@@ -171,7 +171,9 @@ export type FeePlan =
   /** A deposit exists but its L1->L2 message is not consumable yet. */
   | { kind: 'wait-claim'; claim: FeeJuiceClaim }
   /** No Fee Juice and nothing on the way: the user must bridge from L1. */
-  | { kind: 'bridge' };
+  | { kind: 'bridge' }
+  /** Fee Juice arrived but not enough for a transaction's maximum fee: add at least `need - have`. */
+  | { kind: 'top-up'; have: bigint; need: bigint };
 
 export interface FeePlanInput {
   network: FeeNetwork;
@@ -190,12 +192,35 @@ export interface FeePlanInput {
  */
 export function feePlan(p: FeePlanInput): FeePlan {
   if (p.hasSponsor && p.network !== 'mainnet') return { kind: 'sponsored' };
-  const ready = p.claims.find((c) => c.ready);
-  if (ready) return { kind: 'claim', claim: ready.claim };
+  // A transaction is accepted only if its payer can cover the MAXIMUM fee (gas limit × max fee per
+  // gas), not the fee it ends up paying. A claim adds its amount to the balance in the same
+  // transaction: use the largest ready one that covers the maximum, so a small deposit is never
+  // picked again and again when a large one would do (2 AZTEC did not cover account creation on
+  // Alpha, 12 Nov 2026, and failed at every try).
+  const amount = (c: FeeJuiceClaim) => {
+    try { return BigInt(c.claimAmount); } catch { return 0n; }
+  };
+  const ready = p.claims.filter((c) => c.ready).sort((a, b) => (amount(b.claim) > amount(a.claim) ? 1 : amount(b.claim) < amount(a.claim) ? -1 : 0));
+  const enough = ready.find((c) => p.feeJuiceBalance + amount(c.claim) >= p.minBalance);
+  if (enough) return { kind: 'claim', claim: enough.claim };
   if (p.feeJuiceBalance >= p.minBalance && p.feeJuiceBalance > 0n) return { kind: 'balance' };
   const pending = p.claims.find((c) => !c.ready);
   if (pending) return { kind: 'wait-claim', claim: pending.claim };
+  const best = ready.length ? amount(ready[0].claim) : 0n;
+  if (best > 0n || p.feeJuiceBalance > 0n) return { kind: 'top-up', have: p.feeJuiceBalance + best, need: p.minBalance };
   return { kind: 'bridge' };
+}
+
+/**
+ * Fee Juice a transaction must be able to cover on Alpha: its maximum fee, with the node's current
+ * minimum fees doubled for headroom (fees move between blocks). L2 gas limit = the protocol maximum
+ * per transaction (MAX_PROCESSABLE_L2_GAS = 6,540,000), the limit used when none is estimated.
+ * What is actually charged is the gas used, usually a small part of this.
+ */
+export const TX_L2_GAS_LIMIT = 6_540_000n;
+export const TX_DA_GAS_LIMIT = 786_432n;
+export function maxFeeFor(minFees: { feePerL2Gas: bigint; feePerDaGas: bigint }): bigint {
+  return (TX_L2_GAS_LIMIT * minFees.feePerL2Gas + TX_DA_GAS_LIMIT * minFees.feePerDaGas) * 2n;
 }
 
 // ─── L1 bridge (browser, user's own Ethereum wallet) ────────────────────────

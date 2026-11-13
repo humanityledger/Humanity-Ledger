@@ -112,6 +112,32 @@ All open protocol and circuit gaps are tracked with **High for production** seve
 
 ---
 
+## 3.6 Inventory as of 2026-11-11 (supersedes §3.1–§3.5 where they differ)
+
+Nothing listed here has been audited by a third party. "Shipped" means reachable from the deployed app after the Ledger Chat only cleanup (#29).
+
+| Layer | Component | Location | Shipped | State |
+|---|---|---|---|---|
+| aztec-nr | `PrivateEscrow`, `PaymentStream` | `contracts/aztec/{escrow,streams}` | Yes (keyed instance per agreement, testnet) | Source is ahead of the artifact (deposit/creation nullifiers, 313623e). The app deploys the older artifact. Tracked in `deployments/aztec-pending-recompile.json`; a compiled build with green TXE tests exists on `claude/alpha-hardening-2026-11-10@00d451c`, not merged, no e2e |
+| aztec-nr | `IdentityCredential` | `contracts/aztec/identity` | Contract deployed on testnet; no UI path found | Artifact matches source |
+| Client | Private wallet, PXE, proving | `lib/aztec/wallet/*`, `@aztec-labs/*` 6.0.0 | Yes | Until 2026-11-11 `getFeeJuiceBalance` and `isL1ToL2MessageReady` were loaded from a 6.0.0 nightly (unaliased import). Fixed; CI guard added |
+| Client | Encrypted OPFS stores, HKDF key derivation from a wallet signature | `lib/aztec/wallet/{store,keys,wipe}.ts` | Yes | Fail-closed without OPFS; SDK key handling asserted in CI. The signed message is the root secret: its domain separation and phishing resistance need review |
+| Client | Value gates: G7 binding, caps, node pin, fee checks | `lib/aztec/{peer-binding,agreement-policy,fee-juice,fees}.ts`, `lib/payments/*` | Yes | Unit-tested; no two-browser run recorded |
+| Messaging | XMTP v3 (MLS) | `lib/xmtp/*` | Yes | Peer binding is G7 (Schnorr-signed `hl/aztec-binding/v1`, re-verified on every use), not TOFU. TOFU remains only for XMTP inbox ↔ EVM address |
+| Messaging | Agreement invitations (carry claim/contract secrets inside MLS) | `lib/aztec/agreement-invite.ts`, `chat-agreements.ts` | Yes | Legacy `__ZK_*` cards neutralised |
+| Multi-device | Chat preferences over XMTP | `lib/sync/*` | Yes | Aztec state is not synced: keys re-derive from the signature, notes resync from the network. Sender registrations and agreements come back only from re-exchanged addresses and chat invitations |
+| Own circuits | Noir circuits + `@aztec/bb.js` 5.3.0 prover | `circuits/*`, `lib/zk/*` | No (only the VK pin manifest is served) | bb.js 5.x status against the V5 proving-system disclosure is unknown: the disclosure names no component or version. Treat as affected until bumped |
+| L1 | `HumanityIdentityRegistry`, `HumanityTimeLockVault`, `LedgerDeadmanSwitch`, `ZKIdentityRegistry`, `ZKVerificationKeyRegistry`, `StudioProvenance` | `contracts/*.sol`, `contracts/security` | No UI; `/api/wallet/deadman` and `/api/wallet/recovery` are retired (410) | Hardhat suite (workflow "System Core") fails on `main` and did before this inventory. Decide: retire or fix, then audit |
+| Server | Auth (SIWE, JWT), communities, settings, Studio proxy | `app/api/*`, `lib/jwt.ts` | Yes | Secrets no longer defaulted in the repository. Community posts are server-stored and not end-to-end encrypted |
+| Server | LiveKit token route | `app/api/call/token` | Route exists, no UI caller | Remove or wire and audit. 1:1 calls are browser-to-browser WebRTC |
+| Removed | SSE, market/portfolio/hub products, QD identity context | n/a | No | Deleted in #29/#30 |
+| Not present | Sanctions screening | legal text only | No | No code |
+| Supply chain | Served JS/WASM | `next.config.js`, `scripts/zk/check-artifacts.mjs` | Yes | SRI is configured but Next.js does not emit `integrity` for dynamically rendered pages, so it is not in effect. Integrity of the proving bundle rests on TLS and the host |
+
+Stale statements elsewhere in this file: RISK-01 (VKs are derived and compared in workflow "Noir circuits"), RISK-02 (Hardhat does run in CI and fails), RISK-04 (npm audit runs in four workflows; the 2026-11-11 finding was an unused `mongoose` dependency, removed).
+
+---
+
 ## 4. Out-of-Scope
 
 The following are explicitly excluded from this audit:

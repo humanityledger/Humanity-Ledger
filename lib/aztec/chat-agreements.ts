@@ -18,6 +18,7 @@
  * agreement is first used. Invitations hold secrets: nothing here logs them,
  * stores them outside the conversation, or sends them anywhere but the DM.
  */
+import { assertNewValueAllowed } from './value-mode';
 import type { AgreementInvite, EscrowInvite, StreamInvite } from './agreement-invite';
 import type { EscrowView, StreamView } from './agreements';
 import { getPrivateWallet } from './wallet/client';
@@ -105,6 +106,8 @@ async function policyFor(
     claimedAddress: peer.aztecAddress,
   });
   if (!pre.ok || !network) throw new Error(pre.ok ? 'Unknown Aztec network.' : `${pre.reasons[0][0].toUpperCase()}${pre.reasons[0].slice(1)}.`);
+  // G7 on every network before any deploy, post or acceptance.
+  if (!binding.verified) throw new Error("This person's Aztec address is not verified. Ask them to share it again from an up-to-date Ledger Chat.");
   if (network === 'mainnet' && !L.mainnetRecord) throw new Error('The Aztec Alpha deployment record is missing or invalid.');
   const record = network === 'mainnet' ? L.mainnetRecord : L.record;
   return {
@@ -115,7 +118,6 @@ async function policyFor(
       caps: AZTEC_WALLET_CONFIG.agreementCaps,
       acknowledgedUnaudited: ack?.unaudited === true,
       acknowledgedPublicFeePayer: ack?.publicFeePayer === true,
-      // Testnet still accepts v1 (unverified) pins; checkAgreementPolicy requires G7 on Alpha.
       peerVerified: binding.verified,
     },
   };
@@ -145,6 +147,7 @@ export interface OpenRequest {
 
 /** Opens an agreement and returns the invitation to post in the conversation. */
 export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; invite: AgreementInvite }> {
+  await assertNewValueAllowed();
   const wallet = getPrivateWallet();
   const ctx = wallet.agreementContext();
   const L = await load();
@@ -178,6 +181,8 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
     send: { fee: await ctx.prepareFee() },
     classPublished,
     beforeFund: async (raw: string) => {
+      // Asked again right before money moves: deploying the instance takes minutes and the switch may flip meanwhile.
+      await assertNewValueAllowed();
       r.onStep?.('Posting the invitation in this chat');
       await r.post(raw);
       r.onStep?.('Funding the agreement and proving on this device. This can take a few minutes.');

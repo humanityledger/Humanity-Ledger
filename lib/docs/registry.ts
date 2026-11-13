@@ -12,25 +12,30 @@
 import type { Block, DocPage, NavGroup } from "./types";
 import { overview, quickstart, identity, pin } from "./pages/getting-started";
 import { messaging, routing, communities, calls, payments, devices } from "./pages/ledger-chat";
-import { architecture, cryptography, zeroKnowledge, whitepaper } from "./pages/protocol";
+import { architecture, cryptography, ecosystem, zeroKnowledge, whitepaper } from "./pages/protocol";
 import { securityModel, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
-import { about, blog, contact, status } from "./pages/company";
+import { about, blog, contact, status, BLOG_POSTS } from "./pages/company";
 import { brand } from "./pages/brand";
+import { guide } from "./pages/guide";
 import { changelog } from "./pages/changelog";
 import { legalNotice, terms, privacy, cookies, contentPolicy, disclaimer } from "./pages/legal";
 
 export const NAV: NavGroup[] = [
   { title: "Getting started", pages: [overview, quickstart, identity, pin] },
-  { title: "Ledger Chat", pages: [messaging, routing, communities, calls, payments, devices] },
-  { title: "Protocol", pages: [architecture, cryptography, zeroKnowledge, whitepaper] },
+  { title: "Ledger Chat", pages: [guide, messaging, routing, communities, calls, payments, devices] },
+  { title: "Protocol", pages: [architecture, ecosystem, cryptography, zeroKnowledge, whitepaper] },
   { title: "Security", pages: [securityModel, audits, bugBounty] },
   { title: "Developers", pages: [developers] },
   { title: "Company", pages: [about, brand, blog, changelog, status, contact] },
   { title: "Legal", pages: [legalNotice, terms, privacy, cookies, contentPolicy, disclaimer] },
 ];
 
-const ALL: { page: DocPage; group: string }[] = NAV.flatMap((g) => g.pages.map((page) => ({ page, group: g.title })));
+const ALL: { page: DocPage; group: string }[] = [
+  ...NAV.flatMap((g) => g.pages.map((page) => ({ page, group: g.title }))),
+  // Blog posts: routed under /docs, listed from the blog page rather than the sidebar.
+  ...BLOG_POSTS.map((p) => ({ page: p.page, group: "Blog" })),
+];
 
 /** Pages served by app/docs/[slug]. */
 export const DOCS_SLUGS = ALL.filter((e) => e.page.href === `/docs/${e.page.slug}`).map((e) => e.page.slug);
@@ -43,7 +48,6 @@ export const LEGACY_SLUGS: Record<string, string> = {
   "app-hub": "/docs/overview",
   transparency: "/docs/security-model",
   "aml-kyc": "/docs/terms",
-  changelog: "/changelog",
   // Quantum Dots (QD) was a token design that never launched and is no
   // longer part of Humanity Ledger. Old links land on the overview.
   "quantum-dots": "/docs/overview",
@@ -130,6 +134,8 @@ export function blockText(b: Block): string {
       return b.caption;
     case "person":
       return `${b.name}. ${b.role}`;
+    case "gallery":
+      return b.items.map((i) => `${i.caption}.`).join(" ");
     default:
       return "";
   }

@@ -35,7 +35,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose/jwt/verify';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
-import { isRetiredApiRoute } from './lib/security/retiredRoutes';
+import { isRetiredApiRoute, retiredPageTarget } from './lib/security/retiredRoutes';
 import { isSessionPayload } from './lib/security/sessionClaims';
 
 // ── Public routes: accessible to EVERYONE (no auth required) ──────────────────
@@ -93,10 +93,10 @@ const PUBLIC_PREFIXES = [
   '/api/webhooks/stripe',
   '/api/webhooks/',
   '/api/health',
+  '/api/aztec/value-mode', // exits-only switch; public, only ever restricts
   '/api/status',
   '/api/registry/',
   // '/api/chat/', (Removed from public routes for security)
-  '/api/call/',          // Group call room API
   '/api/provenance/',    // Provenance log API called on XMTP connect
   '/api/security/integrity', // Public verifiable proving bundle integrity manifest
   '/api/chat/presence',  // Safe chat presence heartbeat / query
@@ -319,13 +319,27 @@ function newNonce(): string {
   return btoa(id);
 }
 
+/**
+ * connect-src includes `data:`: the Aztec cryptography library (bb.js 6.0.0) loads its WebAssembly with
+ * fetch() of a `data:application/gzip;base64,…` URL. Without it the browser blocked that fetch and the
+ * private wallet could never start ("Failed to fetch" in Chrome, "Load failed" in Safari, at
+ * "Initializing encrypted storage", 3 times for the 3 protocol contracts registered there). A data:
+ * URL carries its content inline: fetching one reaches no server, so this opens no exfiltration path.
+ */
 export function buildCsp(nonce: string, isDev = process.env.NODE_ENV === 'development'): string {
-  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' ${isDev ? "'unsafe-eval' " : ""}'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:${isDev ? ' ws: http:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
+  return `default-src 'self'; script-src 'self' 'nonce-${nonce}' ${isDev ? "'unsafe-eval' " : ""}'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob: data:${isDev ? ' ws: http:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   let earlySession: string | null | undefined;
+
+  // Only Ledger Chat ships. Retired page paths (the old app hub, terminal, portfolio, sign-in pages…)
+  // never render: old links land on the chat, or on /connect for sign-in.
+  if (!pathname.startsWith('/api/')) {
+    const retired = retiredPageTarget(pathname);
+    if (retired) return NextResponse.redirect(new URL(retired, req.url), 308);
+  }
 
   // 1. Edge Rate Limiting for ALL API Routes
   if (pathname.startsWith('/api/')) {
@@ -351,9 +365,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     if (!isDev || !isLocalhost) {
       if (!pathname.startsWith('/api/auth/session')) {
         earlySession = await extractSessionAddress(req);
+        // The private wallet's node relay (fallback route, app/api/aztec/node) syncs in bursts:
+        // its own bucket, so a sync never starves the chat's requests or the other way round.
+        const relay = pathname === '/api/aztec/node';
         const rateLimitRes = earlySession
-          ? applyRateLimit('u:' + earlySession, 600)
-          : applyRateLimit('ip:' + clientIp, 150);
+          ? applyRateLimit((relay ? 'relay:' : 'u:') + earlySession, relay ? 1200 : 600)
+          : applyRateLimit((relay ? 'relay-ip:' : 'ip:') + clientIp, relay ? 60 : 150);
         if (rateLimitRes) return rateLimitRes;
       }
     }
@@ -387,18 +404,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     return publicRes;
   }
 
-
-  // Strict enforcement: ONLY /chat and /portfolio are allowed for authenticated users.
-  // /terminal is strictly redirected to /chat. /hub is allowed.
-  if (pathname === '/terminal' || pathname.startsWith('/terminal/') ) {
-    return NextResponse.redirect(new URL('/chat', req.url));
-  }
-
-  // [FASE 3: App Hub Lock]
-  const LOCKED_ROUTES = ['/dashboard', '/markets', '/governance', '/network', '/qds'];
-  if (LOCKED_ROUTES.some(r => pathname.startsWith(r))) {
-    return NextResponse.redirect(new URL('/chat', req.url));
-  }
 
   // [FASE 18: OFAC / Restricted Jurisdiction Geofencing]
   // Blocks IP addresses from the US and OFAC-sanctioned countries at the edge for PROTECTED app routes.
@@ -489,10 +494,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (req.nextUrl.pathname.startsWith('/prove')) {
     response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
     response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
-  } else if (req.nextUrl.pathname.startsWith('/chat')) {
-    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-    response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
   }
+  // /chat is deliberately NOT cross-origin isolated: COOP same-origin severs wallet popups
+  // (Coinbase/AppKit social login) and COEP blocks wallet iframes. /chat also returns from the
+  // public branch above, so a header set here never applied. Proving runs single-threaded there.
 
   // [SECURITY] Additional hardening headers
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');

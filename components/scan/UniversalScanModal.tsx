@@ -10,7 +10,7 @@ import { useSystemAccount } from '@/hooks/useSystemAccount';
 import { useAppKit } from '@reown/appkit/react';
 import { ATOM_PNGTREE } from '@/lib/constants/systemAssets';
 import { parseScanPayload } from '@/lib/scan/parseScanPayload';
-import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
+import { completeSessionHandshake, previewLink } from '@/lib/scan/sessionHandshake';
 import { useSignMessage, useAccount } from 'wagmi';
 
 const VIEWFINDER_SIZE = 240;
@@ -103,9 +103,9 @@ export default function UniversalScanModal({
   const [successLabel, setSuccessLabel] = useState('Done');
   const [tab, setTab] = useState<'camera' | 'file'>('camera');
   const [fileLoading, setFileLoading] = useState(false);
-  const [pinInput, setPinInput] = useState('');
   const [pinScanData, setPinScanData] = useState<string | null>(null);
-  const pinInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  /** The computer asking to be linked ("Chrome on macOS"), shown before anything is linked. */
+  const [linkLabel, setLinkLabel] = useState<string | null>(null);
 
   const addressRef = useRef(address || externalAddress);
   const onCloseRef = useRef(onClose);
@@ -162,11 +162,19 @@ export default function UniversalScanModal({
 
       try {
         if (route.type === 'session') {
-          // [VISUAL PIN] For QR session handshakes, require PIN before completing
+          // Nothing is linked until the person confirms which computer it is (WhatsApp/Signal model).
+          const preview = await previewLink(decodedText);
+          if (!preview.ok) {
+            setErrMsg(preview.message);
+            if (preview.needsWallet) setNeedsWallet(true);
+            setStatus('error');
+            hasScannedRef.current = false;
+            return;
+          }
           setPinScanData(decodedText);
-          setPinInput('');
+          setLinkLabel(preview.label);
           setStatus('pin_required');
-          return; // don't call completeSessionHandshake yet — wait for PIN
+          return;
         } else if (mode === 'session-only') {
           setErrMsg(
             'This code is not a desktop session QR. On the mobile home screen use “Scan label” for product URLs, wallet codes, or GS1 links.'
@@ -183,31 +191,6 @@ export default function UniversalScanModal({
             onCloseRef.current();
             router.push('/chat');
           }, 900);
-          return;
-        } else if (route.type === 'passport' && route.slug) {
-          setSuccessLabel('Opening passport');
-          setStatus('success');
-          setTimeout(() => {
-            onCloseRef.current();
-            router.push(`/passport/${route.slug}`);
-          }, 700);
-          return;
-        } else if (route.type === 'gs1' && route.gtin) {
-          const res = await fetch(`/api/passport/resolve?url=${encodeURIComponent(decodedText)}`);
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            setErrMsg((body as { error?: string }).error || 'No product passport is mapped to this GS1 code yet.');
-            setStatus('error');
-            hasScannedRef.current = false;
-            return;
-          }
-          const data = await res.json();
-          setSuccessLabel('Opening passport');
-          setStatus('success');
-          setTimeout(() => {
-            onCloseRef.current();
-            router.push(`/passport/${data.slug}`);
-          }, 700);
           return;
         } else {
           setErrMsg(
@@ -287,7 +270,7 @@ export default function UniversalScanModal({
       setErrMsg('');
       setNeedsWallet(false);
       setTab('camera');
-      setPinInput('');
+      setLinkLabel(null);
       setPinScanData(null);
       return;
     }
@@ -305,13 +288,13 @@ export default function UniversalScanModal({
   const handshakeCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => { return () => { handshakeCleanupRef.current?.(); }; }, []);
 
-  // Handle PIN submission after QR scan
+  // The person confirmed the computer: link it.
   const handlePinConfirm = useCallback(async () => {
-    if (pinInput.length !== 4 || !pinScanData) return;
+    if (!pinScanData) return;
     setStatus('verifying_pin');
     try {
-      setSuccessLabel('Session linked');
-      const result = await completeSessionHandshake(pinScanData, getAddress, signMessageAsync, connector, pinInput);
+      setSuccessLabel('Computer linked');
+      const result = await completeSessionHandshake(pinScanData, getAddress, signMessageAsync, connector);
       if (!result.ok) {
         setErrMsg(result.message);
         if ('needsWallet' in result && result.needsWallet) {
@@ -326,11 +309,11 @@ export default function UniversalScanModal({
       onScanRef.current?.(pinScanData);
       setTimeout(() => onCloseRef.current(), 1400);
     } catch {
-      setErrMsg('PIN verification failed. Please check the code and try again.');
+      setErrMsg('The computer could not be linked. Refresh the code on the computer and scan it again.');
       setStatus('error');
       hasScannedRef.current = false;
     }
-  }, [pinInput, pinScanData, getAddress, signMessageAsync, connector]);
+  }, [pinScanData, getAddress, signMessageAsync, connector]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -435,63 +418,35 @@ export default function UniversalScanModal({
                   <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center mb-1 flex-shrink-0">
                     <Shield className="text-white" size={26} />
                   </div>
-                  <p className="text-[13px] font-black uppercase tracking-widest text-black text-center leading-tight">
-                    Visual PIN
+                  <p className="text-[15px] font-semibold text-black text-center leading-tight">Link this computer?</p>
+                  <p className="text-[13px] text-black/70 text-center max-w-[260px] leading-relaxed">
+                    <strong>{linkLabel ?? 'A computer'}</strong> wants to use your Ledger Chat account.
                   </p>
-                  <p className="text-[10px] text-black/50 text-center max-w-[220px] leading-relaxed">
-                    Enter the 4-digit code displayed on your desktop screen
+                  <p role="note" className="text-[12px] text-[#9a2a1a] bg-[#fff1ee] border border-[#f6c9bf] rounded-xl px-3 py-2 text-center max-w-[280px] leading-relaxed">
+                    It will be able to read and send your messages. Only link it if you opened ledgerchat.org yourself on a computer in front of you. Never scan a code someone sent you.
                   </p>
-                  <p role="note" className="text-[11px] text-[#9a2a1a] bg-[#fff1ee] border border-[#f6c9bf] rounded-xl px-3 py-2 text-center max-w-[260px] leading-relaxed">
-                    This signs a computer into your account. Only continue if you opened this code yourself on a computer in front of you.
+                  <p className="text-[11px] text-black/50 text-center max-w-[260px] leading-relaxed">
+                    Your wallet stays on this phone. You can unlink the computer at any time in Settings → Linked devices.
                   </p>
-                  {/* 4-box PIN input */}
-                  <div className="flex gap-3 mt-1">
-                    {[0,1,2,3].map((i) => (
-                      <input
-                        key={i}
-                        ref={pinInputRefs[i]}
-                        id={`pin-digit-${i}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={pinInput[i] || ''}
-                        className="w-12 h-14 text-center text-xl font-black bg-black/5 border-2 border-black/10 rounded-xl focus:outline-none focus:border-black transition-all"
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          const next = (pinInput.split(''));
-                          next[i] = val.slice(-1);
-                          const newPin = next.join('');
-                          setPinInput(newPin);
-                          if (val && i < 3) pinInputRefs[i + 1].current?.focus();
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Backspace' && !pinInput[i] && i > 0) {
-                            pinInputRefs[i - 1].current?.focus();
-                          }
-                        }}
-                      />
-                    ))}
-                  </div>
                   <button
                     type="button"
                     onClick={handlePinConfirm}
-                    disabled={pinInput.length < 4}
-                    className="mt-2 px-8 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-full disabled:opacity-30 transition-opacity"
+                    className="mt-1 px-8 py-3 bg-black text-white text-[13px] font-semibold rounded-full"
                   >
-                    Confirm & Link
+                    Link this computer
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       hasScannedRef.current = false;
-                      setPinInput('');
                       setPinScanData(null);
+                      setLinkLabel(null);
                       setStatus('idle');
                       initScanner();
                     }}
-                    className="text-[9px] text-black/40 underline"
+                    className="text-[12px] text-black/50 underline"
                   >
-                    Cancel, re-scan
+                    Cancel
                   </button>
                 </div>
               )}
@@ -499,7 +454,7 @@ export default function UniversalScanModal({
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/95 z-30 gap-3">
                   <Loader2 className="animate-spin text-black" size={28} />
                   <p className="text-[10px] font-black uppercase tracking-widest text-black/60">
-                    Verifying PIN…
+                    Linking…
                   </p>
                 </div>
               )}

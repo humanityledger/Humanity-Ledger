@@ -4,6 +4,20 @@ All notable changes to Humanity Ledger will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Aztec Alpha (mainnet)
+- **Found 11 November 2026:** the Dockerfile declared no `ARG`, so Railway never passed `NEXT_PUBLIC_AZTEC_*` to `next build`. Every production build used the defaults (Aztec test network, no tokens), although the Alpha variables were set in Railway. The `ARG` lines are added; merging them is what switches production to Alpha.
+- `scripts/aztec/check-alpha-config.mjs` runs before `next build` and checks `NEXT_PUBLIC_AZTEC_TOKENS` and `NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS` against `deployments/aztec-mainnet.json` (mode `strict` in the Dockerfile: a mismatch fails the build and the running deployment stays).
+- The operator's token HLC ("Humanity Ledger Corp.", 6 decimals) is recorded in `deployments/aztec-mainnet.json`. The mainnet preflight now reads each token's deploy transaction and block and runs `checkTokenInstance`; for HLC it confirmed L2 block 24544 and class `0x067df4dd…91e0`.
+- On Alpha the wallet opens with Fee Juice only; Shield, Unshield and Send appear once a token is configured (#40). The chat payment message names the token's symbol, never its internal slot (#40).
+- In-app texts name the network: agreement cards, the wallet's first-open note and empty activity, the stream panel, and the chat menus no longer say "Aztec test network" on Alpha.
+- Agreements stay off on Alpha: no escrow or stream class is deployed or recorded there.
+- **Private wallet storage fixed:** the PXE and wallet stores were opened in the same OPFS pool (`.aztec-kv`); with kv-store 6.0.0 the second open always failed (`pool ".aztec-kv" is already in use by another store instance`). Each store now has its own pool, and the sign-out wipe finds them again (#43).
+- The PIN pad no longer flashes before the chat when the PIN screen is off (#43).
+- No dead ends on Alpha: the Fee Juice bridge is offered in the wallet panel when the account waits for Fee Juice, the Fee Juice balance is always shown with an Add button, a failed balance read never undoes an open wallet or a confirmed payment, and an unconfirmed transaction stays pending instead of failed.
+- Test-network wording removed from the in-app wallet, payment and agreement flow; the send forms show the token's symbol (HLC) (#41, #42).
+
 ## [1.0.0] - 2026-10-20
 
 ### Security

@@ -102,6 +102,34 @@ ENV NEXTAUTH_SECRET="build_time_dummy_secret_ledgerchat_org_0123456789"
 ENV NEXTAUTH_URL="https://ledgerchat.org"
 ENV NEXT_PUBLIC_APP_URL="https://ledgerchat.org"
 
+# Aztec wallet configuration, inlined into the client by `next build`.
+# Railway passes service variables to a Dockerfile build only when they are
+# declared with ARG (docs.railway.com/builds/dockerfiles#using-variables-at-build-time).
+# Before 11 November 2026 none was declared, so every build used the defaults
+# of lib/aztec/wallet/config.ts (test network, no tokens), whatever Railway held.
+# All of them are public values (NEXT_PUBLIC_*), never secrets.
+ARG NEXT_PUBLIC_AZTEC_NETWORK
+ARG NEXT_PUBLIC_AZTEC_ALPHA_ENABLED
+ARG NEXT_PUBLIC_AZTEC_NODE_URL
+ARG NEXT_PUBLIC_AZTEC_L1_CHAIN_ID
+ARG NEXT_PUBLIC_AZTEC_L1_FROM_BLOCK
+ARG NEXT_PUBLIC_AZTEC_EXPLORER
+ARG NEXT_PUBLIC_AZTEC_TOKENS
+ARG NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS
+ARG NEXT_PUBLIC_AZTEC_VALUE_MODE
+ARG NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH
+ARG NEXT_PUBLIC_AZTEC_SPONSORED_FPC
+ARG NEXT_PUBLIC_AZTEC_FAUCET
+ARG NEXT_PUBLIC_AZTEC_SPONSOR
+ARG NEXT_PUBLIC_AZTEC_SPONSOR_ADMIN
+# strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
+# previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
+# Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.
+ARG AZTEC_ALPHA_CONFIG_CHECK=strict
+
+# Step 0: check the Alpha configuration against deployments/aztec-mainnet.json (no-op off Alpha)
+RUN node scripts/aztec/check-alpha-config.mjs
+
 # Step 1: Generate Prisma client
 RUN npx prisma generate
 

@@ -25,6 +25,8 @@ import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
 import { localStoragePeerBindingStore, sdkBindingCrypto, verifiedPeerBinding } from '@/lib/aztec/peer-binding';
 import { AlphaRiskAck, NO_ACK, acked } from '@/components/chat/AlphaRiskAck';
+import { ProvingStatus } from '@/components/chat/ProvingStatus';
+import { useAddressFingerprint } from '@/components/chat/useAddressFingerprint';
 import { checkPrivateRail, invoicePayee } from '@/lib/payments/rails';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { toast } from 'sonner';
@@ -70,6 +72,7 @@ export function ZkInvoiceModal({
   onInvoicePaid,
 }: ZkInvoiceModalProps) {
   const [payeeAztec, setPayeeAztec] = useState<{ address?: string; verified: boolean }>({ verified: false });
+  const issuerFingerprint = useAddressFingerprint(payeeAztec.address);
   const [showPublicRail, setShowPublicRail] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const payingRef = useRef(false);
@@ -101,7 +104,7 @@ export function ZkInvoiceModal({
   // If viewing/paying existing invoice
   const [isPaying, setIsPaying] = useState(false);
   const [proofStep, setProofStep] = useState('');
-  const [proofProgress, setProofProgress] = useState(0);
+  const [provingSince, setProvingSince] = useState(0);
 
   // Form State for creating a new invoice - Clean initial state (no mock data)
   const [title, setTitle] = useState('');
@@ -175,13 +178,12 @@ export function ZkInvoiceModal({
     setIsPaying(true);
     setPayError(null);
     try {
-      setProofStep('Making the proof on this device. This can take a minute.');
-      setProofProgress(40);
+      setProofStep('Making the proof on this device');
+      setProvingSince(Date.now());
       // Same checks as a chat payment: pinned payee, fresh G7, acknowledgement and cap on Alpha.
       const { sendDirectPrivatePayment } = await import('@/lib/payments/direct-private');
       const { txHash } = await sendDirectPrivatePayment({ token: tokenKey, amount: String(existingInvoice.totalAmount), dmPeerInboxId: peerInboxId, selfInboxId: selfInboxId ?? '', ack });
       setProofStep('Payment included on Aztec');
-      setProofProgress(100);
       settle(txHash, 'aztec');
     } catch (err: any) {
       // A failed Aztec transaction changes nothing: no funds left the wallet.
@@ -284,17 +286,7 @@ export function ZkInvoiceModal({
               </div>
             </div>
 
-            {isPaying && (
-              <div className="bg-[#f2f4f7] rounded-2xl p-4 space-y-2">
-                <div className="flex justify-between text-[12px]">
-                  <span className="font-semibold text-gray-800">{proofStep}</span>
-                  <span className="font-mono text-[#15171c] font-semibold">{proofProgress}%</span>
-                </div>
-                <div className="w-full bg-black/10 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-[#15171c] h-full transition-all duration-300" style={{ width: `${proofProgress}%` }} />
-                </div>
-              </div>
-            )}
+            {isPaying && <ProvingStatus label={proofStep || 'Preparing'} startedAt={provingSince || Date.now()} />}
 
             {existingInvoice.status === 'unpaid' && payee && !payee.ok && (
               <p className="text-[13px] text-gray-600">{payee.reason}</p>
@@ -307,17 +299,17 @@ export function ZkInvoiceModal({
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 font-medium">Issuer Aztec Address:</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${payeeAztec.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-                        {payeeAztec.verified ? '✓ Schnorr Verified (G7)' : 'Unverified (Testnet)'}
+                        {payeeAztec.verified ? '✓ Verified (G7)' : 'Not verified: payment blocked'}
                       </span>
                     </div>
                     <div className="font-mono text-[11px] text-gray-800 flex justify-between items-center bg-white border border-black/[0.06] rounded-lg px-2.5 py-1.5">
                       <span className="truncate mr-2">{payeeAztec.address.slice(0, 16)}…{payeeAztec.address.slice(-8)}</span>
                       <span className="font-bold bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10.5px] flex-shrink-0">
-                        FP: {payeeAztec.address.slice(2, 6).toUpperCase()}-{payeeAztec.address.slice(-4).toUpperCase()}
+                        FP: {issuerFingerprint ?? '…'}
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-500">
-                      G7 cryptographic proof confirms control of the signing key. Confirm this fingerprint for high-value settlement.
+                      G7 confirms the issuer signed for this address. For large amounts, read this fingerprint with them over another channel.
                     </p>
                   </div>
                 )}

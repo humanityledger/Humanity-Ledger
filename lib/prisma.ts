@@ -151,8 +151,23 @@ type SystemPrismaClient = PrismaClient & {
   verificationCode: VerificationCodeDelegate;
 };
 
+const { normalizeDatabaseUrl, describeDatabaseUrl, isTransientDbError } = require('./db/url.js') as {
+    normalizeDatabaseUrl: (raw: string | undefined) => string | undefined;
+    isTransientDbError: (err: unknown) => boolean;
+    describeDatabaseUrl: (raw: string | undefined) => { ok: boolean; repaired?: boolean; problem?: string; host?: string };
+};
+
+let dbUrlReported = false;
 function getSanitizedDatabaseUrl(): string {
-    const rawUrl = process.env.DATABASE_URL;
+    // Paste errors in the Railway variable (quotes, "DATABASE_URL=" in the value, spaces) are repaired;
+    // anything else is reported once, without the password (lib/db/url.js).
+    const rawUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
+    if (!dbUrlReported && process.env.DATABASE_URL) {
+        dbUrlReported = true;
+        const d = describeDatabaseUrl(process.env.DATABASE_URL);
+        if (!d.ok) console.error(`[db] DATABASE_URL is unusable: ${d.problem}. Set it in Railway to \${{PgBouncer.DATABASE_URL}} (or \${{Postgres.DATABASE_URL}}).`);
+        else if (d.repaired) console.warn(`[db] DATABASE_URL had quotes, spaces or its own name in the value; repaired (host ${d.host}). Fix the Railway variable too.`);
+    }
     if (!rawUrl || rawUrl.trim() === '') {
         return 'postgresql://postgres:postgres@localhost:5432/humanity_ledger?schema=public';
     }
@@ -219,7 +234,25 @@ function createPrismaClient(): PrismaClient {
         });
     }
 
-    return client;
+    // A pooled connection closed by PgBouncer or a Postgres restart surfaced to users as an empty
+    // list or a 500 ("Error in PostgreSQL connection: Closed"). Reads run once more on a fresh
+    // connection after 150 ms; writes never repeat, so nothing is applied twice.
+    const READS = new Set(['findUnique', 'findUniqueOrThrow', 'findFirst', 'findFirstOrThrow', 'findMany', 'count', 'aggregate', 'groupBy']);
+    return client.$extends({
+        query: {
+            $allModels: {
+                async $allOperations({ operation, args, query }: { operation: string; args: unknown; query: (a: unknown) => Promise<unknown> }) {
+                    try {
+                        return await query(args);
+                    } catch (err) {
+                        if (!READS.has(operation) || !isTransientDbError(err)) throw err;
+                        await new Promise((r) => setTimeout(r, 150));
+                        return query(args);
+                    }
+                },
+            },
+        },
+    }) as unknown as PrismaClient;
 }
 
 export const prisma = (globalForPrisma.prisma ?? createPrismaClient()) as unknown as SystemPrismaClient;

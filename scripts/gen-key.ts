@@ -1,4 +1,4 @@
-import { Fr } from '@aztec/aztec.js/fields';
+import { Fr } from '@aztec-labs/aztec.js/fields';
 
 const key = Fr.random().toString();
 console.log('\n========================================');

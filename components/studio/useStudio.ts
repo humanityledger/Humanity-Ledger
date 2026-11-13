@@ -2,11 +2,12 @@
 
 /**
  * State and actions for Ledger Studio: conversations, projects, artifacts,
- * preferences, connectors, usage, the streaming turn, and Code mode
+ * preferences, usage, the streaming turn, and Code mode
  * (workspace files on this device, permissions, plans, questions, todos,
- * subagents, the code sandbox and checkpoints to rewind).
+ * subagents and checkpoints to rewind). The AI runs on Groq (server side).
  */
 
+import { byokHeaders } from '@/lib/studio/byok';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createStudioStore, uid, DEFAULT_PREFS, workspaceIdFor,
@@ -16,13 +17,13 @@ import {
 import type { Artifact, ArtifactSnapshot } from '@/lib/studio/artifacts';
 import { toSnapshot } from '@/lib/studio/artifacts';
 import {
-  appendUserTurn, attachmentBlock, attachmentKind, compactHistory, dropBeforeCompaction, MAX_IMAGE_BYTES, requestBytes, trimHistory, unansweredToolUses,
+  appendUserTurn, attachmentBlock, attachmentKind, compactHistory, MAX_IMAGE_BYTES, requestBytes, trimHistory, unansweredToolUses,
 } from '@/lib/studio/history';
 import {
   createEventParser, MAX_HISTORY_MESSAGES, MAX_REQUEST_BYTES,
-  type Effort, type PermissionMode, type ResumeResult, type StudioConnectorConfig, type StudioEvent, type StudioMode,
+  type Effort, type PermissionMode, type ResumeResult, type StudioEvent, type StudioMode,
 } from '@/lib/studio/protocol';
-import { isStudioModel, STUDIO_PLANS, type StudioModelId, type StudioPlanId } from '@/lib/studio/models';
+import { isStudioModel, normalizeModel, STUDIO_CAPABILITIES, STUDIO_PLANS, type StudioModelId, type StudioPlanId } from '@/lib/studio/models';
 import { skillsById } from '@/lib/studio/skills';
 import { resolveUiLang, STRINGS } from '@/lib/studio/i18n';
 import { MAX_WS_FILES, MAX_WS_TEXT_CHARS, normalizePath, type WsFile } from '@/lib/studio/fs';
@@ -43,8 +44,14 @@ export interface PendingAttachment {
 }
 
 export interface UsageInfo {
+  /** GROQ_API_KEY is set on the server. */
   configured: boolean;
   checkoutAvailable: boolean;
+  /** The AI provider and its limits (Groq since Nov 2026). Optional: older servers omit them. */
+  provider?: string;
+  defaultModel?: string;
+  tpmLimit?: number;
+  capabilities?: { webSearch: boolean; sandbox: boolean; connectors: boolean; images: boolean };
   usage: {
     plan: { id: StudioPlanId; label: string; dailyBudgetUsd: number; monthlyBudgetUsd: number; maxFileMb: number; maxConnectors: number };
     todayUsd: number; monthUsd: number; todayTokens: number; monthTokens: number; monthSearches: number; monthRequests: number;
@@ -61,8 +68,13 @@ export type TurnInput =
   | { kind: 'message'; text: string; attachments?: PendingAttachment[]; label?: string; compact?: boolean; auto?: boolean; mode?: StudioMode }
   | { kind: 'resume'; results: ResumeResult[]; outcome: InteractionOutcome; permission?: PermissionMode };
 
-const MAX_KNOWLEDGE_CHARS = 300_000;
-const MAX_ARTIFACT_CONTEXT_CHARS = 300_000;
+/**
+ * Project documents and artifacts go into the system prompt of every call. On Groq's free
+ * tier a whole call is about 8,000 tokens (usage.tpmLimit), so each of these gets about a
+ * fifth of it in characters; the server shortens whatever still does not fit.
+ */
+const MAX_CONTEXT_CHARS = 300_000;
+const contextCharsFor = (tpmLimit?: number) => Math.min(MAX_CONTEXT_CHARS, Math.round((tpmLimit && tpmLimit >= 2_000 ? tpmLimit : 8_000) * 1.6));
 const MAX_AUTO_CONTINUE = 3;
 const MAX_REASONING_CHARS = 40_000;
 const MAX_MEMORY_CHARS = 40_000;
@@ -85,7 +97,6 @@ export function useStudio(wallet: string) {
   const [prefs, setPrefsState] = useState<StudioPrefs>(DEFAULT_PREFS);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [connectors, setConnectorsState] = useState<StudioConnectorConfig[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -126,12 +137,12 @@ export function useStudio(wallet: string) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [p, cs, ps, cn, savedDraft] = await Promise.all([store.getPrefs(), store.listConversations(), store.listProjects(), store.getConnectors(), store.getKv<string>('draftId')]);
+      const [p, cs, ps, savedDraft] = await Promise.all([store.getPrefs(), store.listConversations(), store.listProjects(), store.getKv<string>('draftId')]);
       if (!alive) return;
       // Keep the new chat's id across reloads, so files added before the first message are not lost.
       if (typeof savedDraft === 'string' && /^c_[\w-]{8,64}$/.test(savedDraft) && !cs.some(c => c.id === savedDraft)) setDraftId(savedDraft);
       else await store.putKv('draftId', draftIdRef.current);
-      setPrefsState(p); setConversations(cs); setProjects(ps); setConnectorsState(cn); setReady(true);
+      setPrefsState(p); setConversations(cs); setProjects(ps); setReady(true);
     })().catch(() => setReady(true));
     return () => { alive = false; };
   }, [store]);
@@ -164,7 +175,6 @@ export function useStudio(wallet: string) {
   }, [wsId, store]);
 
   const savePrefs = useCallback(async (p: StudioPrefs) => { setPrefsState(p); await store.putPrefs(p); }, [store]);
-  const saveConnectors = useCallback(async (list: StudioConnectorConfig[]) => { setConnectorsState(list); await store.putConnectors(list); }, [store]);
 
   const upsertConversation = useCallback(async (c: Conversation) => {
     setConversations(prev => {
@@ -374,6 +384,8 @@ export function useStudio(wallet: string) {
     for (const f of Array.from(files).slice(0, 10)) {
       const kind = attachmentKind(f.name, f.type || '');
       if (kind === 'unsupported') { rejected.push({ name: f.name, reason: t.fileUnsupported }); continue; }
+      // The Groq models read text only: say so now instead of sending a file the model cannot see.
+      if ((kind === 'image' || kind === 'pdf') && !STUDIO_CAPABILITIES.images) { rejected.push({ name: f.name, reason: kind === 'image' ? t.fileNoImages : t.fileNoPdf }); continue; }
       const limit = kind === 'image' ? Math.min(maxBytes, MAX_IMAGE_BYTES) : maxBytes;
       if (f.size > limit) { rejected.push({ name: f.name, reason: `${t.fileTooLarge} (${Math.round(limit / 1024 / 1024)} MB)` }); continue; }
       const data = kind === 'text' ? await f.text() : await readAsBase64(f);
@@ -489,7 +501,7 @@ export function useStudio(wallet: string) {
 
     // ── context ──
     const files: ProjectFile[] = project ? await store.listFiles(project.id) : [];
-    let budget = MAX_KNOWLEDGE_CHARS;
+    let budget = contextCharsFor(usage?.tpmLimit);
     const knowledge = files.slice(0, 30).flatMap(f => {
       if (budget <= 0) return [];
       const text = f.text.slice(0, budget);
@@ -500,7 +512,7 @@ export function useStudio(wallet: string) {
     const skillIds = Array.from(new Set([...(conv.skillIds ?? []), ...(project?.skillIds ?? [])]));
     const skills = skillIds.map(id => skillMap.get(id)).filter(Boolean).slice(0, 12).map(s => ({ id: s!.id, name: s!.name, instructions: s!.instructions }));
     const currentArtifacts = code ? [] : conv.id === activeIdRef.current && conv.id === activeId ? artifacts : await store.listArtifacts(conv.id);
-    let aBudget = MAX_ARTIFACT_CONTEXT_CHARS;
+    let aBudget = contextCharsFor(usage?.tpmLimit);
     const snapshots: ArtifactSnapshot[] = [...currentArtifacts].sort((a, b) => b.updatedAt - a.updatedAt).flatMap(a => {
       const s = toSnapshot(a);
       if (s.content.length > aBudget) return [];
@@ -516,14 +528,12 @@ export function useStudio(wallet: string) {
     const effortForTurn = conv.effort;
 
     const payload: Record<string, unknown> = {
-      model: isStudioModel(conv.model) ? conv.model : prefs.defaultModel,
+      model: isStudioModel(conv.model) ? conv.model : normalizeModel(prefs.defaultModel),
       messages: trimHistory(compactHistory(apiWithUser), MAX_HISTORY_MESSAGES),
       personalization: prefs.personalization,
       project: project ? { name: project.name, instructions: project.instructions, knowledge } : undefined,
       skills,
       artifacts: snapshots,
-      tools: { webSearch: prefs.webSearch, webFetch: prefs.webFetch },
-      connectors: connectors.filter(c => c.enabled),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       ...(effortForTurn ? { effort: effortForTurn } : {}),
       ...(code ? {
@@ -535,7 +545,6 @@ export function useStudio(wallet: string) {
         },
         memory: memory || undefined,
         todos: conv.todos ?? [],
-        sandbox: prefs.sandbox ? { enabled: true, containerId: conv.containerId } : undefined,
         agents: prefs.customAgents.slice(0, 20),
         rules: { allow: (prefs.rules?.allow ?? []).slice(0, 50), deny: (prefs.rules?.deny ?? []).slice(0, 50) },
         resume: input.kind === 'resume' ? { results: input.results } : undefined,
@@ -577,7 +586,6 @@ export function useStudio(wallet: string) {
     setStreaming(true);
     let producedMessages: any[] | null = null;
     let localArtifacts = [...currentArtifacts];
-    let compacted = false;
     let notice: DisplayMessage['notice'];
     let errored = false;
 
@@ -633,10 +641,6 @@ export function useStudio(wallet: string) {
             patchAssistant(m => ({ ...m, tools: [...(m.tools ?? []), { id: uid('art_'), name: 'artifact', status: 'running' }] }));
           }
           break;
-        case 'citation':
-          if (!/^https:\/\//i.test(e.url)) break; // links are rendered as <a href>
-          patchAssistant(m => (m.citations?.some(c => c.url === e.url) ? m : { ...m, citations: [...(m.citations ?? []), { url: e.url, title: e.title, citedText: e.citedText }] }));
-          break;
         case 'artifact': {
           const snap = e.artifact;
           const existing = localArtifacts.find(a => a.id === snap.id);
@@ -684,13 +688,6 @@ export function useStudio(wallet: string) {
             return { ...m, subagents: list };
           });
           break;
-        case 'container':
-          patchConv(c => ({ ...c, containerId: e.id }));
-          break;
-        case 'compacted':
-          compacted = true;
-          patchAssistant(m => ({ ...m, compacted: true }));
-          break;
         case 'messages':
           producedMessages = e.messages;
           break;
@@ -720,7 +717,7 @@ export function useStudio(wallet: string) {
       const res = await fetch('/api/studio/chat', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...byokHeaders() },
         body: JSON.stringify(payload),
         signal: ctrl.signal,
       });
@@ -751,9 +748,8 @@ export function useStudio(wallet: string) {
       abortRef.current = null;
       // Keep the API history consistent: append exactly what the server produced.
       if (producedMessages && (producedMessages as any[]).length) {
-        let api = [...apiWithUser, ...(producedMessages as any[])];
-        if (compacted) api = dropBeforeCompaction(api);
-        current = { ...current, apiMessages: api, ...(compacted ? { compactedAt: Date.now() } : {}) };
+        const api = [...apiWithUser, ...(producedMessages as any[])];
+        current = { ...current, apiMessages: api };
       } else {
         // Nothing usable came back: drop this user turn from the API history so
         // the next turn is not merged with a prompt that failed. Whatever the
@@ -841,7 +837,7 @@ export function useStudio(wallet: string) {
         setTimeout(() => { runTurnRef.current({ kind: 'message', text: CONTINUE_PROMPT, label: 'continue', auto: true }, id); }, 400);
       }
     }
-  }, [projects, active, activeProjectId, t, draftModel, draftSkills, draftMode, draftId, prefs, upsertConversation, store, activeId, artifacts, connectors, refreshUsage, commitWs]);
+  }, [projects, active, activeProjectId, t, draftModel, draftSkills, draftMode, draftId, prefs, upsertConversation, store, activeId, artifacts, usage, refreshUsage, commitWs]);
   useEffect(() => { runTurnRef.current = runTurn; }, [runTurn]);
 
   const send = useCallback((text: string, attachments: PendingAttachment[] = [], opts: { label?: string; compact?: boolean; mode?: StudioMode } = {}) =>
@@ -963,7 +959,7 @@ export function useStudio(wallet: string) {
   }, []);
 
   return {
-    ready, t, lang, store, prefs, savePrefs, conversations, projects, connectors, saveConnectors,
+    ready, t, lang, store, prefs, savePrefs, conversations, projects,
     active, activeId, activeProjectId, setActiveProjectId, artifacts, openArtifactId, setOpenArtifactId,
     streaming, usage, plan, refreshUsage, draftModel, draftSkills,
     newChat, openChat, renameChat, togglePin, deleteChat, setChatModel, setChatSkills,

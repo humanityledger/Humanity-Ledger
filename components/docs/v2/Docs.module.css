@@ -2162,3 +2162,315 @@ ol.list li::marker {
     animation: none;
   }
 }
+
+/* ── Ecosystem map (Figures.tsx) ─────────────────────────────────────────── */
+
+.eco {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ecoLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--hl-ink-3);
+}
+
+.ecoLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ecoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.ecoGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--hl-border);
+  border-radius: 12px;
+  background: var(--hl-bg);
+  box-shadow: var(--hl-shadow-xs);
+}
+
+.ecoItems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ecoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ecoItemBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ecoItemName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--hl-ink);
+}
+
+.ecoItemText {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--hl-ink-3);
+}
+
+.ecoDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--hl-border-strong);
+}
+
+.ecoLegendItem .ecoDot {
+  margin-top: 0;
+}
+
+.ecoDot_available {
+  background: #15171c;
+}
+
+.ecoDot_partial {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 2px #15171c;
+}
+
+.ecoDot_development {
+  background: repeating-linear-gradient(45deg, #15171c 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 1px #15171c;
+}
+
+.ecoDot_unavailable {
+  background: var(--hl-border);
+}
+
+/* ── Sequences (Figures.tsx) ─────────────────────────────────────────────── */
+
+.seq {
+  --seq-gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seqActors,
+.seqStep {
+  display: grid;
+  grid-template-columns: 28px repeat(var(--seq-cols), minmax(0, 1fr));
+  column-gap: var(--seq-gap);
+}
+
+.seqActors::before {
+  content: "";
+}
+
+.seqActor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--hl-border);
+  border-radius: 12px;
+  background: var(--hl-bg);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hl-ink);
+  min-width: 0;
+}
+
+.seqSteps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seqNum {
+  grid-column: 1;
+  align-self: start;
+  width: 24px;
+  height: 24px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: #15171c;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+.seqTrack {
+  min-width: 0;
+}
+
+.seqBubble {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  border: 1px solid var(--hl-border);
+  border-radius: 12px;
+  background: var(--hl-bg);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--hl-ink-2);
+}
+
+.seqMove {
+  border-style: solid;
+  border-color: var(--hl-border-strong);
+}
+
+.seqMove::after {
+  content: "→";
+  position: absolute;
+  right: 12px;
+  top: 9px;
+  font-size: 13px;
+  color: var(--hl-ink-3);
+}
+
+.seqLeft::after {
+  content: "←";
+}
+
+.seqWho {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hl-ink);
+  padding-right: 18px;
+}
+
+.seqNote {
+  font-size: 12px;
+  color: var(--hl-ink-3);
+}
+
+@media (max-width: 720px) {
+  .seqActors {
+    display: none;
+  }
+  .seqStep {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .seqTrack {
+    grid-column: 2 / 3 !important;
+  }
+}
+
+/* ── Gallery ────────────────────────────────────────────────────────────── */
+
+.gallery {
+  display: grid;
+  gap: 20px;
+  margin: 20px 0 32px;
+}
+
+.galleryCols1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.galleryCols2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.galleryCols3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .galleryCols2,
+  .galleryCols3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.galleryItem {
+  margin: 0;
+  min-width: 0;
+}
+
+.galleryFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--hl-border);
+  border-radius: 14px;
+  background: var(--hl-bg-subtle);
+}
+
+/* Logos keep the clear space their owners ask for. */
+.surface_paper,
+.surface_ink {
+  padding: 48px 32px;
+  min-height: 200px;
+}
+
+.surface_paper {
+  background: #fff9f2;
+}
+
+.surface_ink {
+  background: #141900;
+  border-color: #141900;
+}
+
+.galleryImg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.surface_paper .galleryImg,
+.surface_ink .galleryImg {
+  width: auto;
+  max-width: 100%;
+  max-height: 96px;
+}
+
+.galleryCaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--hl-ink-3);
+}
+
+.galleryDownload {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--hl-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

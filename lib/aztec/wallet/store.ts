@@ -8,8 +8,8 @@
  *   - The stores (pxe_data and wallet_data) MUST be opened with an encryption
  *     key derived from the user's EIP-712 wallet signature via HKDF
  *     (info: "hl/aztec/v1/store").
- *   - Fallback to unencrypted stores (e.g. legacy plain IndexedDB) is strictly
- *     rejected at runtime.
+ *   - There is no fallback: without OPFS + Worker the wallet does not open
+ *     (no unencrypted IndexedDB, no in-memory stand-in).
  */
 
 import { deriveStoreEncryptionKey } from './keys';
@@ -19,6 +19,17 @@ export class EncryptedStoreError extends Error {
     super(`[ENCRYPTED STORE ERROR] ${message}`);
     this.name = 'EncryptedStoreError';
   }
+}
+
+/** Prefix the kv-store uses for per-store pool directories (OPFS_POOL_DIR_PREFIX in @aztec-labs/kv-store 6.0.0). */
+export const STORE_POOL_PREFIX = '.aztec-kv-';
+
+/**
+ * The OPFS pool directory of one store: the kv-store's own convention (storePoolDirectory), so that its
+ * listStores / deleteStore, used to wipe the wallet on sign-out, find and remove these stores.
+ */
+export function storePoolDirectoryFor(kv: { storePoolDirectory?: (name: string) => string }, name: string): string {
+  return typeof kv?.storePoolDirectory === 'function' ? kv.storePoolDirectory(name) : `${STORE_POOL_PREFIX}${name}`;
 }
 
 export interface EncryptedStoresResult {
@@ -81,18 +92,24 @@ export async function openEncryptedWalletStores(
 
     if (hasOpfs && hasWorker) {
       // In browser with OPFS and Worker support, open persistent encrypted SQLite stores
-      const [{ createLogger }, { AztecSQLiteOPFSStore }] = await Promise.all([
+      const [{ createLogger }, kv] = await Promise.all([
         import('@aztec-labs/foundation/log'),
         import('@aztec-labs/kv-store/sqlite-opfs'),
       ]);
+      const { AztecSQLiteOPFSStore } = kv as any;
 
       const log = createLogger('embedded-wallet:encrypted-stores');
+      // One OPFS pool directory per store. Each persistent store holds an origin-wide Web Lock on its
+      // pool directory until it is closed; with both stores in the default pool ".aztec-kv" the second
+      // open always failed with SqlitePoolBusyError, so the wallet could never open (SDK 6.0.0).
+      const pxePool = storePoolDirectoryFor(kv, pxeName);
+      const walletPool = storePoolDirectoryFor(kv, walletName);
       const pxeKey = await getFreshKey();
       const pxeStore = await AztecSQLiteOPFSStore.open(
         log.createChild('pxe:data'),
         pxeName,
         false,
-        undefined,
+        pxePool,
         pxeKey,
       );
 
@@ -102,7 +119,7 @@ export async function openEncryptedWalletStores(
           log.createChild('wallet:data'),
           walletName,
           false,
-          undefined,
+          walletPool,
           walletKey,
         );
         return {
@@ -114,41 +131,12 @@ export async function openEncryptedWalletStores(
         await pxeStore.close().catch(() => {});
         throw walletErr;
       }
-    } else {
-      // Non-browser or test runner without Worker/OPFS:
-      // Return memory store interface with encryption verified
-      const createEphemeralStore = () => ({
-        openMap: () => ({
-          get: async () => undefined,
-          set: async () => {},
-          delete: async () => {},
-        }),
-        openSingleton: () => ({
-          get: async () => undefined,
-          set: async () => {},
-          delete: async () => {},
-        }),
-        openMultiMap: () => ({
-          getValues: async () => [],
-          set: async () => {},
-          deleteValue: async () => {},
-        }),
-        openArray: () => ({
-          push: async () => {},
-          getAt: async () => undefined,
-          length: () => 0,
-        }),
-        close: async () => {},
-        isEncrypted: true,
-      });
-
-      return {
-        pxeStore: createEphemeralStore(),
-        walletStore: createEphemeralStore(),
-        isEncrypted: true,
-      };
     }
+    // BLOCKED: security risk. No OPFS/Worker means no encrypted persistent store; a stand-in store would
+    // claim encryption it does not have and lose notes silently. Fail closed: the wallet does not open.
+    throw new EncryptedStoreError('This browser cannot keep an encrypted private wallet (OPFS storage and Web Workers are required). Use a current Chrome, Edge, Firefox or Safari outside private browsing.');
   } catch (err: any) {
+    if (err instanceof EncryptedStoreError) throw err;
     throw new EncryptedStoreError(
       `Failed to open encrypted stores: ${err?.message || err}`,
       err,

@@ -103,6 +103,8 @@ This playbook defines the response procedures for the four principal incident cl
 
 ## Incident Class 4: Sequencer Censorship (P6 — Aztec Sequencer Censorship)
 
+> Note (2026-11-11): this class was written for the single testnet RPC. On Aztec Alpha V6 block production is decentralised (no single sequencer); the same signals then point to the node this app is configured with, and the first response is to check that node, not to assume network-level censorship. The "escape hatch" in step 6 has not been verified against V6 and must not be relied on.
+
 **Threat**: The Aztec sequencer refuses to include a user's transaction (targeted censorship or network fault).
 
 ### Detection Signals
@@ -128,6 +130,44 @@ This playbook defines the response procedures for the four principal incident cl
 
 ---
 
+## Incident Class 5: Aztec Protocol Fault or Governed Upgrade
+
+**Threat**: a flaw in the Aztec proving system, protocol circuits or rollup contracts (as in Alpha V5, disclosed 2026-08-07 and fixed by Alpha V6 "Tierra"), or a network upgrade that replaces the canonical rollup.
+
+**What Aztec can and cannot do**: there is no central operator and no pause. Rollup contracts are immutable; a fix ships as a new network version adopted through governance, after an execution delay. Disclosures appear on https://aztec.network/network/status and the Aztec blog. During the V5 incident the guidance was to treat funds and contract state on the affected version as exposed and to migrate. Nothing in Ledger Chat can make a flawed rollup safe; the application can only stop adding value and help people take value out.
+
+### Detection Signals
+
+- A new entry on the Aztec network status page or blog (checked daily by the on-call; no automated feed exists yet).
+- `assertNodeForValue` / `assertNetworkAllowed` start refusing: the node reports a rollup address or version other than the pinned one.
+- Workflow "Aztec testnet deployments" (daily) fails: recorded class IDs or instances no longer match the node.
+- A spike of `humanError` "The Aztec node did not accept the transaction" reports from users. There is no client telemetry by design; reports arrive through support.
+
+### Response Steps
+
+| Step | Action | Owner | Target Time |
+|---|---|---|---|
+| 1 | Confirm against the primary source (status page, disclosure post). Record version affected and Aztec's guidance. | Protocol Lead | T+1h |
+| 2 | Stop new value: set `AZTEC_VALUE_MODE=exits-only` on the server (Railway variable, no code change). Open tabs obey it at their next action: every new payment, shield and agreement asks `/api/aztec/value-mode` right before it moves money. Claim, refund, cancel, withdraw, accepting a received invitation and unshielding to your own address keep working. Use `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=false` only to switch the wallet off entirely (this also removes exits). | Engineer | T+30min |
+| 3 | Publish the in-app notice (template 5.3) and the same text on /docs/status. | Protocol Lead | T+2h |
+| 4 | Keep exits open: claim, refund, cancel and withdraw on existing agreements must stay reachable for the affected network. Do not remove its node URL or class IDs from the build until open agreements are settled or past their deadlines. | Engineer | T+4h |
+| 5 | If the fix is a new rollup: follow docs/AZTEC_UPGRADE_MIGRATION.md. | Engineer | per upgrade timeline |
+| 6 | Re-enable value only after the checks in docs/MAINNET_READINESS.md pass on the new version. | Two reviewers | n/a |
+
+### What this application cannot do
+
+- Pause or reverse transactions, freeze contracts, or move anyone's funds. The contracts have no admin and no pause by design.
+- Tell whether a past transaction exploited a protocol flaw.
+- Force clients to stop: a determined user with a cached bundle can still submit transactions. The flag removes the interface, not the capability.
+
+### Open gaps (not implemented)
+
+- Exits-only mode stops the interface, not the capability: a modified client can still call the contracts directly. Fee Juice bridging stays open, since exits need fees.
+- No automated watch on the Aztec status page.
+- This playbook has not been rehearsed.
+
+---
+
 ## 5. Communication Templates
 
 ### 5.1 VK Deprecation Notice (in-app banner)
@@ -136,6 +176,10 @@ This playbook defines the response procedures for the four principal incident cl
 circuit. Your existing proofs remain valid for 14 days. Please update the app before [DATE] 
 to continue transacting. Contact support if you need assistance.
 ```
+
+### 5.3 Aztec Network Notice (in-app banner and /docs/status)
+
+> Aztec has reported an issue affecting the network version Ledger Chat uses for private payments. New private payments and agreements are switched off. Your messages are not affected. If you have an open escrow or stream, you can still claim, refund or withdraw it from the agreement card. We cannot pause or recover funds on your behalf. Source: [link to the Aztec notice].
 
 ### 5.2 Server Security Event Notice (email/in-app)
 ```

@@ -8,7 +8,7 @@ import { useSecureCamera } from '@/hooks/useSecureCamera';
 import { useSystemAccount } from '@/hooks/useSystemAccount';
 import { useAppKit } from '@reown/appkit/react';
 import { parseScanPayload } from '@/lib/scan/parseScanPayload';
-import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
+import { completeSessionHandshake, previewLink } from '@/lib/scan/sessionHandshake';
 import { useSignMessage, useAccount } from 'wagmi';
 
 const VIEWFINDER_SIZE = 260;
@@ -98,16 +98,10 @@ export default function ScanPage() {
   const [needsWallet, setNeedsWallet] = useState(false);
   const [successLabel, setSuccessLabel] = useState('Done');
   const [fileLoading, setFileLoading] = useState(false);
-  const [pinInput, setPinInput] = useState('');
   const [pinScanData, setPinScanData] = useState<string | null>(null);
+  /** The computer asking to be linked, shown before anything happens. */
+  const [linkLabel, setLinkLabel] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-
-  const pinInputRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
   const hasScannedRef    = useRef(false);
   const firstFrameRef    = useRef(false);
   const addressRef       = useRef(address);
@@ -161,49 +155,32 @@ export default function ScanPage() {
     const route = parseScanPayload(decodedText);
     try {
       if (route.type === 'session') {
-        let embeddedPin: string | undefined = undefined;
-        try {
-          const u = new URL(decodedText);
-          embeddedPin = u.searchParams.get('pin') || undefined;
-        } catch {}
-
         // If wallet is not yet connected on mobile browser, prompt wallet connect
         const currentAddr = getAddress();
         if (!currentAddr) {
           setPinScanData(decodedText);
           setNeedsWallet(true);
-          setErrMsg('Connect your wallet on your phone to link your computer.');
+          setErrMsg('Sign in on this phone with your wallet first. Then the computer can be linked.');
           setStatus('error');
           hasScannedRef.current = false;
           setTimeout(() => openAppKit(), 400);
           return;
         }
 
-        // Auto-authorize: complete handshake directly with embedded PIN or direct session
-        setStatus('verifying_pin');
-        try {
-          const res = await completeSessionHandshake(decodedText, getAddress, signMessageAsync, connector, embeddedPin);
-          if (res.ok) {
-            setSuccessLabel('Computer signed in ✓');
-            setStatus('success');
-            setTimeout(() => router.push('/chat'), 1200);
-            return;
-          } else if (res.needsWallet) {
-            setPinScanData(decodedText);
-            setNeedsWallet(true);
-            setErrMsg('Connect your wallet on your phone to complete signing in.');
-            setStatus('error');
-            hasScannedRef.current = false;
-            setTimeout(() => openAppKit(), 400);
-            return;
-          }
-        } catch {
-          // fallback to manual pin entry below if needed
+        // Never link on scan alone (a code can come from a link someone sent): show which
+        // computer is asking and wait for an explicit "Link this computer".
+        const preview = await previewLink(decodedText);
+        if (!preview.ok) {
+          setPinScanData(decodedText);
+          if (preview.needsWallet) { setNeedsWallet(true); setTimeout(() => openAppKit(), 400); }
+          setErrMsg(preview.message);
+          setStatus('error');
+          hasScannedRef.current = false;
+          return;
         }
-
         setPinScanData(decodedText);
-        setPinInput(embeddedPin || '');
-        setTimeout(() => setStatus('pin_required'), 300);
+        setLinkLabel(preview.label);
+        setStatus('pin_required');
         return;
       } else if (route.type === 'wallet' && route.walletAddress) {
         setSuccessLabel('Opening Chat');
@@ -211,27 +188,8 @@ export default function ScanPage() {
         setStatus('success');
         setTimeout(() => router.push('/chat'), 900);
         return;
-      } else if (route.type === 'passport' && route.slug) {
-        setSuccessLabel('Opening Passport');
-        setStatus('success');
-        setTimeout(() => router.push(`/passport/${route.slug}`), 700);
-        return;
-      } else if (route.type === 'gs1' && route.gtin) {
-        const res = await fetch(`/api/passport/resolve?url=${encodeURIComponent(decodedText)}`);
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          setErrMsg((body as { error?: string }).error || 'No product passport mapped to this GS1 code.');
-          setStatus('error');
-          hasScannedRef.current = false;
-          return;
-        }
-        const data = await res.json();
-        setSuccessLabel('Opening Passport');
-        setStatus('success');
-        setTimeout(() => router.push(`/passport/${data.slug}`), 700);
-        return;
       } else {
-        setErrMsg('QR code not recognized. Try a session QR, wallet address, product label, or GS1 link.');
+        setErrMsg('QR code not recognized. Try a session QR or a wallet address.');
         setStatus('error');
         hasScannedRef.current = false;
       }
@@ -304,10 +262,10 @@ export default function ScanPage() {
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePinConfirm = useCallback(async () => {
-    if (pinInput.length !== 4 || !pinScanData) return;
+    if (!pinScanData) return;
     setStatus('verifying_pin');
     try {
-      const result = await completeSessionHandshake(pinScanData, getAddress, signMessageAsync, connector, pinInput);
+      const result = await completeSessionHandshake(pinScanData, getAddress, signMessageAsync, connector);
       if (!result.ok) {
         const needsWalletConnect = 'needsWallet' in result && result.needsWallet;
         if (needsWalletConnect) {
@@ -323,15 +281,15 @@ export default function ScanPage() {
         }
         return;
       }
-      setSuccessLabel('Device Linked');
+      setSuccessLabel('Computer linked');
       setStatus('success');
       setTimeout(() => router.push('/chat'), 1400);
     } catch {
-      setErrMsg('PIN verification failed. Please check the code shown on the desktop screen and try again.');
+      setErrMsg('The computer could not be linked. Refresh the code on the computer and scan it again.');
       setStatus('error');
       hasScannedRef.current = false;
     }
-  }, [pinInput, pinScanData, getAddress, signMessageAsync, connector, router, openAppKit]);
+  }, [pinScanData, getAddress, signMessageAsync, connector, router, openAppKit]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -355,7 +313,7 @@ export default function ScanPage() {
     firstFrameRef.current = false;
     setErrMsg('');
     setNeedsWallet(false);
-    setPinInput('');
+    setLinkLabel(null);
     setPinScanData(null);
     setTab('camera');
     initScanner();
@@ -482,7 +440,7 @@ export default function ScanPage() {
                   Connect Wallet
                 </button>
                 {pinScanData && (
-                  <button onClick={() => { setNeedsWallet(false); setErrMsg(''); setStatus('pin_required'); hasScannedRef.current = true; }} className="w-full py-4 border border-white/20 text-white font-semibold text-[15px] rounded-xl">
+                  <button onClick={() => { setNeedsWallet(false); setErrMsg(''); if (pinScanData) { hasScannedRef.current = false; handleRouteRef.current(pinScanData); } }} className="w-full py-4 border border-white/20 text-white font-semibold text-[15px] rounded-xl">
                     Retry with PIN
                   </button>
                 )}
@@ -495,53 +453,26 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* ── PIN REQUIRED MODAL ── */}
+        {/* ── CONFIRM THE COMPUTER ── */}
         {status === 'pin_required' && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-2xl z-50 flex flex-col items-center justify-center p-6">
             <div className="w-full max-w-sm flex flex-col items-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#25D366] to-[#ff2a85] flex items-center justify-center mb-6 shadow-lg shadow-[#ff2a85]/30">
+              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
                 <Shield size={28} className="text-white" />
               </div>
-              <h2 className="text-white font-bold text-2xl mb-2">Enter Visual PIN</h2>
-              <p className="text-white/60 text-[15px] text-center mb-4 leading-relaxed px-4">
-                Verify the 4-digit code currently shown on your computer screen.
+              <h2 className="text-white font-bold text-2xl mb-2 text-center">Link this computer?</h2>
+              <p className="text-white/80 text-[15px] text-center mb-4 leading-relaxed px-4">
+                <strong>{linkLabel ?? 'A computer'}</strong> wants to use your Ledger Chat account.
               </p>
-              {/* Signing in by QR hands that computer your account: say so before the PIN. */}
-              <p role="note" className="text-[13px] text-center mb-8 leading-relaxed px-4 py-3 rounded-2xl bg-[#ff2a85]/10 text-[#ffb3cf] border border-[#ff2a85]/25">
-                This signs a computer into your account. Only continue if you opened this code yourself on a computer in front of you. Never enter it for someone who sent you the code or a link.
+              <p role="note" className="text-[13px] text-center mb-3 leading-relaxed px-4 py-3 rounded-2xl bg-[#ff2a85]/10 text-[#ffb3cf] border border-[#ff2a85]/25">
+                It will be able to read and send your messages. Only link it if you opened ledgerchat.org yourself on a computer in front of you. Never scan a code someone sent you.
               </p>
-              
-              <div className="flex gap-4 mb-10">
-                {[0,1,2,3].map((i) => (
-                  <input
-                    key={i}
-                    ref={pinInputRefs[i]}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={pinInput[i] || ''}
-                    className="w-14 h-16 text-center text-2xl font-bold bg-[#1A1A1A] border-2 border-white/10 rounded-2xl focus:outline-none focus:border-[#25D366] focus:bg-[#2A2A2A] transition-all text-white shadow-inner"
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      const next = pinInput.split('');
-                      next[i] = val.slice(-1);
-                      setPinInput(next.join(''));
-                      if (val && i < 3) pinInputRefs[i + 1].current?.focus();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace' && !pinInput[i] && i > 0) pinInputRefs[i - 1].current?.focus();
-                    }}
-                  />
-                ))}
-              </div>
-              
+              <p className="text-white/50 text-[13px] text-center mb-8 leading-relaxed px-4">
+                Your wallet stays on this phone. Unlink the computer any time in Settings → Linked devices.
+              </p>
               <div className="w-full flex flex-col gap-3">
-                <button
-                  onClick={handlePinConfirm}
-                  disabled={pinInput.length < 4}
-                  className="w-full py-4 bg-white text-black font-bold text-[15px] rounded-2xl disabled:opacity-50 transition-opacity"
-                >
-                  Verify Device
+                <button onClick={handlePinConfirm} className="w-full py-4 bg-white text-black font-bold text-[15px] rounded-2xl">
+                  Link this computer
                 </button>
                 <button onClick={reset} className="w-full py-4 text-white/50 font-medium text-[15px] hover:text-white transition-colors">
                   Cancel
@@ -563,7 +494,7 @@ export default function ScanPage() {
                  </div>
                )}
                <h2 className="text-white font-bold text-xl">
-                 {status === 'verifying_pin' ? 'Verifying encryption key...' : successLabel}
+                 {status === 'verifying_pin' ? 'Linking the computer…' : successLabel}
                </h2>
              </div>
           </div>

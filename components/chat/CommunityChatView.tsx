@@ -3,23 +3,20 @@ import React, {
   useState, useEffect, useRef, useCallback, useMemo
 } from 'react';
 import dynamic from 'next/dynamic';
-import { Send, Plus, MapPin, CircleDollarSign, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Zap, FileText, Check } from 'lucide-react';
+import { Send, Plus, MapPin, CircleDollarSign, BarChart2, Image as ImgIcon, Mic, Hash, CheckCircle, X, Reply, Play, Pause, Pin, Search, Users, ChevronDown, Film, MoreVertical, Copy, Trash2, ThumbsUp, Heart, Laugh, AlertCircle, Lock, Volume2, Globe, Shield, ExternalLink, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { NativeCryptoSendModal } from './NativeCryptoSendModal';
-const ZkMoneyModal = dynamic(() => import('./ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { AnimatePresence, motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
 import { sanitizeRichText } from '@/lib/security/sanitizeRichText';
 import { parseZkPaymentPayload, parseEscrowPayload } from '@/lib/zk/zkMoney';
 import { parseTipPayload, parseBountyPayload } from '@/lib/zk/zkCommunityPayments';
-import { parseStreamPayload, encodeStreamPayload, ZkPaymentStream } from '@/lib/zk/zkStreaming';
-import { parseInvoicePayload, encodeInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
+import { parseStreamPayload } from '@/lib/zk/zkStreaming';
+import { parseInvoicePayload } from '@/lib/zk/zkInvoice';
 const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then(m => m.ZkWalletPanel), { ssr: false });
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
-import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
-const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').then(m => m.ZkStreamManager), { ssr: false });
-const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
+import { requestValueHandoff } from '@/lib/chat/value-handoff';
 import { markDeletedForMe, isHidden } from '@/lib/chat/deleted-messages';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -459,9 +456,13 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
   if (content.startsWith('__ZK_ESCROW__:')) {
     const escrow = parseEscrowPayload(content);
     if (escrow) {
+      // Plain JSON any member can post: never shown as a locked escrow with amounts or actions.
       return (
-        <div className="min-w-[260px] max-w-[320px] my-1">
-          <ZkEscrowCard escrow={escrow} currentUserTag={escrow.senderTag} />
+        <div className="min-w-[240px] max-w-[320px] my-1 rounded-2xl border border-[#eceef2] bg-white p-4">
+          <p className="text-[12px] font-semibold text-[#727a88]">Escrow (legacy message)</p>
+          <p className="mt-1.5 text-[14px] text-[#4a505c] leading-snug">
+            This message is not backed by a contract: nothing is locked, and any amount in it is unverified.
+          </p>
         </div>
       );
     }
@@ -508,63 +509,16 @@ function MessageContent({ content, mine }: { content: string; mine: boolean }) {
     }
   }
 
-  if (content.startsWith('__ZK_STREAM__:')) {
-    const stream = parseStreamPayload(content);
-    if (stream) {
-      return (
-        <div className="bg-[#1C1C1E] text-white rounded-2xl p-4 shadow-lg border border-black/10 min-w-[240px] max-w-[320px]">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <Zap size={14} />
-              </div>
-              <div>
-                <span className="text-[12px] font-bold text-white">Private Stream</span>
-                <span className="ml-1.5 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Aztec</span>
-              </div>
-            </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          </div>
-          <div className="py-2 border-y border-white/10 my-2">
-            <p className="text-[20px] font-black text-white font-mono">{(stream as any).totalAmount || stream.depositAmount} <span className="text-[12px] text-emerald-400">zk{stream.token}</span></p>
-            <p className="text-[11px] text-white/50">{(stream as any).flowRate || stream.ratePerSecond} {stream.token}/sec</p>
-          </div>
-          <div className="text-[10px] font-mono text-white/60 flex justify-between">
-            <span>To: {stream.recipientTag}</span>
-            <span className="text-emerald-400">Live</span>
-          </div>
-        </div>
-      );
-    }
-  }
-
-  if (content.startsWith('__ZK_INVOICE__')) {
-    const invoice = parseInvoicePayload(content);
-    if (invoice) {
-      return (
-        <div className="bg-[#1C1C1E] text-white rounded-2xl p-4 shadow-lg border border-black/10 min-w-[240px] max-w-[320px]">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                <FileText size={14} />
-              </div>
-              <span className="text-[12px] font-bold text-white">Shielded Invoice</span>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">
-              {invoice.status}
-            </span>
-          </div>
-          <h4 className="font-bold text-white text-[13px]">{invoice.title || 'Private Invoice'}</h4>
-          <p className="text-[11px] text-white/60 mb-2">{(invoice as any).description || invoice.notes || 'Confidential Invoice'}</p>
-          <div className="flex items-center justify-between pt-2 border-t border-white/10">
-            <span className="text-[18px] font-black text-emerald-400">{(invoice as any).amount || invoice.totalAmount || '0'} <span className="text-[11px]">zk{invoice.token}</span></span>
-            <span className="px-2.5 py-1 rounded-xl bg-white/10 text-white text-[11px] font-mono">
-              zk.money
-            </span>
-          </div>
-        </div>
-      );
-    }
+  // `__ZK_STREAM__` / `__ZK_INVOICE__` are plain JSON any member can post: never shown as live streams or invoices.
+  if ((content.startsWith('__ZK_STREAM__:') && parseStreamPayload(content)) || (content.startsWith('__ZK_INVOICE__') && parseInvoicePayload(content))) {
+    return (
+      <div className="min-w-[240px] max-w-[320px] my-1 rounded-2xl border border-[#eceef2] bg-white p-4">
+        <p className="text-[12px] font-semibold text-[#727a88]">{content.startsWith('__ZK_STREAM__:') ? 'Stream' : 'Invoice'} (legacy message)</p>
+        <p className="mt-1.5 text-[14px] text-[#4a505c] leading-snug">
+          This message is not backed by a contract and any amount in it is unverified. Private payments and agreements happen in a direct chat.
+        </p>
+      </div>
+    );
   }
 
   if (/<[a-z][\s\S]*>/i.test(content)) {
@@ -589,7 +543,6 @@ export function CommunityChatView({
   const [sending, setSending] = useState(false);
   const [showAppDrawer, setShowAppDrawer] = useState(false);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
-  const [showZkModal, setShowZkModal] = useState(false);
   const [cryptoRecipient, setCryptoRecipient] = useState('');
   const [showRecipientSheet, setShowRecipientSheet] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
@@ -611,8 +564,6 @@ export function CommunityChatView({
   const [showZkWallet,       setShowZkWallet]       = useState(false);
   const [showZkShield,       setShowZkShield]       = useState(false);
   const [zkShieldMode,       setZkShieldMode]       = useState<'shield'|'unshield'>('shield');
-  const [showZkStreamModal,  setShowZkStreamModal]  = useState(false);
-  const [showZkInvoiceModal, setShowZkInvoiceModal] = useState(false);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1134,8 +1085,9 @@ export function CommunityChatView({
                 },
                 ...(!isMe(contextMenu.msg) && /^0x[0-9a-fA-F]{40}$/.test(contextMenu.msg.authorAddress || '')
                   ? [
-                      // Private payments go to an Aztec address, which the sender enters in the wallet.
-                      { label: 'Send private payment', icon: Shield, fn: () => { setContextMenu(null); setShowZkModal(true); } },
+                      // Private value moves in the 1:1 chat with this member (G7, nothing on the community server).
+                      { label: 'Send private payment', icon: Shield, fn: () => { const peer = contextMenu.msg.authorAddress; setContextMenu(null); requestValueHandoff({ peer, action: 'pay' }); } },
+                      { label: 'Private agreement', icon: Lock, fn: () => { const peer = contextMenu.msg.authorAddress; setContextMenu(null); requestValueHandoff({ peer, action: 'agreement' }); } },
                       { label: 'Send payment', icon: CircleDollarSign, fn: () => { setCryptoRecipient(contextMenu.msg.authorAddress); setContextMenu(null); setShowCryptoModal(true); } },
                     ]
                   : []),
@@ -1180,9 +1132,8 @@ export function CommunityChatView({
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 p-3 bg-white rounded-2xl shadow-md border border-black/[0.04]">
                 {[
-                  { icon: Lock, label: 'zk.money', color: 'bg-[#1C1C1E]', fn: () => setShowZkModal(true) },
-                  { icon: Zap, label: 'ZK Stream', color: 'bg-[#1C1C1E]', fn: () => setShowZkStreamModal(true) },
-                  { icon: FileText, label: 'ZK Invoice', color: 'bg-[#1C1C1E]', fn: () => setShowZkInvoiceModal(true) },
+                  // Community posts are stored on our server: private payments, agreements and invoices are never posted here.
+                  { icon: Lock, label: 'Private pay', color: 'bg-[#1C1C1E]', fn: () => { setShowAppDrawer(false); toast("Private payments and agreements happen in a direct chat. Press and hold a member's message, then choose Send private payment.", { duration: 6000 }); } },
                   { icon: ImgIcon, label: 'Photo/Video', color: 'bg-[#FF9500]', fn: () => fileInputRef.current?.click() },
                   { icon: CircleDollarSign, label: 'Crypto Send', color: 'bg-[#1C1C1E]', fn: () => { setCryptoRecipient(''); setShowRecipientSheet(true); } },
                   { icon: MapPin, label: 'Location', color: 'bg-[#3A3A3C]', fn: sendLocation },
@@ -1356,18 +1307,6 @@ export function CommunityChatView({
         )}
       </AnimatePresence>
 
-      {/* ── ZK.MONEY PRIVATE PAYMENT MODAL ── */}
-      <ZkMoneyModal
-        isOpen={showZkModal}
-        onClose={() => setShowZkModal(false)}
-        myAddress={myAddress}
-        communityName={communityName}
-        onSuccess={(payload, result) => {
-          executeSend(payload);
-          setShowZkModal(false);
-        }}
-      />
-
       {/* ── ZK WALLET PANEL (slide-over with backdrop) ── */}
       <AnimatePresence>
         {showZkWallet && (
@@ -1391,7 +1330,6 @@ export function CommunityChatView({
                 onClose={() => setShowZkWallet(false)}
                 onShield={() => { setZkShieldMode('shield'); setShowZkShield(true); }}
                 onUnshield={() => { setZkShieldMode('unshield'); setShowZkShield(true); }}
-                onSend={() => setShowZkModal(true)}
               />
             </motion.div>
           </>
@@ -1410,35 +1348,6 @@ export function CommunityChatView({
         )}
       </AnimatePresence>
 
-      {/* ── Aztec zk.money Payment Stream Modal ── */}
-      {showZkStreamModal && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowZkStreamModal(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <ZkStreamManager
-              userAddress={myAddress}
-              onClose={() => setShowZkStreamModal(false)}
-              onStreamCreated={(stream: any) => {
-                executeSend(encodeStreamPayload(stream));
-                setShowZkStreamModal(false);
-                toast.success('Private Aztec payment stream active');
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ── Aztec zk.money Invoice Modal ── */}
-      {showZkInvoiceModal && (
-        <ZkInvoiceModal
-          userAddress={myAddress}
-          onClose={() => setShowZkInvoiceModal(false)}
-          onInvoiceCreated={(invoice) => {
-            executeSend(encodeInvoicePayload(invoice));
-            setShowZkInvoiceModal(false);
-            toast.success('Factura confidencial publicada!');
-          }}
-        />
-      )}
     </div>
   );
 }

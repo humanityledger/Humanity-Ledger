@@ -2,7 +2,7 @@ import type { DocPage } from "../types";
 
 export const about: DocPage = {
   slug: "about",
-  href: "/company",
+  href: "/docs/about",
   label: "About",
   title: "About Humanity Ledger",
   summary: "Who we are, what we are building and how we work.",
@@ -57,8 +57,8 @@ export const about: DocPage = {
       items: [
         { title: "LinkedIn", text: "Company news and hiring.", href: "https://es.linkedin.com/company/humanity-ledger", icon: "linkedin", external: true },
         { title: "GitHub", text: "Source code, issues and releases.", href: "https://github.com/humanityledger/Humanity-Ledger", icon: "github", external: true },
-        { title: "Contact", text: "Questions, press and partnerships.", href: "/contact", icon: "mail" },
-        { title: "Blog", text: "How the product works and why.", href: "/blog", icon: "book" },
+        { title: "Contact", text: "Questions, press and partnerships.", href: "/docs/contact", icon: "mail" },
+        { title: "Blog", text: "How the product works and why.", href: "/docs/blog", icon: "book" },
       ],
     },
   ],
@@ -66,7 +66,7 @@ export const about: DocPage = {
 
 export const contact: DocPage = {
   slug: "contact",
-  href: "/contact",
+  href: "/docs/contact",
   label: "Contact",
   title: "Contact us",
   summary: "The right place for each kind of question, so it reaches the right person.",
@@ -96,7 +96,7 @@ export const contact: DocPage = {
 
 export const status: DocPage = {
   slug: "status",
-  href: "/status",
+  href: "/docs/status",
   label: "Status",
   title: "Service status",
   summary: "A live check of our servers, run from your browser when you open this page.",
@@ -129,7 +129,7 @@ export interface BlogPost {
 
 const walletPost: DocPage = {
   slug: "why-your-wallet-is-your-account",
-  href: "/blog/why-your-wallet-is-your-account",
+  href: "/docs/why-your-wallet-is-your-account",
   label: "Why your wallet is your account",
   summary: "Phone numbers were never meant to be identities. Wallets were.",
   keywords: ["blog", "wallet", "identity", "phone number", "account"],
@@ -163,7 +163,7 @@ const walletPost: DocPage = {
 
 const encryptionPost: DocPage = {
   slug: "what-encryption-covers-today",
-  href: "/blog/what-encryption-covers-today",
+  href: "/docs/what-encryption-covers-today",
   label: "What encryption covers in Ledger Chat today",
   summary: "An honest map of what is encrypted end to end, what is not yet, and how the app tells you.",
   keywords: ["blog", "encryption", "e2ee", "fallback", "communities", "attachments", "honesty"],
@@ -202,7 +202,7 @@ export const BLOG_POSTS: BlogPost[] = [
 
 export const blog: DocPage = {
   slug: "blog",
-  href: "/blog",
+  href: "/docs/blog",
   label: "Blog",
   summary: "How Ledger Chat works, why we made the choices we made, and what changed.",
   keywords: ["blog", "news", "articles", "posts", "updates"],

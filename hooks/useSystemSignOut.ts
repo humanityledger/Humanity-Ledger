@@ -79,6 +79,7 @@ export function useSystemSignOut() {
                     'system_vault_v1',
                     'system_pending_wakeup',
                     'system_wallet_addr',  // Extra guard
+                    'hl.link.self.v1',     // this computer's channel to the phone (lib/link/channel.ts)
                 ];
                 targets.forEach(t => localStorage.removeItem(t));
                 // Failsafe: also nuke via direct key in case the key was stored differently
@@ -154,7 +155,8 @@ export function useSystemSignOut() {
                             const lower = db.name.toLowerCase();
                             if (
                                 lower.includes('xmtp') ||
-                                lower.includes('Ledger Chatsecurestore') ||
+                                // (A 'Ledger Chatsecurestore' entry here never matched a lowercased name, so that store was
+                                // always wiped on sign-out. Kept that way on purpose: the more restrictive behaviour.)
                                 lower.includes('ledger_chat_history') ||
                                 // CRITICAL: Preserve the hardware-bound Revolut-style persistence key.
                                 // Deleting this would destroy the non-extractable AES-GCM CryptoKey

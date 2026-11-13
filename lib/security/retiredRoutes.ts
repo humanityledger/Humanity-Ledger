@@ -11,6 +11,9 @@
  * never listed (they are called from outside this repository).
  */
 export const RETIRED_API_ROUTES: readonly string[] = [
+  // Email sign-in removed on 2026-11-11: the only way in is a wallet (SIWE) or a linked phone.
+  '/api/auth/send-code',
+  '/api/auth/verify-code',
   '/api/admin/heartbeat',
   '/api/admin/launch-checklist',
   '/api/admin/logout',
@@ -266,6 +269,88 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/premium/webhooks',
   '/api/premium/paymaster',
   '/api/aztec/balance',
+  // 2026-11-11 audit: live handlers of the retired terminal/forum/wallet products that no UI,
+  // library, script or workflow calls. Cron, webhook, admin, public-API and privacy routes were
+  // left out on purpose. To bring one back, delete its line and review its authentication.
+  '/api/academy/parse-document',
+  '/api/academy/progress',
+  '/api/academy/submissions',
+  '/api/academy/sync',
+  '/api/analytics/dune/export',
+  '/api/analytics/dune/queries',
+  '/api/bridge/status',
+  '/api/forum/admin/queue',
+  '/api/forum/categories',
+  '/api/forum/likes',
+  '/api/forum/notifications',
+  '/api/forum/posts',
+  '/api/forum/posts/[id]',
+  '/api/forum/search',
+  '/api/forum/tags',
+  '/api/forum/telemetry',
+  '/api/forum/topics',
+  '/api/forum/topics/[id]',
+  '/api/forum/upload',
+  '/api/forum/users',
+  '/api/gamification/leaderboard',
+  '/api/ledger/activity',
+  '/api/ledgers/live',
+  '/api/ledgers/sse',
+  '/api/market/new-pairs',
+  '/api/market/new-pairs/live',
+  '/api/market/new-pairs/sse',
+  '/api/market/pool-prices',
+  '/api/market/prices',
+  '/api/market/signals',
+  '/api/network/evm/recent',
+  '/api/network/forensics',
+  '/api/network/ledger-flows',
+  '/api/network/ledger/alert-stats',
+  '/api/network/ledger/top-ledgers',
+  '/api/network/mempool',
+  '/api/network/mempool/recent',
+  '/api/network/v1/hashrate',
+  '/api/network/v1/lightning/stats',
+  '/api/network/wallet-connections',
+  '/api/portfolio/onchain',
+  '/api/premium/prover',
+  '/api/premium/wallet-analytics',
+  '/api/premium/watched-wallets',
+  '/api/wallet/history/deep',
+  '/api/wallet/history/enriched',
+  '/api/wallet/nfts',
+  '/api/wallet/portfolio',
+  '/api/wallet/portfolio/history',
+  '/api/wallet/portfolio/history-real',
+  '/api/wallet/positions',
+  '/api/wallet/swap',
+  '/api/wallet/swap/quote',
+  '/api/wallet/transaction/status',
+  '/api/wallet/transactions',
+  // 2026-11-11 (second pass): live handlers with no caller in the client, libraries, scripts or
+  // workflows, and no UI planned. Calls, community invite tokens and token gates, auth/identity
+  // helpers and Aztec operator routes. Delete a line to bring one back, then review its authentication.
+  '/api/auth/me',
+  '/api/auth/check-email',
+  '/api/auth/kyc-qr-poll',
+  '/api/auth/studio',
+  '/api/auth/qr-sync-seed',
+  '/api/identity/token',
+  '/api/aztec/anchor',
+  '/api/aztec/deploy-token',
+  '/api/aztec/migrate-identity',
+  '/api/aztec/sequencer/health',
+  '/api/aztec/sequencer/overview',
+  '/api/call/room',
+  '/api/call/room/[roomId]',
+  '/api/call/room/[roomId]/join',
+  '/api/call/room/[roomId]/moderate',
+  '/api/call/join/[roomId]',
+  '/api/call/token',
+  '/api/chat/communities/[id]/invite',
+  '/api/chat/communities/[id]/gate',
+  '/api/chat/telemetry',
+  '/api/moderation/status',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));
@@ -278,4 +363,32 @@ function toRegex(u: string): string {
 
 export function isRetiredApiRoute(pathname: string): boolean {
   return PATTERNS.some(p => p.test(pathname));
+}
+
+/**
+ * Page paths that belonged to products other than Ledger Chat. Their code was
+ * removed; old links and bookmarks are sent somewhere that exists instead of
+ * a 404. Matching is by whole path segment, so /hubris is not /hub.
+ */
+const RETIRED_PAGES: Record<string, string> = {
+  hub: '/chat', terminal: '/chat', dashboard: '/chat', portfolio: '/chat', markets: '/chat', governance: '/chat',
+  network: '/chat', qds: '/chat', predictions: '/chat', sequencer: '/chat', forum: '/communities', news: '/chat',
+  academy: '/chat', 'cosmic-forge': '/chat', creator: '/chat', vip: '/chat', ticket: '/chat', saved: '/chat',
+  bridge: '/chat', ledger: '/chat', ledgerpost: '/chat', passport: '/chat', registry: '/chat', 'gold-registry': '/chat',
+  'sovereign-intel': '/chat', 'voss-supremacy': '/chat', 'zk-sandbox': '/chat', sandbox: '/chat', demo: '/chat',
+  canary: '/chat', clearance: '/chat', 'mobile-kyc': '/chat', 'test-qd-flow': '/chat', 'test-xmtp': '/chat',
+  infrastructure: '/chat', directory: '/chat', ecosystem: '/', product: '/', protocol: '/', vision: '/', story: '/',
+  manifesto: '/', 'open-letter': '/', partnership: '/', team: '/', 'use-cases': '/', accessibility: '/',
+  architecture: '/docs/architecture', security: '/docs/security-model', roadmap: '/docs/changelog',
+  login: '/connect', 'sign-up': '/connect',
+  'zero-knowledge': '/docs/zero-knowledge', whitepaper: '/docs/whitepaper', blog: '/docs/blog', changelog: '/docs/changelog',
+  company: '/docs/about', contact: '/docs/contact', support: '/docs/contact', status: '/docs/status',
+  developers: '/docs/developers', developer: '/docs/developers', 'api-docs': '/docs/developers',
+  faq: '/docs/overview', 'how-it-works': '/docs/overview',
+};
+
+/** Where a retired page path should go, or null when the path is still served. */
+export function retiredPageTarget(pathname: string): string | null {
+  const first = pathname.split('/')[1] ?? '';
+  return Object.prototype.hasOwnProperty.call(RETIRED_PAGES, first) ? RETIRED_PAGES[first] : null;
 }

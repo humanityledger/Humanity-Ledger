@@ -37,18 +37,9 @@ describe('Aztec Encrypted Store Fortification (OPFS SQLite & Key Derivation)', (
     await expect(openEncryptedWalletStores(null as any)).rejects.toThrow(EncryptedStoreError);
   });
 
-  it('openEncryptedWalletStores opens encrypted stores with isEncrypted flag', async () => {
-    const stores = await openEncryptedWalletStores(DUMMY_SIG_TESTNET, {
-      pxeName: 'test_pxe',
-      walletName: 'test_wallet',
-    });
-
-    expect(stores.isEncrypted).toBe(true);
-    expect(stores.pxeStore).toBeDefined();
-    expect(stores.walletStore).toBeDefined();
-
-    // Clean up
-    await stores.pxeStore.close().catch(() => {});
-    await stores.walletStore.close().catch(() => {});
+  it('fails closed without OPFS + Worker: no stand-in store that claims encryption', async () => {
+    await expect(
+      openEncryptedWalletStores(DUMMY_SIG_TESTNET, { pxeName: 'test_pxe', walletName: 'test_wallet' }),
+    ).rejects.toThrow(/encrypted private wallet/);
   });
 });

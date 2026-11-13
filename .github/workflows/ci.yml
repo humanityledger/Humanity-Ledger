@@ -32,6 +32,48 @@ jobs:
         run: npx next lint
       - name: Forbidden patterns check
         run: node scripts/forbidden-patterns.mjs
+      - name: One Aztec SDK (@aztec-labs, pinned), aliases resolve
+        run: node scripts/aztec/check-sdk-single-version.mjs
+      - name: Contract artifacts were compiled from the sources in this tree
+        run: node scripts/aztec/check-artifact-sources.mjs
+      - name: SDK still encrypts the wallet stores (kv-store, wallets, pxe)
+        run: node scripts/aztec/inspect-store-encryption.mjs
+      - name: Unit Tests (Aztec client gates, payments, chat handoff)
+        run: >
+          npx vitest run
+          test/unit/aztec/agreement-invite.test.ts
+          test/unit/aztec/agreement-confirm.test.ts
+          test/unit/aztec/agreement-message.test.ts
+          test/unit/aztec/agreement-policy.test.ts
+          test/unit/aztec/agreement-order.test.ts
+          test/unit/aztec/token-check.test.ts
+          test/unit/aztec/direct-payment.test.ts
+          test/unit/aztec/peer-binding.test.ts
+          test/unit/aztec/fee-juice.test.ts
+          test/unit/aztec/fees.test.ts
+          test/unit/aztec/single-flight.test.ts
+          test/unit/aztec/stream-terms.test.ts
+          test/unit/aztec/wallet-wipe.test.ts
+          test/unit/aztec/deployments-registry.test.ts
+          test/unit/aztec/value-mode.test.ts
+          test/unit/security/audit-2026-11-11.test.ts
+          test/unit/auth/pin-lock.test.ts
+          test/unit/aztec/store-encryption.test.ts
+          test/unit/aztec/address-fingerprint.test.ts
+          test/unit/aztec/node-route.test.ts
+          test/unit/aztec/tab-handoff.test.ts
+          test/unit/aztec/wallet-open-tokens.test.ts
+          test/unit/aztec/store-pools.test.ts
+          test/unit/payments
+          test/unit/auth/wallet-links.test.ts
+          test/unit/auth/linked-devices.test.ts
+          test/unit/auth/connect-wallet-only.test.ts
+          test/unit/auth/qr-link-e2e.test.ts
+          test/unit/chat/value-handoff.test.ts
+          test/unit/chat/stickers.test.ts
+          test/unit/chat/calls.test.ts
+          test/unit/studio
+          test/unit/studio-store-sanitize.test.ts
       - name: Unit Tests (security)
         run: npx vitest run test/unit/security
         env:

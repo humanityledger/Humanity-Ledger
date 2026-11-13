@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useAccount, useBalance, useDisconnect, useSignMessage } from 'wagmi';
 import { toast } from 'sonner';
-import { QRCodeSVG } from 'qrcode.react';
 import { useLedgerSettings } from '../terminal/LedgerChatSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
@@ -22,6 +21,7 @@ import { deriveAztecKeySet } from '@/lib/zk/aztecPxe';
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
+import { PrivateWalletStatus } from '@/components/zk/PrivateWalletStatus';
 import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { exportableLocalStorage } from '@/lib/settings/exportSafety';
@@ -30,6 +30,7 @@ import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
 import { CHAT_THEMES, findChatTheme } from '@/lib/chat/themes';
+import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -46,43 +47,31 @@ interface LedgerSettingsFullProps {
   onClose: () => void;
 }
 
-// ─── Executive Swiss Precision Toggle (Serious, Elegant, No Tacky Wobble) ────────────
-const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) => (
+// ─── Switch: the same one as the call settings sheet in the chat ────────────────
+const Toggle = ({ value, onChange, disabled = false, label }: { value: boolean; onChange?: (v: boolean) => void; disabled?: boolean; label?: string }) => (
   <button
     type="button"
     role="switch"
     aria-checked={value}
+    aria-label={label}
     disabled={disabled}
     onClick={(e) => {
       e.stopPropagation();
       onChange?.(!value);
     }}
-    className={`relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus:outline-none border border-black/[0.08] ${
-      disabled ? 'opacity-40 cursor-not-allowed' : ''
-    } ${value ? 'bg-[#15171c] shadow-[inset_0_1px_2px_rgba(0,0,0,0.18)]' : 'bg-[#E4E4E7] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]'}`}
+    // icon-btn: exempt from the 44 px minimum height for buttons on mobile (globals.css), which
+    // stretched the switch into an oval; the whole row is the touch target.
+    className={`icon-btn relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2754d6] ${
+      disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+    } ${value ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}
   >
-    <motion.span
-      layout
-      transition={{
-        type: 'spring',
-        stiffness: 700,
-        damping: 42,
-        mass: 0.5
-      }}
-      animate={{
-        x: value ? 20 : 0,
-      }}
-      className="pointer-events-none relative inline-flex items-center justify-center h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2),0_1px_1px_rgba(0,0,0,0.1)]"
-    >
-      {/* Precision Micro-Indicator Dot */}
-      <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${value ? 'bg-[#15171c]' : 'bg-[#D4D4D8]'}`} />
-    </motion.span>
+    <span className={`absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm transition-transform duration-200 ${value ? 'translate-x-[18px]' : 'translate-x-0'}`} />
   </button>
 );
 
-// ─── Setting Row (Clean Minimalist Typography — No Cluttered Logos/Icons) ────────
+// ─── Setting row: icon tile, title, one line of help (as in the chat's call settings) ──
 const Row = ({
-  label, sublabel, value, onTap, danger = false,
+  icon, label, sublabel, value, onTap, danger = false,
   toggle, onToggle, badge, disabled = false
 }: {
   icon?: React.ReactNode; label: string; sublabel?: string; value?: string;
@@ -106,13 +95,21 @@ const Row = ({
           onTap();
         }
       }}
-      className={`w-full flex items-center justify-between gap-3.5 px-0 py-3.5 border-b border-[#f2f4f7] last:border-0 text-left transition-colors select-none ${
-        disabled ? 'opacity-40 cursor-not-allowed' : (onTap || hasToggle) ? 'hover:bg-[#f2f4f7]/50 active:bg-[#f2f4f7] cursor-pointer' : 'cursor-default'
+      className={`w-full flex items-center justify-between gap-3 py-3 border-b border-[#f0f1f4] last:border-0 text-left transition-colors select-none ${
+        disabled ? 'opacity-40 cursor-not-allowed' : (onTap || hasToggle) ? 'hover:bg-[#f7f8fa] active:bg-[#f2f4f7] cursor-pointer' : 'cursor-default'
       }`}
     >
+      {icon && (
+        <span
+          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 [&>svg]:w-[17px] [&>svg]:h-[17px] ${danger ? 'bg-[#fdecec] text-[#d93036]' : 'bg-[#eff1f4] text-[#15171c]'}`}
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+      )}
       <div className="flex-1 min-w-0 pr-2">
         <p className={`text-[15px] font-medium leading-tight ${danger ? 'text-[#d93036]' : 'text-[#15171c]'}`}>{label}</p>
-        {sublabel && <p className="text-[12px] text-[#727a88] mt-1 leading-snug">{sublabel}</p>}
+        {sublabel && <p className="text-[13px] text-[#727a88] mt-0.5 leading-snug">{sublabel}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {badge && (
@@ -120,9 +117,9 @@ const Row = ({
             {badge}
           </span>
         )}
-        {value && <span className="text-[14px] text-[#727a88] font-normal">{value}</span>}
+        {value && <span className="text-[14px] text-[#727a88] font-normal max-w-[160px] truncate">{value}</span>}
         {hasToggle ? (
-          <Toggle value={toggle} onChange={onToggle} disabled={disabled} />
+          <Toggle value={toggle} onChange={onToggle} disabled={disabled} label={label} />
         ) : onTap ? (
           <ChevronRight size={16} className="text-[#c9ced6]" />
         ) : null}
@@ -138,70 +135,58 @@ const Group = ({ title, footer, children }: {
 }) => (
   <div className="mb-6">
     {title && (
-      <p className="text-[12px] font-semibold text-[#727a88] px-1 mb-1.5">
+      <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">
         {title}
       </p>
     )}
-    <div className="bg-white rounded-[14px] overflow-hidden shadow-sm px-4">
+    <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden px-4">
       {children}
     </div>
     {footer && (
-      <p className="text-[12px] text-[#727a88] px-1 mt-2 leading-relaxed">{footer}</p>
+      <p className="text-[12.5px] text-[#727a88] px-1 mt-2 leading-relaxed">{footer}</p>
     )}
   </div>
 );
 
-// ─── Real ISO-Compliant QR Code (Scannable by Any Camera / Phone) ─────────────
-const DeviceQRCode = ({ data, size = 200 }: { data: string; size?: number }) => (
-  <div className="p-3 bg-white rounded-[16px] shadow-sm flex items-center justify-center">
-    <QRCodeSVG
-      value={data || 'https://ledgerchat.org/chat'}
-      size={size}
-      level="M"
-      includeMargin={false}
-      className="rounded-[10px]"
-    />
-  </div>
-);
-
-// Settings grouped as Swiss-precision typography sections (No Cluttered Icons)
+// Settings sections, in the card style of the chat (rounded white cards on #f4f5f7, quiet
+// sentence-case labels). Each sublabel names what is really inside the section.
 const SETTINGS_SECTIONS = [
   {
-    title: 'MY ACCOUNT',
+    title: 'Account',
     items: [
-      { id: 'account', label: 'Profile & Devices', sublabel: 'Name, photo, wallet address' },
+      { id: 'account', label: 'Profile and devices', sublabel: 'Name, photo, linked devices', icon: User },
     ],
   },
   {
-    title: 'MESSAGES',
+    title: 'Messages',
     items: [
-      { id: 'notifications', label: 'Notifications', sublabel: 'Sounds, vibration, alerts' },
-      { id: 'chat', label: 'Chat Appearance', sublabel: 'Wallpaper, typography, bubbles' },
+      { id: 'notifications', label: 'Notifications', sublabel: 'Sounds, vibration, alerts', icon: Bell },
+      { id: 'chat', label: 'Chat appearance', sublabel: 'Theme, wallpaper, text size, bubbles', icon: Palette },
     ],
   },
   {
-    title: 'PRIVACY & SECURITY',
+    title: 'Privacy and security',
     items: [
-      { id: 'privacy', label: 'Privacy', sublabel: 'Who can see your info' },
-      { id: 'security', label: 'Security', sublabel: 'Sessions, authentication' },
+      { id: 'privacy', label: 'Privacy', sublabel: 'Last seen, read receipts, disappearing messages', icon: Eye },
+      { id: 'security', label: 'Security', sublabel: 'PIN lock, encryption, IP hiding', icon: Lock },
     ],
   },
   {
-    title: 'CALLS',
+    title: 'Calls',
     items: [
-      { id: 'calls', label: 'Calls', sublabel: 'Camera, microphone, audio quality' },
+      { id: 'calls', label: 'Calls', sublabel: 'Hide my IP address, vibration', icon: Phone },
     ],
   },
   {
-    title: 'STORAGE',
+    title: 'Storage',
     items: [
-      { id: 'storage', label: 'Storage & Data', sublabel: 'Cache, network usage' },
+      { id: 'storage', label: 'Storage and data', sublabel: 'Cache, media, settings export', icon: HardDrive },
     ],
   },
   {
-    title: 'ADVANCED',
+    title: 'Payments',
     items: [
-      { id: 'payments', label: 'Payments & Crypto', sublabel: 'Wallet, ZK identity, RPC' },
+      { id: 'payments', label: 'Payments', sublabel: 'Aztec private wallet (Alpha), payment options', icon: Wallet },
     ],
   },
 ];
@@ -519,7 +504,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   // Signing in on another device needs no secret, so the QR code is only a
   // convenient way to open the sign in page there.
-  const connectUrl = typeof window !== 'undefined' ? `${window.location.origin}/connect` : '';
+  const walletAddrForDevices = (myAddress || address || '') as string;
 
   return (
     <motion.div
@@ -527,11 +512,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', stiffness: 340, damping: 36 }}
-      className="absolute inset-0 z-[200] bg-[#f2f4f7] flex flex-col overflow-hidden"
+      className="absolute inset-0 z-[200] bg-[#f4f5f7] flex flex-col overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]"
     >
       {/* ── Header ── */}
       <div
-        className="shrink-0 bg-white border-b border-[#e4e7ec] flex items-center justify-between px-4"
+        className="shrink-0 bg-white border-b border-[#e6e8ec] flex items-center justify-between px-4"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))', paddingBottom: '12px' }}
       >
         <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#15171c] font-medium text-[16px]">
@@ -545,22 +530,25 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {/* ── Section Navigation: iOS grouped list when no section selected ── */}
       {activeTab === 'home' && (
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-6">
+          <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
             {SETTINGS_SECTIONS.map(section => (
               <div key={section.title}>
-                <p className="text-[11.5px] font-semibold text-[#727a88] px-1 mb-2 tracking-wide">{section.title}</p>
-                <div className="bg-white rounded-[14px] overflow-hidden shadow-sm">
+                <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{section.title}</p>
+                <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">
                   {section.items.map((item, idx) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#f7f8fa] transition-colors ${
-                        idx < section.items.length - 1 ? 'border-b border-black/[0.05]' : ''
+                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-[#f7f8fa] transition-colors ${
+                        idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
                       }`}
                     >
+                      <span className="w-9 h-9 rounded-xl bg-[#f4f5f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                        <item.icon size={17} strokeWidth={1.8} />
+                      </span>
                       <div className="flex-1 min-w-0 pr-3">
-                        <p className="text-[15px] font-semibold text-[#15171c] leading-tight">{item.label}</p>
+                        <p className="text-[15px] font-medium text-[#15171c] leading-tight">{item.label}</p>
                         {item.sublabel && <p className="text-[12.5px] text-[#727a88] mt-1 leading-snug">{item.sublabel}</p>}
                       </div>
                       <ChevronRight size={16} className="text-[#c9ced6] shrink-0" />
@@ -575,7 +563,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
       {/* ── Section sub-header breadcrumb (when inside a section) ── */}
       {activeTab !== 'home' && (
-        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e4e7ec]">
+        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
           <button
             type="button"
             onClick={() => setActiveTab('home')}
@@ -585,7 +573,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             Settings
           </button>
           <span className="text-[#c9ced6]">/</span>
-          <span className="text-[14px] text-[#727a88] font-medium capitalize">
+          <span className="text-[14px] text-[#727a88] font-medium">
             {SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
           </span>
         </div>
@@ -602,7 +590,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           {activeTab === 'account' && (
             <>
               {/* Profile card */}
-              <div className="bg-white rounded-[18px] shadow-sm overflow-hidden mb-6">
+              <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden mb-6">
                 <div className="flex flex-col items-center py-8 px-6 gap-4">
                   {/* Avatar */}
                   <div className="relative">
@@ -723,11 +711,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               </div>
 
-              <Group title="Devices" footer="Your account is your wallet. To use Ledger Chat on another device, sign in there with the same wallet.">
+              <Group title="Devices" footer="Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.">
                 <Row
                   icon={<Smartphone size={18} />}
-                  label="Use on another device"
-                  sublabel="Open the sign in page on your phone or computer"
+                  label="Linked devices"
+                  sublabel="Link a computer, see and unlink your devices"
                   onTap={() => setModal('linked_devices')}
                 />
                 <Row
@@ -759,7 +747,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Data & backup">
+              <Group title="Data and backup">
                 <Row
                   icon={<Download size={18} />}
                   label="Export settings"
@@ -802,7 +790,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           {activeTab === 'privacy' && (
             <>
               <Group title="Who can see" footer="Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.">
-                <Row icon={<Clock size={18} />} label="Last seen & online" value={({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || 'My contacts'} onTap={() => setModal('privacy_last_seen')} />
+                <Row icon={<Clock size={18} />} label="Last seen and online" value={({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || 'My contacts'} onTap={() => setModal('privacy_last_seen')} />
               </Group>
 
               <Group title="Disappearing messages" footer="New messages in all chats will auto-delete after the chosen time.">
@@ -918,7 +906,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Sounds & vibration">
+              <Group title="Sounds and vibration">
                 <Row
                   icon={<Volume2 size={18} />}
                   label="Message sound"
@@ -936,7 +924,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Display">
                 <Row
                   icon={<Eye size={18} />}
-                  label="Show Preview in Notifications"
+                  label="Show preview in notifications"
                   sublabel="Display message content in alerts"
                   toggle={settings.notifications_private !== false && !(settings as any).hide_notification_content}
                   onToggle={v => updateSetting('hide_notification_content' as any, !v)}
@@ -957,11 +945,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'security' && (
             <>
-              <Group title="App lock" footer="Biometric lock uses your device's Face ID or fingerprint to protect Ledger Chat.">
+              <Group title="App lock" footer="When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.">
                 <Row
                   icon={<Fingerprint size={18} />}
-                  label="Biometric lock"
-                  sublabel="Face ID / Touch ID"
+                  label="Ask for my PIN"
+                  sublabel="Each time Ledger Chat opens"
                   toggle={!!settings.biometric_lock}
                   onToggle={v => updateSetting('biometric_lock', v)}
                 />
@@ -999,7 +987,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'chat' && (
             <>
-              <Group title="Appearance & Themes">
+              <Group title="Appearance and themes">
                 <Row
                   icon={<Palette size={18} />}
                   label="Color theme"
@@ -1035,7 +1023,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <Group title="Composing">
                 <Row
                   icon={<Send size={18} />}
-                  label="Enter to Send"
+                  label="Enter to send"
                   sublabel="Press Enter to send, Shift+Enter for newline"
                   toggle={settings.enter_to_send !== false}
                   onToggle={v => updateSetting('enter_to_send', v)}
@@ -1078,7 +1066,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Ringtone & alerts">
+              <Group title="Vibration">
                 <Row
                   icon={<Vibrate size={18} />}
                   label="Vibrate"
@@ -1107,7 +1095,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 const kb = (total / 1024).toFixed(1);
                 const mb = (total / 1024 / 1024).toFixed(2);
                 return (
-                  <div className="bg-white rounded-[18px] p-5 mb-6 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-[#e6e8ec] p-5 mb-6">
                     <p className="text-[12px] text-[#727a88] font-semibold mb-3">Local storage used</p>
                     <div className="flex items-end gap-2 mb-3">
                       <p className="text-[40px] font-semibold text-[#15171c] leading-none">
@@ -1150,63 +1138,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           {/* PAYMENTS TAB (Including Native zk.money Aztec Private Payments) */}
           {activeTab === 'payments' && (
             <div className="space-y-6">
-              {/* Shielded Portfolio Overview Card */}
-              <div className="bg-white rounded-[18px] p-5 shadow-sm border border-black/[0.04]">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-black/5 flex items-center justify-center text-[#15171c]">
-                      <Lock size={18} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[16px] text-[#15171c]">Shielded portfolio</span>
-                        <span className="text-[12px] font-semibold bg-black/5 text-[#727a88] px-2 py-0.5 rounded-full">
-                          zk.money
-                        </span>
-                      </div>
-                      <p className="text-[12px] text-[#727a88]">Simulated balances on this device. No real funds move.</p>
-                    </div>
-                  </div>
-                  <span className="text-[12.5px] tabular-nums text-[#15171c] bg-black/5 px-2.5 py-1 rounded-full border border-black/[0.08] flex items-center gap-1.5 font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#15171c]" />
-                    Demo mode
-                  </span>
-                </div>
-
-                {/* Balances grid */}
-                <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-black/[0.04]">
-                  <div className="p-3 rounded-xl bg-[#f2f4f7]">
-                    <p className="text-[12px] font-semibold text-[#727a88]">Shielded DAI</p>
-                    <p className="text-[15px] font-semibold tabular-nums text-[#15171c] mt-0.5">{zkBalances.dai || '0.00'}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#f2f4f7]">
-                    <p className="text-[12px] font-semibold text-[#727a88]">Shielded USDC</p>
-                    <p className="text-[15px] font-semibold tabular-nums text-[#15171c] mt-0.5">{zkBalances.usdc || '0.00'}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#f2f4f7]">
-                    <p className="text-[12px] font-semibold text-[#727a88]">Shielded ETH</p>
-                    <p className="text-[15px] font-semibold tabular-nums text-[#15171c] mt-0.5">{zkBalances.eth || '0.00'}</p>
-                  </div>
-                </div>
-
-                {/* Quick Shield / Unshield Actions */}
-                <div className="flex gap-2.5 mt-3.5 pt-3.5 border-t border-black/[0.04]">
-                  <button
-                    type="button"
-                    onClick={() => { setZkShieldMode('shield'); setShowZkShieldModal(true); }}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#15171c] hover:bg-black text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
-                  >
-                    <ArrowDownToLine size={15} /> Shield funds
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setZkShieldMode('unshield'); setShowZkShieldModal(true); }}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#f2f4f7] hover:bg-[#e4e7ec] text-[#15171c] text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors border border-black/[0.04]"
-                  >
-                    <ArrowUpFromLine size={15} /> Unshield funds
-                  </button>
-                </div>
-              </div>
+              {/* Real private wallet: balances, Fee Juice and local storage, read on this device only. */}
+              <PrivateWalletStatus address={myAddress} />
 
               {/* Sovereign Aztec Identity */}
               <Group title="Your zk handle" footer="Demo feature. The handle is stored on this device and is not yet registered on the Aztec network.">
@@ -1274,47 +1207,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               </Group>
 
-              {/* Cryptographic Keys & Aztec State */}
-              <Group title="Demo keys and sync" footer="Demo keys derived on this device. They do not control real funds.">
-                {(() => {
-                  const azKey = deriveAztecKeySet(myAddress);
-                  return (
-                    <>
-                      <Row
-                        icon={<Key size={18} />}
-                        label="Aztec viewing key"
-                        sublabel="Demo key, stored on this device"
-                        value={`${azKey.incomingViewingKey.slice(0, 8)}…${azKey.incomingViewingKey.slice(-6)}`}
-                        onTap={() => {
-                          navigator.clipboard.writeText(azKey.incomingViewingKey);
-                          toast.success('Aztec viewing key copied');
-                        }}
-                      />
-                      <Row
-                        icon={<RefreshCw size={18} className={isSyncingAztec ? 'animate-spin' : ''} />}
-                        label="Sync demo balances"
-                        sublabel="Refresh the simulated balances"
-                        value={isSyncingAztec ? 'Syncing' : 'Sync now'}
-                        onTap={async () => {
-                          setIsSyncingAztec(true);
-                          try {
-                            const b = await syncBalanceFromAztec(myAddress);
-                            setZkBalances(b);
-                            toast.success('Balances refreshed');
-                          } catch {
-                            toast.info('Synced with local state');
-                          } finally {
-                            setIsSyncingAztec(false);
-                          }
-                        }}
-                      />
-                    </>
-                  );
-                })()}
-              </Group>
-
               {/* Native Crypto Payments */}
-              <Group title="Native crypto payments">
+              <Group title="Crypto payments">
                 <Row
                   icon={<Wallet size={18} />}
                   label="Payments in chats"
@@ -1345,8 +1239,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
               <Group title="Transaction history">
-                <Row label="View full history" onTap={() => window.open('/payments/history', '_blank')} />
-                <Row label="Export CSV" onTap={() => {
+                <Row icon={<Clock size={18} />} label="View full history" onTap={() => window.open('/payments/history', '_blank')} />
+                <Row icon={<Download size={18} />} label="Export CSV" onTap={() => {
                   try {
                     const rows = [['Date', 'Type', 'Amount', 'Peer', 'Status']];
                     for (let i = 0; i < localStorage.length; i++) {
@@ -1396,52 +1290,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="w-10 h-1 rounded-full bg-[#e4e7ec]" />
               </div>
 
-              {/* ── Devices ── */}
+              {/* ── Linked devices (WhatsApp / Signal model) ── */}
               {modal === 'linked_devices' && (
-                <div className="px-6 pb-6">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-[20px] font-semibold text-[#15171c]">Use Ledger Chat on another device</h3>
-                    <button type="button" onClick={() => setModal(null)} aria-label="Close" className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center shrink-0">
-                      <X size={16} className="text-[#727a88]" />
-                    </button>
-                  </div>
-                  <p className="text-[14px] text-[#727a88] mb-5 leading-relaxed">
-                    Your account is your wallet, so there is nothing to transfer. Sign in with the same wallet on the other device.
-                  </p>
-
-                  <div className="flex justify-center mb-3">
-                    {connectUrl ? <DeviceQRCode data={connectUrl} size={180} /> : null}
-                  </div>
-                  <p className="text-[13px] text-[#727a88] text-center mb-4">
-                    Scan this code with the other device to open the sign in page. It contains no secret.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => { navigator.clipboard?.writeText(connectUrl).then(() => toast.success('Link copied')).catch(() => toast.error('Could not copy the link')); }}
-                    className="w-full h-11 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#15171c] text-[15px] font-medium flex items-center justify-center gap-2 mb-5 transition-colors"
-                  >
-                    <Copy size={16} strokeWidth={1.9} /> Copy sign in link
-                  </button>
-
-                  <div className="bg-[#f7f8fa] rounded-2xl p-4 mb-4">
-                    <p className="text-[13px] font-medium text-[#727a88] mb-3">How it works</p>
-                    {[
-                      'Open the link on the other device',
-                      'Choose your wallet and sign the message',
-                      'That device creates its own encryption keys',
-                    ].map((text, i) => (
-                      <div key={text} className="flex items-start gap-3 mb-2 last:mb-0">
-                        <span className="w-6 h-6 rounded-full bg-[#15171c] text-white text-[12.5px] font-semibold flex items-center justify-center shrink-0">{i + 1}</span>
-                        <p className="text-[14px] text-[#15171c] leading-snug pt-[2px]">{text}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="flex items-start gap-2 text-[13px] text-[#4a505c] leading-relaxed">
-                    <ShieldCheck size={15} strokeWidth={1.9} className="mt-[2px] shrink-0 text-[#727a88]" aria-hidden="true" />
-                    Your keys never leave a device and Ledger Chat never sees your wallet's private key.
-                  </p>
-                </div>
+                <LinkedDevicesPanel address={walletAddrForDevices} onClose={() => setModal(null)} />
               )}
 
               {/* ── Privacy Selector ── */}

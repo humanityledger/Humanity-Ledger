@@ -174,6 +174,10 @@ export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setError(null); // no error — graceful degradation
         return;
       }
+      // Only with a PXE configured on purpose (a local sandbox for development). Without one, every page on
+      // every desktop tried a module import that cannot resolve in a browser. The private wallet does
+      // not use this provider (lib/aztec/wallet/client.ts runs its own node in the browser).
+      if (!process.env.NEXT_PUBLIC_AZTEC_PXE_URL) return;
       // Desktop-only: attempt PXE init
       initAztec().catch((err: any) => {
         const msg = err?.message ?? 'Aztec init failed';

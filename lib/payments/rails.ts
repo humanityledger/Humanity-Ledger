@@ -97,7 +97,7 @@ export function checkPrivateRail(i: PrivateRailInput): RailCheck {
   if (!i.payeeAztec) return { ok: false, reason: 'The issuer has not shared an Aztec address in this chat.' };
   if (i.selfAztec && i.selfAztec.toLowerCase() === i.payeeAztec.toLowerCase()) return { ok: false, reason: 'That is your own Aztec address.' };
   // On Alpha real funds move: only to an address the payee proved they control.
-  if (i.network === 'mainnet' && !i.payeeVerified) {
+  if (!i.payeeVerified) {
     return { ok: false, reason: "The issuer's Aztec address is not verified. Ask them to share it again from an up-to-date Ledger Chat." };
   }
   if (!i.tokenConfigured) return { ok: false, reason: 'This token is not available in your private wallet.' };

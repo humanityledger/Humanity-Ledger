@@ -1,67 +1,31 @@
 # Humanity Ledger — Routing Index
-*Created: August 2026*
+*Rewritten: 2026-11-11 from `app/**/page.tsx`. The earlier index described routes of products that were removed (hub, terminal, portfolio, ledger, passport).*
 
-This document classifies all frontend routes in the `app/` directory by Layer, Island visibility, indexing status, and production claim.
+Ledger Chat is the only product. This list is regenerated from the files in `app/`; if a page is added or removed, update it in the same change.
 
-## 🟢 CAPA 2 (App / Workspace)
-Requires SIWE session. `<DynamicIsland />` is **VISIBLE**. Not indexed by crawlers (`noindex`).
+## Pages that exist
 
-| Route | Island | Indexed | Claim | Status |
-|---|---|---|---|---|
-| `/chat` | YES | NO | End-to-end encrypted messaging via XMTP | LIVE |
-| `/portfolio` | YES | NO | Multi-chain balance sync | LIVE |
-| `/studio/provenance` | YES | NO | ZK Identity Dashboard | PARTIAL |
-| `/settings` | YES | NO | User configuration & Enclave PIN | LIVE |
-| `/hub` | YES | NO | Ecosystem dashboard | PARTIAL |
-| `/ledger` | YES | NO | On-chain transfers & QDs | LIVE |
-| `/terminal` | YES | NO | Advanced trading terminal | SIMULATED |
-| `/scan` | YES | NO | Identity QR scanner | LIVE |
-| `/passport/*` | YES | NO | Public identity profiles | LIVE |
+| Route | Purpose |
+|---|---|
+| `/` | Home page |
+| `/connect` | Sign in with an EVM wallet (EIP-4361) |
+| `/chat` | Ledger Chat: XMTP direct messages, private payments and agreements (Aztec test network) |
+| `/communities`, `/communities/[slug]` | Communities (stored by the server, readable by it) |
+| `/join/[code]` | Join a community with an invite code |
+| `/scan` | QR scanner |
+| `/settings`, `/settings/notifications` | Settings |
+| `/studio` | Community app generator |
+| `/docs`, `/docs/[slug]`, `/docs/audits`, `/docs/whitepaper` | Documentation (pages defined in `lib/docs/pages/`) |
+| `/legal/{terms,privacy,cookies,retention,dmca,ownership}`, `/terms`, `/privacy` | Legal pages |
 
-## 🟡 CAPA 1 (Gate / Auth)
-Authentication entry points. `<DynamicIsland />` is **HIDDEN**. Not indexed by crawlers (`noindex`).
+## Pages that were removed
 
-| Route | Island | Indexed | Claim | Status |
-|---|---|---|---|---|
-| `/connect` | NO | NO | Web3 Wallet connection | LIVE |
-| `/login` | NO | NO | Web2 Email fallback | LIVE |
-| `/sign-up` | NO | NO | User registration | LIVE |
-| `/mobile-auth` | NO | NO | Handshake for mobile devices | LIVE |
+Old links are redirected by `middleware.ts` using `lib/security/retiredRoutes.ts` (`RETIRED_PAGES`): `/hub`, `/terminal`, `/dashboard`, `/portfolio`, `/markets`, `/ledger`, `/forum` (to `/communities`) and the rest of that list go to `/chat`, `/` or a documentation page.
 
-## 🔵 CAPA 0 (Public / Marketing)
-Public-facing pages. `<DynamicIsland />` is **HIDDEN**. Indexed by crawlers (`index, follow`).
+## API routes
 
-| Route | Island | Indexed | Claim | Status |
-|---|---|---|---|---|
-| `/` | NO | YES | `ImmersiveManifestoLanding` - Privacy redefined | MARKETING-ONLY |
-| `/how-it-works` | NO | YES | Architecture overview | MARKETING-ONLY |
-| `/product/*` | NO | YES | Product features | MARKETING-ONLY |
-| `/faq` | NO | YES | Frequently Asked Questions | MARKETING-ONLY |
-| `/blog` | NO | YES | Corporate updates | MARKETING-ONLY |
-| `/docs` | NO | YES | User documentation | MARKETING-ONLY |
-| `/manifesto` | NO | YES | Vision statement | MARKETING-ONLY |
-| `/whitepaper` | NO | YES | Technical paper | MARKETING-ONLY |
-| `/company` | NO | YES | About us | MARKETING-ONLY |
-| `/contact` | NO | YES | Contact form | MARKETING-ONLY |
-
-## ⚪ CAPA LEGAL (Legal & Compliance)
-Legal documents. `<DynamicIsland />` is **HIDDEN**. Indexed.
-
-| Route | Island | Indexed | Claim | Status |
-|---|---|---|---|---|
-| `/legal` | NO | YES | Terms Directory | LIVE |
-| `/privacy` | NO | YES | Privacy Policy | LIVE |
-| `/terms` | NO | YES | Terms of Service | LIVE |
-| `/security` | NO | YES | Security practices | LIVE |
-
-## 🔴 CAPA TEST & DEAD (Orphaned / Experiments)
-Unlinked routes or developer playgrounds. `<DynamicIsland />` is **HIDDEN**. Not indexed.
-
-| Route | Island | Indexed | Claim | Status |
-|---|---|---|---|---|
-| `/test-qd` | NO | NO | QD transfer testing | DEAD |
-| `/test-xmtp` | NO | NO | XMTP sandbox | DEAD |
-| `/zk-sandbox` | NO | NO | Noir circuits testbed | TEST |
-| `/voss-supremacy` | NO | NO | Legacy campaign landing | DEAD |
-| `/gold-registry` | NO | NO | Alternate feature landing | DEAD |
-| `/cosmic-forge` | NO | NO | Alternate feature landing | DEAD |
+- Routes that nothing in the repository calls are answered with 410 at the edge before any handler runs (`RETIRED_API_ROUTES`). The 2026-11-11 audit added 55 more (terminal, forum, market, network, wallet and academy products).
+- Cron, webhook, admin, public-API (`/api/v1`) and privacy routes are never retired by this audit because they are called from outside the repository.
+- `GET /api/aztec/value-mode` is public and returns only `{ "mode": "open" | "exits-only" }`.
+- A second pass the same day retired 21 more routes with no caller and no planned UI: calls (`/api/call/*`), community invite tokens and token gates, `/api/auth/{me,check-email,kyc-qr-poll,studio,qr-sync-seed}`, `/api/identity/token`, `/api/aztec/{anchor,deploy-token,migrate-identity,sequencer/*}`, `/api/chat/telemetry` and `/api/moderation/status`. The UI uses the community `joinCode`. To bring one back, delete its line in `RETIRED_API_ROUTES` and review its authentication first.
+- The community app routes (`/api/chat/communities/[id]/apps/**`) are used by the UI and stay.

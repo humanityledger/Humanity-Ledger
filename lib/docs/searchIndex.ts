@@ -14,7 +14,7 @@ const blogEntries = BLOG_POSTS.map((p) => ({ page: p.page, group: "Blog" }));
 export const SEARCH_INDEX = [
   ...buildSearchIndex(blogEntries),
   ...RELEASES.map((r) => ({
-    href: `/changelog#${r.id}`,
+    href: `/docs/changelog#${r.id}`,
     page: "Changelog",
     group: "Company",
     section: r.title,

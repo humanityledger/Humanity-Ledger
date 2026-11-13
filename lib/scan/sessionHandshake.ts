@@ -1,6 +1,38 @@
 /**
- * Desktop ↔ mobile session QR handshake (extracted from QRScannerModal).
+ * Desktop ↔ mobile session QR handshake: the phone side of "link a computer"
+ * (WhatsApp Web / Signal Desktop model, see lib/auth/linkedDevices.ts).
+ *
+ * The phone never links anything on its own: callers first show the person what is asking
+ * (previewLink: "Chrome on macOS, 12:31") and call completeSessionHandshake only after an
+ * explicit "Link this computer". The handshake sends the computer, encrypted to its key,
+ * a one-time claim code plus the channel key the two devices use for signing requests.
  */
+import { addPeer, newChannelKey, newDeviceId } from '@/lib/link/channel';
+
+export interface LinkPreview { ok: true; label: string; expiresAt: number | null }
+
+/** uuid of a session QR (…/connect?s=<uuid>&p=…), or null. */
+export function sessionQrUuid(decodedText: string): string | null {
+  try {
+    const u = new URL(decodedText.trim());
+    const s = u.searchParams.get('s') || u.searchParams.get('uuid') || u.searchParams.get('session');
+    return s && /^[0-9a-z-]{6,64}$/i.test(s) && (u.searchParams.get('p') || u.searchParams.get('pub')) ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+/** What computer is asking to be linked, for the approval screen. Requires this phone's session. */
+export async function previewLink(decodedText: string): Promise<LinkPreview | { ok: false; message: string; needsWallet?: boolean }> {
+  const uuid = sessionQrUuid(decodedText);
+  if (!uuid) return { ok: false, message: 'This is not a Ledger Chat sign-in code. On your computer open ledgerchat.org and scan the code shown there.' };
+  const r = await fetch(`/api/auth/link?uuid=${encodeURIComponent(uuid)}`, { credentials: 'include', cache: 'no-store' }).catch(() => null);
+  if (!r) return { ok: false, message: 'No connection. Check your internet and try again.' };
+  if (r.status === 401) return { ok: false, message: 'Sign in on this phone with your wallet first, then scan the code again.', needsWallet: true };
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, message: j.error || 'This code has expired. Refresh it on the computer.' };
+  return { ok: true, label: String(j.label || 'A computer'), expiresAt: typeof j.expiresAt === 'number' ? j.expiresAt : null };
+}
 
 /**
  * `ledger_chat_seed_<address>` and `system_vault_v1` were copied between
@@ -229,6 +261,9 @@ export async function completeSessionHandshake(
   const mobilePair = await generateX25519KeyPair();
   // [VISUAL PIN HKDF] Pass the PIN to derive a unique session key
   // If PIN is wrong/missing the desktop will fail to decrypt the AES-GCM payload
+  if (!visualPin) {
+    try { visualPin = new URL(decodedText.trim()).searchParams.get('pin') || undefined; } catch { /* JSON format */ }
+  }
   const shared = await deriveSharedSecret(mobilePair.privateKey, ephemeralPub, isECDH, visualPin);
 
   // A one-time claim code, readable only by the computer that shows this QR
@@ -240,8 +275,11 @@ export async function completeSessionHandshake(
   const claim = Array.from(claimBytes, b => b.toString(16).padStart(2, '0')).join('');
   const claimHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(claim))))
     .map(b => b.toString(16).padStart(2, '0')).join('');
-  // The claim alone: no seed or vault leaves this device (purgeLegacyHandshakeSecrets).
-  const payloadStr = JSON.stringify({ claim });
+  // The claim, this computer's device id and the channel key for its signing requests
+  // (lib/link/channel.ts). No seed or vault leaves this device (purgeLegacyHandshakeSecrets).
+  const deviceId = newDeviceId();
+  const channelKey = newChannelKey();
+  const payloadStr = JSON.stringify({ claim, deviceId, channelKey, wallet: resolvedAddress });
   purgeLegacyHandshakeSecrets();
 
   const encrypted = await encryptAESGCM(shared, payloadStr);
@@ -253,6 +291,7 @@ export async function completeSessionHandshake(
     tag: encrypted.tag,
     mobilePub: mobilePair.publicKey,
     claimHash,
+    deviceId,
   };
 
   const res = await fetch('/api/auth/qr-mobile-link', {
@@ -274,6 +313,10 @@ export async function completeSessionHandshake(
     }
     return { ok: false, message: `Handshake error: ${errText}. Please try again.` };
   }
+
+  // This phone keeps the channel key, to read and answer the computer's signing requests.
+  const linked = await res.json().catch(() => ({}));
+  addPeer(deviceId, { key: channelKey, label: String((linked as { label?: string }).label || 'Computer'), linkedAt: Date.now() });
 
   // STEP 3 (seed sync back from the desktop) is removed: the seed it carried
   // was never used, and storing it in plain localStorage was only exposure.

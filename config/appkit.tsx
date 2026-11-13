@@ -8,7 +8,7 @@ import { createAppKit } from '@reown/appkit/react';
 import { createSIWEConfig, formatMessage } from '@reown/appkit-siwe';
 import { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { metaMask, injected, walletConnect, safe } from 'wagmi/connectors';
+import { injected } from 'wagmi/connectors';
 // SIWE Config will be defined below
 
 // 1. Get projectId  Falls back to real project ID so the app renders even without the env var.
@@ -106,9 +106,10 @@ const metadata = {
     description: 'Decentralized Encrypted Messenger on Humanity Ledger',
     url: appOrigin,
     icons: [`${appOrigin}/logo-mark.png`],
-    redirect: {
-        universal: typeof window !== 'undefined' ? window.location.origin : 'https://ledgerchat.org',
-    },
+    // No `redirect`: it is for native apps (deep links back into an app). For a website, a wallet that
+    // follows `redirect.universal` opens ledgerchat.org in a NEW browser tab, away from the tab waiting
+    // for the approval. On iOS 17+ a wallet cannot return to the browser by itself; the visitor taps
+    // "‹ Safari" and /connect resumes (visibilitychange). Android wallets go to the background.
 }
 
 export const wagmiAdapter = new WagmiAdapter({
@@ -123,19 +124,12 @@ export const wagmiAdapter = new WagmiAdapter({
         ...(typeof window !== 'undefined' && Boolean((window as any).ethereum)
             ? [injected({ shimDisconnect: true })]
             : []),
-        walletConnect({ 
-            projectId,
-            // [MOBILE FIX] showQrModal: true enables the AppKit built-in bottom sheet on mobile.
-            // This is the CORRECT signing flow for Safari/Chrome on iOS and Android:
-            //   1. User taps a wallet in the AppKit sheet
-            //   2. AppKit generates a wc:// URI and opens the wallet via universal link
-            //   3. User approves in the wallet — WalletConnect relay delivers the signed SIWE back
-            //   4. Safari never navigates away — the page receives the session via WebSocket
-            // showQrModal: false caused us to handle deep links manually (metamask.app.link/dapp/...)
-            // which opened the page INSIDE MetaMask's browser (zoom issues, not scalable).
-            showQrModal: true,
-            metadata,
-        }),
+        // No walletConnect() here: AppKit's WagmiAdapter provides its own WalletConnect connector
+        // ("By default, EIP-6963 and WC connectors are provided out of the box", docs.reown.com
+        // custom-connectors). The one that was added here had showQrModal: true, which Reown documents
+        // as "must be false" next to AppKit: two WalletConnect connectors with the same id competed, and
+        // on iPhone the page waited on one pairing while the wallet was handed the other, so it stayed on
+        // "Continue in MetaMask" forever.
     ],
     // EIP-6963 multi-injected provider discovery MUST be disabled on mobile.
     // iOS Safari has no injected window.ethereum, so enabling this causes wagmi
@@ -187,11 +181,28 @@ const siweConfig = createSIWEConfig({
   },
   signOut: async () => {
     try {
-      await fetch('/api/siwe/logout');
+      await fetch('/api/siwe/logout', { method: 'POST', credentials: 'include' });
     } catch {}
     return true;
   }
 });
+
+/**
+ * One-Click Auth, phone browsers only (Safari, Chrome; no wallet injected in the page): AppKit asks the
+ * wallet to connect AND sign the SIWE message in one trip (`wc_sessionAuthenticate` where the wallet
+ * supports it, else connect then sign inside the AppKit sheet). Without it the visitor goes to the wallet
+ * twice and, on iPhone, comes back by hand twice. The signature is checked by the same /api/siwe/verify,
+ * which sets the session cookies. /connect then only waits for the session (ConnectPage.tsx).
+ * Off unless NEXT_PUBLIC_ONE_CLICK_AUTH=true: switch it on after the two-phone check in docs/CONNECT.md.
+ */
+function isPhoneBrowserWithoutWallet(): boolean {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+    const phone = iPadOS || /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    return phone && !(window as any).ethereum;
+}
+export const ONE_CLICK_AUTH = process.env.NEXT_PUBLIC_ONE_CLICK_AUTH === 'true' && isPhoneBrowserWithoutWallet();
 
 let appKitInitialized = false;
 
@@ -204,32 +215,37 @@ try {
             defaultNetwork: dedicatedMainnet,
             projectId,
             metadata,
+            ...(ONE_CLICK_AUTH ? { siweConfig } : {}),
             enableWalletConnect: true,
             enableInjected: true,
             allowUnsupportedChain: true,
+            // Full 64-hex ids from the Reown wallet registry (api.web3modal.org/getWallets). The 32-character
+            // prefixes used before matched no wallet, so MetaMask and Rainbow were never featured.
             featuredWalletIds: [
-                'c57ca95b47569778a828d19178114f4d', // MetaMask
-                '4622a2b2d6af1c9844944291e5e7351a', // Trust Wallet
-                'fd20dc426fb37566d803205b19bbc1d4', // Coinbase
-                '1ae92b26df02f0abca6304df07debccd', // Rainbow
-                '38f5d18bd8522c244bdd70cb4a68e0e7', // Bitget Wallet
-                '971e689d0a5be527bac79629b4ee9b92', // OKX Wallet
-                '8a0ee50d1f22f6651afcae7eb4253e52', // Binance Web3
-                'c03dfee351b6fcc421b4494ea33b9d4b', // Uniswap Wallet
+                'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+                '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369', // Rainbow
+                '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
+                'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Base (Coinbase Wallet)
+                '38f5d18bd8522c244bdd70cb4a68e0e718865155811c043f052fb9f1c51de662', // Bitget Wallet
+                '971e689d0a5be527bac79629b4ee9b925e82208e5168b733496a09c0faed0709', // OKX Wallet
+                '8a0ee50d1f22f6651afcae7eb4253e52a3310b90af5daef78a8c4929a9bb99d4', // Binance Wallet
+                'c03dfee351b6fcc421b4494ea33b9d4b92a984f87aa76d1663bb28705e95034a', // Uniswap Wallet
             ],
             features: {
                 analytics: false, //  INSTANT BOOT: Disable telemetry to avoid blocking network requests
                 email: false, // Strictly Web3 - No Web2 Email logins
                 socials: false, // Strictly Web3 - No Google/Apple/X logins
                 emailShowWallets: false,
-                swaps: true,
-                onramp: true,
-                send: true,
-                receive: true,
+                // Third-party wallet actions inside the Reown modal (swap and onramp providers). Not part of
+                // Ledger Chat: payments go through the Aztec wallet. Off so the modal only connects and signs.
+                swaps: false,
+                onramp: false,
+                send: false,
+                receive: false,
             },
             themeMode: 'light',
             themeVariables: {
-                '--w3m-accent': '#5200FF',                    // Aztec purple
+                '--w3m-accent': '#15171c',                    // Ledger Chat ink, as on the landing page
                 '--w3m-border-radius-master': '1.5rem',       // slightly less extreme for mobile hit areas
                 '--w3m-font-family': 'Inter, sans-serif',
                 '--w3m-z-index': 99999,  // must be above our fixed inset-0 container                    

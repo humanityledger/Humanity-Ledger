@@ -1,9 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import {
-  Phone, Video, Star, PhoneIncoming, PhoneOutgoing, PhoneMissed, Lock, Plus, MessageCircle,
+  Phone, Video, Star, PhoneIncoming, PhoneOutgoing, PhoneMissed, Lock, Plus, MessageCircle, CalendarPlus,
 } from 'lucide-react';
 import { PeerAvatar, SectionLabel, EmptyState, PrimaryButton, IconButton, SearchField, Sheet, shortAddr } from './ui/kit';
+import { describeCountdown, describeMeetingTime, meetingPhase, type StoredMeeting } from '@/lib/chat/meeting';
 
 interface CallRecord {
   id: string;
@@ -31,6 +32,11 @@ interface LedgerCallsTabProps {
   onSchedule: () => void;
   onKeypad: () => void;
   onFavorites: () => void;
+  /** Scheduled calls on this device that have not ended (lib/chat/meeting.ts). */
+  upcoming?: StoredMeeting[];
+  onJoinMeeting?: (m: StoredMeeting) => void;
+  /** Opens the chat with this person and the Schedule a call sheet. */
+  onScheduleCall?: (address: string) => void;
 }
 
 const formatDuration = (seconds: number) => {
@@ -57,8 +63,10 @@ const saveFavorites = (favs: string[]) => {
   try { localStorage.setItem('ledger_call_favorites', JSON.stringify(favs)); } catch {}
 };
 
-export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, contacts, onStartCall, onOpenChat }) => {
+export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, contacts, onStartCall, onOpenChat, upcoming = [], onJoinMeeting, onScheduleCall }) => {
   const [showNewCall, setShowNewCall] = useState(false);
+  // The contact sheet serves both "New call" and "Schedule a call".
+  const [pickFor, setPickFor] = useState<'call' | 'schedule'>('call');
   const [contactSearch, setContactSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>(getFavorites);
 
@@ -78,10 +86,10 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col bg-white">
-      <div className="px-4 pt-3 pb-1">
+      <div className="px-4 pt-3 pb-1 flex flex-col">
         <button
           type="button"
-          onClick={() => setShowNewCall(true)}
+          onClick={() => { setPickFor('call'); setShowNewCall(true); }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f7f8fa] transition-colors text-left"
         >
           <span className="w-11 h-11 rounded-full bg-[#15171c] text-white flex items-center justify-center shrink-0" aria-hidden="true">
@@ -89,7 +97,55 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
           </span>
           <span className="text-[15.5px] font-medium text-[#15171c]">New call</span>
         </button>
+        {onScheduleCall && (
+          <button
+            type="button"
+            onClick={() => { setPickFor('schedule'); setShowNewCall(true); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f7f8fa] transition-colors text-left"
+          >
+            <span className="w-11 h-11 rounded-full bg-[#f2f4f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+              <CalendarPlus size={19} strokeWidth={1.9} />
+            </span>
+            <span className="text-[15.5px] font-medium text-[#15171c]">Schedule a call</span>
+          </button>
+        )}
       </div>
+
+      {upcoming.length > 0 && (
+        <>
+          <SectionLabel>Upcoming</SectionLabel>
+          <ul className="px-2">
+            {upcoming.map((m) => {
+              const phase = meetingPhase(m.invite);
+              const canJoin = phase === 'joinable' || phase === 'live';
+              return (
+                <li key={`${m.peer}-${m.invite.id}`}>
+                  <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[#f7f8fa] transition-colors">
+                    <button type="button" onClick={() => onOpenChat(m.peer)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                      <span className="w-11 h-11 rounded-full bg-[#f2f4f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                        {m.invite.kind === 'video' ? <Video size={18} strokeWidth={1.8} /> : <Phone size={18} strokeWidth={1.8} />}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[15.5px] font-medium text-[#15171c] truncate">{m.invite.title}</span>
+                        <span className="block mt-0.5 text-[13.5px] text-[#727a88] truncate">
+                          {nameOf(m.peer)}, {describeMeetingTime(m.invite)}
+                        </span>
+                      </span>
+                    </button>
+                    {canJoin && onJoinMeeting ? (
+                      <button type="button" onClick={() => onJoinMeeting(m)} className="h-9 px-4 rounded-full bg-[#12a150] hover:bg-[#0f8a44] text-white text-[13.5px] font-semibold shrink-0">
+                        Join
+                      </button>
+                    ) : (
+                      <span className="text-[13px] text-[#a3a9b4] shrink-0">{describeCountdown(m.invite)}</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
 
       {favoriteContacts.length > 0 && (
         <>
@@ -117,7 +173,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
           icon={<Phone size={20} strokeWidth={1.8} />}
           title="No calls yet"
           text="Calls you make and receive will show up here."
-          action={<PrimaryButton onClick={() => setShowNewCall(true)}>Start a call</PrimaryButton>}
+          action={<PrimaryButton onClick={() => { setPickFor('call'); setShowNewCall(true); }}>Start a call</PrimaryButton>}
         />
       ) : (
         <ul className="px-2">
@@ -158,7 +214,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
         <Lock size={12} strokeWidth={2} aria-hidden="true" /> Calls are encrypted end to end
       </p>
 
-      <Sheet open={showNewCall} onClose={() => setShowNewCall(false)} title="New call">
+      <Sheet open={showNewCall} onClose={() => setShowNewCall(false)} title={pickFor === 'schedule' ? 'Schedule a call' : 'New call'} subtitle={pickFor === 'schedule' ? 'Choose who to invite' : undefined}>
         <div className="px-4 pb-2">
           <SearchField value={contactSearch} onChange={setContactSearch} placeholder="Search contacts" autoFocus />
         </div>
@@ -179,6 +235,11 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                     <span className="block text-[15px] font-medium text-[#15171c] truncate">{c.name || shortAddr(c.peerAddress)}</span>
                     <span className="block text-[13px] text-[#727a88] truncate tabular-nums">{shortAddr(c.peerAddress)}</span>
                   </span>
+                  {pickFor === 'schedule' && onScheduleCall ? (
+                    <PrimaryButton onClick={() => { onScheduleCall(c.peerAddress); setShowNewCall(false); }} className="h-9 px-4 text-[13.5px]">
+                      Choose
+                    </PrimaryButton>
+                  ) : (<>
                   <IconButton label="Message" onClick={() => { onOpenChat(c.peerAddress); setShowNewCall(false); }}>
                     <MessageCircle size={18} strokeWidth={1.8} />
                   </IconButton>
@@ -191,6 +252,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                   <IconButton label={fav ? 'Remove from favourites' : 'Add to favourites'} onClick={() => toggleFavorite(c.peerAddress)} aria-pressed={fav}>
                     <Star size={18} strokeWidth={1.8} className={fav ? 'fill-[#15171c]' : 'text-[#a3a9b4]'} />
                   </IconButton>
+                  </>)}
                 </li>
               );
             })}

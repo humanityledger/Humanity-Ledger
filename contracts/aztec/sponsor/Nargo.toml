@@ -1,0 +1,10 @@
+[package]
+name = "ledger_sponsor"
+type = "contract"
+authors = ["Humanity Ledger Protocol"]
+compiler_version = ">=1.0.0"
+
+# Same aztec-nr source and tag as the other contracts (see ../escrow/Nargo.toml).
+[dependencies]
+aztec = { git = "https://github.com/aztec-labs-eng/aztec-nr", tag = "v6.0.0", directory = "aztec" }
+sha256 = { tag = "v0.3.0", git = "https://github.com/noir-lang/sha256" }

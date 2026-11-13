@@ -243,6 +243,36 @@ export function BlockView({ block }: { block: Block }) {
           </div>
         </div>
       );
+    case "gallery": {
+      const cols = block.columns ?? 2;
+      return (
+        <div className={`${s.gallery} ${s[`galleryCols${cols}`]}`}>
+          {block.items.map((item) => (
+            <figure key={item.src} className={s.galleryItem}>
+              <div className={`${s.galleryFrame} ${s[`surface_${item.surface ?? "plain"}`]}`}>
+                <img
+                  src={item.src}
+                  alt={item.alt}
+                  width={item.width}
+                  height={item.height}
+                  loading="lazy"
+                  decoding="async"
+                  className={s.galleryImg}
+                />
+              </div>
+              <figcaption className={s.galleryCaption}>
+                <span>
+                  <T text={item.caption} />
+                </span>
+                <a href={item.download ?? item.src} download className={s.galleryDownload}>
+                  Download
+                </a>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      );
+    }
     default:
       return null;
   }

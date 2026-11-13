@@ -1,5 +1,7 @@
 "use client";
 
+import { sendStatusLabel } from '@/lib/chat/optimistic-send';
+import { stickerLabel, stickerSrc } from '@/lib/chat/stickers';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import {
@@ -9,16 +11,17 @@ import {
 import { bubbleClasses } from '@/lib/chat/bubbleStyles';
 import { toast } from 'sonner';
 import { decodeCallEntry, callEntryLabel, formatDuration, CALL_LOG_PREFIX } from '@/lib/chat/callLog';
-import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult, ZkEscrowState } from '@/lib/zk/zkMoney';
+import { parseZkPaymentPayload, parseEscrowPayload, ZkPaymentResult } from '@/lib/zk/zkMoney';
 import { parseTipPayload, ZkTip } from '@/lib/zk/zkCommunityPayments';
-import { parseStreamPayload, calculateStreamProgress, ZkPaymentStream } from '@/lib/zk/zkStreaming';
+import { parseStreamPayload } from '@/lib/zk/zkStreaming';
 import { parseInvoicePayload, ZkInvoice } from '@/lib/zk/zkInvoice';
-import { ZkEscrowCard } from '@/components/zk/ZkEscrowCard';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { PREMIUM_STICKERS, RenderPremiumSticker } from './StickerPicker';
 import { useLinkPreview, extractFirstUrl, LinkPreviewCard } from './LedgerLinkPreview';
 import dynamic from 'next/dynamic';
 import { isAgreementMessage } from '@/lib/aztec/agreement-message';
+import { parseMeeting } from '@/lib/chat/meeting';
+import { MeetingCard } from './MeetingCard';
 import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { RemoteAttachmentBubble } from './RemoteAttachmentBubble';
 
@@ -260,12 +263,15 @@ const ZkPaymentBubble = React.memo(({ content }: { content: string; isMe: boolea
 ZkPaymentBubble.displayName = 'ZkPaymentBubble';
 
 // ─── Escrow ──────────────────────────────────────────────────────────────────
-const ZkEscrowBubble = React.memo(({ content, isMe }: { content: string; isMe: boolean }) => {
-  const escrow: ZkEscrowState | null = parseEscrowPayload(content);
-  if (!escrow) return null;
+// `__ZK_ESCROW__:` is plain JSON any peer can type: it never renders as an escrow with amounts or actions.
+const ZkEscrowBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
+  if (!parseEscrowPayload(content)) return null;
   return (
-    <div className="min-w-[260px] max-w-[340px]">
-      <ZkEscrowCard escrow={escrow} currentUserTag={isMe ? escrow.senderTag : escrow.recipientTag} />
+    <div className={`${CARD} min-w-[240px] max-w-[320px] p-4`}>
+      <CardLabel icon={<Lock size={12} strokeWidth={2.2} />}>Escrow (legacy message)</CardLabel>
+      <p className="mt-2 text-[14px] text-[#4a505c] leading-snug">
+        This message is from an older version and is not backed by a contract: nothing is locked, and any amount in it is unverified. Only agreement cards opened from Agreements are on Aztec.
+      </p>
     </div>
   );
 });
@@ -292,52 +298,15 @@ const ZkTipBubble = React.memo(({ content }: { content: string; isMe: boolean })
 ZkTipBubble.displayName = 'ZkTipBubble';
 
 // ─── Payment stream ──────────────────────────────────────────────────────────
-const STREAM_STATUS: Record<string, string> = { active: 'Active', paused: 'Paused', completed: 'Finished', cancelled: 'Cancelled', canceled: 'Cancelled' };
-
+// `__ZK_STREAM__:` is plain JSON any peer can type: no amounts or live "paid" progress from it (same closure as escrow).
 const ZkStreamBubble = React.memo(({ content }: { content: string; isMe: boolean }) => {
-  const stream: ZkPaymentStream | null = parseStreamPayload(content);
-  const [, setTick] = React.useState(0);
-  React.useEffect(() => {
-    if (!stream || stream.status !== 'active') return;
-    const id = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [stream?.status]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!stream) return null;
-  const progress = calculateStreamProgress(stream);
-  const status = STREAM_STATUS[String(stream.status)] || String(stream.status);
+  if (!parseStreamPayload(content)) return null;
   return (
-    <div className={`${CARD} min-w-[260px] max-w-[320px] p-4`}>
-      <CardLabel
-        icon={<Waves size={13} strokeWidth={2} />}
-        aside={
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-[#4a505c]">
-            <span className={`w-1.5 h-1.5 rounded-full ${stream.status === 'active' ? 'bg-[#1f9d55]' : 'bg-[#a3a9b4]'}`} aria-hidden="true" />
-            {status}
-          </span>
-        }
-      >
-        Payment stream
-      </CardLabel>
-      <p className="text-[24px] font-semibold tracking-[-0.02em] tabular-nums text-[#15171c] mt-2.5">
-        {stream.depositAmount} <span className="text-[15px] font-medium text-[#727a88]">{stream.token}</span>
+    <div className={`${CARD} min-w-[240px] max-w-[320px] p-4`}>
+      <CardLabel icon={<Waves size={13} strokeWidth={2} />}>Payment stream (legacy message)</CardLabel>
+      <p className="mt-2 text-[14px] text-[#4a505c] leading-snug">
+        This message is from an older version and is not backed by a contract: nothing is streaming, and any amount in it is unverified. Real streams are opened from Private agreement → Stream.
       </p>
-      <p className="text-[13px] text-[#727a88] mt-1 truncate">From {stream.senderTag} to {stream.recipientTag}</p>
-      <div className="mt-3">
-        <div className="flex justify-between text-[13px] text-[#4a505c] tabular-nums">
-          <span>{progress.formattedStreamed} {stream.token} paid</span>
-          <span>{progress.percentCompleted.toFixed(0)}%</span>
-        </div>
-        <div className="w-full bg-[#eff1f4] rounded-full h-1.5 overflow-hidden mt-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.percentCompleted)}>
-          <div className="bg-[#15171c] h-full transition-[width] duration-1000" style={{ width: `${progress.percentCompleted}%` }} />
-        </div>
-        <p className="text-[13px] text-[#727a88] mt-1.5">
-          {progress.timeRemainingSeconds > 0 ? `About ${Math.ceil(progress.timeRemainingSeconds / 3600)} h left` : 'Fully paid'}
-        </p>
-      </div>
-      {stream.memo && (
-        <p className="mt-3 bg-[#f7f8fa] border border-[#eceef2] px-3 py-2 rounded-xl text-[14px] text-[#4a505c]">{stream.memo}</p>
-      )}
-      <DemoNote />
     </div>
   );
 });
@@ -365,6 +334,7 @@ const ZkInvoiceBubble = React.memo(({ content, isMe }: { content: string; isMe: 
       >
         Invoice {invoice.invoiceNumber}
       </CardLabel>
+      <p className="text-[12px] text-[#727a88] mt-1">Status as sent by the issuer. Paying goes only to their verified Aztec address.</p>
       <p className="text-[15.5px] font-semibold text-[#15171c] mt-2.5 truncate">{invoice.title}</p>
       <p className="text-[13px] text-[#727a88] mt-0.5 truncate">From {invoice.senderTag} to {invoice.recipientTag}</p>
       <div className="mt-3 space-y-1">
@@ -544,14 +514,30 @@ GroupCallBubble.displayName = 'GroupCallBubble';
 
 // ─── Sticker ─────────────────────────────────────────────────────────────────
 // A plain div with a CSS animation: no nested Framer Motion scale (iOS blur bug).
-const StickerBubble = React.memo(({ content }: { content: string }) => (
+const StickerBubble = React.memo(({ content }: { content: string }) => {
+  // Ledger Chat's own stickers (lib/chat/stickers.ts): an image from this site only.
+  const src = stickerSrc(content);
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={stickerLabel(content) ?? 'Sticker'}
+        width={148}
+        height={148}
+        draggable={false}
+        className="block w-[148px] h-[148px] select-none opacity-0 animate-[stickerPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
+      />
+    );
+  }
+  return (
   <div
     className="text-[64px] leading-none select-none cursor-default opacity-0 animate-[stickerPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
     style={{ filter: 'drop-shadow(0 4px 12px rgba(16,24,40,0.15))' }}
   >
     {content.replace('__STICKER__', '')}
   </div>
-));
+  );
+});
 StickerBubble.displayName = 'StickerBubble';
 
 // ─── Quick reactions (Disabled: native phone emojis only) ──────────────────
@@ -652,6 +638,8 @@ export const MessageBubble = React.memo(({
   // Encrypted voice notes, photos, videos and files (lib/chat/remote-attachment.ts).
   // The message carries the decryption key: it is never shown as text.
   const remoteAttachment = isAgreement ? null : parseAttachmentMessage(content);
+  // Scheduled calls (lib/chat/meeting.ts).
+  const meeting = isAgreement ? null : parseMeeting(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
   const isSticker    = content.startsWith('__STICKER__') && !isPremium;
   const isAudio      = content.startsWith('__AUDIO__');
@@ -846,6 +834,8 @@ export const MessageBubble = React.memo(({
 
             {isAgreement ? (
               <AgreementCard raw={content} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={msg.senderInboxId} selfInboxId={clientInboxId} />
+            ) : meeting ? (
+              <MeetingCard invite={meeting} isMe={isMe} />
             ) : remoteAttachment ? (
               <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
             ) : isSticker ? (
@@ -1062,10 +1052,12 @@ export const MessageBubble = React.memo(({
             {isMe && !msg.failed && (
               <span
                 className={msg.status === 'read' && readReceipts ? 'msg-read text-[#15171c]' : 'msg-tick text-[#a3a9b4]'}
-                aria-label={msg.status === 'scheduled' ? 'Scheduled' : msg.status === 'read' && readReceipts ? 'Read' : msg.status === 'delivered' ? 'Delivered' : 'Sent'}
+                role="img"
+                aria-label={sendStatusLabel(msg.status, { readReceipts })}
+                title={sendStatusLabel(msg.status, { readReceipts })}
               >
-                {msg.status === 'scheduled'
-                  ? <Clock size={12} strokeWidth={2} />
+                {msg.status === 'scheduled' || msg.status === 'sending'
+                  ? <Clock size={12} strokeWidth={2} className={msg.status === 'sending' ? 'opacity-70' : undefined} />
                   : (msg.status === 'read' || msg.status === 'delivered') && readReceipts
                     ? <CheckCheck size={14} strokeWidth={2} />
                     : <Check size={14} strokeWidth={2} />}

@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Check, CircleHelp, Clock, Lock, Mail, X } from 'lucide-react';
+import { pinLockEnabled } from '@/lib/auth/pin-lock';
+import { clearLocalSessionMarkers } from '@/lib/auth/session-check';
 
 // ─── Session clearance ────────────────────────────────────────────────────────
 // DUAL STORAGE: sessionStorage (primary) + localStorage (fallback)
@@ -380,14 +382,18 @@ export function TuringShieldGate({
               setTimeout(checkEnclave, delay);
               return;
             }
-            // All retries exhausted — redirect to connect
+            // All retries exhausted — redirect to connect. The server has no session, so the local sign-in
+            // hints are stale: clear them, or /connect would read them and send the user straight back here.
             document.removeEventListener('visibilitychange', handleVisibilityForGate);
+            clearLocalSessionMarkers();
             const dest = typeof window !== 'undefined' ? window.location.pathname : '/chat';
             window.location.replace(`/connect?redirect=${encodeURIComponent(dest)}`);
             return;
           }
           document.removeEventListener('visibilitychange', handleVisibilityForGate);
           setSessionReady(true);
+          // PIN screen off (lib/auth/pin-lock.ts): the server confirmed a session, so let the chat open.
+          if (!pinLockEnabled()) { setCleared(true); return; }
           if (data?.hasPin === false) {
             // Permanence check: if this device/browser already belongs to an existing account,
             // never divert into "Create your security PIN / account" loop again!
@@ -423,6 +429,8 @@ export function TuringShieldGate({
           // Network error — show gate, user will see the PIN input and retry
           document.removeEventListener('visibilitychange', handleVisibilityForGate);
           setSessionReady(true);
+          // With the PIN screen off there is nothing to type; the chat reports its own request errors.
+          if (!pinLockEnabled()) setCleared(true);
         });
     };
 
@@ -661,7 +669,9 @@ export function TuringShieldGate({
 
   // Pre-mount / SSR: render a neutral loading screen matching the PIN gate style.
   // Avoids hydration mismatches (server and client initial render match 1:1) and prevents blank white flash.
-  if (!mounted) {
+  // With the PIN screen off (lib/auth/pin-lock.ts) the same neutral screen stays until the session check
+  // clears the gate: the PIN pad must never appear, not even for the moment the check takes.
+  if (!mounted || (!cleared && !settingPin && !pinLockEnabled())) {
     return (
       <div
         className="fixed inset-0 z-[99999] flex items-center justify-center"

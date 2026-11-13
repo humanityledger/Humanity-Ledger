@@ -77,10 +77,10 @@ export default function ChatError({
             <RefreshCw size={12} /> Reload Chat
           </button>
           <Link
-            href="/hub"
+            href="/"
             className="w-full flex items-center justify-center gap-2 py-3 border border-black/10 text-black/60 font-bold text-[11px] uppercase tracking-widest rounded-2xl hover:border-black hover:text-black transition-colors"
           >
-            <Home size={12} /> Back to Hub
+            <Home size={12} /> Back to home
           </Link>
           <Link
             href="/connect"

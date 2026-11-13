@@ -50,6 +50,19 @@ export async function revokeSessionToken(token: string | undefined | null): Prom
   prune();
 }
 
+/**
+ * Revoke a session known only by its fingerprint (a linked device removed from the phone:
+ * the server keeps the fingerprint, never the token). `ttlSec`: until the token expires.
+ */
+export async function revokeFingerprint(fp: string, ttlSec: number): Promise<void> {
+  if (!/^[0-9a-f]{64}$/.test(fp)) return;
+  const ttl = Math.max(60, Math.min(DEFAULT_TTL_SEC, Math.ceil(ttlSec)));
+  revokedHere.set(fp, Date.now() + ttl * 1000);
+  notRevokedCache.delete(fp);
+  await safeRedisSet(PREFIX + fp, '1', 'EX', ttl);
+  prune();
+}
+
 /** True when the token was revoked by a logout on any instance. */
 export async function isSessionTokenRevoked(token: string): Promise<boolean> {
   const fp = tokenFingerprint(token);

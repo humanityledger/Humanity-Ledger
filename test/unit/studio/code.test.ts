@@ -1,46 +1,16 @@
-import { vi } from 'vitest';
-import { COMPACT_BETA, runAgent, type SandboxIo } from '@/lib/studio/agent';
+import { runAgent } from '@/lib/studio/agent';
 import { chatRequestSchema, type StudioEvent } from '@/lib/studio/protocol';
-import { STUDIO_PLANS, estimateCostUsd } from '@/lib/studio/models';
+import { STUDIO_PLANS } from '@/lib/studio/models';
 import { estimateInputTokens, sanitizeMessages, sinceLastCompaction, validateTurnShape } from '@/lib/studio/sanitize';
-import { outputFileIdsIn } from '@/lib/studio/sandbox';
-
-/** A fake SDK client that replays scripted responses through the stream API. */
-function fakeClient(responses: any[]) {
-  const calls: any[] = [];
-  const client = {
-    beta: {
-      messages: {
-        stream(params: any) {
-          calls.push(JSON.parse(JSON.stringify(params)));
-          const res = typeof responses[0] === 'function' ? responses.shift()(params) : responses.shift();
-          let handler: ((e: any) => void) | null = null;
-          return {
-            on(_name: string, fn: (e: any) => void) { handler = fn; return this; },
-            async finalMessage() {
-              if (!res) throw new Error('no scripted response left');
-              if (res.error) throw res.error;
-              for (const t of res.thinking ?? []) handler?.({ type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: t } });
-              res.content.forEach((b: any, index: number) => {
-                handler?.({ type: 'content_block_start', index, content_block: b.type === 'text' ? { type: 'text', text: '' } : b });
-                if (b.type === 'text') handler?.({ type: 'content_block_delta', index, delta: { type: 'text_delta', text: b.text } });
-              });
-              return { usage: {}, ...res };
-            },
-          };
-        },
-      },
-    },
-  };
-  return { client: client as any, calls };
-}
+import { ProviderError } from '@/lib/studio/groq';
+import { fakeClient } from './fake-client';
 
 const toolUse = (id: string, name: string, input: any) => ({ type: 'tool_use', id, name, input });
-const callTools = (...blocks: any[]) => ({ content: blocks, stop_reason: 'tool_use', usage: { input_tokens: 1_000, output_tokens: 100 } });
-const endWith = (text: string) => ({ content: [{ type: 'text', text }], stop_reason: 'end_turn', usage: { input_tokens: 1_000, output_tokens: 50 } });
+const callTools = (...blocks: any[]) => ({ content: blocks, stop_reason: 'tool_use' as const, usage: { input_tokens: 1_000, output_tokens: 100 } });
+const endWith = (text: string) => ({ content: [{ type: 'text', text }], stop_reason: 'end_turn' as const, usage: { input_tokens: 1_000, output_tokens: 50 } });
 
 const codeReq = (extra: Record<string, unknown> = {}) => chatRequestSchema.parse({
-  model: 'claude-sonnet-5-5',
+  model: 'openai/gpt-oss-120b',
   mode: 'code',
   permission: 'ask',
   messages: [{ role: 'user', content: 'Fix the bug' }],
@@ -50,48 +20,45 @@ const codeReq = (extra: Record<string, unknown> = {}) => chatRequestSchema.parse
 
 const run = (client: any, req: any, extra: Record<string, unknown> = {}) => {
   const events: StudioEvent[] = [];
-  const p = runAgent({ client, req, model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.pro, emit: e => events.push(e), budgetUsd: 10, ...extra });
+  const p = runAgent({ client, req, model: 'openai/gpt-oss-120b', plan: STUDIO_PLANS.pro, emit: e => events.push(e), budgetUsd: 10, ...extra });
   return { events, p };
 };
 const produced = (events: StudioEvent[]) => (events.find(e => e.type === 'messages') as any).messages as any[];
-const toolNames = (params: any) => params.tools.map((t: any) => t.name ?? t.type);
+const toolNames = (params: any) => params.tools.map((t: any) => t.name);
 
 describe('Code mode tools and request', () => {
-  it('offers workspace tools by permission, compaction, effort and no artifact tool', async () => {
+  it('offers workspace tools by permission and effort, and no artifact or server tools', async () => {
     const ask = fakeClient([endWith('ok')]);
     await run(ask.client, codeReq({ effort: 'high' })).p;
     const names = toolNames(ask.calls[0]);
-    expect(names).toEqual(expect.arrayContaining(['read_file', 'list_files', 'grep', 'write_file', 'edit_file', 'delete_file', 'move_file', 'todo_write', 'ask_user', 'task', 'web_search']));
-    expect(names).not.toContain('artifact');
-    expect(names).not.toContain('propose_plan');
-    expect(names).not.toContain('code_execution'); // no sandbox requested
-    expect(ask.calls[0].betas).toContain(COMPACT_BETA);
-    expect(ask.calls[0].context_management.edits[0]).toMatchObject({ type: 'compact_20260112', trigger: { type: 'input_tokens' } });
-    expect(ask.calls[0].context_management.edits[0].trigger.value).toBeGreaterThanOrEqual(50_000);
-    expect(ask.calls[0].output_config).toEqual({ effort: 'high' });
-    expect(ask.calls[0].system.map((b: any) => b.text).join('\n')).toMatch(/<workspace_files>[\s\S]*a\.ts[\s\S]*<\/workspace_files>/);
+    expect(names).toEqual(['read_file', 'list_files', 'grep', 'write_file', 'edit_file', 'delete_file', 'move_file', 'todo_write', 'ask_user', 'task'].filter(n => names.includes(n)));
+    expect(names).toEqual(expect.arrayContaining(['read_file', 'list_files', 'grep', 'write_file', 'edit_file', 'delete_file', 'move_file', 'todo_write', 'ask_user', 'task']));
+    for (const gone of ['artifact', 'propose_plan', 'web_search', 'web_fetch', 'code_execution', 'sync_sandbox']) expect(names).not.toContain(gone);
+    expect(ask.calls[0].reasoning_effort).toBe('high');
+    const system = ask.calls[0].system.map((b: any) => b.text).join('\n');
+    expect(system).toMatch(/<workspace_files>[\s\S]*a\.ts[\s\S]*<\/workspace_files>/);
+    expect(system).toContain('You cannot run code in Studio');
+    expect(system).not.toMatch(/sync_sandbox|code_execution|Claude/);
 
+    // An old client asking for the sandbox gets the same tools.
     const plan = fakeClient([endWith('ok')]);
-    await run(plan.client, codeReq({ permission: 'plan', sandbox: { enabled: true } }), { sandboxIo: fakeIo().io }).p;
+    await run(plan.client, codeReq({ permission: 'plan', sandbox: { enabled: true } })).p;
     const planNames = toolNames(plan.calls[0]);
     expect(planNames).toContain('propose_plan');
     expect(planNames).not.toContain('write_file');
     expect(planNames).not.toContain('code_execution');
   });
 
-  it('drops an effort the plan does not include', async () => {
+  it('maps xhigh and max (saved before the migration) to high', async () => {
     const free = fakeClient([endWith('ok')]);
-    const events: StudioEvent[] = [];
-    await runAgent({ client: free.client, req: codeReq({ effort: 'max' }), model: 'claude-sonnet-5-5', plan: STUDIO_PLANS.free, emit: e => events.push(e), budgetUsd: 1 });
-    expect(free.calls[0].output_config).toBeUndefined();
+    await runAgent({ client: free.client, req: codeReq({ effort: 'max' }), model: 'openai/gpt-oss-120b', plan: STUDIO_PLANS.free, emit: () => {}, budgetUsd: 1 });
+    expect(free.calls[0].reasoning_effort).toBe('high');
   });
 
   it('keeps chat mode unchanged', async () => {
     const chat = fakeClient([endWith('ok')]);
-    await run(chat.client, chatRequestSchema.parse({ model: 'claude-sonnet-5-5', messages: [{ role: 'user', content: 'hi' }] })).p;
-    expect(toolNames(chat.calls[0])).toContain('artifact');
-    expect(chat.calls[0].betas).toBeUndefined();
-    expect(chat.calls[0].context_management).toBeUndefined();
+    await run(chat.client, chatRequestSchema.parse({ model: 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'hi' }] })).p;
+    expect(toolNames(chat.calls[0])).toEqual(['artifact']);
   });
 });
 
@@ -201,12 +168,12 @@ describe('Resuming is validated', () => {
 });
 
 describe('Subagents', () => {
-  it('explore runs on Haiku, read-only, tagged with its parent, and reports back', async () => {
+  it('explore runs on the small model, read-only, tagged with its parent, and reports back', async () => {
     const c = fakeClient([
       callTools(toolUse('s1', 'task', { description: 'Find usages', prompt: 'Find where a is used', subagent_type: 'explore' })),
       // inside the subagent
       (params: any) => {
-        expect(params.model).toBe('claude-haiku-5-5');
+        expect(params.model).toBe('openai/gpt-oss-20b');
         expect(toolNames(params)).not.toContain('write_file');
         expect(toolNames(params)).not.toContain('task');
         return callTools(toolUse('g1', 'grep', { pattern: 'a' }));
@@ -247,91 +214,15 @@ describe('Subagents', () => {
   });
 });
 
-function fakeIo() {
-  const uploads: { name: string; size: number }[] = [];
-  const io: SandboxIo = {
-    async upload(data, filename) { uploads.push({ name: filename, size: data.length }); return 'file_upload0001'; },
-    async importOutput(fileId) { return fileId === 'file_out00000001' ? { filename: 'report.csv', content: 'a,b\n1,2\n', encoding: 'utf8', size: 8 } : null; },
-  };
-  return { io, uploads };
-}
-
-describe('Sandbox', () => {
-  it('copies the workspace in, reuses the container and imports outputs', async () => {
-    const { io, uploads } = fakeIo();
-    const c = fakeClient([
-      callTools(toolUse('sy', 'sync_sandbox', {})),
-      (params: any) => {
-        const last = params.messages.at(-1).content;
-        expect(last.find((b: any) => b.type === 'container_upload')).toEqual({ type: 'container_upload', file_id: 'file_upload0001' });
-        expect(params.container).toBe('cntr_previous01');
-        return {
-          content: [
-            { type: 'server_tool_use', id: 'srv1', name: 'bash_code_execution', input: { command: 'python run.py' } },
-            { type: 'bash_code_execution_tool_result', tool_use_id: 'srv1', content: { type: 'bash_code_execution_result', stdout: 'ok', stderr: '', return_code: 0, content: [{ type: 'bash_code_execution_output', file_id: 'file_out00000001' }] } },
-            { type: 'text', text: 'Ran it.' },
-          ],
-          stop_reason: 'end_turn',
-          container: { id: 'cntr_new0000001', expires_at: '2026-11-27T00:00:00Z' },
-          usage: { input_tokens: 2_000, output_tokens: 100, server_tool_use: { code_execution_requests: 1 } },
-        };
-      },
-    ]);
-    const r = run(c.client, codeReq({ permission: 'auto', sandbox: { enabled: true, containerId: 'cntr_previous01' } }), { sandboxIo: io });
-    const res = await r.p;
-    expect(toolNames(c.calls[0])).toEqual(expect.arrayContaining(['sync_sandbox', 'code_execution']));
-    expect(uploads).toHaveLength(1);
-    expect(res.containerId).toBe('cntr_new0000001');
-    expect(res.uploadedFileIds).toEqual(['file_upload0001']);
-    expect(res.outputFileIds).toEqual(['file_out00000001']);
-    expect(r.events.find(e => e.type === 'container')).toMatchObject({ id: 'cntr_new0000001' });
-    expect((r.events.filter(e => e.type === 'file') as any[]).map(e => e.change.path)).toContain('outputs/report.csv');
-    // The stored history never references the uploaded copy.
-    const hist = produced(r.events);
-    expect(JSON.stringify(hist)).not.toContain('file_upload0001');
-    expect(JSON.stringify(hist)).toContain('copied into the sandbox');
-    // Code execution is billed.
-    expect(estimateCostUsd('claude-sonnet-5-5', { server_tool_use: { code_execution_requests: 1 } } as any)).toBeGreaterThan(0);
-  });
-
-  it('drops a copy the API refuses and says so', async () => {
-    const { io } = fakeIo();
-    const bad = Object.assign(new Error('bad file'), { status: 400 });
-    const c = fakeClient([
-      callTools(toolUse('sy', 'sync_sandbox', {})),
-      { error: bad, content: [] },
-      (params: any) => {
-        const last = params.messages.at(-1).content;
-        expect(last.some((b: any) => b.type === 'container_upload')).toBe(false);
-        expect(last[0].is_error).toBe(true);
-        return endWith('Running code is not available.');
-      },
-    ]);
-    const r = run(c.client, codeReq({ permission: 'auto', sandbox: { enabled: true } }), { sandboxIo: io });
-    await r.p;
-    expect(r.events.some(e => e.type === 'notice' && (e as any).code === 'SYNC_FAILED')).toBe(true);
-  });
-});
-
 describe('Robustness', () => {
-  it('retries a step once the provider recovers from an overload', async () => {
-    const overloaded = Object.assign(new Error('Overloaded'), { status: 529 });
-    const c = fakeClient([{ error: overloaded, content: [] }, endWith('ok')]);
+  it('turns provider failures into clear errors (the Groq client already retried)', async () => {
+    const c = fakeClient([{ error: new ProviderError('PROVIDER_OVERLOADED', 'Overloaded', 503) }]);
     const r = run(c.client, codeReq());
-    const res = await r.p;
-    expect(res.stopReason).toBe('end_turn');
-    expect(c.calls).toHaveLength(2);
-  }, 10_000);
-
-  it('drops an effort setting the model refuses and tries again', async () => {
-    const bad = Object.assign(new Error('output_config.effort: not supported for this model'), { status: 400 });
-    const c = fakeClient([{ error: bad, content: [] }, endWith('ok')]);
-    await run(c.client, codeReq({ effort: 'high' })).p;
-    expect(c.calls[0].output_config).toEqual({ effort: 'high' });
-    expect(c.calls[1].output_config).toBeUndefined();
+    await expect(r.p).rejects.toMatchObject({ name: 'AgentError' });
+    expect(c.calls).toHaveLength(1);
   });
 
-  it('caches each tool step without leaking cache markers into the history', async () => {
+  it('sends no cache markers to the provider and stores none in the history', async () => {
     const c = fakeClient([
       callTools(toolUse('r1', 'read_file', { path: 'README.md' })),
       callTools(toolUse('r2', 'read_file', { path: 'src/a.ts' })),
@@ -339,18 +230,13 @@ describe('Robustness', () => {
     ]);
     const r = run(c.client, codeReq({ permission: 'auto' }));
     await r.p;
-    const marked = (m: any) => Array.isArray(m.content) && m.content.some((b: any) => b.cache_control);
-    // Step 2 and 3: the original prompt and the newest tool results are marked, nothing else.
-    expect(c.calls[1].messages.filter(marked)).toHaveLength(2);
-    expect(c.calls[2].messages.filter(marked)).toHaveLength(2);
-    expect(marked(c.calls[2].messages.at(-1))).toBe(true);
-    expect(marked(c.calls[2].messages.at(-3))).toBe(false);
+    expect(JSON.stringify(c.calls)).not.toContain('cache_control');
     expect(JSON.stringify(produced(r.events))).not.toContain('cache_control');
   });
 
   it('keeps the work done before a failure in the history', async () => {
-    const boom = Object.assign(new Error('bad request'), { status: 400 });
-    const c = fakeClient([callTools(toolUse('w1', 'write_file', { path: 'n.txt', content: 'x' })), { error: boom, content: [] }]);
+    const boom = new ProviderError('BAD_REQUEST', 'bad request', 400);
+    const c = fakeClient([callTools(toolUse('w1', 'write_file', { path: 'n.txt', content: 'x' })), { error: boom }]);
     const r = run(c.client, codeReq({ permission: 'auto' }));
     await expect(r.p).rejects.toBeTruthy();
     const hist = produced(r.events);
@@ -360,19 +246,24 @@ describe('Robustness', () => {
 });
 
 describe('Reasoning, compaction and the history', () => {
-  it('streams reasoning and counts compaction iterations', async () => {
-    const c = fakeClient([{
-      thinking: ['Let me look', ' at the code.'],
-      content: [{ type: 'compaction', content: '<summary>earlier work</summary>' }, { type: 'text', text: 'ok' }],
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 1_000, output_tokens: 10, iterations: [{ type: 'compaction', input_tokens: 100_000, output_tokens: 2_000 }] },
-    }]);
+  it('streams reasoning', async () => {
+    const c = fakeClient([{ reasoning: ['Let me look', ' at the code.'], content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1_000, output_tokens: 10 } }]);
     const r = run(c.client, codeReq());
     const res = await r.p;
     expect(r.events.filter(e => e.type === 'reasoning').map((e: any) => e.delta).join('')).toBe('Let me look at the code.');
-    expect(r.events.some(e => e.type === 'compacted')).toBe(true);
-    expect(res.usage.input_tokens).toBe(101_000);
-    expect(res.usage.output_tokens).toBe(2_010);
+    expect(res.usage).toMatchObject({ input_tokens: 1_000, output_tokens: 10 });
+  });
+
+  it('starts an old compacted history at its summary', async () => {
+    const msgs: any[] = [
+      { role: 'user', content: 'x'.repeat(5_000) },
+      { role: 'assistant', content: [{ type: 'compaction', content: '<summary>earlier work</summary>' }, { type: 'text', text: 'ok' }] },
+      { role: 'user', content: 'next' },
+    ];
+    const c = fakeClient([endWith('ok')]);
+    await run(c.client, codeReq({ messages: msgs })).p;
+    expect(c.calls[0].messages).toHaveLength(2);
+    expect(c.calls[0].messages[0].content[0].type).toBe('compaction');
   });
 
   it('estimates only what follows the last compaction', () => {
@@ -383,21 +274,17 @@ describe('Reasoning, compaction and the history', () => {
     expect(est).toBeLessThan(10_000);
   });
 
-  it('accepts sandbox outputs only when this wallet made them', () => {
+  it('drops resource references from old sandbox outputs, and rejects them in user turns', () => {
     const msgs: any[] = [
       { role: 'user', content: 'run' },
       { role: 'assistant', content: [{ type: 'bash_code_execution_tool_result', tool_use_id: 's', content: { type: 'bash_code_execution_result', content: [{ type: 'bash_code_execution_output', file_id: 'file_mine0000001' }] } }] },
       { role: 'user', content: 'more' },
     ];
-    expect(outputFileIdsIn(msgs)).toEqual(['file_mine0000001']);
-    expect(sanitizeMessages(msgs).ok).toBe(false);
-    expect(sanitizeMessages(msgs, { ownedFileIds: new Set(['file_other000001']) }).ok).toBe(false);
-    expect(sanitizeMessages(msgs, { ownedFileIds: new Set(['file_mine0000001']) }).ok).toBe(true);
-    // Never in a user turn, and never under another block type.
-    const sneaky: any[] = [{ role: 'user', content: [{ type: 'bash_code_execution_output', file_id: 'file_mine0000001' }] }];
-    expect(sanitizeMessages(sneaky, { ownedFileIds: new Set(['file_mine0000001']) }).ok).toBe(false);
-    const other: any[] = [{ role: 'user', content: 'a' }, { role: 'assistant', content: [{ type: 'text', text: 'x', file_id: 'file_mine0000001' }] }];
-    expect(sanitizeMessages(other, { ownedFileIds: new Set(['file_mine0000001']) }).ok).toBe(false);
+    const r = sanitizeMessages(msgs);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(JSON.stringify(r.messages)).not.toContain('file_id');
+    const sneaky: any[] = [{ role: 'user', content: [{ type: 'text', text: 'x', file_id: 'file_mine0000001' }] }];
+    expect(sanitizeMessages(sneaky).ok).toBe(false);
   });
 
   it('answers every call when stopped part-way so the history stays valid', async () => {
@@ -480,10 +367,10 @@ describe('Permission rules', () => {
 describe('Context meter', () => {
   it('reports how full the context was on the last call', async () => {
     const c = fakeClient([
-      { ...callTools(toolUse('r', 'read_file', { path: 'README.md' })), usage: { input_tokens: 100, cache_read_input_tokens: 9_000, output_tokens: 50 } },
-      { ...endWith('ok'), usage: { input_tokens: 200, cache_read_input_tokens: 9_500, cache_creation_input_tokens: 300, output_tokens: 40 } },
+      { ...callTools(toolUse('r', 'read_file', { path: 'README.md' })), usage: { input_tokens: 3_000, output_tokens: 50 } },
+      { ...endWith('ok'), usage: { input_tokens: 3_500, output_tokens: 40 } },
     ]);
     const res = await run(c.client, codeReq({ permission: 'auto' })).p;
-    expect(res.contextTokens).toBe(200 + 9_500 + 300 + 40);
+    expect(res.contextTokens).toBe(3_500 + 40);
   });
 });

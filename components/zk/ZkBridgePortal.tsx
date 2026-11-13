@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
+import { isSponsorAdmin, ledgerSponsorAddress } from '@/lib/aztec/wallet/ledger-sponsor';
 import { ERC20_ABI, l1ClientsFromViem, pinnedFeeJuice, type BridgeStep, type FeeJuiceClaim } from '@/lib/aztec/fee-juice';
 
 interface ZkBridgePortalProps {
@@ -82,15 +83,18 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
   );
 }
 
-function FeeJuiceStation({ userAddress }: { userAddress: string }) {
-  const { state, open, walletConnected, sameAccount } = useAztecWallet(userAddress);
+/** Fee Juice for the private wallet on Aztec Alpha: balance, bridge from Ethereum, deposits on their way. Also shown inside the wallet panel. */
+export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
+  const { state, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(userAddress);
   const { address: evm, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: MAINNET_CHAIN_ID });
   const { data: walletClient } = useWalletClient({ chainId: MAINNET_CHAIN_ID });
   const pin = pinnedFeeJuice('mainnet');
-  const evmAddr = evm as `0x${string}` | undefined;
+  // On a computer linked to the phone no Ethereum wallet is connected here, but the account is the
+  // same address: read its balances (read-only, public RPC) instead of showing nothing.
+  const evmAddr = (evm ?? (linkedComputer && /^0x[a-fA-F0-9]{40}$/.test(userAddress) ? userAddress : undefined)) as `0x${string}` | undefined;
 
   const { data: eth } = useBalance({ address: evmAddr, chainId: MAINNET_CHAIN_ID, query: { enabled: !!evmAddr } });
   const { data: aztecUnits, refetch: refetchAztec } = useReadContract({
@@ -140,6 +144,11 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
 
   const held = typeof aztecUnits === 'bigint' ? aztecUnits : 0n;
   const tooMuch = units !== null && units > held;
+  // A deposit is claimed whole by one transaction, which must cover its maximum fee: below this, the
+  // account cannot be created with it (lib/aztec/fee-juice.ts maxFeeFor). AZTEC and Fee Juice are 1:1.
+  const minDeposit = fj?.minForTx && fj.minForTx > 0n ? fj.minForTx : 0n;
+  const minWhole = minDeposit > 0n ? ((minDeposit + 10n ** 18n - 1n) / 10n ** 18n).toString() : null;
+  const tooSmall = units !== null && minDeposit > 0n && state.phase === 'needs-fee-juice' && units < minDeposit;
   const wrongChain = isConnected && chainId !== MAINNET_CHAIN_ID;
   const busy = step !== null && step !== 'deposited';
 
@@ -191,6 +200,11 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         >
           {state.phase === 'signing' || state.phase === 'starting' ? state.step ?? 'Opening…' : 'Open private wallet'}
         </button>
+        {linkedComputer && (
+          <p className="text-[13px] text-[#475467] leading-relaxed">
+            This computer is linked to your phone. Opening the private wallet sends a request to your phone: open Ledger Chat there and tap Approve.
+          </p>
+        )}
         {state.error && <p className="text-[13px] text-[#FF3B30]">{state.error}</p>}
       </div>
     );
@@ -224,9 +238,21 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           />
         </div>
         {tooMuch && <p className="mt-1.5 text-[13px] text-[#FF3B30]">That is more AZTEC than your Ethereum wallet holds.</p>}
+        {minWhole && state.phase === 'needs-fee-juice' && (
+          <p className={`mt-1.5 text-[14px] leading-snug ${tooSmall ? 'text-[#FF3B30]' : 'text-[#475467]'}`}>
+            Add at least <strong>{minWhole} AZTEC</strong> in one deposit: creating your account must be able to cover its maximum
+            network fee. Only the gas used is charged; the rest stays as Fee Juice for your next payments. The Ethereum fee for the
+            deposit is the same whatever the amount.
+          </p>
+        )}
       </div>
 
-      {!isConnected ? (
+      {!isConnected && linkedComputer ? (
+        <p className="text-[13.5px] text-[#475467] leading-relaxed">
+          This computer is linked to your phone, so it can read your balances but cannot sign on Ethereum. To add Fee Juice, open
+          Ledger Chat on your phone and deposit from there; it appears here once it lands.
+        </p>
+      ) : !isConnected ? (
         <p className="text-[13.5px] text-[#475467]">Connect the Ethereum wallet that holds your AZTEC.</p>
       ) : wrongChain ? (
         <button
@@ -245,7 +271,7 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         </label>
         <button
           type="button"
-          disabled={!units || tooMuch || busy || !walletClient || !ackPublic}
+          disabled={!units || tooMuch || tooSmall || busy || !walletClient || !ackPublic}
           onClick={bridge}
           className="w-full min-h-[44px] rounded-2xl bg-[#15171C] text-white text-[14px] font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
         >
@@ -312,6 +338,67 @@ function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           The bridge is one way: Fee Juice can only pay Aztec fees and cannot be sent back to Ethereum. Add only what you expect to spend on fees.
         </p>
       </div>
+
+      {isSponsorAdmin(evm ?? userAddress) && <SponsorOperator publicClient={publicClient} walletClient={walletClient} />}
+    </div>
+  );
+}
+
+/**
+ * Operator tools for the Ledger sponsor (P1), shown only to NEXT_PUBLIC_AZTEC_SPONSOR_ADMIN. Every
+ * step is signed by the operator: the deploy and the claim by their private wallet, the deposit by
+ * their Ethereum wallet. Works from a phone; no terminal.
+ */
+function SponsorOperator({ publicClient, walletClient }: { publicClient: any; walletClient: any }) {
+  const configured = ledgerSponsorAddress();
+  const [deployed, setDeployed] = useState<string>(() => { try { return localStorage.getItem('hl:aztec-sponsor-deployed') || ''; } catch { return ''; } });
+  const [amount, setAmount] = useState('40');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [balance, setBalance] = useState<bigint | null>(null);
+  const target = configured || deployed;
+  const run = async (label: string, fn: () => Promise<string | void>) => {
+    if (busy) return;
+    setBusy(true); setMsg(label);
+    try { const out = await fn(); setMsg(out || 'Done.'); } catch (e) { setMsg(humanError(e)); } finally { setBusy(false); }
+  };
+  useEffect(() => {
+    if (!target) return;
+    getPrivateWallet().sponsorBalance(target).then(setBalance).catch(() => setBalance(null));
+  }, [target, msg]);
+  return (
+    <div className="rounded-2xl border border-[#15171C] px-4 py-4 space-y-3">
+      <div>
+        <p className="text-[14px] font-semibold text-[#15171C]">Ledger sponsor</p>
+        <p className="text-[12.5px] text-[#475467] leading-relaxed mt-1">
+          Pays account creation and the first transactions of people without Fee Juice, a few per account and up to a daily limit. You deploy it and fund it from here; every step is signed by your own wallets.
+        </p>
+      </div>
+      {!target ? (
+        <button type="button" disabled={busy} onClick={() => run('Deploying the sponsor from your private wallet…', async () => {
+          const a = await getPrivateWallet().deployLedgerSponsor();
+          setDeployed(a);
+          return 'Deployed. Last step: set NEXT_PUBLIC_AZTEC_SPONSOR to this address in Railway and redeploy.';
+        })} className="h-11 w-full rounded-full bg-[#15171C] text-white text-[14px] font-semibold disabled:opacity-40">Deploy the sponsor</button>
+      ) : (
+        <>
+          <button type="button" onClick={() => navigator.clipboard?.writeText(target).catch(() => {})} className="w-full text-left text-[12.5px] font-mono text-[#15171C] break-all">{target}</button>
+          {!configured && <p className="text-[12.5px] text-[#475467]">Not active yet: set <strong>NEXT_PUBLIC_AZTEC_SPONSOR</strong> to this address in Railway, then redeploy.</p>}
+          <p className="text-[13px] text-[#15171C]">Fee Juice in the sponsor: <strong>{balance === null ? '…' : formatUnits(balance, 18)}</strong></p>
+          <div className="flex gap-2">
+            <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-11 flex-1 rounded-xl border border-[#E4E7EC] px-3 text-[14px]" aria-label="AZTEC to add to the sponsor" />
+            <button type="button" disabled={busy || !walletClient || !publicClient} onClick={() => run('Confirm the deposit in your Ethereum wallet…', async () => {
+              await getPrivateWallet().bridgeToSponsor(l1ClientsFromViem(publicClient, walletClient), target, amount);
+              return 'Deposited on Ethereum. When it arrives (a few minutes), tap Claim into the sponsor.';
+            })} className="h-11 px-4 rounded-full bg-[#15171C] text-white text-[14px] font-semibold disabled:opacity-40">Add AZTEC</button>
+          </div>
+          <button type="button" disabled={busy} onClick={() => run('Claiming arrived deposits into the sponsor…', async () => {
+            const r = await getPrivateWallet().claimIntoSponsor();
+            return r.claimed ? `Claimed ${r.claimed} deposit${r.claimed > 1 ? 's' : ''}.${r.waiting ? ` ${r.waiting} still on the way.` : ''}` : r.waiting ? 'The deposit is still on its way. Try again in a few minutes.' : 'Nothing to claim.';
+          })} className="h-11 w-full rounded-full border border-[#E4E7EC] text-[14px] font-semibold disabled:opacity-40">Claim into the sponsor</button>
+        </>
+      )}
+      {msg && <p className="text-[12.5px] text-[#475467]" role="status">{msg}</p>}
     </div>
   );
 }
@@ -329,6 +416,7 @@ function planLabel(plan: string): string {
   if (plan === 'claim') return 'Arrived deposit';
   if (plan === 'balance') return 'Your Fee Juice';
   if (plan === 'wait-claim') return 'Waiting for deposit';
+  if (plan === 'top-up') return 'Add more Fee Juice';
   return 'Add Fee Juice';
 }
 
@@ -347,5 +435,35 @@ function ClaimRow({ claim, ready }: { claim: FeeJuiceClaim; ready: boolean }) {
         {ready ? 'Ready, used by your next transaction' : 'Arriving on Aztec'}
       </span>
     </li>
+  );
+}
+
+/**
+ * What the account holds on Ethereum (read-only): ETH for gas and AZTEC to bridge as Fee Juice.
+ * Works on a computer linked to the phone too: the account address is the session address.
+ */
+export function EthereumHoldings({ userAddress }: { userAddress: string }) {
+  const { address: evm } = useAccount();
+  const pin = pinnedFeeJuice('mainnet');
+  const who = (evm ?? (/^0x[a-fA-F0-9]{40}$/.test(userAddress) ? userAddress : undefined)) as `0x${string}` | undefined;
+  const { data: eth } = useBalance({ address: who, chainId: MAINNET_CHAIN_ID, query: { enabled: !!who } });
+  const { data: units } = useReadContract({
+    address: pin.token as `0x${string}`, abi: ERC20_ABI, functionName: 'balanceOf',
+    args: who ? [who] : undefined, chainId: MAINNET_CHAIN_ID, query: { enabled: !!who },
+  });
+  const { data: dec } = useReadContract({ address: pin.token as `0x${string}`, abi: ERC20_ABI, functionName: 'decimals', chainId: MAINNET_CHAIN_ID });
+  const rows: [string, string][] = [
+    ['ETH', eth ? Number(eth.formatted).toFixed(5) : '…'],
+    ['AZTEC', units === undefined || dec === undefined ? '…' : Number(formatUnits(units as bigint, Number(dec))).toLocaleString(undefined, { maximumFractionDigits: 4 })],
+  ];
+  return (
+    <>
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex items-baseline justify-between py-3 border-t border-[#eef0f3] first:border-t-0">
+          <span className="text-[14px] text-[#5b6170]">{k}</span>
+          <span className="text-[15px] font-semibold tabular-nums">{v}</span>
+        </div>
+      ))}
+    </>
   );
 }

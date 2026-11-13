@@ -14,14 +14,17 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { singleFlight } from '@/lib/aztec/single-flight';
-import { X, KeyRound, Lock, Waves, LoaderCircle } from 'lucide-react';
+import { X, KeyRound, Lock, Waves } from 'lucide-react';
 import { announcementFor, localStoragePeerBindingStore, peerAztecAddress, verifiedAnnouncementFor } from '@/lib/aztec/peer-binding';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
-import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
+import { ProvingStatus } from './ProvingStatus';
 import { STREAM_START_SLACK, streamTerms } from '@/lib/aztec/stream-terms';
 import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
+import { useValueMode } from '@/lib/aztec/useValueMode';
+import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -56,9 +59,25 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   const [wallet, setWallet] = useState<WalletSnapshot>(() => getPrivateWallet().state);
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const [peer, setPeer] = useState<string | undefined>();
+  const [peerVerified, setPeerVerified] = useState(false);
+  const valueMode = useValueMode();
+  // No configured token (Alpha, Fee Juice only): nothing to fund an agreement with; sharing the address still works.
+  const paused = !hasPrivateTokens()
+    ? NO_PRIVATE_TOKENS_MESSAGE
+    : valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
   useEffect(() => {
+    setPeerVerified(false);
     peerAztecAddress(localStoragePeerBindingStore(), dmPeerInboxId).then(setPeer).catch(() => setPeer(undefined));
-  }, [dmPeerInboxId]);
+    // Fresh G7 check (stored Schnorr proof re-verified); chat-agreements repeats it before any value moves.
+    let live = true;
+    import('@/lib/aztec/peer-binding')
+      .then(async (pb) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), dmPeerInboxId, selfInboxId ?? '', await pb.sdkBindingCrypto()))
+      .then((b) => live && setPeerVerified(b.verified))
+      .catch(() => live && setPeerVerified(false));
+    return () => {
+      live = false;
+    };
+  }, [dmPeerInboxId, selfInboxId]);
 
   const [kind, setKind] = useState<'escrow' | 'stream'>('escrow');
   const [token, setToken] = useState(AZTEC_WALLET_CONFIG.tokens[0]?.address ?? '');
@@ -66,6 +85,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   const [duration, setDuration] = useState(DURATIONS.escrow[1].s);
   const [step, setStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState(0);
   const [ack, setAck] = useState(NO_ACK);
   // The acknowledgement is per agreement: never carried across conversations or attempts, never persisted.
   useEffect(() => setAck(NO_ACK), [dmPeerInboxId]);
@@ -94,6 +114,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   const once = useRef(singleFlight()).current; // 4.19: a double tap never funds two agreements
   const open = () => once(async () => {
     setError(null);
+    setStartedAt(Date.now());
     if (!peer) return;
     setStep('Preparing');
     try {
@@ -158,7 +179,11 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 <KeyRound size={14} /> Aztec addresses
               </p>
               <p className="text-[13px] text-[#727a88] mt-1 leading-snug">
-                {peer ? `${peerName}'s address is saved for this chat: ${peer.slice(0, 10)}…${peer.slice(-4)}.` : `${peerName} has not shared an Aztec address in this chat yet. Share yours and ask them to share theirs.`}
+                {peer
+                  ? peerVerified
+                    ? `${peerName}'s address is saved and verified for this chat: ${peer.slice(0, 10)}…${peer.slice(-4)}.`
+                    : `${peerName}'s address ${peer.slice(0, 10)}…${peer.slice(-4)} is not verified. Ask them to share it again from an up-to-date Ledger Chat; agreements need a verified address.`
+                  : `${peerName} has not shared an Aztec address in this chat yet. Share yours and ask them to share theirs.`}
               </p>
               <button type="button" className="mt-2.5 h-9 px-3.5 rounded-full bg-[#eff1f4] text-[13.5px] font-semibold text-[#15171c]" disabled={!!step} onClick={share}>
                 Share my Aztec address
@@ -220,7 +245,8 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 </p>
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !amount || !token || (ALPHA && !acked(ack))} onClick={open}>
+                {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
                 </button>
               </div>
@@ -229,9 +255,9 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
         )}
 
         {step && (
-          <p className="mt-4 flex items-center gap-2 text-[13.5px] text-[#4a505c]" role="status">
-            <LoaderCircle size={14} className="animate-spin" /> {step}
-          </p>
+          <div className="mt-4">
+            <ProvingStatus label={step} startedAt={startedAt || Date.now()} />
+          </div>
         )}
         {error && <p className="mt-4 text-[13px] text-[#7a2e12] bg-[#fdf0eb] border border-[#f5d3c4] rounded-xl px-3 py-2">{error}</p>}
       </div>

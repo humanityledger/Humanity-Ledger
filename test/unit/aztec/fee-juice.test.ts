@@ -69,6 +69,41 @@ describe('feePlan', () => {
   });
 });
 
+describe('feePlan with the maximum fee of Alpha', () => {
+  const AZTEC = 10n ** 18n;
+  const base = { network: 'mainnet' as const, hasSponsor: false, feeJuiceBalance: 0n, minBalance: 28n * AZTEC, claims: [] as { claim: any; ready: boolean }[] };
+  const withAmount = (n: bigint) => ({ ...claim(), claimAmount: n.toString(), messageHash: '0x' + n.toString(16).padStart(64, '0') });
+
+  it('a deposit too small for the maximum fee is never picked: top-up, with what is missing', () => {
+    // 12 Nov 2026: 2 AZTEC did not cover account creation and failed at every try.
+    const small = withAmount(2n * AZTEC);
+    expect(feePlan({ ...base, claims: [{ claim: small, ready: true }] })).toEqual({ kind: 'top-up', have: 2n * AZTEC, need: 28n * AZTEC });
+  });
+
+  it('picks the largest ready deposit that covers it, not the first one', () => {
+    const small = withAmount(2n * AZTEC);
+    const big = withAmount(50n * AZTEC);
+    expect(feePlan({ ...base, claims: [{ claim: small, ready: true }, { claim: big, ready: true }] })).toEqual({ kind: 'claim', claim: big });
+  });
+
+  it('balance and a deposit add up in the same transaction', () => {
+    const small = withAmount(10n * AZTEC);
+    expect(feePlan({ ...base, feeJuiceBalance: 20n * AZTEC, claims: [{ claim: small, ready: true }] })).toEqual({ kind: 'claim', claim: small });
+  });
+
+  it('waits for a deposit in flight before asking for more', () => {
+    expect(feePlan({ ...base, feeJuiceBalance: AZTEC, claims: [{ claim: withAmount(30n * AZTEC), ready: false }] }).kind).toBe('wait-claim');
+  });
+
+  it('maximum fee: 6,540,000 L2 gas and the DA limit at the current minimum fees, doubled', async () => {
+    const { maxFeeFor } = await import('@/lib/aztec/fee-juice');
+    // Alpha, 12 Nov 2026: feePerL2Gas 2,115,843,389,038, feePerDaGas 0 → about 27.7 AZTEC.
+    const f = maxFeeFor({ feePerL2Gas: 2_115_843_389_038n, feePerDaGas: 0n });
+    expect(f).toBe(6_540_000n * 2_115_843_389_038n * 2n);
+    expect(f / AZTEC).toBe(27n);
+  });
+});
+
 describe('claims', () => {
   it('stores without secrets, merges by message hash and never reuses a secret index', () => {
     const mem = new Map<string, string>();
@@ -217,3 +252,11 @@ describe('agreementFeeCheck', () => {
   });
 });
 
+
+describe('humanError: encrypted store failures', () => {
+  it('maps decrypt_failed and store errors without leaking internals', async () => {
+    const { humanError } = await import('@/lib/aztec/wallet/client');
+    expect(humanError(new Error('SqliteEncryptionError decrypt_failed: cannot decode page 1'))).toMatch(/could not be decrypted/);
+    expect(humanError(new Error('[ENCRYPTED STORE ERROR] This browser cannot keep an encrypted private wallet'))).toBe('This browser cannot keep an encrypted private wallet');
+  });
+});

@@ -33,10 +33,10 @@ export const SITE_NAV: NavGroup[] = [
     label: "Product",
     items: [
       { label: "Ledger Chat", href: "/chat", hint: "The private messenger, in your browser" },
-      { label: "How it works", href: "/#how-it-works", hint: "From wallet to first message" },
-      { label: "Private payments", href: "/#payments", hint: "Shielded transfers on Aztec" },
-      { label: "Download", href: "/#download", hint: "Phone and desktop" },
-      { label: "Network status", href: "/status", hint: "What is up right now" },
+      { label: "How it works", href: "/docs/guide", hint: "From wallet to first message" },
+      { label: "Private payments", href: "/#aztec", hint: "Settled privately on Aztec" },
+      { label: "On your phone", href: "/#in-your-hand", hint: "Messages, calls and payments" },
+      { label: "Network status", href: "/docs/status", hint: "What is up right now" },
     ],
   },
   {
@@ -44,18 +44,18 @@ export const SITE_NAV: NavGroup[] = [
     items: [
       { label: "Documentation", href: "/docs/overview", hint: "How everything works, honestly" },
       { label: "Architecture", href: "/docs/architecture", hint: "Messaging, identity and payments" },
-      { label: "Developer hub", href: "/developers", hint: "Run it, read it, build on it" },
+      { label: "Developers", href: "/docs/developers", hint: "Run it, read it, build on it" },
       { label: "Source code", href: EXTERNAL_LINKS.github.repo, hint: "Humanity-Ledger on GitHub", external: true },
-      { label: "Changelog", href: "/changelog", hint: "What changed, in plain words" },
+      { label: "Changelog", href: "/docs/changelog", hint: "What changed, in plain words" },
     ],
   },
   {
     label: "Company",
     items: [
-      { label: "About", href: "/company", hint: "Who builds Humanity Ledger" },
-      { label: "Blog", href: "/blog", hint: "Notes from the work" },
+      { label: "About", href: "/docs/about", hint: "Who builds Humanity Ledger" },
+      { label: "Blog", href: "/docs/blog", hint: "Notes from the work" },
       { label: "Security", href: "/docs/audits", hint: "Audits, findings and disclosure" },
-      { label: "Contact", href: "/contact", hint: "Write to us" },
+      { label: "Contact", href: "/docs/contact", hint: "Write to us" },
     ],
   },
 ];
@@ -125,8 +125,8 @@ export function SiteNav({ groups = SITE_NAV }: { groups?: NavGroup[] }) {
   return (
     <div className={s.shell}>
       <header className={`${s.bar} hl-glass ${scrolled ? s.barScrolled : ""}`}>
-        <Link href="/" className={s.brand} aria-label="Humanity Ledger home">
-          <HLLogo size={30} />
+        <Link href="/" className={s.brand} aria-label="Ledger Chat home">
+          <HLLogo size={30} label="Ledger Chat" />
         </Link>
 
         <nav
@@ -198,7 +198,7 @@ export function SiteNav({ groups = SITE_NAV }: { groups?: NavGroup[] }) {
         <div className={s.sheetBackdrop} onClick={closeSheet}>
           <div role="dialog" aria-modal="true" aria-label="Menu" className={`${s.sheet} hl-glass`} onClick={(e) => e.stopPropagation()}>
             <div className={s.sheetHead}>
-              <HLLogo size={28} />
+              <HLLogo size={28} label="Ledger Chat" />
               <button type="button" className={s.menuBtn} aria-label="Close menu" onClick={closeSheet} autoFocus>
                 <Close size={19} strokeWidth={1.9} />
               </button>

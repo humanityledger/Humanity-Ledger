@@ -2,9 +2,9 @@ import type { DocPage } from "../types";
 
 export const developers: DocPage = {
   slug: "developers",
-  href: "/developers",
-  label: "Developer hub",
-  title: "Developer hub",
+  href: "/docs/developers",
+  label: "Developers",
+  title: "Developers",
   summary: "Everything you need to read, run and contribute to the Humanity Ledger code.",
   keywords: ["developer", "developers", "api", "sdk", "code", "github", "repository", "run locally", "contribute", "setup", "install", "stack", "env"],
   updated: "2026-10-21",

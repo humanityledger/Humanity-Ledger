@@ -15,7 +15,6 @@ const PROTECTED_ROUTES = [
   '/api/chat/communities/posts',
   '/api/chat/presence',
   '/api/user/export',
-  '/api/events',
   '/api/communities/reports',
 ];
 

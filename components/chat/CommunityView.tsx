@@ -19,7 +19,6 @@ import { PinnedMessagesPanel, MessageSearchPanel } from './CommunityMessageReact
 import CommunityAnalytics from './CommunityAnalytics';
 import { CommunityGovernanceView } from './CommunityGovernanceModal';
 import { ZkCommunityTreasury } from '@/components/zk/ZkCommunityTreasury';
-import { GroupPartyCall } from './GroupPartyCall';
 import { CommunityApps } from './community-apps/CommunityApps';
 import { countLabel, communityInviteUrl } from '@/lib/ui/format';
 
@@ -890,23 +889,6 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               setShowSearchPanel(false);
               jumpToMessage(msg.id);
             }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── NATIVE GROUP PARTY CALL ────────────────────────────────────────── */}
-      <AnimatePresence>
-        {partyCallActive && (
-          <GroupPartyCall
-            groupId={communityId}
-            groupName={community?.name || 'Community'}
-            myAddress={myAddress}
-            onClose={() => {
-              setPartyCallActive(false);
-              setPartyCallRoomId(null);
-              setPartyCallParticipants([]);
-            }}
-            isActive={partyCallActive}
           />
         )}
       </AnimatePresence>

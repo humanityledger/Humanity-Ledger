@@ -18,6 +18,40 @@
 export interface KvStoreAdmin {
   listStores(): Promise<string[]>;
   deleteStore(name: string): Promise<void>;
+  /** Removes one whole OPFS pool directory (kv-store deletePoolDirectory); used for the legacy shared pool. */
+  deletePoolDirectory?(poolDirectory: string): Promise<void>;
+}
+
+/**
+ * The shared default pool of @aztec-labs/kv-store. Builds before 11 November 2026 opened the PXE store
+ * there (the wallet store then failed with SqlitePoolBusyError, see store.ts); listStores does not see it,
+ * so it is removed as a whole. Nothing else in the app uses this pool.
+ */
+export const LEGACY_SHARED_POOL = '.aztec-kv';
+
+/** Best effort, never throws: removes the legacy shared pool if it exists and is not open in another tab. */
+async function deleteLegacySharedPool(admin: KvStoreAdmin): Promise<'deleted' | 'absent' | 'failed'> {
+  if (typeof admin.deletePoolDirectory !== 'function') return 'absent';
+  try {
+    const root = await globalThis.navigator?.storage?.getDirectory?.();
+    if (root) {
+      try {
+        await root.getDirectoryHandle(LEGACY_SHARED_POOL);
+      } catch {
+        return 'absent';
+      }
+    }
+    await admin.deletePoolDirectory(LEGACY_SHARED_POOL);
+    return 'deleted';
+  } catch {
+    return 'failed';
+  }
+}
+
+async function loadAdmin(): Promise<KvStoreAdmin | null> {
+  const m: any = await import('@aztec-labs/kv-store/sqlite-opfs');
+  if (typeof m.listStores !== 'function' || typeof m.deleteStore !== 'function') return null;
+  return { listStores: m.listStores, deleteStore: m.deleteStore, deletePoolDirectory: typeof m.deletePoolDirectory === 'function' ? m.deletePoolDirectory : undefined };
 }
 
 export const isWalletStoreName = (n: unknown): n is string =>
@@ -31,10 +65,13 @@ export async function wipeLocalAztecStores(kv?: KvStoreAdmin): Promise<{ deleted
   let admin = kv;
   try {
     if (!admin) {
-      const m: any = await import('@aztec-labs/kv-store/sqlite-opfs');
-      if (typeof m.listStores !== 'function' || typeof m.deleteStore !== 'function') return { deleted, failed: ['(kv-store utilities unavailable)'] };
-      admin = { listStores: m.listStores, deleteStore: m.deleteStore };
+      const loaded = await loadAdmin();
+      if (!loaded) return { deleted, failed: ['(kv-store utilities unavailable)'] };
+      admin = loaded;
     }
+    const legacy = await deleteLegacySharedPool(admin);
+    if (legacy === 'deleted') deleted.push(LEGACY_SHARED_POOL);
+    else if (legacy === 'failed') failed.push(LEGACY_SHARED_POOL);
     const names = (await admin.listStores()).filter(isWalletStoreName);
     for (const n of names) {
       try {
@@ -48,4 +85,58 @@ export async function wipeLocalAztecStores(kv?: KvStoreAdmin): Promise<{ deleted
     failed.push('(stores could not be listed)');
   }
   return { deleted, failed };
+}
+
+/** How many Aztec wallet stores this browser holds; null when that cannot be read (never throws, never returns names). */
+export async function countLocalAztecStores(kv?: KvStoreAdmin): Promise<number | null> {
+  try {
+    let admin = kv;
+    if (!admin) {
+      const m: any = await import('@aztec-labs/kv-store/sqlite-opfs');
+      if (typeof m.listStores !== 'function') return null;
+      admin = { listStores: m.listStores, deleteStore: m.deleteStore };
+    }
+    return (await admin.listStores()).filter(isWalletStoreName).length;
+  } catch {
+    return null;
+  }
+}
+
+/** Store names for one network + rollup + account; the account appears only as a hash. Throws without a rollup (fail-closed). */
+export async function walletStoreNames(
+  network: 'testnet' | 'mainnet',
+  rollupAddress: string,
+  evmAddress: string,
+  subtle: Pick<SubtleCrypto, 'digest'> = globalThis.crypto.subtle,
+): Promise<{ pxeName: string; walletName: string }> {
+  const rollup = rollupAddress.toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(rollup)) throw new Error('The Aztec node did not report its rollup address.');
+  const d = new Uint8Array(await subtle.digest('SHA-256', new TextEncoder().encode(`hl/aztec-store/v1:${evmAddress.toLowerCase()}`)));
+  const acct = Array.from(d.slice(0, 6), (b) => b.toString(16).padStart(2, '0')).join('');
+  const tag = `${network === 'mainnet' ? 'alpha' : 'testnet'}_${rollup.slice(2, 10)}_${acct}`;
+  return { pxeName: `pxe_${tag}`, walletName: `wallet_${tag}` };
+}
+
+/** Names written by builds before per-account encrypted stores: plaintext pxe_data…/wallet_data…, and the shared per-network names. */
+export const isLegacyStoreName = (n: unknown): n is string =>
+  typeof n === 'string' &&
+  (n.startsWith('pxe_data') || n.startsWith('wallet_data') || ['pxe_testnet', 'wallet_testnet', 'pxe_alpha', 'wallet_alpha'].includes(n));
+
+/** Best effort, never throws: removes legacy stores only (a store open in another tab stays). */
+export async function wipeLegacyPlainStores(kv?: KvStoreAdmin): Promise<number> {
+  try {
+    let admin = kv;
+    if (!admin) {
+      const loaded = await loadAdmin();
+      if (!loaded) return 0;
+      admin = loaded;
+    }
+    let n = (await deleteLegacySharedPool(admin)) === 'deleted' ? 1 : 0;
+    for (const name of (await admin.listStores()).filter(isLegacyStoreName)) {
+      try { await admin.deleteStore(name); n++; } catch { /* open elsewhere */ }
+    }
+    return n;
+  } catch {
+    return 0;
+  }
 }

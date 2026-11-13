@@ -13,6 +13,8 @@
  *     (reported, not required: today they are not)?
  *   - does every instance in deployments/aztec-mainnet.json exist, with the
  *     recorded class and keys?
+ *   - is every token in deployments/aztec-mainnet.json deployed by its recorded
+ *     transaction (in which block), and does it pass checkTokenInstance?
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -75,6 +77,41 @@ describe.skipIf(!LIVE)(`Aztec Alpha mainnet preflight (${NODE_URL})`, () => {
       expect(!instance!.publicKeys.equals(PublicKeys.default())).toBe(e.keyed);
       report.push(`${e.name}: instance found, class matches, keys ${e.keyed ? 'present' : 'absent'}`);
     }, 120_000);
+  }
+
+  // Private tokens in the record (the wallet lists only these on Alpha). For each:
+  // the deploy transaction is mined and in which block, the instance exists, and
+  // it passes the same checkTokenInstance the wallet runs when it opens. The block
+  // and class ID are printed so a pending entry (deployBlock 0) can be completed.
+  for (const t of (record.tokens ?? []) as Array<{ symbol: string; address: string; classId: string | null; deployTx: string; deployBlock: number }>) {
+    it(`token ${t.symbol} at ${t.address.slice(0, 10)}…: deploy transaction, instance and checkTokenInstance`, async () => {
+      const n: any = await node();
+      const { AztecAddress } = await import('@aztec-labs/aztec.js/addresses');
+      const { TxHash } = await import('@aztec-labs/stdlib/tx');
+      const { checkTokenInstance } = await import('@/lib/aztec/token-check');
+      const { TokenContractArtifact } = (await import('@aztec-labs/noir-contracts.js/Token')) as any;
+
+      // 1. The deploy transaction and its block.
+      const hash = TxHash.fromString(t.deployTx);
+      const receipt: any = await n.getTxReceipt(hash);
+      const effect: any = await n.getTxEffect(hash).catch(() => undefined);
+      const block = Number(receipt?.blockNumber ?? effect?.l2BlockNumber ?? 0);
+      report.push(`${t.symbol}: deployTx ${t.deployTx} status ${receipt?.status ?? 'unknown'}, block ${block || 'not found'} (recorded ${t.deployBlock || 'pending'})`);
+      expect(block, `${t.symbol}: deploy transaction not found or not mined`).toBeGreaterThan(0);
+      if (t.deployBlock > 0) expect(block, `${t.symbol}: recorded deployBlock`).toBe(t.deployBlock);
+
+      // 2. The instance, its class and its deployer.
+      const instance: any = await n.getContract(AztecAddress.fromStringUnsafe(t.address));
+      expect(instance, `${t.symbol}: no instance at ${t.address}`).toBeTruthy();
+      const classId = instance.currentContractClassId.toString();
+      report.push(`${t.symbol}: instance class ${classId}, deployer ${instance.deployer?.toString?.() ?? 'unknown'}`);
+
+      // 3. The wallet's own check, against the artifact the wallet trusts.
+      const check = await checkTokenInstance(n, t.address, [TokenContractArtifact]);
+      report.push(`${t.symbol}: checkTokenInstance ${check.ok ? `ok (${check.artifact})` : `REFUSED: ${check.reason}`}`);
+      expect(check, `${t.symbol}: checkTokenInstance`).toMatchObject({ ok: true });
+      if (t.classId) expect(classId, `${t.symbol}: recorded classId`).toBe(t.classId);
+    }, 180_000);
   }
 
   it('writes a summary', () => {

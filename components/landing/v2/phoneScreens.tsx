@@ -8,9 +8,10 @@
  *
  * The Dynamic Island is drawn by the frame, not by the screens.
  *
- * Everything a screen says must be true of the product today: no "verified"
- * badge (peer proof, G7, is open), no "Encrypted" badge on communities (their
- * posts are server-stored), and payments say which Aztec network they run on.
+ * Everything a screen says must be true of the product today. Value only moves
+ * to an Aztec address the other person signed for (G7), so payment and
+ * agreement cards may say "address verified"; communities carry no "Encrypted"
+ * badge (their posts are server-stored); payments say which Aztec network they run on.
  */
 
 import React from "react";
@@ -280,7 +281,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         <span className={s.chatAvatar} style={{ background: "#ece5ff", color: "#5200ff" }}>A</span>
         <span className={s.chatWho}>
           <span className={s.chatName}>Alice</span>
-          <span className={`${s.chatSub} ${s.mono}`}>zk:alice</span>
+          <span className={`${s.chatSub} ${s.mono}`}>0x7f3a…c21e</span>
         </span>
         <Phone size={22} strokeWidth={1.9} />
         <Video size={24} strokeWidth={1.9} />
@@ -292,7 +293,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         </span>
         <span className={s.day}>Today</span>
         <div className={`${s.msgIn} ${s.in}`}>
-          I paid for dinner. Your share is 42 USDC.<span className={s.time}>21:04</span>
+          I paid for dinner. Your share is 42 HLC.<span className={s.time}>21:04</span>
         </div>
         <div className={`${s.msgOut} ${at(p, 0.1)}`}>
           Send me a private invoice and I will pay it here.
@@ -313,7 +314,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
             </span>
           </div>
           <div className={s.invTitle}>Dinner, Friday</div>
-          <div className={s.invParties}>From zk:alice</div>
+          <div className={s.invParties}>To Alice · Aztec address verified</div>
           <div className={s.invItemRow}>
             <span>Your share</span>
             <span className={s.num}>42.00</span>
@@ -321,10 +322,10 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
             <span>Total</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>42.00 USDC</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>42.00 HLC</span>
           </div>
           <div className={s.invFooterRow}>
-            <span className={s.invDue}>Aztec testnet</span>
+            <span className={s.invDue}>Aztec Alpha · mainnet</span>
             <span className={`${s.invActionBtn} ${paid ? s.invActionDone : ""}`}>
               {paid ? (
                 <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} /> Paid</span>
@@ -345,6 +346,99 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         </div>
         <div className={`${s.msgIn} ${at(p, 0.88)}`}>
           Got it, thank you!<span className={s.time}>21:06</span>
+        </div>
+      </div>
+      <Composer />
+    </div>
+  );
+}
+
+/* ── 4b. Private agreement (escrow) ───────────────────────────────── */
+
+/**
+ * An escrow agreement opened from the chat: posted, funded with a proof made
+ * on the device, then released. Same card shape as the real AgreementCard.
+ */
+export function AgreementChatScreen({ p }: ScreenProps) {
+  const proving = p >= 0.34 && p < 0.56;
+  const locked = p >= 0.56 && p < 0.8;
+  const released = p >= 0.8;
+  const status = released ? "Released" : locked ? "Locked" : proving ? "Proving" : "Open";
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <div className={s.chatHead}>
+        <ArrowLeft size={24} strokeWidth={2} />
+        <span className={s.chatAvatar} style={{ background: "#e6f4ea", color: "#1f7a3a" }}>M</span>
+        <span className={s.chatWho}>
+          <span className={s.chatName}>Marco</span>
+          <span className={`${s.chatSub} ${s.mono}`}>0x91c4…08bd</span>
+        </span>
+        <Phone size={22} strokeWidth={1.9} />
+        <Video size={24} strokeWidth={1.9} />
+      </div>
+      <div className={s.chatBody}>
+        <span className={s.e2ee}>
+          <Lock size={13} strokeWidth={2.2} />
+          End-to-end encrypted · MLS
+        </span>
+        <span className={s.day}>Today</span>
+        <div className={`${s.msgIn} ${s.in}`}>
+          Logo files by Friday. Half now, half on delivery?<span className={s.time}>09:12</span>
+        </div>
+        <div className={`${s.msgOut} ${at(p, 0.08)}`}>
+          Deal. I will lock it in escrow so you know it is there.
+          <span className={s.time}>
+            09:13 <CheckCheck size={15} strokeWidth={2.2} />
+          </span>
+        </div>
+
+        <div className={`${s.ledgerInvoiceCard} ${at(p, 0.18)}`}>
+          <div className={s.invTop}>
+            <span className={s.invDocTag}>
+              <ShieldCheck size={14} strokeWidth={2.2} />
+              Private agreement
+            </span>
+            <span className={`${s.invStatusTag} ${released || locked ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>
+              <span className={s.invDot} />
+              {status}
+            </span>
+          </div>
+          <div className={s.invTitle}>Escrow · logo design</div>
+          <div className={s.invParties}>To Marco · Aztec address verified</div>
+          <div className={s.invItemRow}>
+            <span>Released on delivery</span>
+            <span className={s.num}>300.00</span>
+          </div>
+          <div className={s.invDivider} />
+          <div className={s.invTotalRow}>
+            <span>Amount</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>300.00 HLC</span>
+          </div>
+          <div className={s.invFooterRow}>
+            <span className={s.invDue}>Aztec Alpha · mainnet</span>
+            <span className={`${s.invActionBtn} ${released ? s.invActionDone : ""}`}>
+              {released ? (
+                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} /> Released</span>
+              ) : proving ? (
+                <span className={s.invBtnInner}><span className={s.spinner} /> Making proof</span>
+              ) : locked ? (
+                "Release"
+              ) : (
+                "Fund"
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className={`${s.msgIn} ${at(p, 0.66)}`}>
+          Files are in the shared folder.<span className={s.time}>17:40</span>
+        </div>
+        <div className={`${s.msgOut} ${at(p, 0.86)}`}>
+          Perfect. Released.
+          <span className={s.time}>
+            17:42 <CheckCheck size={15} strokeWidth={2.2} />
+          </span>
         </div>
       </div>
       <Composer />
@@ -425,6 +519,148 @@ export function CommunitiesScreen({ p }: ScreenProps) {
             )}
           </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Shared pieces for the newer screens (inline styles keep them self-contained) ── */
+
+const INKC = "#0b0c0e";
+const MUTED = "#6b7280";
+const LINE = "#eceef2";
+const fade = (p: number, from: number): React.CSSProperties => ({
+  opacity: p >= from ? 1 : 0,
+  transform: p >= from ? "none" : "translateY(10px)",
+  transition: "opacity 420ms ease, transform 520ms cubic-bezier(0.16,1,0.3,1)",
+});
+
+/* ── 6. Private wallet ──────────────────────────────────────────────── */
+
+export function WalletScreen({ p }: ScreenProps) {
+  const rows: [string, string][] = [
+    ["Fee Juice", "31.42"],
+    ["Next fee paid from", "Your Fee Juice"],
+    ["Proofs", "Made on this iPhone"],
+  ];
+  const activity: [string, string, string][] = [
+    ["Sent to Maya", "−25.00 HLC", "Settled"],
+    ["Received from Leo", "+120.00 HLC", "Settled"],
+    ["Account created", "", "Block 48,211"],
+  ];
+  return (
+    <div className={s.screenLight} style={{ background: "#f4f5f7" }}>
+      <StatusBar />
+      <div style={{ background: "#fff", padding: "18px 26px 24px", borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em", color: INKC }}>Private wallet</div>
+        <div style={{ fontSize: 15, color: MUTED, marginTop: 4 }}>Aztec Alpha on Ethereum mainnet</div>
+        <div style={{ fontSize: 15, color: "#8a909c", marginTop: 26 }}>Private balance</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4, ...fade(p, 0.05) }}>
+          <span style={{ fontSize: 54, fontWeight: 600, letterSpacing: "-0.04em", color: INKC, fontVariantNumeric: "tabular-nums" }}>1,245.00</span>
+          <span style={{ fontSize: 19, color: MUTED, fontWeight: 500 }}>HLC</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 22 }}>
+          {["Send", "Receive", "Add funds"].map((l, i) => (
+            <span key={l} style={{ height: 52, borderRadius: 26, display: "grid", placeItems: "center", fontSize: 17, fontWeight: 600, background: i === 0 ? INKC : "#f2f4f7", color: i === 0 ? "#fff" : INKC }}>{l}</span>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding: "18px 18px 0", display: "grid", gap: 14 }}>
+        <div style={{ background: "#fff", borderRadius: 22, border: `1px solid ${LINE}`, padding: "6px 20px", ...fade(p, 0.25) }}>
+          {rows.map(([k, v], i) => (
+            <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "15px 0", borderTop: i ? `1px solid ${LINE}` : "none", fontSize: 16.5 }}>
+              <span style={{ color: MUTED }}>{k}</span>
+              <span style={{ color: INKC, fontWeight: 500 }}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: "#fff", borderRadius: 22, border: `1px solid ${LINE}`, padding: "14px 20px 6px", ...fade(p, 0.45) }}>
+          <div style={{ fontSize: 15, color: "#8a909c", marginBottom: 4 }}>Activity</div>
+          {activity.map(([a, b, c], i) => (
+            <div key={a} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderTop: i ? `1px solid ${LINE}` : "none" }}>
+              <span>
+                <span style={{ display: "block", fontSize: 16.5, color: INKC, fontWeight: 500 }}>{a}</span>
+                <span style={{ display: "block", fontSize: 14, color: MUTED, marginTop: 2 }}>{c}</span>
+              </span>
+              <span style={{ fontSize: 16.5, fontWeight: 600, color: INKC, fontVariantNumeric: "tabular-nums" }}>{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 7. Make it yours: themes, wallpapers, bubbles ─────────────────── */
+
+export function ThemesScreen({ p }: ScreenProps) {
+  const themes = ["#0b0c0e", "#f4f1ea", "#e8eef7", "#1d2a24", "#f7e9ec"];
+  const pick = Math.min(themes.length - 1, Math.floor(p * 4.5));
+  const dark = pick === 0 || pick === 3;
+  const bg = themes[pick];
+  const ink = dark ? "#fff" : INKC;
+  return (
+    <div className={s.screenLight} style={{ background: bg, transition: "background 500ms ease" }}>
+      <StatusBar dark={dark} />
+      <div style={{ padding: "8px 26px 0", color: ink }}>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>Leo</div>
+        <div style={{ fontSize: 14.5, opacity: 0.6 }}>Chat appearance</div>
+      </div>
+      <div style={{ padding: "34px 22px 0", display: "grid", gap: 12 }}>
+        <div style={{ justifySelf: "start", maxWidth: "78%", padding: "14px 18px", borderRadius: 24, background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: ink, fontSize: 18 }}>Dinner at 9?</div>
+        <div style={{ justifySelf: "end", maxWidth: "78%", padding: "14px 18px", borderRadius: 24, background: dark ? "#fff" : INKC, color: dark ? INKC : "#fff", fontSize: 18 }}>Perfect. I’ll book.</div>
+        <div style={{ justifySelf: "start", maxWidth: "78%", padding: "14px 18px", borderRadius: 24, background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: ink, fontSize: 18 }}>Your theme looks great.</div>
+      </div>
+      <div style={{ position: "absolute", left: 16, right: 16, bottom: 40, background: "#fff", borderRadius: 30, padding: "20px 22px 24px", boxShadow: "0 20px 50px -20px rgba(0,0,0,0.35)" }}>
+        <div style={{ fontSize: 15, color: "#8a909c" }}>Theme</div>
+        <div style={{ display: "flex", gap: 14, marginTop: 12 }}>
+          {themes.map((c, i) => (
+            <span key={c} style={{ width: 52, height: 52, borderRadius: 26, background: c, border: "1px solid rgba(0,0,0,0.1)", boxShadow: i === pick ? `0 0 0 3px #fff, 0 0 0 5px ${INKC}` : "none", transition: "box-shadow 300ms" }} />
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20, fontSize: 16.5 }}>
+          <span style={{ color: MUTED }}>8 themes · 12 wallpapers · 7 bubble styles</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 8. Ledger Studio: build an app inside the chat ────────────────── */
+
+export function StudioScreen({ p }: ScreenProps) {
+  const built = p >= 0.4;
+  return (
+    <div className={s.screenLight}>
+      <StatusBar />
+      <div style={{ padding: "8px 26px 14px", borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em", color: INKC }}>Ledger Studio</div>
+        <div style={{ fontSize: 14.5, color: MUTED }}>Build it where you talk</div>
+      </div>
+      <div style={{ padding: "18px 20px 0", display: "grid", gap: 12 }}>
+        <div style={{ justifySelf: "end", maxWidth: "84%", padding: "14px 18px", borderRadius: 24, background: INKC, color: "#fff", fontSize: 17.5, ...fade(p, 0.02) }}>
+          Make a page for my café with the menu.
+        </div>
+        <div style={{ justifySelf: "start", fontSize: 15, color: MUTED, ...fade(p, 0.18) }}>{built ? "Built" : "Building…"}</div>
+      </div>
+      <div style={{ margin: "14px 20px 0", borderRadius: 26, border: `1px solid ${LINE}`, overflow: "hidden", background: "#faf8f4", ...fade(p, 0.4) }}>
+        <div style={{ padding: "26px 24px 10px" }}>
+          <div style={{ fontSize: 13.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7f6c" }}>Since 2019</div>
+          <div style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", color: "#1d1a14", marginTop: 6 }}>Café Aurora</div>
+        </div>
+        {[["Flat white", "3.20"], ["Croissant", "2.80"], ["Cold brew", "3.90"]].map(([n, v], i) => (
+          <div key={n} style={{ display: "flex", justifyContent: "space-between", padding: "15px 24px", borderTop: i === 0 ? "none" : "1px solid #ece6da", fontSize: 18, color: "#1d1a14" }}>
+            <span>{n}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{v} HLC</span>
+          </div>
+        ))}
+        <div style={{ padding: "16px 24px 24px" }}>
+          <span style={{ display: "grid", placeItems: "center", height: 54, borderRadius: 27, background: "#1d1a14", color: "#fff", fontSize: 17.5, fontWeight: 600 }}>Share the menu</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, padding: "16px 20px 0", ...fade(p, 0.7) }}>
+        {["Publish", "Send in chat", "Edit"].map((l, i) => (
+          <span key={l} style={{ flex: 1, height: 48, borderRadius: 24, display: "grid", placeItems: "center", fontSize: 16, fontWeight: 600, background: i === 0 ? INKC : "#f2f4f7", color: i === 0 ? "#fff" : INKC }}>{l}</span>
+        ))}
       </div>
     </div>
   );
