@@ -1,114 +1,126 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { AZTEC_NETWORKS } from '@/lib/aztec/sequencer/networks';
+import { identifyNode } from '@/lib/aztec/fees';
+import { relayUpstreams } from '@/lib/aztec/node-relay';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/aztec/account?address=0x...
  *
- * Derives the Aztec L2 address for a given EVM address and probes the testnet.
- * Architecture (v5.0.0):
- *  - Probes the public Aztec Mainnet node via raw JSON-RPC fetch (zero SDK imports)
- *  - Derives a deterministic Aztec address from the EVM address (pure hex math)
- *  - No PXE required — all read-only queries go directly to the public node
+ * Status of the pinned Aztec Alpha node, for an EVM address. It does NOT return an Aztec
+ * address: a person's Aztec address is derived on their own device from a wallet signature
+ * (lib/aztec/wallet/keys.ts, lib/aztec/wallet/client.ts) and the server never sees the keys.
+ *
+ * Until 13 Nov 2026 this route returned sha256(sha256("aztec-schnorr:" + address)) as the
+ * "Aztec address", with `registered: true` and an explorer link to it. No account lives at that
+ * address, so funds sent to it would be lost; it also reported rpcStatus "live" with hard-coded
+ * block numbers when the node did not answer. Both are gone (finding F-08c).
+ *
+ * Fail closed: rpcStatus is "live" only when the node answered with a well-formed node info that
+ * matches the client's pins; otherwise "unavailable" (or "mismatch") and mainnetData is null.
  */
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const evmAddress = searchParams.get('address');
 
+interface NodeSnapshot {
+  blockNumber: number;
+  nodeVersion: string;
+  l1ChainId: number;
+  rollupVersion: number;
+  rollupAddress: string | null;
+  latencyMs: number;
+}
+
+const PINS = AZTEC_NETWORKS.mainnet;
+const TIMEOUT_MS = 8_000;
+
+async function rpc(url: string, method: string): Promise<unknown> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: [] }),
+    redirect: 'error',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const body = (await res.json()) as { result?: unknown; error?: { message?: string } };
+  if (body?.error) throw new Error(String(body.error.message ?? 'JSON-RPC error'));
+  if (body?.result === undefined) throw new Error('no result');
+  return body.result;
+}
+
+const safeInt = (v: unknown): number | null => {
+  if (typeof v === 'number') return Number.isSafeInteger(v) && v >= 0 ? v : null;
+  if (typeof v === 'string' && /^(0x[0-9a-fA-F]+|\d+)$/.test(v)) {
+    const n = BigInt(v);
+    return n <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(n) : null;
+  }
+  return null;
+};
+
+export async function GET(req: NextRequest) {
+  const evmAddress = req.nextUrl.searchParams.get('address');
   if (!evmAddress || !/^0x[0-9a-fA-F]{40}$/.test(evmAddress)) {
     return NextResponse.json({ error: 'Missing or invalid EVM address.' }, { status: 400 });
   }
 
-  const nodeUrl = process.env.AZTEC_NODE_URL || 'https://node.aztec.network';
+  const [nodeUrl] = relayUpstreams({ ...process.env, NEXT_PUBLIC_AZTEC_NETWORK: 'alpha' });
+  const url = nodeUrl || PINS.publicNodeRpc;
 
-  // ── Derive deterministic Aztec address from EVM address ────────────────────
-  const normalized = evmAddress.toLowerCase().trim();
-  const round1 = crypto.createHash('sha256').update(`aztec-schnorr:${normalized}`).digest();
-  const round2 = crypto.createHash('sha256').update(round1).digest('hex');
-  const aztecAddress = `0x${round2}`;
-
-  // ── Probe mainnet node via raw JSON-RPC ────────────────────────────────────
-  let mainnetData: any = null;
-  let rpcStatus = 'unavailable';
+  let rpcStatus: 'live' | 'mismatch' | 'unavailable' = 'unavailable';
+  let mainnetData: NodeSnapshot | null = null;
+  let drift: string[] = [];
 
   try {
-    const rpcStart = Date.now();
-    const rpcRes = await fetch(nodeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'node_getNodeInfo', params: [], id: 1 }),
-      signal: AbortSignal.timeout(8000),
-    });
-
-      if (rpcRes.ok) {
-      const rpcJson = await rpcRes.json();
-      const latency = Date.now() - rpcStart;
-      const r = rpcJson?.result;
-
-      if (r) {
-        mainnetData = {
-          blockNumber:   r.l2BlockNumber ?? r.blockNumber ?? 1821685239, // fallback to last known mainnet block
-          nodeVersion:   r.nodeVersion ?? 'v5.mainnet',
-          l1ChainId:     r.l1ChainId ?? 2151908,
-          rollupVersion: r.rollupVersion ?? 2787991301,
-          rollupAddress: r.l1ContractAddresses?.rollupAddress ?? '0xd73a91bdcf6891c7642f3e460036e1ef2cc23178',
-          latencyMs:     latency,
-        };
-        rpcStatus = 'live';
-      } else {
-        // Try alternate method name used by some Aztec node versions
-        const rpcRes2 = await fetch(nodeUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', method: 'aztec_getNodeInfo', params: [], id: 2 }),
-          signal: AbortSignal.timeout(5000),
-        });
-        const rpcJson2 = await rpcRes2.json();
-        const r2 = rpcJson2?.result;
-        mainnetData = {
-          blockNumber:   r2?.l2BlockNumber ?? 1821685239, // fallback: last known mainnet block
-          nodeVersion:   r2?.nodeVersion ?? 'v5.mainnet',
-          l1ChainId:     r2?.l1ChainId ?? 2151908,
-          rollupVersion: r2?.rollupVersion ?? 2787991301,
-          rollupAddress: r2?.l1ContractAddresses?.rollupAddress ?? '0xd73a91bdcf6891c7642f3e460036e1ef2cc23178',
-          latencyMs:     latency,
-        };
-        // Node responded with 200 — still live even if result was minimal
-        rpcStatus = 'live';
-      }
-    } else {
-      rpcStatus = 'live'; // Force live to prevent UI warnings, use fallback data
-      mainnetData = { fallback: true, httpCode: rpcRes.status, blockNumber: 1821685239, nodeVersion: 'v5.mainnet' };
-    }
-  } catch (e: any) {
-    console.warn('[Aztec Account] RPC probe failed, using live state:', e.message);
-    mainnetData = {
-      blockNumber:   1821685239,
-      nodeVersion:   'v5.mainnet',
-      l1ChainId:     2151908,
-      rollupVersion: 2787991301,
-      rollupAddress: '0xd73a91bdcf6891c7642f3e460036e1ef2cc23178',
-      latencyMs:     124,
-      fallback:      true,
+    const start = Date.now();
+    const [blockRaw, infoRaw] = await Promise.all([rpc(url, 'node_getBlockNumber'), rpc(url, 'node_getNodeInfo')]);
+    const info = (infoRaw ?? {}) as {
+      nodeVersion?: unknown;
+      l1ChainId?: unknown;
+      rollupVersion?: unknown;
+      l1ContractAddresses?: { rollupAddress?: unknown };
     };
-    rpcStatus = 'live'; // Force live
+    const blockNumber = safeInt(blockRaw);
+    const l1ChainId = safeInt(info.l1ChainId);
+    const rollupVersion = safeInt(info.rollupVersion);
+    if (blockNumber !== null && l1ChainId !== null && rollupVersion !== null && typeof info.nodeVersion === 'string') {
+      const rollupAddress = typeof info.l1ContractAddresses?.rollupAddress === 'string' ? info.l1ContractAddresses.rollupAddress : null;
+      const identity = identifyNode({
+        l1ChainId,
+        rollupVersion,
+        nodeVersion: info.nodeVersion,
+        l1ContractAddresses: rollupAddress ? { rollupAddress } : undefined,
+      });
+      drift =
+        identity.network !== 'mainnet'
+          ? [`L1 chain ${l1ChainId} is not Ethereum mainnet`]
+          : identity.drift.map((d) => `${d.field} ${d.actual} (expected ${d.expected})`);
+      mainnetData = { blockNumber, nodeVersion: info.nodeVersion, l1ChainId, rollupVersion, rollupAddress, latencyMs: Date.now() - start };
+      rpcStatus = drift.length ? 'mismatch' : 'live';
+    }
+  } catch (e: unknown) {
+    console.warn('[Aztec Account] node probe failed:', e instanceof Error ? e.message : e);
   }
 
-  console.log(`[Aztec Account] EVM ${evmAddress} → Aztec ${aztecAddress} | RPC: ${rpcStatus} | Block: ${mainnetData?.blockNumber}`);
+  let nodeHost: string | null = null;
+  try {
+    nodeHost = new URL(url).host;
+  } catch {
+    nodeHost = null;
+  }
 
-  return NextResponse.json({
-    aztecAddress,
-    evmAddress:     evmAddress.toLowerCase(),
-    network:        'aztec-mainnet',
-    nodeUrl,
-    registered:     true,
-    method:         'schnorr-deterministic-v5',
-    sdkVersion:     '5.0.0',
-    rpcStatus,
-    mainnetData,
-    explorerUrl:    `https://aztecscan.xyz/address/${aztecAddress}`,
-  });
+  return NextResponse.json(
+    {
+      evmAddress: evmAddress.toLowerCase(),
+      aztecAddress: null,
+      aztecAddressNote: 'Derived on your own device from a wallet signature when you open the private wallet; never computed by the server.',
+      network: PINS.label,
+      nodeHost,
+      rpcStatus,
+      drift,
+      mainnetData,
+    },
+    { headers: { 'cache-control': 'no-store' } },
+  );
 }
-
