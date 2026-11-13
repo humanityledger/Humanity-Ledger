@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import {
-  createInMemoryCommunity,
   listInMemoryCommunities,
 } from '@/lib/communities/in-memory-communities';
 
@@ -67,17 +66,20 @@ export async function POST(req: NextRequest) {
     if (auth.errorResponse) return auth.errorResponse;
     const address = auth.walletAddress;
 
-    const { name, description, isPrivate } = await req.json();
-    if (!name || typeof name !== 'string') return NextResponse.json({ error: 'Name required' }, { status: 400 });
+    const body = await req.json().catch(() => ({}));
+    const isPrivate = Boolean(body?.isPrivate);
+    const name = typeof body?.name === 'string' ? body.name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 64) : '';
+    const description = typeof body?.description === 'string' ? body.description.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, 500) : '';
+    if (name.length < 2) return NextResponse.json({ error: 'A name of at least 2 characters is required' }, { status: 400 });
 
     const { randomBytes } = await import('crypto');
-    const joinCode = randomBytes(4).toString('hex').toUpperCase();
+    const joinCode = randomBytes(6).toString('hex').toUpperCase();
 
     try {
       const community = await (prisma as any).community.create({
         data: {
-          name: name.trim(),
-          description: description?.trim() || '',
+          name,
+          description,
           isPrivate: Boolean(isPrivate),
           ownerAddress: address.toLowerCase(),
           joinCode,
@@ -110,15 +112,10 @@ export async function POST(req: NextRequest) {
           membersCount: community._count.members,
         },
       }, { status: 201 });
-    } catch {
-      // Resilient standalone mode: save in memory
-      const mem = createInMemoryCommunity({
-        name: name.trim(),
-        description: description?.trim() || '',
-        isPrivate: Boolean(isPrivate),
-        ownerAddress: address,
-      });
-      return NextResponse.json({ community: mem }, { status: 201 });
+    } catch (e: any) {
+      // Nothing is kept in this server's memory and reported as created (see app/api/chat/communities).
+      console.error('[communities POST] not created:', e?.code || e?.message);
+      return NextResponse.json({ error: 'Communities are unavailable right now. Nothing was created.', code: 'STORE_UNAVAILABLE' }, { status: 503 });
     }
   } catch (e: any) {
     console.error('[communities POST]', e);

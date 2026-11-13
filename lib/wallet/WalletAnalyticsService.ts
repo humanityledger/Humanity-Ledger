@@ -48,7 +48,7 @@ export interface AnalyticsTransfer {
   hash: string;
   timestamp: string;
   amount: number;
-  valueUsd: number;
+  valueUsd: number | null;
   type: 'IN' | 'OUT';
   from: string;
   to: string;

@@ -30,7 +30,9 @@ fi
 
 # Run pre-deploy migration check if database is configured
 if [ -f scripts/railway-pre-deploy.js ]; then
-  node scripts/railway-pre-deploy.js || true
+  # Fail closed: new code never boots on a schema that failed to migrate; Railway keeps the
+  # previous deployment serving because the healthcheck on /api/health never passes.
+  node scripts/railway-pre-deploy.js || exit 1
 fi
 
 # Railway Public Networking default for ledgerchat.org is port 8080, but respects $PORT if set.

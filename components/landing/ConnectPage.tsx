@@ -46,9 +46,12 @@ import { ConnectView, type ConnectStage, type WalletOption } from "@/components/
 import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { classifySignError, SIGN_MESSAGES } from "@/lib/auth/sign-error";
+import { failedBeforeWallet, personalSign, type Eip1193Provider } from "@/lib/auth/wallet-sign";
+import { isWalletConnectUri, safeWalletHref, walletConnectLink } from "@/lib/auth/wallet-links";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
 import { ONE_CLICK_AUTH } from "@/config/appkit";
+import { injected } from "wagmi/connectors";
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
@@ -90,6 +93,26 @@ const MOBILE_WALLETS: WalletOption[] = [
   { id: "okx-mobile", name: "OKX Wallet", hint: "Opens OKX app", logo: "" },
 ];
 
+/**
+ * Inside a wallet's own browser (MetaMask, Rainbow, Coinbase, Trust, OKX and the other in-app browsers)
+ * the wallet is already in the page: one button signs in with it, and no other app is opened.
+ */
+function inAppWalletOption(): WalletOption | null {
+  if (typeof window === "undefined") return null;
+  const eth = (window as unknown as { ethereum?: Record<string, unknown> }).ethereum;
+  if (!eth) return null;
+  const name =
+    eth.isRainbow ? "Rainbow" :
+    eth.isCoinbaseWallet ? "Coinbase Wallet" :
+    eth.isTrust || eth.isTrustWallet ? "Trust Wallet" :
+    eth.isOkxWallet || eth.isOKExWallet ? "OKX Wallet" :
+    eth.isBitKeep || eth.isBitget ? "Bitget Wallet" :
+    eth.isZerion ? "Zerion" :
+    eth.isPhantom ? "Phantom" :
+    eth.isMetaMask ? "MetaMask" : "this wallet";
+  return { id: "injected-mobile", name: `Continue with ${name}`, hint: "Sign in here, inside the wallet app", logo: "" };
+}
+
 /** Return path after sign-in. Only same-origin paths are honoured. */
 function returnPathFromQuery(): string {
   if (typeof window === "undefined") return "/chat";
@@ -120,7 +143,7 @@ function clearDisconnectGuard() {
 
 export default function ConnectPage() {
   const isMobile = useIsMobile();
-  const { isConnected, address, status: accountStatus } = useAccount();
+  const { isConnected, address, status: accountStatus, connector: activeConnector } = useAccount();
   const chainId = useChainId();
   const { connect, connectors, isPending, isError, error } = useConnect();
   const { signMessageAsync } = useSignMessage();
@@ -157,6 +180,8 @@ export default function ConnectPage() {
   const signingStartTimeRef = useRef(0);
   // True while a wallet signature request is awaiting an answer (the user may be in the wallet app).
   const signPendingRef = useRef(false);
+  // Detaches the listener of the WalletConnect pairing started by a named wallet button.
+  const wcPairingCleanupRef = useRef<(() => void) | null>(null);
 
   const effectiveIsConnected = mounted && isConnected && !readDisconnectGuard();
 
@@ -396,7 +421,8 @@ export default function ConnectPage() {
     }
     if (readDisconnectGuard()) return;
 
-    // Clear stale connection pairing URI now that session is connected
+    // The pairing did its job: stop listening and drop its link.
+    wcPairingCleanupRef.current?.();
     setMobileDeepLink(null);
 
     signingRef.current = true;
@@ -524,18 +550,28 @@ export default function ConnectPage() {
           setMobileDeepLink(null);
         }
 
-        // Robust mobile signature handling with deep retry on transient relay errors.
-        // The retry window gives the user time to return from MetaMask after signing.
+        // One request per attempt, straight to the connected wallet's provider (lib/auth/wallet-sign.ts).
+        // It is awaited until it is answered or times out, including while the tab is suspended in the
+        // wallet app. It is sent again only if it failed before the wallet received it.
+        let provider: Eip1193Provider | null = null;
         let signature = "";
-        for (let attempt = 0; attempt < 5; attempt++) {
+        for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            // "expired" is not retried: the user gets "Try again" and a fresh nonce.
-            // The tab may be suspended while the user is in the wallet app. The same request keeps
-            // being awaited when the tab returns (visibilitychange does not abandon it); only the
-            // timeout ends it.
+            if (!provider) {
+              try {
+                provider = ((await activeConnector?.getProvider?.()) as Eip1193Provider | undefined) ?? null;
+              } catch {
+                provider = null;
+              }
+            }
             signPendingRef.current = true;
             try {
-              signature = await withSignTimeout(signMessageAsync({ message }), SIGN_TIMEOUT_MS);
+              signature = await withSignTimeout(
+                provider && typeof provider.request === "function"
+                  ? personalSign(provider, address, message)
+                  : signMessageAsync({ message }),
+                SIGN_TIMEOUT_MS,
+              );
             } finally {
               signPendingRef.current = false;
             }
@@ -543,47 +579,14 @@ export default function ConnectPage() {
             if (signature) break;
           } catch (e: unknown) {
             if (stale()) return;
-            const errMsg = ((e as { message?: string })?.message || "").toLowerCase();
-
-            if (classifySignError(e) === "declined") {
-              throw e; // User explicitly cancelled (code 4001 / rejected / denied), do not retry
+            if (classifySignError(e) === "declined" || !failedBeforeWallet(e) || attempt === 2) throw e;
+            console.warn(`[SIWE] the wallet was not ready (attempt ${attempt + 1}); asking again.`);
+            provider = null;
+            await new Promise((r) => setTimeout(r, 1500));
+            while (!stale() && document.visibilityState !== "visible") {
+              await new Promise((r) => setTimeout(r, 500));
             }
-
-            const isRecoverable =
-              errMsg.includes("not connected") ||
-              errMsg.includes("reconnecting") ||
-              errMsg.includes("socket stall") ||
-              errMsg.includes("provider not found") ||
-              errMsg.includes("unavailable") ||
-              errMsg.includes("timeout") ||
-              errMsg.includes("network") ||
-              errMsg.includes("interrupted") ||
-              errMsg.includes("connection") ||
-              errMsg.includes("closed") ||
-              errMsg.includes("stall") ||
-              errMsg.includes("relay") ||
-              errMsg.includes("pending") ||
-              errMsg.includes("waiting");
-
-            if (isRecoverable && attempt < 4) {
-              console.warn(`[SIWE:Mobile] Transient error on attempt ${attempt + 1}, retrying in 3s...`, errMsg);
-              // On retry: update the deep link in state so the button re-renders with
-              // the current link. The user can tap "Open wallet to sign" to return
-              // to the wallet — from a button click (user gesture) Safari allows it.
-              if (isMobile && mobileDeepLink) {
-                // Update state so button reflects current link; do NOT navigate here
-                // (we are inside an async IIFE — not a user gesture — Safari blocks it).
-                setMobileDeepLink(mobileDeepLink);
-              }
-              await new Promise((r) => setTimeout(r, 3000));
-              // Do not send a new request to a wallet the user is still looking at.
-              while (!stale() && document.visibilityState !== "visible") {
-                await new Promise((r) => setTimeout(r, 500));
-              }
-              if (stale()) return;
-              continue;
-            }
-            throw e;
+            if (stale()) return;
           }
         }
 
@@ -627,7 +630,7 @@ export default function ConnectPage() {
         signingRef.current = false;
       }
     })();
-  }, [mounted, accountStatus, address, authStatus, chainId, isLinked, signMessageAsync, setLinked]);
+  }, [mounted, accountStatus, address, authStatus, chainId, isLinked, signMessageAsync, setLinked, activeConnector]);
 
   /* ── Auto-heal / Resume when returning from wallet app ────────────────── */
   useEffect(() => {
@@ -752,22 +755,65 @@ export default function ConnectPage() {
               c.name.toLowerCase().includes(brand),
           )
         : undefined;
-      if (inj && hasProvider) {
-        const w = MOBILE_WALLETS.find((x) => x.id === walletId);
-        if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
-        connect({ connector: inj });
+      if (hasProvider) {
+        const w = MOBILE_WALLETS.find((x) => x.id === walletId) ?? inAppWalletOption();
+        if (w) setPendingWallet({ id: w.id, name: w.name.replace(/^Continue with /, ""), logo: w.logo });
+        // A wallet that injected itself after this page's wagmi config was built has no connector yet:
+        // an injected connector made now reaches the same window.ethereum.
+        connect({ connector: inj ?? injected({ shimDisconnect: true }) });
         return;
       }
 
-      // Safari / Chrome on a phone: AppKit alone opens the wallet. Its sheet creates the WalletConnect
-      // pairing and opens the chosen wallet from the user's tap (the only moment iOS allows it), then
-      // delivers the session back over the relay. This page used to start a second pairing of its own in
-      // parallel and navigate from an async callback (which iOS blocks): the wallet got one pairing, the
-      // page waited on the other, and the sheet stayed on "Continue in MetaMask".
+      // Safari / Chrome on a phone, a named wallet: this page asks WalletConnect for one pairing and
+      // opens that wallet's own link with it. The link is followed from the tap when the pairing is
+      // ready in time (iOS only lets a page open an app from a person's tap); otherwise the "Open …"
+      // button in the next screen is a plain link, which every phone opens. "Other wallets" (the 500+
+      // in the WalletConnect registry) goes through the AppKit sheet, which never runs alongside this.
       const w = MOBILE_WALLETS.find((x) => x.id === walletId);
-      if (w) setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
+      const wc = connectors.find((c) => c.id === "walletConnect" || (c as { type?: string }).type === "walletConnect");
+      if (!w || !wc) {
+        setMobileDeepLink(null);
+        openAppKitSafe();
+        return;
+      }
+      wcPairingCleanupRef.current?.();
+      setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
       setMobileDeepLink(null);
-      openAppKitSafe();
+      const tappedAt = Date.now();
+      let paired = false;
+      const onMessage = (m: { type: string; data?: unknown }) => {
+        if (m.type !== "display_uri" || paired || !isWalletConnectUri(m.data)) return;
+        const link = safeWalletHref(walletConnectLink(brand, m.data, window.location.origin));
+        if (!link) return;
+        paired = true;
+        setMobileDeepLink(link);
+        if (Date.now() - tappedAt < 1000) {
+          try {
+            window.location.href = link;
+          } catch {
+            /* the button in the next screen opens it */
+          }
+        }
+      };
+      const emitter = (wc as unknown as { emitter: { on: (e: string, f: typeof onMessage) => void; off: (e: string, f: typeof onMessage) => void } }).emitter;
+      emitter.on("message", onMessage);
+      const noAnswer = setTimeout(() => {
+        if (paired) return;
+        cleanup();
+        setPendingWallet(null);
+        wc.disconnect?.().catch(() => {});
+        toast.error("WalletConnect did not answer.", {
+          description: "Check your connection and try again. If it keeps happening, sign in from your wallet app's browser.",
+          duration: 9000,
+        });
+      }, 15_000);
+      const cleanup = () => {
+        clearTimeout(noAnswer);
+        emitter.off("message", onMessage);
+        wcPairingCleanupRef.current = null;
+      };
+      wcPairingCleanupRef.current = cleanup;
+      connect({ connector: wc });
     },
     [connect, connectors, openAppKitSafe],
   );
@@ -826,7 +872,7 @@ export default function ConnectPage() {
       <ConnectView
         stage={stage}
         isMobile={isMobile}
-        wallets={isMobile ? MOBILE_WALLETS : DESKTOP_WALLETS}
+        wallets={isMobile ? (inAppWalletOption() ? [inAppWalletOption()!] : MOBILE_WALLETS) : DESKTOP_WALLETS}
         pendingWallet={pendingWallet}
         signStep={signStep}
         errorMessage={signError}
@@ -835,14 +881,25 @@ export default function ConnectPage() {
         qrPin={qrPin}
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}
-        onOtherWallets={openAppKitSafe}
+        onOtherWallets={() => {
+          // One pairing at a time: a named wallet's pending pairing is dropped before the sheet opens.
+          if (wcPairingCleanupRef.current) {
+            wcPairingCleanupRef.current();
+            setPendingWallet(null);
+            setMobileDeepLink(null);
+          }
+          openAppKitSafe();
+        }}
         onPhone={handlePhone}
         onBack={handleBack}
         onRetry={handleRetry}
         onDisconnect={handleDisconnect}
         onCancelPending={() => {
+          wcPairingCleanupRef.current?.();
           setPendingWallet(null);
           setMobileDeepLink(null);
+          const wc = connectors.find((c) => c.id === "walletConnect");
+          wc?.disconnect?.().catch(() => {});
         }}
         onRefreshQr={handleRefreshQr}
         onLinkDevice={() => setShowMobileScanner(true)}

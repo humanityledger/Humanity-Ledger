@@ -1,12 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronLeft, Lock, Globe, Settings, Hash, Edit, Heart, Users,
-  Pin, Search, X, Bell, BellOff, Share2, MoreVertical, RefreshCw,
-  MessageSquare, FileText, BarChart2, Vote, Video, PhoneCall, Shield,
-  LayoutGrid, Activity
-} from 'lucide-react';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
 import { sanitizeRichText } from '@/lib/security/sanitizeRichText';
@@ -102,9 +96,9 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
           {isOwn && onEdit && (
             <button
               onClick={() => onEdit(post)}
-              className="p-1.5 rounded-lg bg-black/5 hover:bg-black/10 text-black/30 hover:text-black transition-colors opacity-0 group-hover:opacity-100"
+              className="h-8 px-3 rounded-full border border-[#e4e7ec] bg-white text-[12.5px] font-semibold text-[#344054] hover:text-[#15171c] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
             >
-              <Edit size={14} />
+              Edit
             </button>
           )}
           <button
@@ -113,8 +107,8 @@ function PostCard({ post, myAddress, onEdit, onLike, localLikes }: PostCardProps
               liked ? 'bg-red-50 text-[#d93036]' : 'text-black/30 hover:text-red-400 hover:bg-red-50'
             }`}
           >
-            <Heart size={14} fill={liked ? 'currentColor' : 'none'} />
-            <span className="text-[12px] font-semibold">{likeCount}</span>
+            <span className="text-[12.5px] font-semibold">{liked ? 'Liked' : 'Like'}</span>
+            <span className="text-[12px] font-semibold tabular-nums">{likeCount}</span>
           </button>
         </div>
       </div>
@@ -353,9 +347,9 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
         <div className="flex items-center gap-2.5">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl hover:bg-black/5 text-black/40 transition-colors md:hidden"
+            className="h-11 px-3 rounded-xl hover:bg-black/5 text-[14px] font-semibold text-[#344054] transition-colors md:hidden"
           >
-            <ChevronLeft size={22} />
+            Back
           </button>
 
           <button
@@ -377,10 +371,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               ) : (
                 <p className="text-[15px] font-semibold text-[#15171c] leading-tight flex items-center gap-1.5 truncate max-w-[180px]">
                   {community?.name || 'Community'}
-                  {community?.isPrivate
-                    ? <Lock size={11} className="text-[#a3a9b4] shrink-0" aria-label="Private community" />
-                    : <Globe size={11} className="text-[#a3a9b4] shrink-0" aria-label="Public community" />
-                  }
+                  <span className="text-[11.5px] font-medium text-[#727a88] shrink-0">{community?.isPrivate ? 'Private' : 'Public'}</span>
                 </p>
               )}
               <p className="text-[12.5px] text-[#727a88] font-medium">
@@ -413,10 +404,10 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           <div className="relative">
             <button
               onClick={() => setShowMoreMenu(p => !p)}
-              className="p-2 rounded-xl hover:bg-black/5 text-black/30 hover:text-black transition-colors"
-              title="More options"
+              className="h-11 px-3 rounded-xl hover:bg-black/5 text-[14px] font-semibold text-[#344054] hover:text-[#15171c] transition-colors"
+              aria-expanded={showMoreMenu}
             >
-              <MoreVertical size={17} />
+              More
             </button>
             <AnimatePresence>
               {showMoreMenu && (
@@ -506,7 +497,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
           onClick={() => setShowSearchPanel(true)}
           className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#475061] hover:bg-[#f2f4f7] transition-colors shrink-0"
         >
-          Search Messages
+          Search messages
         </button>
         <button
           type="button"
@@ -542,7 +533,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             activeTab === 'settings' ? 'bg-[#15171c] text-white' : 'text-[#475061] hover:bg-[#f2f4f7]'
           }`}
         >
-          Community Settings
+          Community settings
         </button>
       </div>
 
@@ -582,8 +573,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                         onClick={() => setShowInlineForm(true)}
                         className="px-4 py-2 bg-[#15171c] hover:bg-black text-white rounded-full text-[13px] font-semibold transition-colors flex items-center gap-1.5 shrink-0"
                       >
-                        <Edit size={14} />
-                        <span className="hidden sm:inline">Post</span>
+                        Write a post
                       </button>
                     </div>
                   ) : (
@@ -601,9 +591,9 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                           <button
                             type="button"
                             onClick={() => setShowInlineForm(false)}
-                            className="text-black/30 hover:text-black"
+                            className="h-9 px-2 text-[13px] font-semibold text-[#475467] hover:text-[#15171c]"
                           >
-                            <X size={15} />
+                            Close
                           </button>
                         </div>
                       </div>
@@ -656,9 +646,6 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 rounded-2xl bg-black/5 flex items-center justify-center mb-5">
-                      <FileText size={36} className="text-[#15171c]" />
-                    </div>
                     <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">No posts yet</h3>
                     <p className="text-[14px] text-black/40 max-w-xs">
                       Be the first to write a post in this community.
@@ -689,9 +676,10 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
               {/* FAB */}
               <motion.button
                 onClick={() => { setEditingPost(null); setShowEditor(true); }}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-[#15171c] text-white rounded-full flex items-center justify-center shadow-sm z-20 hover:bg-black"
+                className="fixed bottom-6 right-6 h-12 px-5 bg-[#15171c] text-white rounded-full flex items-center justify-center text-[14px] font-semibold z-20 hover:bg-black"
+                style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
               >
-                <Edit size={22} />
+                Write a post
               </motion.button>
             </motion.div>
           )}
@@ -719,7 +707,6 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                           : 'text-black/40 hover:bg-black/[0.03] hover:text-black/70'
                       }`}
                     >
-                      {ch.isPaid ? <Lock size={13} className="shrink-0" /> : <Hash size={13} className="shrink-0" />}
                       <span className="text-[13px] font-semibold truncate">{ch.name}</span>
                       {ch.isPaid && (
                         <span className="ml-auto text-[11px] font-medium border border-[#E4E7EC] text-[#475061] px-1.5 py-0.5 rounded-md">Paid</span>
@@ -905,10 +892,10 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
             >
               {/* Header */}
               <div className="h-[64px] px-4 border-b border-[#E4E7EC] flex items-center gap-3 bg-white shrink-0">
-                <button onClick={() => setShowInfoPanel(false)} className="p-2 rounded-xl hover:bg-black/5 text-black/40 transition-colors">
-                  <ChevronLeft size={22} />
+                <button onClick={() => setShowInfoPanel(false)} className="h-11 px-3 rounded-xl hover:bg-black/5 text-[14px] font-semibold text-[#344054] transition-colors">
+                  Back
                 </button>
-                <span className="text-[17px] font-semibold text-[#15171c]">Group Info</span>
+                <span className="text-[17px] font-semibold text-[#15171c]">Community info</span>
               </div>
 
               <div className="flex-1 overflow-y-auto">
@@ -961,7 +948,6 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                     <button key={label} onClick={fn} className="w-full flex items-center justify-between px-4 py-3.5 bg-white rounded-2xl hover:bg-[#f7f8fa] transition-colors text-left">
                       <span className="flex-1 text-[15px] font-medium text-[#15171c]">{label}</span>
                       {value && <span className="text-[14px] text-[#727a88] mr-2">{value}</span>}
-                      <ChevronLeft size={16} className="text-black/20 rotate-180" />
                     </button>
                   ))}
                 </div>

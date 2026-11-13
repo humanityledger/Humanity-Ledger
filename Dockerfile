@@ -122,6 +122,13 @@ ARG NEXT_PUBLIC_AZTEC_SPONSORED_FPC
 ARG NEXT_PUBLIC_AZTEC_FAUCET
 ARG NEXT_PUBLIC_AZTEC_SPONSOR
 ARG NEXT_PUBLIC_AZTEC_SPONSOR_ADMIN
+# WalletConnect (Reown) project for the sign-in on phones. Without this ARG the Railway variable never
+# reached `next build` and the bundle used the fallback id in next.config.js. Its Reown project must list
+# ledgerchat.org (and www.ledgerchat.org if served) in the domain allowlist, or the relay refuses every
+# pairing and no wallet app opens.
+ARG NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+ARG NEXT_PUBLIC_WC_PROJECT_ID
+ARG NEXT_PUBLIC_ONE_CLICK_AUTH
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
 # Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.

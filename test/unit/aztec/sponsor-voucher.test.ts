@@ -24,6 +24,21 @@ describe('LedgerSponsor vouchers (server side)', () => {
     delete process.env.AZTEC_SPONSOR_SIGNER_KEY;
   });
 
+  it('on Aztec Alpha never derives the signer from JWT_SECRET', () => {
+    const prevNet = process.env.NEXT_PUBLIC_AZTEC_NETWORK;
+    const prevKey = process.env.AZTEC_SPONSOR_SIGNER_KEY;
+    delete process.env.AZTEC_SPONSOR_SIGNER_KEY;
+    process.env.NEXT_PUBLIC_AZTEC_NETWORK = 'alpha';
+    process.env.JWT_SECRET = 'a-long-test-secret-0123456789';
+    expect(sponsorPublicKey()).toBeNull();
+    expect(signVoucher(1_000)).toBeNull();
+    process.env.AZTEC_SPONSOR_SIGNER_KEY = '11'.repeat(32);
+    expect(sponsorPublicKey()).not.toBeNull();
+    if (prevNet === undefined) delete process.env.NEXT_PUBLIC_AZTEC_NETWORK; else process.env.NEXT_PUBLIC_AZTEC_NETWORK = prevNet;
+    if (prevKey === undefined) delete process.env.AZTEC_SPONSOR_SIGNER_KEY; else process.env.AZTEC_SPONSOR_SIGNER_KEY = prevKey;
+    delete process.env.JWT_SECRET;
+  });
+
   it('derives a stable key from JWT_SECRET when no key is set, and none without either', () => {
     process.env.JWT_SECRET = 'a-long-test-secret-0123456789';
     const a = sponsorPublicKey(); const b = sponsorPublicKey();

@@ -19,7 +19,7 @@ import {
 import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
-import { safeWalletHref, walletHomeLink } from "@/lib/auth/wallet-links";
+import { safeWalletHref } from "@/lib/auth/wallet-links";
 import { openMobileWalletApp, detectConnectedMobileWallet } from "@/lib/wallet/mobileWallet";
 
 /**
@@ -260,18 +260,17 @@ function Connecting(p: ConnectViewProps) {
         Waiting for approval
       </span>
       <div className={s.actions}>
-        {p.isMobile && (
-          <a
-            href={safeWalletHref(p.mobileDeepLink) ?? walletHomeLink(null)}
-            className={`${s.btn} ${s.btnPrimary}`}
-            onClick={() => {
-              const href = safeWalletHref(p.mobileDeepLink);
-              if (href && typeof window !== "undefined") window.location.href = href;
-            }}
-          >
-            Open {name}
-          </a>
-        )}
+        {p.isMobile &&
+          (safeWalletHref(p.mobileDeepLink) ? (
+            // A plain link: a tap on it is the one navigation every phone browser lets open an app.
+            <a href={safeWalletHref(p.mobileDeepLink)!} className={`${s.btn} ${s.btnPrimary}`}>
+              Open {name}
+            </a>
+          ) : (
+            <button type="button" className={`${s.btn} ${s.btnPrimary}`} disabled aria-disabled="true">
+              Preparing {name}
+            </button>
+          ))}
         <button type="button" className={`${s.btn} ${s.btnSecondary}`} onClick={p.onCancelPending}>
           Cancel
         </button>

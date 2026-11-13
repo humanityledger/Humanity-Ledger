@@ -1,9 +1,15 @@
 /**
- * Railway Pre-Deploy Database Synchronization & Resilience Engine
- * Automatically resolves stuck/failed migrations (e.g. P3009) before deploying migrations.
+ * Railway pre-deploy: applies Prisma migrations and recovers a failed one from the real schema.
+ *
+ * A failed migration is resolved only when the database proves its state (lib/db/migration-inspect.js):
+ * fully in place → marked applied; fully absent → marked rolled back and applied again; anything else
+ * stops the deploy with the list of missing objects and changes nothing. The script exits non-zero on
+ * failure and start.sh does not boot, so a broken schema never serves traffic.
  */
 
 const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const { Client } = require('pg');
 const { normalizeDatabaseUrl, describeDatabaseUrl, isPoolerUrl, directUrlFor } = require('../lib/db/url.js');
 
@@ -23,103 +29,132 @@ for (const key of ['DATABASE_URL', 'DATABASE_URL_UNPOOLED']) {
   }
 }
 
-async function resolveStuckMigrations(databaseUrl) {
-  let client;
+const { extractObjects, decide } = require('../lib/db/migration-inspect.js');
+
+const MIGRATIONS_DIR = path.join(__dirname, '..', 'prisma', 'migrations');
+const SUPERSEDED = path.join(__dirname, '..', 'prisma', 'superseded-migrations.json');
+// npx prints an "update available" banner on stderr: noise in the deploy logs, never a problem.
+const CLI_ENV = { ...process.env, NPM_CONFIG_UPDATE_NOTIFIER: 'false', NO_UPDATE_NOTIFIER: '1' };
+
+function sslFor(databaseUrl) {
+  const isLocalhost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+  if (isLocalhost) return false;
+  const sslStrict = process.env.DATABASE_SSL_STRICT === 'true' || Boolean(process.env.PGSSLROOTCERT);
+  let privateNetwork = false;
   try {
-    const isLocalhost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
-    const sslStrict = process.env.DATABASE_SSL_STRICT === 'true' || Boolean(process.env.PGSSLROOTCERT);
-    const sslConfig = isLocalhost
-      ? false
-      : {
-          rejectUnauthorized: sslStrict,
-          ...(process.env.PGSSLROOTCERT ? { ca: require('fs').readFileSync(process.env.PGSSLROOTCERT).toString() } : {}),
-        };
-    if (!isLocalhost && !sslStrict) {
-      console.warn('[pre-deploy] Security Notice: DATABASE_SSL_STRICT is not enabled; connecting with unverified TLS. Set DATABASE_SSL_STRICT=true and supply PGSSLROOTCERT for production hardening.');
-    }
-
-    client = new Client({
-      connectionString: databaseUrl,
-      ssl: sslConfig,
-      connectionTimeoutMillis: 10000,
-    });
-
-    await client.connect();
-    console.log('[pre-deploy] Connected to PostgreSQL successfully.');
-
-    // Check if _prisma_migrations table exists
-    const tableCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = '_prisma_migrations'
-      );
-    `);
-
-    if (tableCheck.rows[0]?.exists) {
-      // Find all failed migrations (where finished_at is NULL and rolled_back_at is NULL)
-      const failedRes = await client.query(`
-        SELECT migration_name 
-        FROM "_prisma_migrations" 
-        WHERE finished_at IS NULL AND rolled_back_at IS NULL;
-      `);
-
-      if (failedRes.rows.length > 0) {
-        console.log(`[pre-deploy] Detected ${failedRes.rows.length} stuck/failed migration(s):`, failedRes.rows.map(r => r.migration_name));
-
-        for (const row of failedRes.rows) {
-          const mig = row.migration_name;
-          console.log(`[pre-deploy] Inspecting schema state for migration: ${mig}`);
-
-          let tableExists = false;
-          if (mig.includes('product_passport')) {
-            const chk = await client.query(`
-              SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'ProductPassport'
-              );
-            `);
-            tableExists = chk.rows[0]?.exists;
-          } else if (mig.includes('verification_code')) {
-            const chk = await client.query(`
-              SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'VerificationCode'
-              );
-            `);
-            tableExists = chk.rows[0]?.exists;
-          }
-
-          if (tableExists) {
-            console.log(`[pre-deploy] Target tables for '${mig}' already exist. Marking migration as successfully applied.`);
-            await client.query(`
-              UPDATE "_prisma_migrations" 
-              SET finished_at = NOW(), applied_steps_count = 1 
-              WHERE migration_name = $1;
-            `, [mig]);
-          } else {
-            console.log(`[pre-deploy] Target tables for '${mig}' do not exist. Deleting failed record to allow clean re-apply.`);
-            await client.query(`
-              DELETE FROM "_prisma_migrations" 
-              WHERE migration_name = $1 AND finished_at IS NULL;
-            `, [mig]);
-          }
-        }
-      } else {
-        console.log('[pre-deploy] No stuck migrations detected in _prisma_migrations.');
-      }
-    }
-  } catch (err) {
-    console.warn('[pre-deploy] Note on direct database inspection:', err.message);
-  } finally {
-    if (client) {
-      try {
-        await client.end();
-      } catch {}
-    }
+    privateNetwork = new URL(databaseUrl.replace(/^postgres(ql)?:/, 'http:')).hostname.endsWith('.railway.internal');
+  } catch {}
+  if (!sslStrict && !privateNetwork) {
+    console.warn('[pre-deploy] Security notice: DATABASE_SSL_STRICT is not enabled for a public database host; TLS is not verified. Set DATABASE_SSL_STRICT=true and PGSSLROOTCERT.');
   }
+  return {
+    rejectUnauthorized: sslStrict,
+    ...(process.env.PGSSLROOTCERT ? { ca: fs.readFileSync(process.env.PGSSLROOTCERT).toString() } : {}),
+  };
+}
+
+async function withClient(databaseUrl, fn) {
+  const client = new Client({ connectionString: databaseUrl, ssl: sslFor(databaseUrl), connectionTimeoutMillis: 10000 });
+  await client.connect();
+  try {
+    return await fn(client);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+async function failedMigrations(client) {
+  const t = await client.query(`SELECT to_regclass('public."_prisma_migrations"') IS NOT NULL AS ok`);
+  if (!t.rows[0] || !t.rows[0].ok) return [];
+  const r = await client.query(`SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY started_at`);
+  return r.rows.map((x) => x.migration_name);
+}
+
+/** What the public schema has, by name and case-sensitive (tables like "User" are quoted). */
+async function existingObjects(client) {
+  const [tables, indexes, columns, constraints, types] = await Promise.all([
+    client.query(`SELECT tablename AS n FROM pg_tables WHERE schemaname = 'public'`),
+    client.query(`SELECT indexname AS n FROM pg_indexes WHERE schemaname = 'public'`),
+    client.query(`SELECT table_name || '.' || column_name AS n FROM information_schema.columns WHERE table_schema = 'public'`),
+    client.query(`SELECT c.conname AS n FROM pg_constraint c JOIN pg_namespace ns ON ns.oid = c.connamespace WHERE ns.nspname = 'public'`),
+    client.query(`SELECT t.typname AS n FROM pg_type t JOIN pg_namespace ns ON ns.oid = t.typnamespace WHERE ns.nspname = 'public'`),
+  ]);
+  const set = (r) => new Set(r.rows.map((x) => x.n));
+  return { tables: set(tables), indexes: set(indexes), columns: set(columns), constraints: set(constraints), types: set(types) };
+}
+
+function cli(args) {
+  execSync(`npx prisma ${args}`, { stdio: 'inherit', timeout: 120000, env: CLI_ENV });
+}
+
+function sha256File(file) {
+  return require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+/**
+ * Marks reviewed, superseded migrations as applied without running them (prisma/superseded-migrations.json).
+ * Only when the superseding baseline is applied and the file still has the reviewed sha256.
+ */
+async function settleSupersededMigrations(databaseUrl) {
+  if (!fs.existsSync(SUPERSEDED)) return [];
+  const list = JSON.parse(fs.readFileSync(SUPERSEDED, 'utf8')).migrations || [];
+  const settled = [];
+  await withClient(databaseUrl, async (client) => {
+    const t = await client.query(`SELECT to_regclass('public."_prisma_migrations"') IS NOT NULL AS ok`);
+    if (!t.rows[0] || !t.rows[0].ok) return;
+    const r = await client.query(`SELECT migration_name, finished_at IS NOT NULL AND rolled_back_at IS NULL AS applied FROM "_prisma_migrations"`);
+    const applied = new Set(r.rows.filter((x) => x.applied).map((x) => x.migration_name));
+    for (const m of list) {
+      if (applied.has(m.name) || !applied.has(m.supersededBy)) continue;
+      const file = path.join(MIGRATIONS_DIR, m.name, 'migration.sql');
+      if (!fs.existsSync(file)) continue;
+      const hash = sha256File(file);
+      if (hash !== m.sha256) {
+        throw new Error(`superseded migration ${m.name} changed (sha256 ${hash}, reviewed ${m.sha256}); review it again before deploying.`);
+      }
+      cli(`migrate resolve --applied ${m.name}`);
+      console.log(`[pre-deploy] ${m.name} marked as applied without running it: superseded by ${m.supersededBy}.`);
+      settled.push(m.name);
+    }
+  });
+  return settled;
+}
+
+/**
+ * Resolves every failed migration from what the database really has, or stops (fail closed).
+ * Returns the names it resolved. `seen` stops a migration from being handled twice in one run.
+ */
+async function resolveFailedMigrations(databaseUrl, seen) {
+  const resolved = [];
+  await withClient(databaseUrl, async (client) => {
+    const failed = await failedMigrations(client);
+    if (failed.length === 0) return;
+    const existing = await existingObjects(client);
+    for (const name of failed) {
+      const file = path.join(MIGRATIONS_DIR, name, 'migration.sql');
+      if (seen.has(name)) {
+        throw new Error(`migration ${name} failed again after being resolved in this run; resolve it by hand (npx prisma migrate resolve).`);
+      }
+      seen.add(name);
+      if (!fs.existsSync(file)) {
+        throw new Error(`migration ${name} is recorded as failed but prisma/migrations/${name} does not exist in this build.`);
+      }
+      const verdict = decide(extractObjects(fs.readFileSync(file, 'utf8')), existing);
+      console.log(`[pre-deploy] Failed migration ${name}: ${verdict.reason}.`);
+      if (verdict.action === 'applied') {
+        cli(`migrate resolve --applied ${name}`);
+        console.log(`[pre-deploy] ${name} marked as applied (its schema is already in place).`);
+      } else if (verdict.action === 'rolled-back') {
+        cli(`migrate resolve --rolled-back ${name}`);
+        console.log(`[pre-deploy] ${name} marked as rolled back; it will be applied again.`);
+      } else {
+        const missing = verdict.missing.slice(0, 10).join(', ');
+        throw new Error(`migration ${name} needs a person: ${verdict.reason}${missing ? `; missing: ${missing}` : ''}. Nothing was changed.`);
+      }
+      resolved.push(name);
+    }
+  });
+  return resolved;
 }
 
 /**
@@ -153,36 +188,6 @@ async function pickMigrationConnection() {
   console.warn('[pre-deploy] The migration URL is PgBouncer and no direct host answered; migrating without the advisory lock (one pre-deploy at a time). Set DATABASE_URL_UNPOOLED to ${{Postgres.DATABASE_URL}} in Railway.');
 }
 
-async function runCliMigrations() {
-  await pickMigrationConnection();
-  // 1. Try prisma migrate resolve as an additional layer of defense
-  try {
-    console.log('[pre-deploy] Attempting Prisma CLI migrate resolve on 20260523000000_hpf_product_passport...');
-    execSync('npx prisma migrate resolve --applied 20260523000000_hpf_product_passport', {
-      stdio: 'pipe',
-      timeout: 30000,
-    });
-    console.log('[pre-deploy] Prisma CLI resolve: marked 20260523000000_hpf_product_passport as applied.');
-  } catch (e) {
-    // Expected if already applied or not found; proceed safely
-  }
-
-  // 2. Deploy all pending migrations — A-017: Exit with code 1 on failure. No --accept-data-loss fallback.
-  console.log('[pre-deploy] Executing: npx prisma migrate deploy...');
-  try {
-    execSync('npx prisma migrate deploy', {
-      stdio: 'inherit',
-      timeout: 120000,
-    });
-    console.log('[pre-deploy] Prisma migrations deployed successfully.');
-    return;
-  } catch (deployErr) {
-    console.error('[pre-deploy] FATAL: prisma migrate deploy failed:', deployErr.message);
-    console.error('[pre-deploy] A-017: --accept-data-loss fallback REMOVED for safety. Fix the migration conflict before deploying.');
-    process.exit(1);
-  }
-}
-
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl || databaseUrl.includes('dummy') || databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
@@ -190,16 +195,35 @@ async function main() {
     process.exit(0);
   }
 
-  console.log('[pre-deploy] Starting pre-deploy resilience check...');
-  await resolveStuckMigrations(databaseUrl);
-  await runCliMigrations();
-
-  console.log('[pre-deploy] Pre-deploy tasks completed successfully.');
-  process.exit(0);
+  console.log('[pre-deploy] Starting migrations.');
+  await pickMigrationConnection();
+  const seen = new Set();
+  // Each round: resolve what failed from the real schema, then deploy. A migration that fails is
+  // inspected in the next round; one that fails twice, or is partly applied, stops the deploy.
+  for (let round = 1; round <= 30; round++) {
+    const url = process.env.DATABASE_URL_UNPOOLED || databaseUrl;
+    const settled = await settleSupersededMigrations(url);
+    const resolved = await resolveFailedMigrations(url, seen);
+    if (round > 1 && settled.length + resolved.length === 0) {
+      // deploy failed but recorded no failed migration (connection, permissions, P1xxx): retrying would only repeat it.
+      console.error('[pre-deploy] FATAL: migrate deploy failed without a failed migration to recover; see the Prisma error above.');
+      process.exit(1);
+    }
+    try {
+      cli('migrate deploy');
+      console.log('[pre-deploy] Prisma migrations deployed successfully.');
+      process.exit(0);
+    } catch (deployErr) {
+      // A-017: never --accept-data-loss. The failed migration is inspected in the next round.
+      console.warn(`[pre-deploy] migrate deploy failed (round ${round}); inspecting the failed migration.`);
+    }
+  }
+  console.error('[pre-deploy] FATAL: migrations did not converge after 30 rounds.');
+  process.exit(1);
 }
 
 main().catch((fatal) => {
-  console.error('[pre-deploy] Fatal error caught in pre-deploy script:', fatal);
+  console.error('[pre-deploy] FATAL:', fatal && fatal.message ? fatal.message : fatal);
   // A-017: Exit 1 on unhandled fatal — do NOT swallow errors silently
   process.exit(1);
 });

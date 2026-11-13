@@ -1,6 +1,5 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Link2, Users, Globe, Lock, ChevronRight } from 'lucide-react';
 import { countLabel } from '@/lib/ui/format';
 import { toast } from 'sonner';
 import { SectionLabel, EmptyState, PrimaryButton, SecondaryButton, SearchField, Sheet, tintFor } from './ui/kit';
@@ -43,9 +42,7 @@ function CommunityRow({ c, onOpen }: { c: Community; onOpen: () => void }) {
         <span className="flex-1 min-w-0">
           <span className="flex items-center gap-1.5 min-w-0">
             <span className="text-[15.5px] font-medium text-[#15171c] truncate">{c.name}</span>
-            {c.isPrivate
-              ? <Lock size={12} strokeWidth={2} className="text-[#a3a9b4] shrink-0" aria-label="Private" />
-              : <Globe size={12} strokeWidth={2} className="text-[#a3a9b4] shrink-0" aria-label="Public" />}
+            <span className="text-[11.5px] font-medium text-[#727a88] shrink-0">{c.isPrivate ? 'Private' : 'Public'}</span>
           </span>
           <span className="block text-[13px] text-[#727a88] truncate mt-0.5 tabular-nums">
             {countLabel(members, 'member', 'members')}{c.myRole === 'ADMIN' ? ' · Admin' : c.myRole === 'MODERATOR' ? ' · Moderator' : ''}
@@ -54,7 +51,6 @@ function CommunityRow({ c, onOpen }: { c: Community; onOpen: () => void }) {
             <span className="block text-[13px] text-[#727a88] truncate">{c.description}</span>
           )}
         </span>
-        <ChevronRight size={16} strokeWidth={1.8} className="text-[#c9ced6] shrink-0" aria-hidden="true" />
       </button>
     </li>
   );
@@ -171,10 +167,10 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         {view === 'mine' ? (
           <div className="flex gap-2 mt-3">
             <PrimaryButton onClick={() => setShowCreate(true)} className="flex-1 h-10 text-[14.5px]">
-              <Plus size={17} strokeWidth={2} /> New community
+              New community
             </PrimaryButton>
             <SecondaryButton onClick={() => setShowJoin(true)} className="h-10 text-[14.5px]">
-              <Link2 size={17} strokeWidth={1.9} /> Join
+              Join with a link or code
             </SecondaryButton>
           </div>
         ) : (
@@ -191,7 +187,6 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           </div>
         ) : communities.length === 0 ? (
           <EmptyState
-            icon={<Users size={20} strokeWidth={1.8} />}
             title="No communities yet"
             text="Create a space for a team, a project or friends, then invite people with a link."
             action={<PrimaryButton onClick={() => setShowCreate(true)}>New community</PrimaryButton>}
@@ -206,7 +201,6 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           <SectionLabel>{visiblePublic.length} public {visiblePublic.length === 1 ? 'community' : 'communities'}</SectionLabel>
           {visiblePublic.length === 0 ? (
             <EmptyState
-              icon={<Globe size={20} strokeWidth={1.8} />}
               title={q ? 'No matches' : 'No public communities yet'}
               text={q ? 'Try another word.' : 'Public communities can be found and joined by anyone.'}
               action={!q ? <SecondaryButton onClick={() => { setIsPrivate(false); setShowCreate(true); }}>Create a public one</SecondaryButton> : undefined}
@@ -243,9 +237,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           <fieldset className="flex flex-col gap-2">
             <legend className="text-[13px] font-medium text-[#4a505c] mb-1.5">Who can join</legend>
             {([
-              [true, Lock, 'Private', 'Only people with an invite link'],
-              [false, Globe, 'Public', 'Anyone can find it and join'],
-            ] as const).map(([priv, Icon, title, text]) => (
+              [true, 'Private', 'Only people with an invite link'],
+              [false, 'Public', 'Anyone can find it and join'],
+            ] as const).map(([priv, title, text]) => (
               <button
                 key={title}
                 type="button"
@@ -254,12 +248,11 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                 onClick={() => setIsPrivate(priv)}
                 className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${isPrivate === priv ? 'border-[#15171c] bg-white' : 'border-[#e4e7ec] hover:bg-[#f7f8fa]'}`}
               >
-                <span className="w-9 h-9 rounded-full bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true"><Icon size={17} strokeWidth={1.8} /></span>
                 <span className="flex-1">
                   <span className="block text-[15px] font-medium text-[#15171c]">{title}</span>
                   <span className="block text-[13px] text-[#727a88]">{text}</span>
                 </span>
-                <span className={`w-[18px] h-[18px] rounded-full border-2 ${isPrivate === priv ? 'border-[#15171c] bg-[radial-gradient(circle,#15171c_45%,transparent_50%)]' : 'border-[#c9ced6]'}`} aria-hidden="true" />
+                <span className={`text-[12.5px] font-semibold ${isPrivate === priv ? 'text-[#15171c]' : 'text-[#a3a9b4]'}`}>{isPrivate === priv ? 'Selected' : 'Choose'}</span>
               </button>
             ))}
           </fieldset>

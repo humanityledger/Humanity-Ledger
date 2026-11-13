@@ -25,6 +25,7 @@ import { useWalletStore } from '@/lib/store/wallet-store';
 import { useAztec } from '@/context/AztecContext';
 import { toast } from 'sonner';
 import { chatTextPx, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
+import { ChatCredit } from '@/components/chat/ChatCredit';
 import { loadBlockList, saveBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
 import { deriveCallLog, callLogMessages, decodeCallEntry, callEntryLabel, isCallSignal, CALL_LOG_PREFIX, type CallSignal } from '@/lib/chat/callLog';
 import { startDeviceSync, stopDeviceSync, handleDeviceSyncMessage, setSynced, getSynced, getDeviceStore, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
@@ -339,6 +340,18 @@ import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptRes
 /** How long an answered call may look for a network path before it is reported as failed. */
 const ICE_CONNECT_MS = 20_000;
 const CALL_SDP = { sdpTransform: (sdp: string) => tuneOpusSdp(sdp) };
+
+/**
+ * Puts a call stream on a <video> and starts it. Setting srcObject alone left iOS Safari and some
+ * Android browsers on a black frame until something else asked the element to play. Muted: the
+ * voice plays through the one <audio> element.
+ */
+function attachVideo(el: HTMLVideoElement | null, stream: MediaStream | null) {
+  if (!el) return;
+  if (el.srcObject !== stream) el.srcObject = stream;
+  el.muted = true;
+  if (stream && el.paused) el.play().catch(() => {});
+}
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
 import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus, CircleDot } from 'lucide-react';
 import { MEETING_JOIN_EVENT, MEETINGS_EVENT, loadMeetings, meetingPreview, parseMeeting, rememberMeeting, upcomingMeetings, type StoredMeeting } from '@/lib/chat/meeting';
@@ -597,6 +610,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const conversationsRef = useRef<ConversationMeta[]>([]);
   conversationsRef.current = conversations;
   const [activePeer, setActivePeer] = useState<string | null>(null);
+  const activePeerState = activePeer; // read by executeSend, which may be told another recipient
+  // The address of the person in the current call: call signals go to them even if another chat is open.
+  const callPeerAddrRef = useRef<string | null>(null);
   const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const push = usePushNotifications(address || undefined);
@@ -1012,6 +1028,31 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     toast.success(on ? 'Pinned' : 'Unpinned');
   }, [address, pinnedPeers]);
 
+  // Blocks a peer on this account (synced block list), closes their chat and says so.
+  const blockPeer = (peer: string) => {
+    if (!peer) return;
+    setShowContactInfo(false);
+    const next = new Set(blockedPeersRef.current);
+    next.add(peer.toLowerCase());
+    blockedPeersRef.current = next;
+    setBlockedPeers(next);
+    saveBlockList(Array.from(next)).catch(() => {});
+    setActivePeer(null);
+    toast.success(`${getDisplayName(peer)} is blocked`);
+  };
+
+  // Contact info: on screens wide enough for the details column it is already on screen, so the
+  // header and the menu bring it into view; narrower screens open the sheet.
+  const openContactInfo = () => {
+    const column = typeof document !== 'undefined' ? document.getElementById('chat-details-column') : null;
+    if (column && column.offsetParent !== null) {
+      column.scrollTo({ top: 0, behavior: 'smooth' });
+      column.focus({ preventScroll: true });
+      return;
+    }
+    setShowContactInfo(true);
+  };
+
   const toggleMute = useCallback((peer: string) => {
     const key = peer.toLowerCase();
     const on = !mutedPeers.has(key);
@@ -1104,7 +1145,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
   
   // The PeerJS MediaConnection object (from peerInstance.call() or Peer.on('call'))
-  const [activeConnection, setActiveConnection] = useState<any>(null);
+  const [activeConnection, setActiveConnectionState] = useState<any>(null);
+  // The ref is the one the PeerJS callbacks read; it is set at once, not after the next render. Read
+  // through a useEffect, it still held the previous connection when the other person's stream and ICE
+  // "connected" arrived a moment after answering, so the call never left "Connecting": the voice played
+  // (it does not wait for that state) but both videos stayed hidden and screen sharing refused to start.
+  const setActiveConnection = (conn: any) => {
+    activeConnectionRef.current = conn;
+    setActiveConnectionState(conn);
+  };
   // [ARCH-FIX] Pending PeerJS connection queued by peer.on('call') — used by answerCall()
   const pendingConnectionRef = useRef<any>(null);
   // Caller stores the remotePeerId — now derived deterministically, not from XMTP
@@ -1140,6 +1189,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  // Where the other person's voice plays (speakers, headset, Bluetooth). Browsers that let a page pick
+  // the output (setSinkId: Chrome, Edge, Firefox, recent Safari on a Mac) list them in Call settings;
+  // on phones the system's own audio route button decides, so the row is not shown there.
+  const [audioOutputs, setAudioOutputs] = useState<{ id: string; label: string }[]>([]);
+  const [audioOutputId, setAudioOutputId] = useState<string>('default');
+  const canPickOutput = typeof window !== 'undefined' && typeof (HTMLMediaElement.prototype as any).setSinkId === 'function';
+  const loadAudioOutputs = async () => {
+    if (!canPickOutput || !navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setAudioOutputs(list.filter((d) => d.kind === 'audiooutput').map((d, i) => ({ id: d.deviceId, label: d.label || `Output ${i + 1}` })));
+    } catch { /* no list: the default output stays */ }
+  };
+  const chooseAudioOutput = async (id: string) => {
+    const el = remoteAudioRef.current as any;
+    if (!el?.setSinkId) return;
+    try { await el.setSinkId(id); setAudioOutputId(id); } catch { toast.error('That output cannot be used right now.'); }
+  };
   // Call Duration State
   // When the call was answered. The running clock is <CallClock>, which ticks on its own.
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
@@ -1545,7 +1612,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, []);
   // Always-fresh ref to executeSend — avoids stale closure in event listeners
-  const executeSendRef = useRef<((content: string) => Promise<boolean>) | null>(null);
+  const executeSendRef = useRef<((content: string, opts?: { to?: string }) => Promise<boolean>) | null>(null);
   // Network sends of messages, one after the other in typing order (lib/chat/optimistic-send.ts).
   const sendQueueRef = useRef(createSendQueue());
 
@@ -2057,7 +2124,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // A shared screen arrives as its own connection, only from the person we are in a call with.
         if (connection.metadata?.kind === 'screen') {
           const current = activeConnectionRef.current;
-          if (callStateRef.current === 'active' && current && connection.peer === current.peer) {
+          if ((callStateRef.current === 'active' || callStateRef.current === 'connecting') && current && connection.peer === current.peer) {
             try { screenInRef.current?.close(); } catch {}
             screenInRef.current = connection;
             connection.answer(undefined, CALL_SDP);
@@ -2113,7 +2180,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
           if (callStateRef.current === 'idle') {
              // Fallback trigger ringing state if XMTP is lagging
-             const inCallType = connection.metadata?.callType || 'audio';
+             const inCallType = connection.metadata?.callType === 'video' ? 'video' : 'audio';
+             if (!callPeerAddrRef.current) callPeerAddrRef.current = activePeerRef.current;
              setCallType(inCallType);
              callTypeRef.current = inCallType;
              setCallState('ringing');
@@ -2425,7 +2493,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (callStateRef.current !== 'connecting') return;
     console.warn('[Call] No network path to the other device (ICE).', ownTurnRef.current ? 'TURN relay was offered.' : 'No TURN relay configured.');
     toast.error("The call couldn't connect through this network. Try again, or switch one side to Wi-Fi or mobile data.", { duration: 7000 });
-    executeSendRef.current?.('__CALL_HANGUP__').catch(() => {});
+    executeSendRef.current?.('__CALL_HANGUP__', { to: callPeerAddrRef.current || undefined }).catch(() => {});
     performEndCallRef.current();
   };
   const goLiveWhenConnectedRef = useRef<(conn: any) => void>(() => {});
@@ -2489,7 +2557,37 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       else console.warn('[Audio] play() failed:', err);
     });
   };
-  const remoteHasVideo = !!remoteStream?.getVideoTracks().length;
+  // The other person's camera is shown when its frames arrive, read from the track itself (unmute),
+  // not from the call state: a stream gains its video track after the first render on some
+  // browsers, and the same MediaStream object never re-rendered the call screen.
+  const [remoteVideoLive, setRemoteVideoLive] = useState(false);
+  useEffect(() => {
+    const st = remoteStream;
+    if (!st) { setRemoteVideoLive(false); return; }
+    const update = () => setRemoteVideoLive(st.getVideoTracks().some((t) => t.readyState === 'live' && !t.muted));
+    const bound = new Set<MediaStreamTrack>();
+    const bind = (t: MediaStreamTrack) => {
+      if (bound.has(t)) return;
+      bound.add(t);
+      t.addEventListener('unmute', update);
+      t.addEventListener('mute', update);
+      t.addEventListener('ended', update);
+    };
+    st.getVideoTracks().forEach(bind);
+    const onAdd = (e: MediaStreamTrackEvent) => { if (e.track.kind === 'video') bind(e.track); update(); };
+    st.addEventListener('addtrack', onAdd as EventListener);
+    st.addEventListener('removetrack', update);
+    update();
+    // Some Safari versions do not fire unmute on remote tracks: a light check keeps the screen right.
+    const poll = setInterval(() => { st.getVideoTracks().forEach(bind); update(); }, 1000);
+    return () => {
+      clearInterval(poll);
+      st.removeEventListener('addtrack', onAdd as EventListener);
+      st.removeEventListener('removetrack', update);
+      bound.forEach((t) => { t.removeEventListener('unmute', update); t.removeEventListener('mute', update); t.removeEventListener('ended', update); });
+    };
+  }, [remoteStream]);
+  const remoteHasVideo = remoteVideoLive || !!remoteStream?.getVideoTracks().some((t) => t.readyState === 'live');
   const localHasVideo = !!localStream?.getVideoTracks().some((t) => t.readyState === 'live');
   const stopReconnectRef = useRef<() => void>(() => {});
   stopReconnectRef.current = () => {
@@ -2536,7 +2634,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (Date.now() > r.deadline) {
         stopReconnectRef.current();
         toast.error('The call lost its connection.');
-        executeSendRef.current?.('__CALL_HANGUP__').catch(() => {});
+        executeSendRef.current?.('__CALL_HANGUP__', { to: callPeerAddrRef.current || undefined }).catch(() => {});
         performEndCallRef.current();
         return;
       }
@@ -2585,7 +2683,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [callState]);
 
   // Keep refs in sync with state
-  useEffect(() => { activeConnectionRef.current = activeConnection; }, [activeConnection]);
   useEffect(() => { remoteStreamRef.current = remoteStream; }, [remoteStream]);
 
   const performEndCall = useCallback(() => {
@@ -2602,6 +2699,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     callMetricsRef.current = null;
     setAudioBlocked(false);
     // Forget the call before closing its connections: their 'close' must not start a recovery.
+    callPeerAddrRef.current = null;
     activeConnectionRef.current = null;
     callStateRef.current = 'idle';
     stopReconnectRef.current();
@@ -2672,6 +2770,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const startCall = async (type: 'audio' | 'video', targetPeerOverride?: string) => {
     const targetPeer = targetPeerOverride || activePeer;
     if (!targetPeer) return;
+    callPeerAddrRef.current = targetPeer;
     callMetricsRef.current = startCallMetrics('caller', type);
     setCallTiming({});
     
@@ -2731,7 +2830,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // if the WebRTC session had to re-initialize). Using the base ID here would break the
       // receiver's reverse-dial fallback if the caller is on a suffixed ID.
       const myStablePeerId = myPeerIdRef.current || derivePeerId(address!);
-      executeSend(`__CALL_OFFER__:${myStablePeerId}:${type}`).catch(() => {});
+      executeSend(`__CALL_OFFER__:${myStablePeerId}:${type}`, { to: targetPeer }).catch(() => {});
 
       // Directly dial the receiver via PeerJS — no XMTP round-trip needed
       const livePeerForStart = peerInstanceRef.current;
@@ -2768,7 +2867,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           }
           toast.error('No answer.');
           // Tell the callee to stop ringing; both call logs then read "missed".
-          executeSendRef.current?.('__CALL_HANGUP__').catch(() => {});
+          executeSendRef.current?.('__CALL_HANGUP__', { to: callPeerAddrRef.current || undefined }).catch(() => {});
           performEndCallRef.current();
         }
       }, 45000);
@@ -2889,7 +2988,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
       // Send CALL_ANSWER as status update for chat UI
       const myStableId = derivePeerId(address!);
-      executeSend(`__CALL_ANSWER__:${myStableId}`).catch(() => {});
+      executeSend(`__CALL_ANSWER__:${myStableId}`, { to: callPeerAddrRef.current || undefined }).catch(() => {});
 
       // Failsafe: if remote stream does not arrive within 20s, abort
       callTimeoutRef.current = setTimeout(() => {
@@ -2905,7 +3004,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       setCallState('idle');
       
       // Tell the caller immediately that we couldn't answer due to hardware/permission failure
-      executeSend('__CALL_DECLINE__').catch(() => {});
+      executeSend('__CALL_DECLINE__', { to: callPeerAddrRef.current || undefined }).catch(() => {});
 
       const errName = e?.name || '';
       if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
@@ -3099,7 +3198,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ─── declineCall: Receiver declines ─────────────────────────────────────────
   const declineCall = useCallback(async () => {
     try {
-      if (executeSendRef.current) await executeSendRef.current('__CALL_DECLINE__');
+      if (executeSendRef.current) await executeSendRef.current('__CALL_DECLINE__', { to: callPeerAddrRef.current || undefined });
     } catch {}
     // Log declined call to sovereign history
     if (address && activePeer) {
@@ -3121,7 +3220,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // not an answered call of 0 seconds.
     const wasConnected = callStateRef.current === 'active';
     try {
-      if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__');
+      if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__', { to: callPeerAddrRef.current || undefined });
     } catch {}
     // Log completed call to sovereign history
     if (address && activePeer) {
@@ -3360,8 +3459,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (screenOutRef.current) { stopScreenShareRef.current(); return; }
     const main = activeConnectionRef.current;
     const livePeer = peerInstanceRef.current;
-    if (!main || !livePeer || livePeer.destroyed || callStateRef.current !== 'active') return;
-    if (!canShareScreen) { toast.error('Screen sharing is not available on this device'); return; }
+    if (!canShareScreen) {
+      // iPhone and iPad browsers, and Chrome on most Android phones, give web pages no way to capture
+      // the screen (no getDisplayMedia). Said plainly instead of a button that does nothing.
+      toast.error('This browser cannot share your screen. Share it from Ledger Chat on a computer (Chrome, Edge, Firefox or Safari).', { duration: 7000 });
+      return;
+    }
+    if (!main || !livePeer || livePeer.destroyed || (callStateRef.current !== 'active' && callStateRef.current !== 'connecting')) {
+      toast.error('Wait until the call is connected, then share your screen.');
+      return;
+    }
     let stream: MediaStream | null = null;
     try {
       stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15, max: 30 } }, audio: false });
@@ -4359,6 +4466,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 }
                 setCallType(offerCallType);
                 callTypeRef.current = offerCallType;
+                callPeerAddrRef.current = msgConvPeer || activePeerRef.current;
                 isCallerRef.current = false;
                 setCallState('ringing');
                 startRingtone();
@@ -5250,7 +5358,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const handleStartConversation = async () => handleStartConversationWithPeer(peerInput);
 
   // Resolves true only when XMTP took the message; every refusal or failure resolves false.
-  const executeSend = async (content: string): Promise<boolean> => {
+  // `to`: the person a call signal is for. A call started from the Calls tab or a scheduled call
+  // changes the open chat in the same tap, before React has re-rendered: without `to` the offer went
+  // to the chat that was open before (another person rang) or nowhere.
+  const executeSend = async (content: string, opts: { to?: string } = {}): Promise<boolean> => {
+    const activePeer = opts.to || activePeerState;
     // 1. App Store Compliance: Content Moderation & Rate Limiting
     if (!checkRateLimit(address || 'anon', 60, 60000)) {
       toast.error('You are sending messages too quickly. Wait a moment.');
@@ -5985,18 +6097,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onVoiceCall={() => { setShowContactInfo(false); handleStartCall('audio', activePeer); }}
             onVideoCall={() => { setShowContactInfo(false); handleStartCall('video', activePeer); }}
             onSearch={() => { setShowContactInfo(false); setShowSearch(true); }}
-            onBlock={() => {
-              setShowContactInfo(false);
-              {
-                const next = new Set(blockedPeersRef.current);
-                next.add(activePeer.toLowerCase());
-                blockedPeersRef.current = next;
-                setBlockedPeers(next);
-                saveBlockList(Array.from(next)).catch(() => {});
-              }
-              setActivePeer(null);
-              toast.success(`${getDisplayName(activePeer)} is blocked`);
-            }}
+            onBlock={() => blockPeer(activePeer)}
+            isMuted={mutedPeers.has(activePeer.toLowerCase())}
+            onToggleMute={() => toggleMute(activePeer)}
           />
         )}
       </AnimatePresence>
@@ -6463,7 +6566,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               upcoming={meetings}
               onJoinMeeting={(m) => { setActiveCommunity(null); setSidebarTab('chats'); setShowList(false); handleStartCall(m.invite.kind === 'video' ? 'video' : 'audio', m.peer); }}
               onScheduleCall={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); setShowMeetingSheet(true); }}
-              onStartCall={(addr, type) => { setSidebarTab('chats'); setShowList(false); handleStartCall(type, addr); }}
+              onStartCall={(addr, type) => { setSidebarTab('chats'); setShowList(false); handleStartCall(type === 'video' ? 'video' : 'audio', addr); }}
               onOpenChat={(addr) => { setActiveCommunity(null); setActivePeer(addr); setSidebarTab('chats'); setShowList(false); }}
               onNew={() => {}}
               onSchedule={() => {}}
@@ -6538,7 +6641,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button type="button" onClick={() => setShowList(true)} className="md:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
                   <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
-                <button type="button" onClick={() => setShowContactInfo(true)} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
+                <button type="button" onClick={openContactInfo} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
                   <div className="relative shrink-0">
                     <Avatar address={activePeer!} size={42} />
                     {peerStatus.status === 'online' && (
@@ -6600,7 +6703,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       <div className="fixed inset-0 z-[150]" onClick={() => setShowHeaderMenu(false)} aria-hidden="true" />
                       <div role="menu" className="absolute right-0 top-11 z-[160] w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
                         {[
-                          { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: () => setShowContactInfo(true) },
+                          { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: openContactInfo },
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
                           { label: 'Wallpaper', icon: <ImageIcon size={17} strokeWidth={1.8} />, onClick: () => setShowWallpaperPicker(true) },
                           { label: 'Appearance', icon: <Palette size={17} strokeWidth={1.8} />, onClick: () => setShowThemePicker(true) },
@@ -7242,17 +7345,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               peerInboxId={activePeerInboxIdRef.current}
               client={client}
               messages={messages.filter((m: any) => m.conversationId === `dm-${activePeer.toLowerCase()}`)}
+              myAddress={effectiveAddress || ''}
               isMuted={mutedPeers.has(activePeer.toLowerCase())}
-              disappearing={(() => { try { const t = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()); return ({ '24h': 'after 24 hours', '7d': 'after 7 days', '90d': 'after 90 days' } as Record<string, string>)[t || ''] ?? null; } catch { return null; } })()}
               onCall={(type) => handleStartCall(type)}
               onPay={() => setShowZkModal(true)}
               onToggleMute={() => toggleMute(activePeer)}
-              onMore={() => setShowContactInfo(true)}
+              onBlock={() => blockPeer(activePeer)}
+              onClearChat={() => setShowClearConfirm(true)}
             />
           )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] relative overflow-y-auto p-6 md:p-12">
+            <ChatCredit align="end" className="hidden md:flex absolute bottom-6 right-7 max-w-[340px]" />
             <div className="w-full max-w-md flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-6">
                 <MessageSquare size={28} strokeWidth={1.6} aria-hidden="true" />
@@ -7363,7 +7468,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               className="fixed z-[100000] w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden shadow-[0_18px_40px_-12px_rgba(16,24,40,0.45)] bg-[#15171c] cursor-pointer ring-1 ring-black/10"
             >
               <video
-                ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
+                ref={el => attachVideo(el, remoteStream)}
                 autoPlay playsInline muted className="w-full h-full object-cover"
               />
               <div className="absolute top-2 left-2 bg-white/90 text-[#15171c] text-[12px] tabular-nums px-2 py-0.5 rounded-full font-medium">
@@ -7414,9 +7519,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
             {/* Background: the other person's video, or their name and picture for a voice call */}
             <div className="absolute inset-0">
-              {callType === 'video' && remoteHasVideo && callState === 'active' ? (
+              {callType === 'video' && remoteHasVideo && (callState === 'active' || remoteVideoLive) ? (
                 <video
-                  ref={el => { if (el && el.srcObject !== remoteStream) el.srcObject = remoteStream; }}
+                  ref={el => attachVideo(el, remoteStream)}
                   autoPlay playsInline muted className="w-full h-full object-cover"
                 />
               ) : (
@@ -7436,7 +7541,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             {remoteScreen && (
               <div className="absolute inset-0 z-10 bg-[#0f1115] flex items-center justify-center">
                 <video
-                  ref={el => { if (el && el.srcObject !== remoteScreen) el.srcObject = remoteScreen; }}
+                  ref={el => attachVideo(el, remoteScreen)}
                   autoPlay playsInline muted className="w-full h-full object-contain"
                 />
                 <div role="status" className="absolute top-[72px] left-1/2 -translate-x-1/2 bg-white/95 text-[#15171c] text-[13px] font-medium px-3.5 py-1.5 rounded-full shadow">
@@ -7462,7 +7567,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {!isCamOff && localHasVideo ? (
                   <div className="w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden ring-1 ring-white/30 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.6)] bg-[#15171c]">
                     <video
-                      ref={el => { if (el && el.srcObject !== localStream) el.srcObject = localStream; }}
+                      ref={el => attachVideo(el, localStream)}
                       autoPlay playsInline muted className="w-full h-full object-cover"
                       style={activeCamera === 'user' ? { transform: 'scaleX(-1)' } : undefined}
                     />
@@ -7511,7 +7616,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     )}
                   </div>
 
-                  <button type="button" onClick={() => setShowCallSettings(true)} className={btn} aria-label="Call settings" title="Call settings">
+                  <button type="button" onClick={() => { void loadAudioOutputs(); setShowCallSettings(true); }} className={btn} aria-label="Call settings" title="Call settings">
                     <Settings size={18} strokeWidth={1.9} />
                   </button>
                 </div>
@@ -7560,7 +7665,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 cameraOff={isCamOff || !localHasVideo}
                 screenSharing={isScreenSharing}
                 onSwitchCamera={localHasVideo ? switchCamera : undefined}
-                onScreenShare={canShareScreen ? toggleScreenShare : undefined}
+                onScreenShare={toggleScreenShare}
                 onToggleCamera={toggleCamera}
                 onToggleMic={toggleMic}
                 onEnd={endCall}
@@ -7616,6 +7721,19 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     {row({ icon: <Mic size={17} strokeWidth={1.8} />, title: 'Noise suppression', text: 'Filters out background noise',
                       right: toggle({ on: voiceIsolation, label: 'Noise suppression', onToggle: toggleVoiceIsolation }) })}
                     {row({ icon: <Volume2 size={17} strokeWidth={1.8} />, title: 'Echo cancellation', text: 'Always on in Ledger Chat calls' })}
+                    {canPickOutput && audioOutputs.length > 1 && row({
+                      icon: <Volume2 size={17} strokeWidth={1.8} />, title: 'Audio output', text: 'Where you hear the call',
+                      right: (
+                        <select
+                          aria-label="Audio output"
+                          value={audioOutputId}
+                          onChange={(e) => chooseAudioOutput(e.target.value)}
+                          className="max-w-[150px] h-9 rounded-lg border border-[#e4e7ec] bg-white px-2 text-[13px] text-[#15171c]"
+                        >
+                          {audioOutputs.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                        </select>
+                      ),
+                    })}
 
                     {callType === 'video' && (
                       <>
