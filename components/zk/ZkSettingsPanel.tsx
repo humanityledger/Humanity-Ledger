@@ -12,6 +12,7 @@ import { getShieldedBalances, syncBalanceFromAztec, calculatePrivacyScore, getZk
 import { getIdentity, createIdentity, updateIdentity, ZkIdentity } from '@/lib/zk/zkIdentity';
 import { checkAztecNodeStatus } from '@/lib/zk/aztecPxe';
 import { getPrivateWallet } from '@/lib/aztec/wallet/client';
+import { networkLabel } from '@/lib/aztec/wallet/config';
 import { getUserStreams } from '@/lib/zk/zkStreaming';
 import { getUserInvoices } from '@/lib/zk/zkInvoice';
 import { ZkBridgePortal } from './ZkBridgePortal';
@@ -155,7 +156,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 {nodeStatus?.status === 'synced' ? `Block #${nodeStatus.rollupBlockNumber}` : 'Connecting...'}
               </span>
             </div>
-            <div className="text-[10px] text-gray-400 mt-0.5">Aztec Mainnet Rollup</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">{networkLabel()}</div>
           </div>
         </div>
 

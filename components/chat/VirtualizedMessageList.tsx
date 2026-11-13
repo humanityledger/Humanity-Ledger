@@ -42,6 +42,7 @@ const MemoizedMessageRow = React.memo(({
 }, (prev, next) => 
   prev.msg.id === next.msg.id && 
   prev.msg.status === next.msg.status &&
+  prev.msg.failed === next.msg.failed &&
   prev.msg.reactions === next.msg.reactions
 );
 MemoizedMessageRow.displayName = 'MemoizedMessageRow';

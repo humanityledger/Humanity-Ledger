@@ -330,7 +330,8 @@ import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls, CallClock } from '@/components/chat/call/CallScreens';
 import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, peerServerOptions } from '@/lib/calls/media';
-import { finishCallMetrics, markFirstAudio, markSetup, sampleHeap, startCallMetrics, type CallMetrics } from '@/lib/calls/metrics';
+import { confirmOptimistic, createSendQueue, failOptimistic, insertOptimistic, newOptimisticId, optimisticMessage } from '@/lib/chat/optimistic-send';
+import { callMetricsDetail, callMetricsLabel, finishCallMetrics, markFirstAudio, markSetup, routeFromStats, sampleHeap, startCallMetrics, type CallMetrics, type CallRoute } from '@/lib/calls/metrics';
 import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 /** Opus tuned for speech on every offer and answer (lib/calls/media.ts). */
 /** How long an answered call may look for a network path before it is reported as failed. */
@@ -497,43 +498,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   
   // BIOMETRIC LOCK STATE
   const [isBiometricallyUnlocked, setIsBiometricallyUnlocked] = useState(false);
-  const [biometricChecking, setBiometricChecking] = useState(false);
-
-  useEffect(() => {
-    // App lock off: nothing to unlock. The lock screen is rendered only while the lock is on (below), so the
-    // state is left untouched here: a lock switched on later (settings arriving after the defaults) still engages.
-    if (!ledgerSettings?.biometric_lock) return;
-    // If already unlocked, do nothing
-    if (isBiometricallyUnlocked) return;
-
-    // Trigger biometric check
-    const checkBiometric = async () => {
-      setBiometricChecking(true);
-      try {
-        if (typeof window !== 'undefined' && window.PublicKeyCredential) {
-          // Hardware WebAuthn prompt for Secure Enclave identity verification
-          await navigator.credentials.get({
-            publicKey: {
-              challenge: new Uint8Array(32),
-              rpId: window.location.hostname,
-              userVerification: "preferred",
-              timeout: 60000
-            }
-          }).catch(() => {
-             // Fallback if user cancels or it fails
-          });
-        }
-        setIsBiometricallyUnlocked(true);
-      } catch (e) {
-        console.error("Biometric failed", e);
-      } finally {
-        setBiometricChecking(false);
-        // Fallback unlock after a timeout to prevent absolute lockouts during testing
-        setTimeout(() => setIsBiometricallyUnlocked(true), 2500);
-      }
-    };
-    checkBiometric();
-  }, [ledgerSettings?.biometric_lock, isBiometricallyUnlocked]);
+  // The app lock (Settings › Security) is the PIN screen below and nothing else. It used to
+  // unlock by itself: a WebAuthn prompt with a fixed challenge whose result was ignored, and a
+  // 2.5 s timer that opened the chat whatever happened, so the lock protected nothing.
   
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -814,19 +781,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   const [inputText, setInputText] = useState('');
   const [peerInput, setPeerInput] = useState('');
-  const [sending, setSending] = useState(false);
-
-  // Safety net: if 'sending' stays true for more than 30 s (XMTP stall /
-  // unhandled rejection), auto-reset so the user is never permanently locked out.
-  const sendingWatchdogRef = useRef(false);
-  useEffect(() => {
-    sendingWatchdogRef.current = sending;
-    if (!sending) return;
-    const t = setTimeout(() => {
-      if (sendingWatchdogRef.current) setSending(false);
-    }, 30_000);
-    return () => clearTimeout(t);
-  }, [sending]);
+  // (The composer used to lock while a message was on its way, with a 30 s watchdog. Each
+  // message now carries its own status instead: lib/chat/optimistic-send.ts.)
   const [sendAnimKey, setSendAnimKey] = useState(0);
   // ── [FASE 16: Rate Limiting Anti-Spam] ───────────────────────────────
   // Prevents spam abuse: max 5 messages per 10 seconds (App Store Guideline 1.2)
@@ -1174,7 +1130,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ── Telegram/WhatsApp Parity States ──
   const [isCallMinimized, setIsCallMinimized] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'poor' | 'disconnected'>('good');
-  const [callRoute, setCallRoute] = useState<{ kind: 'direct' | 'relay' | 'unknown'; rttMs: number | null }>({ kind: 'unknown', rttMs: null });
+  const [callRoute, setCallRoute] = useState<CallRoute>({ kind: 'unknown', path: null, rttMs: null });
+  // Setup time and first audio of the current call (lib/calls/metrics.ts), shown in the minimized call.
+  const [callTiming, setCallTiming] = useState<{ setupMs?: number; firstAudioMs?: number }>({});
 
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -1580,6 +1538,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
   // Always-fresh ref to executeSend — avoids stale closure in event listeners
   const executeSendRef = useRef<((content: string) => Promise<boolean>) | null>(null);
+  // Network sends of messages, one after the other in typing order (lib/chat/optimistic-send.ts).
+  const sendQueueRef = useRef(createSendQueue());
 
   // Detect physical device type (touch + narrow screen = mobile)
   useEffect(() => {
@@ -2361,7 +2321,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   useEffect(() => {
     if (callState !== 'active' || !activeConnectionRef.current) {
       setNetworkQuality('good');
-      setCallRoute({ kind: 'unknown', rttMs: null });
+      setCallRoute({ kind: 'unknown', path: null, rttMs: null });
       return;
     }
     let stopped = false;
@@ -2372,28 +2332,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       try {
         const stats = await peerConn.getStats();
         let isPoor = peerConn.iceConnectionState === 'disconnected';
-        const candidates: Record<string, any> = {};
-        let selectedPair: any = null;
         stats.forEach((report: any) => {
-          if (report.type === 'local-candidate' || report.type === 'remote-candidate') candidates[report.id] = report;
-          if (report.type === 'candidate-pair' && report.state === 'succeeded' && (report.nominated || report.selected)) selectedPair = report;
           if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.currentRoundTripTime > 0.4) isPoor = true;
           if (report.type === 'inbound-rtp' && report.packetsReceived > 0 && report.packetsLost / report.packetsReceived > 0.05) isPoor = true;
         });
         if (stopped) return;
         setNetworkQuality(isPoor ? 'poor' : 'good');
-        if (selectedPair) {
-          const l = candidates[selectedPair.localCandidateId];
-          const r = candidates[selectedPair.remoteCandidateId];
-          const relayed = l?.candidateType === 'relay' || r?.candidateType === 'relay';
-          const kind = l || r ? (relayed ? 'relay' : 'direct') : 'unknown';
-          // RTT in 20 ms steps: a jittery number would otherwise re-render on every check.
-          const rttMs = typeof selectedPair.currentRoundTripTime === 'number' ? Math.round(selectedPair.currentRoundTripTime * 50) * 20 : null;
-          const key = `${kind}:${rttMs}`;
+        // Selected candidate pair → direct (host / srflx / prflx) or relay, and the round trip.
+        const route = routeFromStats(stats);
+        if (route) {
+          const key = `${route.path}:${route.rttMs}`;
           if (key !== lastRoute) {
             lastRoute = key;
-            setCallRoute({ kind: kind as any, rttMs });
-            if (callMetricsRef.current) { callMetricsRef.current.route = kind as any; callMetricsRef.current.rttMs = rttMs; }
+            setCallRoute(route);
+            if (callMetricsRef.current) { callMetricsRef.current.route = route.kind; callMetricsRef.current.path = route.path ?? undefined; callMetricsRef.current.rttMs = route.rttMs; }
           }
         }
       } catch {}
@@ -2480,6 +2432,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
       setCallState('active');
       markSetup(callMetricsRef.current);
+      setCallTiming((t) => ({ ...t, setupMs: callMetricsRef.current?.setupMs }));
       playRemoteAudio();
     };
     if (!pc || up()) { live(); return; }
@@ -2518,7 +2471,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const el = remoteAudioRef.current;
     if (!el) return;
     // The voice actually playing is "first audio" (the element is the one always-mounted <audio>).
-    el.onplaying = () => markFirstAudio(callMetricsRef.current);
+    el.onplaying = () => {
+      markFirstAudio(callMetricsRef.current);
+      const firstAudioMs = callMetricsRef.current?.firstAudioMs;
+      setCallTiming((t) => (t.firstAudioMs === firstAudioMs ? t : { ...t, firstAudioMs }));
+    };
     el.play().then(() => setAudioBlocked(false)).catch((err: any) => {
       if (err?.name === 'NotAllowedError') setAudioBlocked(true);
       else console.warn('[Audio] play() failed:', err);
@@ -2708,6 +2665,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const targetPeer = targetPeerOverride || activePeer;
     if (!targetPeer) return;
     callMetricsRef.current = startCallMetrics('caller', type);
+    setCallTiming({});
     
     // Ensure state updates if called from history list
     if (targetPeerOverride && activePeer !== targetPeerOverride) {
@@ -2834,6 +2792,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // [ANDROID FIX] Use callStateRef.current instead of the stale React state closure.
     if (callStateRef.current !== 'ringing') return;
     callMetricsRef.current = startCallMetrics('callee', callTypeRef.current === 'video' ? 'video' : 'audio');
+    setCallTiming({});
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast.error('This browser cannot use your microphone or camera. Try a current version of Chrome, Edge, Firefox or Safari.');
       return;
@@ -5300,7 +5259,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const isReaction = content.startsWith('__REACT__');
     const isVote = content.startsWith('__VOTE__');
     const isSignal = isSystemSignal(content);
-    if (!isSignal && sending) return false;
+    // No "one message at a time" gate any more: each message shows at once and the network sends
+    // go through sendQueueRef in order (lib/chat/optimistic-send.ts).
 
     // Direct local state sync for PIN/UNPIN signals
     if (content.startsWith('__PIN__')) {
@@ -5360,8 +5320,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       }
     }
 
-    if (!isSignal) setSending(true);
-    
     // Phase 2: Message Quoting
     let finalContent = content;
     if (replyingTo && !isSignal && !isAgreementMsg) {
@@ -5380,7 +5338,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       if (content.trim() === '/add') { finalContent = `My wallet: ${address}`; }
       else if (/^\/pay (\d+\.?\d*)$/.test(content.trim())) {
         const m = content.trim().match(/^\/pay (\d+\.?\d*)$/);
-        if (m) { setTransferAmount(m[1]); setShowWalletTransfer(true); setSending(false); return false; }
+        if (m) { setTransferAmount(m[1]); setShowWalletTransfer(true); return false; }
       }
     }
     // Tone translator  
@@ -5415,7 +5373,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         localStorage.removeItem(`ledger_draft_${address.toLowerCase()}_${activePeer.toLowerCase()}`);
     }
 
-    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticId = newOptimisticId();
 
     let displayContent = finalContent;
     let burnAtNs: number | undefined = undefined;
@@ -5435,15 +5393,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         // can find and replace this optimistic message atomically when it arrives.
         optimisticContentMap.current.set(finalContent, optimisticId); // FIX: must match what XMTP echoes back
 
-        const optimisticMsg = {
+        // Shown in this same tick, as "Sending" (clock) until XMTP returns its id.
+        const optimisticMsg = optimisticMessage({
           id: optimisticId,
           senderInboxId: client?.inboxId || '',
           content: displayContent,
           burnAtNs,
-          sentAtNs: Date.now(),
           conversationId: `dm-${activePeer.toLowerCase()}`
-        };
-        setMessages(prev => [...prev, optimisticMsg].sort((a, b) => a.sentAtNs - b.sentAtNs));
+        });
+        setMessages(prev => insertOptimistic(prev, optimisticMsg));
 
         // Clear typing indicator immediately
         stopTypingSignal();
@@ -5482,7 +5440,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // ALWAYS send via XMTP / offline queue — works both online AND offline.
       // sendMessage() handles: XMTP retries, fallback to DB offline queue, and
       // guarantees delivery when the recipient opens Ledger Chat.
-      const realId = await sendMessage(client, activePeer, finalContent, address);
+      // Messages go out in the order they were typed (one queue); call and typing signals skip
+      // the queue so a call is never held behind a slow message.
+      const peerAtSend = activePeer;
+      const realId = isSignal
+        ? await sendMessage(client, peerAtSend, finalContent, address)
+        : await sendQueueRef.current.run(() => sendMessage(client, peerAtSend, finalContent, address));
 
       // ── Swap the optimistic bubble for the real message, by id ──────────────
       // Pairing them by content (when the stream echo or the 12 s poll arrived)
@@ -5511,13 +5474,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         optimisticContentMap.current.delete(finalContent);
         confirmedMsgIds.current.add(realId);
         const sentAtMs = Date.now();
-        setMessages(prev => {
-          if (prev.some(m => m.id === realId)) {
-            // The stream echo already put the real message in: drop our copy.
-            return prev.filter(m => m.id !== optimisticId);
-          }
-          return prev.map(m => (m.id === optimisticId ? { ...m, id: realId, status: m.status || 'sent' } : m));
-        });
+        // The stream echo may already have put the real message in: then our copy is dropped.
+        setMessages(prev => confirmOptimistic(prev, optimisticId, realId));
         // Persist the REAL message (never the optimistic id) so it survives reloads.
         import('@/lib/chat/indexeddb').then(({ chatDB }) => {
           chatDB.saveMessages([{
@@ -5555,15 +5513,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // Use 'finalContent' (processed input) to match what we inserted into the map.
       optimisticContentMap.current.delete(finalContent);
       const errString = err?.message || String(err);
-      setMessages(prev => prev.map(m => 
-        m.id === optimisticId 
-          ? { ...m, failed: true, error: errString } 
-          : m
-      ));
+      setMessages(prev => failOptimistic(prev, optimisticId, errString));
       console.error('[Chat] executeSend failed:', err);
       return false;
-    } finally {
-      if (!isSignal) setSending(false);
     }
   };
 
@@ -5784,6 +5736,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         title="Ledger Chat is locked"
         subtitle="Enter your PIN to open your conversations."
         onUnlock={() => setIsBiometricallyUnlocked(true)}
+        // No PIN on this account: there is nothing to check, so the lock cannot protect it. Say
+        // so instead of leaving the person on a lock screen they cannot pass.
+        onNeedsSetup={() => {
+          setIsBiometricallyUnlocked(true);
+          toast.warning('The app lock needs a PIN', {
+            description: 'This account has no PIN, so the lock cannot protect it and Ledger Chat opened without one. You can turn the lock off in Settings › Security.',
+            duration: 9000,
+          });
+        }}
       />
     );
   }
@@ -6846,12 +6807,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   />
                 </AnimatePresence>
               )}
-              {sending && (
-                <div className="flex self-end items-center gap-2 my-2 mr-4 py-1 px-3 bg-black/[0.04] rounded-full text-[12px] font-medium text-[#727a88]" role="status">
-                  <LoaderCircle size={13} strokeWidth={2} className="animate-spin" aria-hidden="true" />
-                  Sending
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -7233,7 +7188,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     {/* Send, or record a voice message when the field is empty */}
                     {inputText.trim() ? (
                       <LottieSendButton
-                        disabled={sending || isUploading}
+                        disabled={isUploading}
                         data-key={sendAnimKey}
                         onTrigger={() => {}}
                       />
@@ -7390,13 +7345,18 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               <div className="absolute top-2 left-2 bg-white/90 text-[#15171c] text-[12px] tabular-nums px-2 py-0.5 rounded-full font-medium">
                 <CallClock startedAt={callStartedAt} />
               </div>
+              {callMetricsLabel(callRoute, callTiming) && (
+                <div className="absolute bottom-2 left-2 right-2 bg-black/55 text-white text-[10px] tabular-nums px-2 py-0.5 rounded-full truncate text-center" title={callMetricsDetail(callRoute, callTiming)}>
+                  {callMetricsLabel(callRoute, callTiming)}
+                </div>
+              )}
             </motion.div>
           ) : (
             // The call keeps living in a black pill at the top, like the Dynamic Island.
             <button
               type="button"
               onClick={() => setIsCallMinimized(false)}
-              aria-label={`Return to the call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}`}
+              aria-label={`Return to the call with ${activePeer ? getDisplayName(activePeer) : 'your contact'}${callMetricsDetail(callRoute, callTiming) ? '. ' + callMetricsDetail(callRoute, callTiming) : ''}`}
               className="fixed left-1/2 -translate-x-1/2 z-[100000] h-10 max-w-[calc(100vw-24px)] pl-2.5 pr-2 rounded-full bg-[#0b0c0f] text-white flex items-center gap-3 shadow-[0_10px_30px_rgba(11,12,15,0.22)] active:scale-[0.98] transition-transform"
               style={{ top: 'max(10px, calc(env(safe-area-inset-top, 0px) + 6px))' }}
             >
@@ -7407,6 +7367,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {callReconnecting ? 'Reconnecting…' : activePeer ? getDisplayName(activePeer) : 'Call'}
               </span>
               <span className="font-mono text-[12px] text-[#b9bdc6] tabular-nums shrink-0"><CallClock startedAt={callStartedAt} /></span>
+              {/* Local measurements only (lib/calls/metrics.ts): route and time to connect. */}
+              {callMetricsLabel(callRoute, callTiming) && (
+                <span
+                  className="hidden min-[400px]:inline text-[11px] text-[#8b909b] tabular-nums shrink-0"
+                  title={callMetricsDetail(callRoute, callTiming)}
+                >
+                  {callMetricsLabel(callRoute, callTiming)}
+                </span>
+              )}
               <span className="flex items-center gap-[2px] h-4 shrink-0" aria-hidden="true">
                 {[8, 14, 10, 16, 7].map((h, i) => (
                   <span key={i} className="w-[3px] rounded-sm bg-[#5fd38d] animate-pulse" style={{ height: h, animationDelay: `${i * 0.15}s` }} />
@@ -7613,7 +7582,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 };
                 const toggle = ({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) => (
                   <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
-                    className={`relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}>
+                    className={`icon-btn relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}>
                     <span className={`absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm transition-transform duration-200 ${on ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                   </button>
                 );

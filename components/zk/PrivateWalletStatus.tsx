@@ -73,14 +73,14 @@ export function PrivateWalletStatus({ address }: { address: string }) {
 
   if (!isWalletConfigured()) {
     return (
-      <div className="bg-white rounded-[18px] p-5 shadow-sm border border-black/[0.04] text-[13px] text-[#4a505c]">
+      <div className="bg-white rounded-2xl p-5 border border-[#e6e8ec] text-[13px] text-[#4a505c]">
         Private payments are switched off on this build of Ledger Chat.
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-sm border border-black/[0.04] space-y-4">
+    <div className="bg-white rounded-2xl p-5 border border-[#e6e8ec] space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-black/5 flex items-center justify-center text-[#15171c]"><Lock size={18} /></div>

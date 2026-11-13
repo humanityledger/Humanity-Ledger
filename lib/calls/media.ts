@@ -13,8 +13,11 @@
  *     anything else. The browsers still negotiate RED by themselves where both want it.
  *   - sending: voice has the highest priority on the link; video and screen get bitrate caps, and a
  *     shared screen keeps its resolution (text stays readable) while a camera keeps its frame rate.
- *   - ICE: few servers (each extra one slows candidate gathering), our TURN first when configured.
+ *   - ICE: few servers (each extra one slows candidate gathering), STUN first, then our TURN
+ *     (lib/calls/ice.ts).
  */
+
+import { hasStun, shapeIceServers } from './ice';
 
 export const CALL_AUDIO: MediaTrackConstraints = {
   echoCancellation: true,
@@ -156,20 +159,10 @@ export const FALLBACK_ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
 ];
 
-function cleanIce(list: unknown): RTCIceServer[] {
-  if (!Array.isArray(list)) return [];
-  const out: RTCIceServer[] = [];
-  for (const s of list as any[]) {
-    const urls = (Array.isArray(s?.urls) ? s.urls : [s?.urls]).filter((u: unknown) => typeof u === 'string' && /^(stun|stuns|turn|turns):/i.test(u as string));
-    if (!urls.length) continue;
-    out.push({ urls, ...(typeof s.username === 'string' ? { username: s.username } : {}), ...(typeof s.credential === 'string' ? { credential: s.credential } : {}) });
-  }
-  return out.slice(0, 6);
-}
-
 /**
  * ICE servers for this account: short-lived TURN credentials from /api/calls/ice when the server
- * has a TURN service, else STUN only. Our TURN goes first, STUN after it.
+ * has a TURN service, else STUN only. The list is trimmed and ordered by lib/calls/ice.ts (STUN
+ * first, one URL per TURN transport); a public STUN is added only when ours has none.
  * `refreshInMs`: when to fetch again, before the credentials expire (PeerJS reads its config for
  * every new connection, so a long session keeps working TURN).
  */
@@ -178,11 +171,11 @@ export async function loadIceConfig(fetchImpl: typeof fetch = fetch): Promise<{ 
     const res = await fetchImpl('/api/calls/ice', { credentials: 'include', cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      const own = cleanIce(data?.iceServers);
+      const own = shapeIceServers(data?.iceServers);
       if (own.length) {
         const ttl = Number(data?.ttl);
         const refreshInMs = Number.isFinite(ttl) && ttl > 0 ? Math.max(5 * 60_000, (ttl - 15 * 60) * 1000) : 60 * 60_000;
-        return { iceServers: [...own, ...FALLBACK_ICE], refreshInMs, own: true };
+        return { iceServers: hasStun(own) ? own : [...own, ...FALLBACK_ICE], refreshInMs, own: true };
       }
     }
   } catch {
