@@ -7,7 +7,7 @@ export const about: DocPage = {
   title: "About Humanity Ledger",
   summary: "Who we are, what we are building and how we work.",
   keywords: ["about", "company", "team", "protocol", "mission", "humanity ledger", "ledger chat"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -24,7 +24,7 @@ export const about: DocPage = {
       strongFirst: true,
       rows: [
         ["Ledger Chat", "Direct messages encrypted with MLS through XMTP, communities, voice and video calls, and payments from your own wallet.", "Early access, in the browser."],
-        ["Private payments wallet", "Private balances on Aztec: shield, send, receive by QR code and unshield, with proofs made on your device.", "Aztec test network only, with test tokens."],
+        ["Private payments wallet", "Private balances on Aztec: shield, send, receive by QR code and unshield, with proofs made on your device.", "Aztec Alpha, which settles on Ethereum mainnet, with a cap per payment. Not audited yet."],
         ["Documentation", "How every part works, what it can see, and which security findings are still open.", "[Read it](/docs/overview)."],
       ],
     },
@@ -71,7 +71,7 @@ export const contact: DocPage = {
   title: "Contact us",
   summary: "The right place for each kind of question, so it reaches the right person.",
   keywords: ["contact", "email", "support", "help", "press", "partnership", "reach", "talk"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "cards",
@@ -101,7 +101,7 @@ export const status: DocPage = {
   title: "Service status",
   summary: "A live check of our servers, run from your browser when you open this page.",
   keywords: ["status", "uptime", "down", "outage", "incident", "health", "working", "operational"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     { t: "h2", text: "About this page" },
     {
@@ -133,7 +133,7 @@ const walletPost: DocPage = {
   label: "Why your wallet is your account",
   summary: "Phone numbers were never meant to be identities. Wallets were.",
   keywords: ["blog", "wallet", "identity", "phone number", "account"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -167,7 +167,7 @@ const encryptionPost: DocPage = {
   label: "What encryption covers in Ledger Chat today",
   summary: "An honest map of what is encrypted end to end, what is not yet, and how the app tells you.",
   keywords: ["blog", "encryption", "e2ee", "fallback", "communities", "attachments", "honesty"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -206,6 +206,6 @@ export const blog: DocPage = {
   label: "Blog",
   summary: "How Ledger Chat works, why we made the choices we made, and what changed.",
   keywords: ["blog", "news", "articles", "posts", "updates"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [],
 };

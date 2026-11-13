@@ -7,7 +7,7 @@ export const messaging: DocPage = {
   title: "Messaging in Ledger Chat",
   summary: "How direct messages are encrypted, where your history is kept, and how to recognise a message that was not.",
   keywords: ["chat", "messages", "dm", "direct message", "encryption", "e2ee", "end to end", "xmtp", "mls", "history", "fallback", "readable"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -83,7 +83,7 @@ export const routing: DocPage = {
   label: "How messages travel",
   summary: "The path a message takes from your device to someone else's, and what each part of the path can see.",
   keywords: ["routing", "relay", "delivery", "offline", "fallback", "network", "path", "server", "metadata", "p2p"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -111,7 +111,7 @@ export const routing: DocPage = {
     { t: "h2", text: "What an observer on your network sees" },
     {
       t: "p",
-      text: "All traffic between your browser, our server and XMTP is encrypted with TLS. Someone watching your network, such as a public Wi-Fi operator, can see that you are connecting to Ledger Chat and to XMTP, and roughly how much data you send. They cannot see the content or who you are writing to.",
+      text: "All traffic between your browser, our server and XMTP is encrypted with TLS. Someone watching your network, such as a public WiFi operator, can see that you are connecting to Ledger Chat and to XMTP, and roughly how much data you send. They cannot see the content or who you are writing to.",
     },
   ],
 };
@@ -122,7 +122,7 @@ export const communities: DocPage = {
   label: "Communities",
   summary: "Groups with channels, roles and invite links, and how their privacy differs from direct messages.",
   keywords: ["community", "group", "channel", "server", "roles", "admin", "moderator", "invite", "posts", "members", "paid channel"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -163,7 +163,7 @@ export const calls: DocPage = {
   label: "Voice and video calls",
   summary: "How calls connect, how they are encrypted, and what they reveal about your network.",
   keywords: ["call", "voice", "video", "webrtc", "ip address", "turn", "stun", "relay", "group call", "microphone", "camera"],
-  updated: "2026-11-12",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -207,7 +207,7 @@ export const payments: DocPage = {
   label: "Payments in chat",
   summary: "Send tokens to the person you are talking to, from your own wallet, without leaving the conversation.",
   keywords: ["pay", "payment", "send money", "transfer", "usdc", "usdt", "eth", "tokens", "wallet", "fees", "receipt", "qr"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -247,7 +247,7 @@ export const devices: DocPage = {
   label: "Linked devices",
   summary: "Use Ledger Chat on more than one device, and what to expect from the desktop and mobile apps.",
   keywords: ["device", "link", "qr", "second device", "phone", "desktop", "windows", "mac", "linux", "ios", "android", "app", "download", "install"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",

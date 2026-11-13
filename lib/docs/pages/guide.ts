@@ -1,7 +1,7 @@
 import type { DocPage, GalleryItem } from "../types";
 
 /**
- * The plain-language guide to Ledger Chat, for anyone, with the iPhone
+ * The plain language guide to Ledger Chat, for anyone, with the iPhone
  * mockups from the landing page and the desktop screens from the brand kit.
  * Every sentence describes what the app does today.
  */
@@ -45,7 +45,7 @@ export const guide: DocPage = {
     "iphone",
     "beginner",
   ],
-  updated: "2026-11-12",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",

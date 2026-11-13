@@ -7,7 +7,7 @@ export const developers: DocPage = {
   title: "Developers",
   summary: "Everything you need to read, run and contribute to the Humanity Ledger code.",
   keywords: ["developer", "developers", "api", "sdk", "code", "github", "repository", "run locally", "contribute", "setup", "install", "stack", "env"],
-  updated: "2026-10-21",
+  updated: "2026-11-13",
   blocks: [
     {
       t: "p",
@@ -96,7 +96,7 @@ export const developers: DocPage = {
     { t: "h3", text: "Why does signing in fail locally?" },
     {
       t: "p",
-      text: "Usually one of these. The message must be a real EIP-4361 message, built with `prepareMessage()`, with the checksummed address. Its domain must match the server's, which ignores the port: sign for `localhost`, not `localhost:3000`. In production the domain comes from `NEXT_PUBLIC_DOMAIN` or `NEXT_PUBLIC_APP_URL` (the `www.` variant is accepted too, and `SIWE_ALLOWED_DOMAINS` adds others); if neither is set, every sign-in is refused. The nonce route, `/api/siwe/nonce`, must be reachable without a session, and the request to `/api/siwe/verify` must carry the `siwe-nonce` cookie it set. `test/auth/siwe-routes.test.ts` runs the whole flow with a real signature.",
+      text: "Usually one of these. The message must be a real EIP-4361 message, built with `prepareMessage()`, with the checksummed address. Its domain must match the server's, which ignores the port: sign for `localhost`, not `localhost:3000`. In production the domain comes from `NEXT_PUBLIC_DOMAIN` or `NEXT_PUBLIC_APP_URL` (the `www.` variant is accepted too, and `SIWE_ALLOWED_DOMAINS` adds others); if neither is set, every sign in is refused. The nonce route, `/api/siwe/nonce`, must be reachable without a session, and the request to `/api/siwe/verify` must carry the `siwe-nonce` cookie it set. `test/auth/siwe-routes.test.ts` runs the whole flow with a real signature.",
     },
     { t: "h3", text: "Where is the identity check?" },
     {
