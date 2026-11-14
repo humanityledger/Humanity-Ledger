@@ -358,6 +358,9 @@ import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Ke
 import { MEETING_JOIN_EVENT, MEETINGS_EVENT, loadMeetings, meetingPreview, parseMeeting, rememberMeeting, upcomingMeetings, type StoredMeeting } from '@/lib/chat/meeting';
 import { SCHEDULED_EVENT, addScheduled, describeSendTime, dueScheduled, loadScheduled, markAttempt, removeScheduled, scheduleTimeError, scheduledForPeer, type ScheduledMessage } from '@/lib/chat/scheduled';
 import { shortAddress as formatAddress } from '@/lib/ui/format';
+import { holdWalletConnectAutoOpen, isIOSBrowser, peerWalletLinks, signRequestLink, watchSentSignRequest, type WalletOpenLink } from '@/lib/auth/wc-sign-request';
+import { relayDidNotTakeRequest } from '@/lib/auth/wallet-sign';
+import { detectConnectedMobileWallet } from '@/lib/wallet/mobileWallet';
 
 // Ledger Studio (AI workspace). Loaded only when opened; never sees encrypted
 // chats unless the person sends something there themselves.
@@ -512,6 +515,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const waitingSigRef = useRef(false);
   const setIsWaitingForSignature = useCallback((v: boolean) => { waitingSigRef.current = v; setIsWaitingForSignatureState(v); }, []);
   const [initError, setInitError] = useState('');
+  // The link that opens the wallet on the pending signature request (WalletConnect on a phone).
+  // undefined: not a phone WalletConnect request; null: the request has not reached the relay yet.
+  const [signLink, setSignLink] = useState<WalletOpenLink | null | undefined>(undefined);
   
   // BIOMETRIC LOCK STATE
   const [isBiometricallyUnlocked, setIsBiometricallyUnlocked] = useState(false);
@@ -3809,7 +3815,44 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               const hex = Array.from(msg as Uint8Array).map((b: number) => b.toString(16).padStart(2, '0')).join('');
               finalMsg = ('0x' + hex) as any;
           }
-          setIsWaitingForSignature(true); const res = await signMessageAsync({ message: finalMsg as any }); setIsWaitingForSignature(false); return res;
+          // On a phone over WalletConnect the wallet must be opened from a tap, after the request has
+          // reached the relay; WalletConnect's own open (outside a tap) races the publish on iPhone and is
+          // blocked on Android Chrome. Same flow as sign-in (lib/auth/wc-sign-request.ts, ConnectPage).
+          const phone = typeof window !== 'undefined' && !(window as any).ethereum && (/Android/i.test(navigator.userAgent || '') || isIOSBrowser());
+          let provider: any = null;
+          if (phone) { try { provider = await connector?.getProvider?.(); } catch { provider = null; } }
+          for (let attempt = 0; ; attempt++) {
+            let held: { release: () => void; href: string | null } | null = null;
+            let stop: (() => void) | null = null;
+            let wentHidden = false;
+            const onHidden = () => { if (document.visibilityState === 'hidden') wentHidden = true; };
+            if (phone && provider) {
+              if (isIOSBrowser()) held = holdWalletConnectAutoOpen(provider) as any;
+              const peer = peerWalletLinks(provider);
+              const bases = [held?.href, peer.native, detectConnectedMobileWallet(connector?.name).deepLink, peer.universal];
+              setSignLink(null);
+              stop = watchSentSignRequest(provider, (req) => setSignLink(signRequestLink(bases, req) ?? undefined));
+              if (!stop) setSignLink(undefined);
+              document.addEventListener('visibilitychange', onHidden);
+            }
+            setIsWaitingForSignature(true);
+            try {
+              return await signMessageAsync({ message: finalMsg as any });
+            } catch (e) {
+              // Sent once more only if the wallet cannot have shown it: the relay never took it and
+              // the person never left the page.
+              if (attempt === 0 && phone && relayDidNotTakeRequest(e) && !wentHidden) {
+                await new Promise((res) => setTimeout(res, 1500));
+                continue;
+              }
+              throw e;
+            } finally {
+              stop?.(); held?.release();
+              document.removeEventListener('visibilitychange', onHidden);
+              setSignLink(undefined);
+              setIsWaitingForSignature(false);
+            }
+          }
         } catch (sigErr: any) { setIsWaitingForSignature(false);
           const msg = sigErr?.message || '';
           if (msg.includes('connector') || msg.includes('not connected') || msg.includes('No connector') || msg.includes('signMessage')) {
@@ -5974,6 +6017,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <PadlockLoader
         isInitializing={isInitializing}
         isWaitingForSignature={isWaitingForSignature}
+        signLink={signLink}
         initError={initError}
         onActivate={initClient}
         onClearAndRetry={() => {

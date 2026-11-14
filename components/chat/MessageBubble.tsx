@@ -821,7 +821,7 @@ export const MessageBubble = React.memo(({
           dragElastic={{ left: 0.2, right: 0 }}
           onDragEnd={handleDragEnd}
           animate={controls}
-          className={`flex flex-col relative ${isMe ? 'items-end' : 'items-start'} max-w-[82vw] md:max-w-[65%] min-w-0`}
+          className={`flex flex-col relative ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[65%] min-w-0 [overflow-wrap:anywhere]`}
           style={{ touchAction: 'pan-y', WebkitUserSelect: 'none' } as React.CSSProperties}
           onDoubleClick={handleDoubleTap}
           onTouchStart={handleLongPressStart}
@@ -972,7 +972,7 @@ export const MessageBubble = React.memo(({
             ) : msg.senderInboxId === '__bot__' ? (
               <div className={`${CARD} p-3.5 max-w-[340px]`}>
                 <CardLabel icon={<Bot size={13} strokeWidth={2} />}>Ledger assistant</CardLabel>
-                <div className="text-[15px] text-[#15171c] whitespace-pre-wrap mt-2 leading-relaxed">
+                <div className="text-[15px] text-[#15171c] whitespace-pre-wrap [overflow-wrap:anywhere] mt-2 leading-relaxed">
                   {content.replace(/^🤖 /, '').split('\n').map((line: string, i: number) => (
                     <p key={i} className={line.startsWith('**') ? 'font-semibold' : ''}>
                       {line.replace(/\*\*/g, '')}
@@ -1018,7 +1018,7 @@ export const MessageBubble = React.memo(({
                   </div>
                 ) : (
                   <p
-                    className="whitespace-pre-wrap break-words leading-[1.45] select-text"
+                    className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-[1.45] select-text"
                     style={{ fontSize: `${fontSizePx}px`, fontFamily, WebkitUserSelect: 'text', userSelect: 'text' } as React.CSSProperties}
                   >
                     {isBurned
