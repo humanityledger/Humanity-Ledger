@@ -114,6 +114,20 @@ describe.skipIf(!LIVE)(`Aztec Alpha mainnet preflight (${NODE_URL})`, () => {
     }, 180_000);
   }
 
+  // R1: the transactions of the first private payment are mined, and in which block.
+  const fpp = (record as any).firstPrivatePayment as undefined | { txs: Array<{ step: string; txHash: string; block: number }> };
+  for (const tx of fpp?.txs ?? []) {
+    it(`first private payment, ${tx.step}: mined`, async () => {
+      const n: any = await node();
+      const { TxHash } = await import('@aztec-labs/stdlib/tx');
+      const receipt: any = await n.getTxReceipt(TxHash.fromString(tx.txHash));
+      const block = Number(receipt?.blockNumber ?? 0);
+      report.push(`R1 ${tx.step}: ${tx.txHash} status ${receipt?.status ?? 'unknown'}, block ${block || 'not found'} (recorded ${tx.block || 'pending'})`);
+      expect(block, `${tx.step}: not found or not mined`).toBeGreaterThan(0);
+      if (tx.block > 0) expect(block).toBe(tx.block);
+    }, 120_000);
+  }
+
   it('writes a summary', () => {
     console.log(report.join('\n'));
     const out = process.env.GITHUB_STEP_SUMMARY;

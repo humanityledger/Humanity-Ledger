@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { issueCap, recordedAdmin } from '@/lib/aztec/token-issuer';
 
-const HLC = '0x2cd0f3775d129210ecf2165e338e1b6b708f2243ac1b30feb0ac49875366e55d';
-const ADMIN = '0x01c7e18f1751ea94e3d63aad2d0b7221642ad299454f769103f0d32364ce549b';
+const HLC = '0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5';
+const ADMIN = '0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42';
 
 describe('token issuer on Alpha', () => {
   it('reads the HLC admin from deployments/aztec-mainnet.json', () => {

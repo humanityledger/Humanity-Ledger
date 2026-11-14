@@ -16,6 +16,24 @@
       "symbol": "HLC",
       "name": "Humanity Ledger Corp.",
       "decimals": 6,
+      "address": "0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5",
+      "admin": "0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42",
+      "artifact": "@aztec-labs/noir-contracts.js/Token",
+      "classId": "0x067df4ddda0b0872ef604f47f3681d5e8c0de98280ac6b79963851c055ba91e0",
+      "deployTx": "0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c",
+      "deployBlock": 28992,
+      "deployedOn": "2026-11-14",
+      "status": "active",
+      "deployedBy": "Ledger Chat private wallet of 0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675 (operator tool #r1, PR #91); universal deployment",
+      "confirmedBy": "Aztec mainnet preflight run 43583640304 (14 Nov 2026): deploy tx checkpointed in L2 block 28992, universal deployment (deployer zero), checkTokenInstance ok (Token)"
+    }
+  ],
+  "retiredTokens": [
+    {
+      "key": "USDC",
+      "symbol": "HLC",
+      "name": "Humanity Ledger Corp.",
+      "decimals": 6,
       "address": "0x2cd0f3775d129210ecf2165e338e1b6b708f2243ac1b30feb0ac49875366e55d",
       "admin": "0x01c7e18f1751ea94e3d63aad2d0b7221642ad299454f769103f0d32364ce549b",
       "artifact": "@aztec-labs/noir-contracts.js/Token",
@@ -23,8 +41,35 @@
       "deployTx": "0x0dfc7146b9f807432d06bccf43d3cea88e849455f8f62372ea2b93d41be29136",
       "deployBlock": 24544,
       "deployedOn": "2026-11-11",
-      "status": "active",
-      "confirmedBy": "Aztec mainnet preflight run 42990431384 (11 Nov 2026): deploy tx checkpointed in L2 block 24544, instance deployer = admin, checkTokenInstance ok (Token)"
+      "status": "do-not-use",
+      "confirmedBy": "Aztec mainnet preflight run 42990431384 (11 Nov 2026): deploy tx checkpointed in L2 block 24544, instance deployer = admin, checkTokenInstance ok (Token)",
+      "retired": "2026-11-14: no one holds the key of its admin account (0x01c7\u2026549b), so it can never be issued. Replaced by the HLC below; never list it in NEXT_PUBLIC_AZTEC_TOKENS."
     }
-  ]
+  ],
+  "firstPrivatePayment": {
+    "$comment": "R1: the first private payment from Ledger Chat on Aztec Alpha, 14 November 2026, from the operator's account to a second account of the operator. Blocks are filled in from the preflight; nothing guessed.",
+    "date": "2026-11-14",
+    "from": "0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42",
+    "to": "0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a",
+    "token": "0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5",
+    "txs": [
+      {
+        "step": "deploy HLC",
+        "txHash": "0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c",
+        "block": 28992
+      },
+      {
+        "step": "issue 1 HLC to the sender's private balance (mint_to_private)",
+        "txHash": "0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940",
+        "block": 29001
+      },
+      {
+        "step": "private transfer of 0.10 HLC",
+        "txHash": "0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5",
+        "block": 29012
+      }
+    ],
+    "device": "Chrome on Windows with MetaMask (desktop)",
+    "confirmedBy": "Aztec mainnet preflight run 43583640304: all three transactions checkpointed (blocks 28992, 29001, 29012)"
+  }
 }

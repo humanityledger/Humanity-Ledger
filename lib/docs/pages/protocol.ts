@@ -222,11 +222,11 @@ export const zeroKnowledge: DocPage = {
     {
       t: "status",
       items: [
-        { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. On Alpha the code paths are the same, but no private payment from Ledger Chat has been recorded there yet (first run pending). Not independently audited." },
+        { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. On Alpha the first private payment from Ledger Chat settled on 14 November 2026 (L2 block 29012). Not independently audited." },
         { label: "Bridge from Ethereum", state: "development", text: "Moving real tokens from Ethereum into Aztec and back needs a bridge contract on each side. It is not built." },
         { label: "Agreements (escrow and payment stream)", state: "partial", text: "In conversations on the Aztec test network. Contracts not independently audited. Two hardening changes to the contract source (a nullifier on each deposit and on each stream creation) are not compiled into the deployed contracts yet, so the app uses the previous versions until they are." },
         { label: "Pausing new payments", state: "partial", text: "We can switch the app to exits only: new payments and agreements are refused, while claiming, refunding, cancelling and withdrawing keep working. This stops our interface, not the contracts, which have no pause. A modified client can still call them." },
-        { label: "Aztec Alpha (mainnet)", state: "partial", text: "Production is built for Alpha. The HLC token is deployed there (block 24544) and checked by our preflight. Fees in Fee Juice and per token caps are built; agreements are refused; the external audit and the first recorded private payment are still open." },
+        { label: "Aztec Alpha (mainnet)", state: "partial", text: "Production is built for Alpha. The HLC token is deployed there (block 28992) and checked by our preflight; the first private payment settled in block 29012. Fees in Fee Juice and per token caps are built; agreements are refused; the external audit is still open." },
       ],
     },
     { t: "h2", text: "Status of the Aztec network" },

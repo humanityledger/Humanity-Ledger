@@ -18,7 +18,7 @@ describe('readSnapshot / buildReport', () => {
     expect(s.node.ok).toBe(false);
     // deployments/aztec-mainnet.json: no escrow or stream, HLC recorded with its block.
     expect(s.record?.contracts).toEqual([]);
-    expect(s.record?.tokens.map((t) => [t.symbol, t.decimals, t.deployBlock])).toEqual([['HLC', 6, 24544]]);
+    expect(s.record?.tokens.map((t) => [t.symbol, t.decimals, t.deployBlock])).toEqual([['HLC', 6, 28992]]);
     expect(s.record?.sponsoredFpc).toBeNull();
     expect(s.token?.totalSupply).toMatchObject({ error: expect.any(String) });
 
