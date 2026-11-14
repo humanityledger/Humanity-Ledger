@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### LedgerSponsor readiness (14 November 2026)
+
+- Fix: a refused sponsor request no longer uses up anything. Each limit was a separate rate-limit call
+  that records every request, so a wallet asking on a day the daily limit was reached lost one of its
+  lifetime sponsored transactions per attempt. `lib/aztec/sponsor-quota.ts` takes a slot in both limits
+  or in neither, and refuses when Redis does not answer instead of falling back to per-process limits.
+  Nothing is counted while the server cannot sign.
+- Fix: the wallet no longer sends a sponsored transaction without estimated gas limits (the sponsor
+  would refuse it above its 40 AZTEC cap after the voucher was spent); operator transactions are never
+  sponsored.
+- `scripts/aztec/verify-sponsor.mjs` and the "Aztec verify sponsor" workflow: read-only check of a
+  deployed sponsor (network, class, key and cap, Fee Juice, limits, record).
+- Contract: TXE tests for voucher id zero and the constructor's zero key and zero cap.
+- `docs/SPONSOR.md`: state table, deployment checklist, V2 digest, the Alpha-only signer key, and that
+  Fee Juice in the sponsor cannot be withdrawn. /protocol: the 24 h counter now reads "vouchers issued".
+
 ### Protocol fee foundation (14 November 2026)
 
 - `lib/protocol/fees.ts`: Phase 0 fee arithmetic (`protocolFee`, `ceilBps`, `minimumAmount`), u128-safe, refusing a

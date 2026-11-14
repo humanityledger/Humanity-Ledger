@@ -23,14 +23,36 @@ describe('Ledger sponsor (P1)', () => {
   it('the wallet only falls back to the sponsor when the user has no usable Fee Juice', () => {
     const w = read('lib/aztec/wallet/client.ts');
     expect(w).toMatch(/const sponsored = state\.plan !== 'claim' \? await this\.trySponsor\(\) : null;/);
-    expect(w).toMatch(/if \(state\.plan === 'balance'\) return \{ fee: undefined \};\n    const sponsored = await this\.trySponsor\(\);/);
+    // resolveFee: an account with its own Fee Juice is never sponsored; the sponsor comes last.
+    const rf = w.slice(w.indexOf('private async resolveFee('), w.indexOf('async bridgeFeeJuice('));
+    expect(rf.indexOf("if (state.plan === 'balance') return { fee: undefined };")).toBeGreaterThan(0);
+    expect(rf.indexOf("if (state.plan === 'balance') return { fee: undefined };")).toBeLessThan(rf.indexOf('this.trySponsor()'));
     expect(read('lib/aztec/wallet/ledger-sponsor.ts')).toMatch(/AZTEC_WALLET_CONFIG\.network === 'mainnet' && ADDRESS_RE\.test\(a\)/);
   });
 
-  it('vouchers need a signed-in wallet and respect per-wallet and daily limits', () => {
+  it('vouchers need a signed-in wallet and take a slot in both limits or in neither', () => {
     const r = read('app/api/aztec/sponsor/route.ts');
     expect(r).toMatch(/requireWallet\(req\)/);
-    expect(r).toMatch(/max: perWallet/);
-    expect(r).toMatch(/max: perDay, windowSec: 86400/);
+    // Behaviour of the quota itself: test/unit/aztec/sponsor-quota.test.ts.
+    expect(r).toMatch(/takeSponsorSlot\(redisQuotaStore\(redis\), wallet, \{ perWallet, perDay \}\)/);
+    expect(r).not.toMatch(/checkRateLimit/);
+    // Nothing is counted while the server cannot sign (no key, no binding), and an unavailable
+    // store refuses instead of falling back to per-process limits.
+    expect(r.indexOf('!sponsorPublicKey()')).toBeGreaterThan(0);
+    expect(r.indexOf('!sponsorPublicKey()')).toBeLessThan(r.indexOf('takeSponsorSlot('));
+    expect(r).toMatch(/quota === 'unavailable'[\s\S]{0,200}status: 503/);
+  });
+
+  it('a sponsored fee is never sent without estimated gas limits (its voucher would be wasted)', () => {
+    const w = read('lib/aztec/wallet/client.ts');
+    expect(w.match(/if \(this\.sponsoredWithoutLimits\(fee, (deployGas|gasSettings)\)\) \{/g)?.length).toBe(2);
+    expect(w).toMatch(/return !gasSettings && !!fee && typeof fee === 'object' && this\.sponsoredFees\.has\(fee\);/);
+    // Only estimated transactions may be sponsored; the operator's own transactions are not.
+    expect(w).toMatch(/const sponsored = opts\?\.estimated \? await this\.trySponsor\(\) : null;/);
+    // The check sits after the estimate and before the send, in both places.
+    for (const [est, send] of [['estimatedGasSettings(deploy,', 'deploy.send('], ['estimatedGasSettings(interaction,', 'interaction.send(']]) {
+      const i = w.indexOf(est), g = w.indexOf('sponsoredWithoutLimits(fee', i), sd = w.indexOf(send, i);
+      expect(i > 0 && g > i && sd > g).toBe(true);
+    }
   });
 });

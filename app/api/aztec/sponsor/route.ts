@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWallet } from '@/lib/security/requireWallet';
-import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { signVoucher, sponsorBinding, sponsorLimits, sponsorPublicKey, VOUCHER_TTL_S } from '@/lib/aztec/sponsor-voucher';
-import { safeRedisGet, safeRedisSet } from '@/lib/redis';
+import { getRedisClient, safeRedisGet, safeRedisSet } from '@/lib/redis';
+import { redisQuotaStore, takeSponsorSlot } from '@/lib/aztec/sponsor-quota';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,9 @@ const address = () => (process.env.NEXT_PUBLIC_AZTEC_SPONSOR || '').trim();
  * GET  /api/aztec/sponsor — whether sponsorship is on, the sponsor address, and the public key the
  *      contract must be deployed with (public data; used by the deploy screen).
  * POST /api/aztec/sponsor — a one-use voucher for the signed-in wallet, within the limits
- *      (AZTEC_SPONSOR_PER_WALLET for life, AZTEC_SPONSOR_PER_DAY for everyone).
+ *      (AZTEC_SPONSOR_PER_WALLET for life, AZTEC_SPONSOR_PER_DAY for everyone). A refused request
+ *      uses up nothing (lib/aztec/sponsor-quota.ts); without a working key and sponsor binding,
+ *      nothing is counted at all.
  */
 export async function GET() {
   const key = sponsorPublicKey();
@@ -23,7 +25,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const auth = await requireWallet(req);
   if (auth.errorResponse) return auth.errorResponse;
-  if (!address()) return NextResponse.json({ error: 'NOT_CONFIGURED', message: 'Sponsored fees are not on yet.' }, { status: 503 });
+  const binding = sponsorBinding();
+  if (!address() || !binding || !sponsorPublicKey()) {
+    return NextResponse.json({ error: 'NOT_CONFIGURED', message: 'Sponsored fees are not on yet.' }, { status: 503 });
+  }
   const { perWallet, perDay } = sponsorLimits();
   const wallet = auth.walletAddress.toLowerCase();
   // A retry within the voucher's life gets the same voucher back: failed attempts (a closed tab,
@@ -39,16 +44,19 @@ export async function POST(req: NextRequest) {
       if (v.sponsor === address() && v.expiresAt - Math.floor(Date.now() / 1000) > 120 && !used.includes(v.voucherId)) return NextResponse.json(v);
     } catch { /* issue a new one */ }
   }
-  const mine = await checkRateLimit(`w:${wallet}`, { max: perWallet, windowSec: 10 * 365 * 86400, prefix: 'aztec-sponsor' });
-  if (!mine.allowed) {
+  const quota = await getRedisClient()
+    .then((redis) => takeSponsorSlot(redisQuotaStore(redis), wallet, { perWallet, perDay }))
+    .catch(() => 'unavailable' as const);
+  if (quota === 'used-up') {
     return NextResponse.json({ error: 'USED_UP', message: 'This account has used its sponsored transactions. Add Fee Juice to continue.' }, { status: 429 });
   }
-  const day = await checkRateLimit('all', { max: perDay, windowSec: 86400, prefix: 'aztec-sponsor-day' });
-  if (!day.allowed) {
+  if (quota === 'daily-limit') {
     return NextResponse.json({ error: 'DAILY_LIMIT', message: 'Sponsored fees are used up for today. Try again tomorrow or add Fee Juice.' }, { status: 429 });
   }
-  const binding = sponsorBinding();
-  const voucher = binding ? signVoucher(binding) : null;
+  if (quota === 'unavailable') {
+    return NextResponse.json({ error: 'PAUSED', message: 'Sponsored fees are paused for a moment. Try again shortly or add Fee Juice.' }, { status: 503 });
+  }
+  const voucher = signVoucher(binding);
   if (!voucher) return NextResponse.json({ error: 'NOT_CONFIGURED', message: 'Sponsored fees are not on yet.' }, { status: 503 });
   const body = { sponsor: address(), ...voucher };
   await safeRedisSet(lastKey, JSON.stringify(body), 'EX', VOUCHER_TTL_S);

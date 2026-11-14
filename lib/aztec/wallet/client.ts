@@ -203,6 +203,13 @@ export function decodePaymentRequest(raw: string): { address: string; token?: To
   };
 }
 
+/**
+ * Shown when a sponsored transaction could not be estimated. Nothing was sent and the voucher was not
+ * put into a transaction, so a retry within its 15 minutes gets the same voucher back from the server.
+ */
+const SPONSOR_NEEDS_ESTIMATE =
+  'The network fee for this sponsored transaction could not be estimated, so nothing was sent. Try again in the next few minutes: the same sponsorship is reused.';
+
 class PrivateWallet {
   private sdk: Sdk | null = null;
   private node: any = null;
@@ -544,6 +551,10 @@ class PrivateWallet {
     // whose maximum fee (limits x max fee per gas) is above its 40 AZTEC cap, which the protocol's
     // default limits exceed. If the estimate fails, the defaults are kept.
     const deployGas = await this.estimatedGasSettings(deploy, sdk.NO_FROM, fee);
+    if (this.sponsoredWithoutLimits(fee, deployGas)) {
+      upsertActivity(this.me.toString(), { id, kind: 'deploy', status: 'failed', error: SPONSOR_NEEDS_ESTIMATE, createdAt: Date.now() });
+      throw new Error(SPONSOR_NEEDS_ESTIMATE);
+    }
     const deployFee = deployGas ? { ...(fee ?? {}), gasSettings: deployGas } : fee;
     const receipt = await this.sendAndWait(() => deploy.send({ from: sdk.NO_FROM, fee: deployFee, wait: sdk.NO_WAIT }), id, 'deploy');
     if (!receipt) {
@@ -570,6 +581,16 @@ class PrivateWallet {
   private sponsorIssue = '';
   /** Fee options that the Ledger sponsor pays (their gas is estimated without the sponsor call). */
   private sponsoredFees = new WeakSet<object>();
+  /**
+   * A sponsored fee about to go out without estimated gas limits. With the protocol's default
+   * limits its maximum fee is above the sponsor's 40 AZTEC cap, so the sponsor would refuse the
+   * transaction after its voucher was put into it (a voucher put into a transaction is never asked
+   * back, so it would use up one of the account's sponsored transactions for nothing). Stopping
+   * before the send keeps the voucher: the server hands the same one back on the next try.
+   */
+  private sponsoredWithoutLimits(fee: any, gasSettings: any): boolean {
+    return !gasSettings && !!fee && typeof fee === 'object' && this.sponsoredFees.has(fee);
+  }
 
   // ── Operator tools for the Ledger sponsor (signed by the operator's own wallets) ──
 
@@ -816,7 +837,9 @@ class PrivateWallet {
       const ready = state.claims.find((c) => c.ready)?.claim;
       if (ready) return { fee: { paymentMethod: this.claimMethod(ready) }, consumes: ready };
     }
-    const sponsored = await this.trySponsor();
+    // Only transactions sent with estimated gas limits may be sponsored (sponsoredWithoutLimits):
+    // the operator's own transactions (deploy and fund the sponsor, R1) are not estimated.
+    const sponsored = opts?.estimated ? await this.trySponsor() : null;
     if (sponsored) return { fee: sponsored };
     throw new Error(
       state.plan === 'wait-claim'
@@ -1245,6 +1268,11 @@ class PrivateWallet {
     // the previous behaviour: the wallet's own per-transaction limits.
     const interaction = build(contract);
     const gasSettings = await this.estimatedGasSettings(interaction, from ?? this.me, fee);
+    if (this.sponsoredWithoutLimits(fee, gasSettings)) {
+      upsertActivity(this.me.toString(), { id, kind, status: 'failed', error: SPONSOR_NEEDS_ESTIMATE, createdAt: Date.now() });
+      this.set({ activity: await this.loadActivity().catch(() => this.snapshot.activity) });
+      throw new Error(SPONSOR_NEEDS_ESTIMATE);
+    }
     const sendFee = gasSettings ? { ...(fee ?? {}), gasSettings } : fee;
     const receipt = await this.sendAndWait(
       () => interaction.send({ from: from ?? this.me, fee: sendFee, wait: this.sdk!.NO_WAIT }),

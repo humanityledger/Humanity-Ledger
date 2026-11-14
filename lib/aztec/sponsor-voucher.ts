@@ -30,9 +30,9 @@ function signerPrivateKey(): Buffer | null {
   if (/^[0-9a-fA-F]{64}$/.test(explicit)) return Buffer.from(explicit, 'hex');
   // On Aztec Alpha (real funds) the key must be its own secret. Derived from JWT_SECRET it would let
   // anyone holding the session secret mint vouchers, and rotating that secret would silently change
-  // the signer (every voucher then fails as "unknown signer"). The voucher digest does not name the
-  // contract instance (finding SP-5, docs/security/AUDIT_2026-11-13.md), so a key must also never be
-  // shared between a test deployment and a mainnet one.
+  // the signer (every voucher then fails as "unknown signer"). Since V2 a voucher names one instance of
+  // one network (finding SP-5, docs/security/AUDIT_2026-11-13.md); a separate key per network is still
+  // the rule, so a leaked test key can never sign for Alpha.
   if (process.env.NEXT_PUBLIC_AZTEC_NETWORK === 'alpha') return null;
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 16) return null;

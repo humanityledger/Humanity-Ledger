@@ -132,7 +132,7 @@ export interface Snapshot {
     balance?: bigint | { error: string };
     /** NEXT_PUBLIC_AZTEC_SPONSOR, if set. */
     configuredAddress: string | null;
-    /** Voucher requests that reached the daily limit check in the last 24 h. null: not read. */
+    /** Vouchers signed in the last 24 h (refused requests are not counted). null: not read. */
     requests24h: number | null;
   };
   pins: { l1ChainId: number; rollup: string; feeJuicePortal: string; nodeVersion: string; rollupVersion: number };
@@ -358,7 +358,7 @@ export function buildMetrics(s: Snapshot): Metric[] {
     out.push({
       id: 'sponsor-requests',
       group: 'onboarding',
-      label: 'Sponsored transaction requests, 24 h',
+      label: 'Sponsored vouchers issued, 24 h',
       status: 'not-deployed',
       value: '0',
       raw: '0',
@@ -369,14 +369,14 @@ export function buildMetrics(s: Snapshot): Metric[] {
     out.push({
       id: 'sponsor-requests',
       group: 'onboarding',
-      label: 'Sponsored transaction requests, 24 h',
+      label: 'Sponsored vouchers issued, 24 h',
       status: s.sponsor.requests24h === null ? 'unavailable' : 'live',
       value: s.sponsor.requests24h === null ? undefined : s.sponsor.requests24h.toLocaleString('en-US'),
       raw: s.sponsor.requests24h === null ? undefined : String(s.sponsor.requests24h),
       detail:
         s.sponsor.requests24h === null
           ? 'The counter could not be read.'
-          : 'Requests for a new voucher that reached the daily limit check. A request is not a sponsored transaction: the proof may never be sent.',
+          : 'New vouchers the server signed (a refused request is not counted, a retry that gets the same voucher back is not counted twice). A voucher is not a sponsored transaction: the proof may never be sent.',
       source: 'Server rate counter (aztec-sponsor-day)',
     });
   }

@@ -131,6 +131,6 @@ export function saveFundings(list: SponsorFunding[]) {
 export async function sponsorDeployArgs(): Promise<{ xHi: string; xLo: string; yHi: string; yLo: string }> {
   const r = await fetch('/api/aztec/sponsor', { credentials: 'include' });
   const j = await r.json().catch(() => null);
-  if (!j?.signer) throw new Error('The server has no sponsor key yet (AZTEC_SPONSOR_SIGNER_KEY or JWT_SECRET).');
+  if (!j?.signer) throw new Error('The server has no sponsor key yet. On Aztec Alpha set AZTEC_SPONSOR_SIGNER_KEY (64 hex characters).');
   return j.signer;
 }
