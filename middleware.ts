@@ -95,6 +95,9 @@ const PUBLIC_PREFIXES = [
   '/api/webhooks/',
   '/api/health',
   '/api/aztec/value-mode', // exits-only switch; public, only ever restricts
+  // LedgerSponsor: GET is public data (address, signer public key, limits) read by the operator's
+  // deploy screen and by scripts/aztec/verify-sponsor.mjs; POST checks the session itself (requireWallet).
+  '/api/aztec/sponsor',
   '/api/status',
   '/api/protocol/', // Public, read-only, cached aggregate metrics (app/api/protocol/metrics)
   '/api/registry/',
