@@ -9,6 +9,10 @@ describe('GET /api/health is honest (F-10)', () => {
   it('ok only when the database and Redis both answered', () => {
     expect(healthVerdict(up, up)).toEqual({ ok: true, degraded: [] });
     expect(healthVerdict(up, down)).toEqual({ ok: false, degraded: ['redis'] });
+    // Since #88 the server boots past a failed migration: the health body must say so.
+    expect(healthVerdict(up, up, { ok: false, status: 'NEEDS_ATTENTION', failed: ['20260101_x'] })).toEqual({ ok: false, degraded: ['migrations'] });
+    expect(healthVerdict(up, up, { ok: false, status: 'UNKNOWN', failed: [] })).toEqual({ ok: true, degraded: [] });
+    expect(healthVerdict(up, up, { ok: true, status: 'OK', failed: [] })).toEqual({ ok: true, degraded: [] });
     expect(healthVerdict(up, missing)).toEqual({ ok: false, degraded: ['redis'] });
     expect(healthVerdict(down, down)).toEqual({ ok: false, degraded: ['db', 'redis'] });
   });

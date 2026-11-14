@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRedisHealth } from '@/lib/redis/client';
-import { healthVerdict, type HealthCheck as Check } from '@/lib/health';
+import { healthVerdict, type HealthCheck as Check, type MigrationCheck } from '@/lib/health';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,9 +48,25 @@ async function checkRedis(): Promise<Check> {
   }
 }
 
+// Failed Prisma migrations (finished_at and rolled_back_at both null). Names only: no SQL, no data.
+// The operator resolves them with `npx prisma migrate resolve` (docs/runbooks/MIGRATIONS.md).
+async function checkMigrations(): Promise<MigrationCheck> {
+  if (!process.env.DATABASE_URL) return { ok: false, status: 'UNKNOWN', failed: [] };
+  try {
+    const rows = await withTimeout<{ migration_name: string }[]>(
+      prisma.$queryRaw<{ migration_name: string }[]>`SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY started_at`,
+      CHECK_TIMEOUT_MS,
+    );
+    const failed = rows.map((r: { migration_name: string }) => r.migration_name);
+    return { ok: failed.length === 0, status: failed.length === 0 ? 'OK' : 'NEEDS_ATTENTION', failed };
+  } catch {
+    return { ok: false, status: 'UNKNOWN', failed: [] };
+  }
+}
+
 export async function GET() {
-  const [database, redis] = await Promise.all([checkDatabase(), checkRedis()]);
-  const { ok, degraded } = healthVerdict(database, redis);
+  const [database, redis, migrations] = await Promise.all([checkDatabase(), checkRedis(), checkMigrations()]);
+  const { ok, degraded } = healthVerdict(database, redis, migrations);
 
   return NextResponse.json(
     {
@@ -61,7 +77,7 @@ export async function GET() {
       environment: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'unknown',
       replicaId: process.env.RAILWAY_REPLICA_ID || 'local',
       uptimeSeconds: Math.round(process.uptime()),
-      services: { web: { ok: true, status: 'OK' }, database, redis },
+      services: { web: { ok: true, status: 'OK' }, database, redis, migrations },
     },
     {
       status: 200,
