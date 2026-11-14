@@ -46,13 +46,29 @@ import { ConnectView, type ConnectStage, type WalletOption } from "@/components/
 import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { classifySignError, SIGN_MESSAGES } from "@/lib/auth/sign-error";
-import { failedBeforeWallet, personalSign, type Eip1193Provider } from "@/lib/auth/wallet-sign";
+import { failedBeforeWallet, personalSign, relayDidNotTakeRequest, type Eip1193Provider } from "@/lib/auth/wallet-sign";
+import {
+  holdWalletConnectAutoOpen,
+  isIOSBrowser,
+  peerWalletLinks,
+  restoreHeldWalletLink,
+  signRequestLink,
+  watchSentSignRequest,
+  type HeldWalletLink,
+  type WalletOpenLink,
+} from "@/lib/auth/wc-sign-request";
+import { detectConnectedMobileWallet } from "@/lib/wallet/mobileWallet";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
 import { ONE_CLICK_AUTH } from "@/config/appkit";
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
+/**
+ * iPhone: how long "Open … to sign" waits for the relay to confirm it has the request before it is
+ * enabled anyway (a wallet whose provider does not report it). The relay usually answers in under a second.
+ */
+const SIGN_READY_FALLBACK_MS = 8_000;
 const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/UniversalScanModal"), { ssr: false });
 
 const QR_LIFETIME_MS = 240_000;
@@ -160,6 +176,10 @@ export default function ConnectPage() {
   const [signStep, setSignStep] = useState<1 | 2 | 3>(2);
   const [signError, setSignError] = useState<string | null>(null);
   const [mobileDeepLink, setMobileDeepLink] = useState<string | null>(null);
+  // iPhone: the link "Open … to sign" follows (this request's id and topic), and whether the relay has the
+  // request yet. Until it does, the button waits: leaving for the wallet earlier is what lost the request.
+  const [signLink, setSignLink] = useState<WalletOpenLink | null>(null);
+  const [signReady, setSignReady] = useState(true);
 
   const [qrSession, setQrSession] = useState<string | null>(null);
   const [qrData, setQrData] = useState("");
@@ -203,6 +223,7 @@ export default function ConnectPage() {
   useEffect(() => {
     setMounted(true);
     purgeLegacyHandshakeSecrets(); // leftovers from older builds
+    restoreHeldWalletLink(); // a sign-in interrupted by a reload had held back the wallet link (wc-sign-request.ts)
     try {
       // Set by sign-out when an Aztec wallet store could not be deleted (lib/aztec/wallet/wipe.ts).
       if (sessionStorage.getItem("hl.aztec.wipe_incomplete")) {
@@ -536,6 +557,13 @@ export default function ConnectPage() {
           typeof window !== "undefined" &&
           Boolean((window as unknown as { ethereum?: unknown }).ethereum);
 
+        // iPhone (Safari, Chrome, any iOS browser) over WalletConnect: the request is published first and the
+        // wallet is opened from the person's tap only (lib/auth/wc-sign-request.ts explains the failure this
+        // prevents). Android, computers and wallet browsers keep the flow they had.
+        const iosWalletConnect = isMobile && !isInAppBrowser && isIOSBrowser();
+        setSignLink(null);
+        setSignReady(!iosWalletConnect);
+
         if (isMobile && !isInAppBrowser) {
           // No stored link: the "Open … to sign" button then opens the wallet that is actually connected,
           // by the native deep link from its WalletConnect session (lib/wallet/mobileWallet.ts, validated).
@@ -549,39 +577,79 @@ export default function ConnectPage() {
         // wallet app. It is sent again only if it failed before the wallet received it.
         let provider: Eip1193Provider | null = null;
         let signature = "";
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            if (!provider) {
-              try {
-                provider = ((await activeConnector?.getProvider?.()) as Eip1193Provider | undefined) ?? null;
-              } catch {
-                provider = null;
-              }
-            }
-            signPendingRef.current = true;
+        let held: HeldWalletLink | null = null;
+        let stopWatching: (() => void) | null = null;
+        let readyFallback: ReturnType<typeof setTimeout> | undefined;
+        // Whether the person may have left for the wallet while this request was out.
+        let wentHidden = false;
+        const onHidden = () => {
+          if (document.visibilityState === "hidden") wentHidden = true;
+        };
+        try {
+          for (let attempt = 0; attempt < 3; attempt++) {
             try {
-              signature = await withSignTimeout(
-                provider && typeof provider.request === "function"
-                  ? personalSign(provider, address, message)
-                  : signMessageAsync({ message }),
-                SIGN_TIMEOUT_MS,
-              );
-            } finally {
-              signPendingRef.current = false;
+              if (!provider) {
+                try {
+                  provider = ((await activeConnector?.getProvider?.()) as Eip1193Provider | undefined) ?? null;
+                } catch {
+                  provider = null;
+                }
+              }
+              if (iosWalletConnect) {
+                held?.release();
+                stopWatching?.();
+                clearTimeout(readyFallback);
+                setSignReady(false);
+                setSignLink(null);
+                held = holdWalletConnectAutoOpen(provider);
+                const peer = peerWalletLinks(provider);
+                const bases = [held.href, peer.native, detectConnectedMobileWallet(activeConnector?.name).deepLink, peer.universal];
+                stopWatching = watchSentSignRequest(provider, (req) => {
+                  if (stale()) return;
+                  clearTimeout(readyFallback);
+                  setSignLink(signRequestLink(bases, req));
+                  setSignReady(true);
+                });
+                readyFallback = setTimeout(() => {
+                  if (!stale()) setSignReady(true);
+                }, stopWatching ? SIGN_READY_FALLBACK_MS : 0);
+              }
+              wentHidden = document.visibilityState === "hidden";
+              document.addEventListener("visibilitychange", onHidden);
+              signPendingRef.current = true;
+              try {
+                signature = await withSignTimeout(
+                  provider && typeof provider.request === "function"
+                    ? personalSign(provider, address, message)
+                    : signMessageAsync({ message }),
+                  SIGN_TIMEOUT_MS,
+                  { pauseWhileHidden: iosWalletConnect },
+                );
+              } finally {
+                signPendingRef.current = false;
+                document.removeEventListener("visibilitychange", onHidden);
+              }
+              if (stale()) return; // a newer attempt or a redirect took over
+              if (signature) break;
+            } catch (e: unknown) {
+              if (stale()) return;
+              // Sent again only if the wallet cannot have seen it: it failed before reaching the wallet, or the
+              // relay never took it while the page stayed in view (so the person never went to the wallet).
+              const neverShown = relayDidNotTakeRequest(e) && !wentHidden;
+              if (classifySignError(e) === "declined" || (!failedBeforeWallet(e) && !neverShown) || attempt === 2) throw e;
+              console.warn(`[SIWE] the wallet was not ready (attempt ${attempt + 1}); asking again.`);
+              provider = null;
+              await new Promise((r) => setTimeout(r, 1500));
+              while (!stale() && document.visibilityState !== "visible") {
+                await new Promise((r) => setTimeout(r, 500));
+              }
+              if (stale()) return;
             }
-            if (stale()) return; // a newer attempt or a redirect took over
-            if (signature) break;
-          } catch (e: unknown) {
-            if (stale()) return;
-            if (classifySignError(e) === "declined" || !failedBeforeWallet(e) || attempt === 2) throw e;
-            console.warn(`[SIWE] the wallet was not ready (attempt ${attempt + 1}); asking again.`);
-            provider = null;
-            await new Promise((r) => setTimeout(r, 1500));
-            while (!stale() && document.visibilityState !== "visible") {
-              await new Promise((r) => setTimeout(r, 500));
-            }
-            if (stale()) return;
           }
+        } finally {
+          clearTimeout(readyFallback);
+          stopWatching?.();
+          held?.release();
         }
 
         if (stale()) return;
@@ -749,6 +817,8 @@ export default function ConnectPage() {
     setView("choose");
     setPendingWallet(null);
     setMobileDeepLink(null);
+    setSignLink(null);
+    setSignReady(true);
     setAuthStatus("idle");
     setSignError(null);
     signingRef.current = false;
@@ -760,6 +830,7 @@ export default function ConnectPage() {
     signingRef.current = false;
     setSignError(null);
     setMobileDeepLink(null);
+    setSignLink(null);
     setAuthStatus("idle");
   }, []);
 
@@ -802,6 +873,8 @@ export default function ConnectPage() {
         signStep={signStep}
         errorMessage={signError}
         mobileDeepLink={mobileDeepLink}
+        signLink={signLink}
+        signReady={signReady}
         qr={qrData ? <QRCodeSVG value={qrData} size={204} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}

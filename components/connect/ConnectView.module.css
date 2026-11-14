@@ -356,6 +356,12 @@
   transform: scale(0.985);
 }
 
+.btn:disabled {
+  cursor: progress;
+  opacity: 0.78;
+  transform: none;
+}
+
 .btn:focus-visible,
 .btnText:focus-visible,
 .back:focus-visible {

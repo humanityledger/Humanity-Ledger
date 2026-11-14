@@ -34,7 +34,19 @@ export function failedBeforeWallet(e: unknown): boolean {
   const code = Number(err?.code ?? err?.cause?.code);
   if (code === 4100 || code === 4900 || code === 4901) return true; // unauthorised, disconnected, chain disconnected
   const text = `${typeof err?.message === 'string' ? err.message : ''} ${typeof err?.cause?.message === 'string' ? err.cause.message : ''}`.toLowerCase();
-  return /not connected|provider not found|no provider|connector not found|reconnecting/.test(text);
+  return /not connected|provider not found|no provider|connector not found|reconnecting|no internet connection/.test(text);
+}
+
+/**
+ * WalletConnect could not hand the request to its relay ("Failed to publish payload", a stalled
+ * socket). When the page stayed in view from the moment the request was made until this error, the
+ * person never went to the wallet and the wallet never showed it, so it may be sent again. When the
+ * page was hidden in between, the wallet may be showing it: the caller must not send a second one.
+ */
+export function relayDidNotTakeRequest(e: unknown): boolean {
+  const err = e as { message?: unknown; cause?: { message?: unknown } } | null;
+  const text = `${typeof err?.message === 'string' ? err.message : ''} ${typeof err?.cause?.message === 'string' ? err.cause.message : ''}`.toLowerCase();
+  return /failed (initial )?publish|failed to publish|socket stall/.test(text);
 }
 
 export async function personalSign(provider: Eip1193Provider, address: string, message: string): Promise<`0x${string}`> {
