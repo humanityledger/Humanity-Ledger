@@ -1,6 +1,6 @@
 # NLnet proposal draft: Ledger Chat
 
-**Status:** draft for the NLnet call closing on 3 January 2027 at 12:00 CET. Not submitted. Every figure below points to a file, a CI workflow or a testnet transaction in this repository; before submitting, re-check each one against `main`.
+**Status:** submitted to NLnet on 14 November 2026 (proposal `2027-01-04e`, requested €40,000). Fund: Restack_Fund. Under review; nothing has been awarded. Every figure below points to a file, a CI workflow or a transaction recorded in this repository.
 
 ## Project name
 

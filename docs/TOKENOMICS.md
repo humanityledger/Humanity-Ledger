@@ -63,4 +63,19 @@ revenue verifiable without revealing any payment.
    competent authority before any offer to the public in the EU. **Not met.**
 5. No venture capital and no private round, ever. **Met.**
 
+### Progress (14 November 2026)
+
+The HLC token is deployed on Aztec Alpha (L2 block 28992) and the first private payment from Ledger Chat settled in L2
+block 29012. That is the product working; it meets none of conditions 1 to 4 by itself.
+
+| # | Next step | Funding |
+|---|---|---|
+| 1 | Fee contract written against the Phase 0 arithmetic (`protocolFee`), then hardened and packaged for an external audit | NLnet proposal `2027-01-04e` (D-4, D-5), submitted 14 November 2026, under review |
+| 2 | The six months start the day the fee contract is live; `/protocol` reads fees on chain and shows "Not deployed" until then | None needed |
+| 3 | 4-of-7 treasury multisig set up, allocations moved, minters revoked and admin renounced on chain | Operator |
+| 4 | Counsel engaged for the MiCA / ESMA classification; crypto-asset white paper prepared for notification | Operator |
+| 5 | Kept: grants fund work, never tokens | — |
+
+The same steps live in `lib/protocol/tokenomics.ts` (`LAUNCH_CONDITIONS[].next`).
+
 Owners for each step: `docs/PENDING_STEFAN.md`.

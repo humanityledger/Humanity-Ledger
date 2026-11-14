@@ -250,6 +250,7 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
   const root = el('div', { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none', perspective: '900px', contain: 'strict' }, host);
   root.setAttribute('aria-hidden', 'true');
   const anims: Animation[] = [];
+  const ps: P[] = [];
   const timers: number[] = [];
   let raf = 0;
   let finished = false;
@@ -268,6 +269,8 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
     cancelAnimationFrame(raf);
     timers.forEach(t => clearTimeout(t));
     anims.forEach(a => { try { a.cancel(); } catch { /* gone */ } });
+    window.removeEventListener('pagehide', cleanup);
+    ps.length = 0;
     root.remove();
     resolveDone();
   };
@@ -320,12 +323,11 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
 
   /* Canvas */
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const canvas = el('canvas', { position: 'absolute', inset: '0', width: `${W}px`, height: `${H}px` }, root) as HTMLCanvasElement;
+  const canvas = el('canvas', { position: 'absolute', inset: '0', width: `${W}px`, height: `${H}px`, willChange: 'contents', transform: 'translateZ(0)' }, root) as HTMLCanvasElement;
   canvas.width = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
   const ctx = canvas.getContext('2d');
   root.insertBefore(canvas, hero);
-  const ps: P[] = [];
   type Spawner = (t: number, dt: number) => void;
   const spawners: Spawner[] = [];
   const add = (p: Partial<P> & Pick<P, 'x' | 'y' | 'shape' | 'color'>) =>
@@ -342,7 +344,10 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
     animate(d, [{ opacity: 0 }, { opacity: peak, offset: inAt }, { opacity: peak, offset: outAt }, { opacity: 0 }], { duration: T, fill: 'forwards', easing: 'ease-in-out' });
     return d;
   };
+  // A short buzz on impacts, where the device supports it (Android; iOS browsers do not).
+  const buzz = (at0: number, pattern: number[]) => later(at0, () => { try { navigator.vibrate?.(pattern); } catch { /* not allowed */ } });
   const shake = (at0: number, ms: number, amp: number) => {
+    buzz(at0, [ms > 500 ? 60 : 30, 40, 30]);
     const target = o.shakeTarget;
     if (!target) return;
     later(at0, () => {
@@ -715,6 +720,7 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
   };
   raf = requestAnimationFrame(step);
   later(T + 400, cleanup); // in case frames stop (tab hidden)
+  window.addEventListener('pagehide', cleanup);
 
   return { done, cancel: cleanup };
 }

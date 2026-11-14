@@ -12,7 +12,7 @@ Proving (circuits):     UltraHonk over BN254 with Barretenberg (@aztec/bb.js 5.3
 Direct messages:        XMTP v3 (MLS, RFC 9420, implemented by XMTP through OpenMLS)
 Community posts:        Stored by the application server, readable by it (see below)
 L1 contracts:           Solidity, Cancun EVM, not audited, not deployed to mainnet
-Release stage:          Pre-release · Aztec testnet only · no external audit
+Release stage:          Live on Aztec Alpha (first private payment: L2 block 29012, 14 Nov 2026) · cap per payment · no external audit
 Engineering plan:       docs/zk/MASTER_PROMPT.md
 Aztec review dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
 ```
@@ -120,7 +120,7 @@ Solidity contracts for the Cancun EVM live in `contracts/`. None has had an exte
 
 1. **No quantum resistance.** BN254, secp256k1 and Curve25519 are not quantum resistant.
 2. **No traffic-analysis protection.** MLS protects message content, not IP addresses, sizes or timing.
-3. **Testnet only.** No external security audit has concluded. Not production ready.
+3. **Live on Aztec Alpha, not audited.** The first private payment from Ledger Chat settled on 14 November 2026 (L2 block 29012). No external security audit has concluded; payments have a cap.
 4. **No formal verification.** Tests and fuzzing are not machine-checked proofs.
 
 ---

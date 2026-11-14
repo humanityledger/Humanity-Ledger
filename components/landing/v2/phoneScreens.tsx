@@ -34,6 +34,10 @@ import {
   Video,
 } from "lucide-react";
 import s from "./PhoneShowcase.module.css";
+import { CHAT_THEMES, chatThemeVars } from "@/lib/chat/themes";
+import { WALLPAPERS, canvasCss, resolveWallpaper } from "@/lib/chat/wallpapers";
+import { BUBBLE_STYLES, bubbleClasses } from "@/lib/chat/bubbleStyles";
+import { STICKER_PACKS, stickerFile } from "@/lib/chat/stickers";
 
 export interface ScreenProps {
   p: number;
@@ -80,6 +84,21 @@ function ChatHeader({ name, initials, sub }: { name: string; initials: string; s
       <Phone size={22} strokeWidth={1.9} />
       <Video size={24} strokeWidth={1.9} />
     </div>
+  );
+}
+
+/**
+ * G7: the peer signed (Schnorr) the binding of their Aztec address to this XMTP chat identity
+ * (lib/aztec/peer-binding.ts, version 2). Value only moves to an address verified this way.
+ */
+function VerifiedBinding() {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 600, color: "#0f9d63" }}>
+      <span style={{ width: 17, height: 17, borderRadius: 9, background: "#0f9d63", display: "grid", placeItems: "center" }}>
+        <Check size={12} strokeWidth={3.2} color="#fff" />
+      </span>
+      Verified Aztec address
+    </span>
   );
 }
 
@@ -280,7 +299,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         <span className={s.chatAvatar} style={{ background: "#ece5ff", color: "#5200ff" }}>A</span>
         <span className={s.chatWho}>
           <span className={s.chatName}>Alice</span>
-          <span className={`${s.chatSub} ${s.mono}`}>0x7f3a…c21e</span>
+          <VerifiedBinding />
         </span>
         <Phone size={22} strokeWidth={1.9} />
         <Video size={24} strokeWidth={1.9} />
@@ -590,35 +609,112 @@ export function WalletScreen({ p }: ScreenProps) {
   );
 }
 
-/* ── 7. Make it yours: themes, wallpapers, bubbles ─────────────────── */
+/* ── 7. Make it yours: themes, wallpapers, bubbles (the real catalogue) ─ */
+
+const LOOKS: [string, string, string][] = [
+  ["midnight", "nebula", "aurora"],
+  ["default", "scene-dawn-peaks", "tail"],
+  ["rose", "candy", "glass"],
+  ["synthwave", "scene-city", "glow"],
+  ["forest", "doodle-mint", "gradient"],
+];
 
 export function ThemesScreen({ p }: ScreenProps) {
-  const themes = ["#0b0c0e", "#f4f1ea", "#e8eef7", "#1d2a24", "#f7e9ec"];
-  const pick = Math.min(themes.length - 1, Math.floor(p * 4.5));
-  const dark = pick === 0 || pick === 3;
-  const bg = themes[pick];
-  const ink = dark ? "#fff" : INKC;
+  const pick = Math.min(LOOKS.length - 1, Math.floor(p * LOOKS.length));
+  const [themeId, wallId, bubble] = LOOKS[pick];
+  const theme = CHAT_THEMES.find((t) => t.id === themeId) ?? CHAT_THEMES[0];
+  const wall = resolveWallpaper(wallId);
+  const tone = wall && wall.id !== "default" ? wall.tone : theme.dark ? "dark" : "light";
+  const msg: React.CSSProperties = { maxWidth: "78%", padding: "13px 18px", fontSize: 18, lineHeight: 1.35 };
   return (
-    <div className={s.screenLight} style={{ background: bg, transition: "background 500ms ease" }}>
-      <StatusBar dark={dark} />
-      <div style={{ padding: "8px 26px 0", color: ink }}>
+    <div
+      className={s.screenLight}
+      data-chat-theme={theme.id}
+      data-wallpaper-tone={tone}
+      style={{ ...(chatThemeVars(theme) as unknown as React.CSSProperties), ...canvasCss(wall, theme.canvas), transition: "background-color 500ms ease" }}
+    >
+      <StatusBar dark={tone === "dark"} />
+      <div style={{ padding: "8px 26px 0", color: tone === "dark" ? "#fff" : INKC, textShadow: tone === "dark" ? "0 1px 3px rgba(0,0,0,.4)" : "none" }}>
         <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>Leo</div>
-        <div style={{ fontSize: 14.5, opacity: 0.6 }}>Chat appearance</div>
+        <div style={{ fontSize: 14.5, opacity: 0.7 }}>{theme.label} · {wall?.label} · {BUBBLE_STYLES.find((b) => b.id === bubble)?.label}</div>
       </div>
-      <div style={{ padding: "34px 22px 0", display: "grid", gap: 12 }}>
-        <div style={{ justifySelf: "start", maxWidth: "78%", padding: "14px 18px", borderRadius: 24, background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: ink, fontSize: 18 }}>Dinner at 9?</div>
-        <div style={{ justifySelf: "end", maxWidth: "78%", padding: "14px 18px", borderRadius: 24, background: dark ? "#fff" : INKC, color: dark ? INKC : "#fff", fontSize: 18 }}>Perfect. I’ll book.</div>
-        <div style={{ justifySelf: "start", maxWidth: "78%", padding: "14px 18px", borderRadius: 24, background: dark ? "rgba(255,255,255,0.1)" : "#fff", color: ink, fontSize: 18 }}>Your theme looks great.</div>
+      <div key={pick} style={{ padding: "30px 22px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className={bubbleClasses(bubble, false)} style={{ ...msg, alignSelf: "flex-start" }}>Dinner at 9?</div>
+        <div className={bubbleClasses(bubble, true)} style={{ ...msg, alignSelf: "flex-end" }}>Perfect. I’ll book.</div>
+        <div className={bubbleClasses(bubble, false)} style={{ ...msg, alignSelf: "flex-start" }}>Your theme looks great.</div>
       </div>
-      <div style={{ position: "absolute", left: 16, right: 16, bottom: 40, background: "#fff", borderRadius: 30, padding: "20px 22px 24px", boxShadow: "0 20px 50px -20px rgba(0,0,0,0.35)" }}>
-        <div style={{ fontSize: 15, color: "#8a909c" }}>Theme</div>
-        <div style={{ display: "flex", gap: 14, marginTop: 12 }}>
-          {themes.map((c, i) => (
-            <span key={c} style={{ width: 52, height: 52, borderRadius: 26, background: c, border: "1px solid rgba(0,0,0,0.1)", boxShadow: i === pick ? `0 0 0 3px #fff, 0 0 0 5px ${INKC}` : "none", transition: "box-shadow 300ms" }} />
+      <div style={{ position: "absolute", left: 16, right: 16, bottom: 40, background: "#fff", borderRadius: 30, padding: "20px 22px 22px", boxShadow: "0 20px 50px -20px rgba(0,0,0,0.35)" }}>
+        <div style={{ display: "flex", gap: 8, padding: 4, borderRadius: 999, background: "#f2f4f7", fontSize: 15, fontWeight: 600 }}>
+          {["Theme", "Wallpaper", "Bubbles"].map((t, i) => (
+            <span key={t} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 999, background: i === pick % 3 ? "#fff" : "transparent", color: i === pick % 3 ? INKC : MUTED, boxShadow: i === pick % 3 ? "0 1px 3px rgba(16,24,40,.14)" : "none" }}>{t}</span>
           ))}
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20, fontSize: 16.5 }}>
-          <span style={{ color: MUTED }}>8 themes · 12 wallpapers · 7 bubble styles</span>
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          {LOOKS.map(([t, w], i) => {
+            const th = CHAT_THEMES.find((x) => x.id === t) ?? CHAT_THEMES[0];
+            return <span key={t} style={{ flex: 1, height: 64, borderRadius: 14, ...canvasCss(resolveWallpaper(w), th.canvas), boxShadow: i === pick ? `0 0 0 3px #fff, 0 0 0 5px ${INKC}` : "inset 0 0 0 1px rgba(0,0,0,.08)", transition: "box-shadow 300ms" }} />;
+          })}
+        </div>
+        <div style={{ marginTop: 16, fontSize: 15.5, color: MUTED }}>
+          {CHAT_THEMES.length} themes · {WALLPAPERS.length - 1} wallpapers · {BUBBLE_STYLES.length} bubble styles
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 7b. Stickers that take over the chat ──────────────────────────── */
+
+const SPLATS: [number, number, number][] = [[215, 470, 1], [90, 300, 0.55], [340, 260, 0.62], [120, 640, 0.5], [330, 700, 0.58]];
+
+function Splat({ x, y, k, on }: { x: number; y: number; k: number; on: boolean }) {
+  return (
+    <svg width={220 * k} height={300 * k} viewBox="0 0 200 270" style={{ position: "absolute", left: x - 110 * k, top: y - 110 * k, transform: on ? "scale(1)" : "scale(0.2)", opacity: on ? 1 : 0, transition: "transform 420ms cubic-bezier(.3,1.5,.5,1), opacity 200ms", filter: "drop-shadow(0 6px 8px rgba(0,0,0,.22))" }} aria-hidden="true">
+      <defs>
+        <radialGradient id={`sp${x}`} cx="40%" cy="30%" r="80%"><stop offset="0" stopColor="#b8fbe2" /><stop offset=".5" stopColor="#2fd3a2" /><stop offset="1" stopColor="#0f8f6c" /></radialGradient>
+      </defs>
+      <path d="M100 30c22 0 30 18 48 22 20 4 34 22 26 42-6 16 8 30-6 44-14 14-30 6-44 16-14 10-26 24-44 12-18-12-12-28-28-38-16-10-34-20-26-40 8-20 26-18 34-34 10-18 18-24 40-24Z" fill={`url(#sp${x})`} />
+      <path d="M78 150v70a9 9 0 0 0 18 0v-62zM122 148v40a7 7 0 0 0 14 0v-36z" fill={`url(#sp${x})`} />
+      <circle cx="170" cy="40" r="9" fill={`url(#sp${x})`} />
+      <circle cx="24" cy="70" r="7" fill={`url(#sp${x})`} />
+      <ellipse cx="78" cy="62" rx="18" ry="9" fill="#fff" opacity=".55" transform="rotate(-30 78 62)" />
+    </svg>
+  );
+}
+
+export function StickerScreen({ p }: ScreenProps) {
+  const pickerOpen = p < 0.32;
+  const flying = p >= 0.32 && p < 0.44;
+  const splatted = p >= 0.44;
+  const pack = STICKER_PACKS.find((x) => x.id === "lumi") ?? STICKER_PACKS[0];
+  const theme = CHAT_THEMES.find((t) => t.id === "midnight") ?? CHAT_THEMES[0];
+  return (
+    <div className={s.screenLight} data-chat-theme={theme.id} data-wallpaper-tone="dark" style={{ ...(chatThemeVars(theme) as unknown as React.CSSProperties), ...canvasCss(resolveWallpaper("nebula"), theme.canvas) }}>
+      <StatusBar dark />
+      <div style={{ padding: "8px 26px 0", color: "#fff" }}>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>Mia</div>
+        <div style={{ fontSize: 14.5, opacity: 0.7 }}>online</div>
+      </div>
+      <div style={{ padding: "26px 22px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className={bubbleClasses("aurora", false)} style={{ alignSelf: "flex-start", maxWidth: "78%", padding: "13px 18px", fontSize: 18 }}>We did it!! 🎉</div>
+        <div className={bubbleClasses("aurora", true)} style={{ alignSelf: "flex-end", maxWidth: "78%", padding: "13px 18px", fontSize: 18 }}>This needs a sticker.</div>
+      </div>
+      {SPLATS.map(([x, y, k], i) => <Splat key={i} x={x} y={y} k={k} on={splatted && p < 0.96} />)}
+      <img
+        src={stickerFile(pack.id, "splash")}
+        alt=""
+        style={{ position: "absolute", left: 215 - 130, top: 470 - 130, width: 260, height: 260, transform: flying ? "scale(1.9) rotate(-10deg)" : splatted ? "scale(1)" : "scale(0.3)", opacity: flying || splatted ? 1 : 0, transition: "transform 380ms cubic-bezier(.5,0,.9,.4), opacity 200ms", filter: "drop-shadow(0 20px 26px rgba(0,0,0,.4))" }}
+      />
+      <div style={{ position: "absolute", left: 12, right: 12, bottom: 30, background: "#fff", borderRadius: 30, padding: "16px 16px 18px", boxShadow: "0 20px 50px -20px rgba(0,0,0,0.45)", transform: pickerOpen ? "translateY(0)" : "translateY(120%)", transition: "transform 380ms cubic-bezier(.2,.8,.3,1)" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          {STICKER_PACKS.map((pk) => (
+            <img key={pk.id} src={stickerFile(pk.id, pk.cover)} alt="" style={{ width: 44, height: 44, borderRadius: 14, background: pk.id === pack.id ? "#f2f4f7" : "transparent", boxShadow: pk.id === pack.id ? `inset 0 0 0 2px ${INKC}` : "none", padding: 3 }} />
+          ))}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+          {pack.stickers.slice(0, 8).map((st) => (
+            <img key={st.id} src={stickerFile(pack.id, st.id)} alt="" style={{ width: "100%", aspectRatio: "1", borderRadius: 16, background: st.id === "splash" && p > 0.2 ? "#f2f4f7" : "transparent" }} />
+          ))}
         </div>
       </div>
     </div>

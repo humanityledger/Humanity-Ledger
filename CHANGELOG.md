@@ -6,10 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Launch on Aztec Alpha
+- **14 November 2026: first private payment from Ledger Chat on Aztec Alpha.** 0.10 HLC, transfer `0x1eb2bb76…40a5`, checkpointed in L2 block 29012; HLC `0x1f49571a…24e5` deployed in block 28992; both confirmed by the mainnet preflight run 43583640304. STATUS, README, the protocol specification and the Aztec dossier no longer say "testnet only".
+- NLnet proposal `2027-01-04e` submitted (€40,000, deliverables D-1 to D-5). Under review.
+- Landing page on obsidian: live-on-Alpha hero, the on-chain record, an interactive four-layer stack, a playground to try themes, wallpapers, bubbles and stickers, and where it runs today (web app on iPhone, Android and desktop; App Store and Google Play marked "Soon").
+- Phone mockups show the real themes, wallpapers and bubble styles, the sticker picker with a scene, and the verified Aztec address (G7) on the payment chat.
+- HLC launch conditions carry their next step (`LAUNCH_CONDITIONS[].next`, docs/TOKENOMICS.md); none of conditions 1 to 4 is met.
+
 ### Chat appearance and stickers
-- **Appearance studio** (Settings → Chat appearance, and Appearance inside a chat): one place with a live preview and three tabs. **40 colour themes** in six families (every pair contrast-tested to WCAG AA), **60 wallpapers** in six families (soft colours, gradients, mesh, patterns, doodles and illustrated scenes, all drawn on the device, nothing downloaded) and **14 bubble styles** (classic tail, soft, elevated, gradient, aurora, glow, glass, tinted…). A chat can keep its own wallpaper; on dark wallpapers the time under messages turns light.
+- **Appearance studio** (Settings → Chat appearance, and Appearance inside a chat): one place with a live preview and three tabs. **40 colour themes** in six families (every pair contrast-tested to WCAG AA), **59 wallpapers** in six families (soft colours, gradients, mesh, patterns, doodles and illustrated scenes, all drawn on the device, nothing downloaded) and **14 bubble styles** (classic tail, soft, elevated, gradient, aurora, glow, glass, tinted…). A chat can keep its own wallpaper; on dark wallpapers the time under messages turns light.
 - Fixed: a wallpaper picked in Settings never reached the chat (the chat read ids, Settings stored CSS), and the in-chat picker only offered four bubble styles. Wallpapers are now stored as ids only; values from older builds are mapped.
-- **Three original sticker packs** drawn for Ledger Chat (36 stickers): *Nubi & Sol*, a little cloud and a little sun; *Lumi*, a jelly drop; *Spike*, a sassy cactus. Volumetric, die-cut, with idle motion.
+- **Three original sticker packs** drawn for Ledger Chat (42 stickers): *Nubi & Sol*, a little cloud and a little sun, with couple moments (hug, forehead kiss, smooch, cozy, come here); *Lumi*, a jelly drop; *Spike*, a sassy cactus. Volumetric, die-cut, with idle motion. Impacts buzz on devices that support vibration.
 - **Sticker moments**: when a sticker arrives (and when it is tapped) it leaves its bubble and plays a 4–5 s scene over the whole chat: paint that splats on the glass and drips, rain of hearts, lipstick kisses, fireworks, a quake with cracks, money rain, fire, sunrise, night sky… 19 scenes. Reduced motion gets a short still pop; Settings → Chat appearance → Sticker effects turns automatic moments off on a device.
 
 ### Aztec Alpha (mainnet)

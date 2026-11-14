@@ -27,11 +27,16 @@ import {
   ChatScreen,
   WalletScreen,
   ThemesScreen,
+  StickerScreen,
   StudioScreen,
   type ScreenProps,
 } from "./phoneScreens";
 import { DeviceFrame, type IslandState } from "./DeviceFrame";
 import { networkLabel } from "@/lib/aztec/wallet/config";
+import { CHAT_THEMES } from "@/lib/chat/themes";
+import { WALLPAPERS } from "@/lib/chat/wallpapers";
+import { BUBBLE_STYLES } from "@/lib/chat/bubbleStyles";
+import "@/app/ledger-chat-settings.css";
 import s from "./PhoneShowcase.module.css";
 
 interface Phone {
@@ -75,8 +80,16 @@ const PHONES: Phone[] = [
     id: "themes",
     label: "Make it yours",
     title: "Every chat looks the way you want.",
-    text: "Eight themes, twelve wallpapers and seven bubble styles.",
+    text: `${CHAT_THEMES.length} themes, ${WALLPAPERS.length - 1} wallpapers and ${BUBBLE_STYLES.length} bubble styles, with a live preview.`,
     Screen: ThemesScreen,
+    island: "idle",
+  },
+  {
+    id: "stickers",
+    label: "Stickers",
+    title: "Stickers that take over the chat.",
+    text: "Original packs drawn for Ledger Chat. Each one plays a full-screen moment when it lands: paint, kisses, fireworks.",
+    Screen: StickerScreen,
     island: "idle",
   },
   {
@@ -124,6 +137,7 @@ const SCREENS: Record<string, React.ComponentType<ScreenProps>> = {
   communities: CommunitiesScreen,
   wallet: WalletScreen,
   themes: ThemesScreen,
+  stickers: StickerScreen,
   studio: StudioScreen,
 };
 

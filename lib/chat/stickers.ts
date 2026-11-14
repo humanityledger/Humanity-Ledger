@@ -67,6 +67,12 @@ export const STICKER_PACKS: readonly StickerPack[] = [
       { id: 'hmph', label: 'Hmph!', scene: 'shake', tint: '#ff4d4d' },
       { id: 'together', label: 'Together', scene: 'fireworks' },
       { id: 'gn', label: 'Good night', scene: 'night' },
+      { id: 'come-here', label: 'Come here', scene: 'hug', tint: '#ff8fb1' },
+      { id: 'forehead-kiss', label: 'Forehead kiss', scene: 'hearts', tint: '#ff7aa2' },
+      { id: 'cheek-kiss', label: 'Smooch', scene: 'kiss', tint: '#e8335e' },
+      { id: 'cozy', label: 'Cozy', scene: 'hearts', tint: '#b197fc' },
+      { id: 'please', label: 'Please?', scene: 'rain' },
+      { id: 'not-talking', label: 'Not talking', scene: 'shake', tint: '#ff4d4d' },
     ],
   },
   {

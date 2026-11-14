@@ -107,6 +107,52 @@ const DRAW: Record<string, Record<string, Draw>> = {
       caption: 'Good night',
       captionColor: '#5c5fef',
     }),
+    'come-here': () => ({
+      defs: NUBI.defs,
+      art: one(NUBI, { eyes: 'happy', mouth: 'grin', blush: true }, 'up', { y: 246, s: 0.84 }) + prop.heart(96, 120, 0.7, -16) + prop.heart(420, 112, 0.62, 16, '#ff8fab') + prop.heart(256, 74, 0.5, 0, '#ffc2d6'),
+      caption: 'Come here',
+      captionColor: '#f06595',
+    }),
+    'forehead-kiss': () => ({
+      defs: NUBI.defs + SOL.defs,
+      art:
+        one(NUBI, { eyes: 'closed', mouth: 'smile', blush: true }, 'none', { x: 196, y: 290, s: 0.6 }) +
+        one(SOL, { eyes: 'closed', mouth: 'kiss', blush: true }, 'none', { x: 330, y: 176, s: 0.56, r: -16 }) +
+        prop.heart(250, 176, 0.5, -10) + prop.sparkle(96, 150, 0.6, '#ffd8e4'),
+      caption: 'Forehead kiss',
+      captionColor: '#e64980',
+    }),
+    'cheek-kiss': () => ({
+      defs: NUBI.defs + SOL.defs,
+      art:
+        one(SOL, { eyes: 'closed', mouth: 'kiss', blush: true }, 'none', { x: 342, y: 236, s: 0.56, r: -12 }) +
+        one(NUBI, { eyes: 'wink', mouth: 'grin', blush: true }, 'none', { x: 190, y: 262, s: 0.62 }) +
+        prop.heart(286, 150, 0.62, 12) + prop.heart(420, 96, 0.4, 20, '#ff8fab'),
+      caption: 'Smooch',
+      captionColor: '#e8335e',
+    }),
+    cozy: () => ({
+      defs: NUBI.defs + SOL.defs,
+      art:
+        one(SOL, { eyes: 'closed', mouth: 'smile', blush: true }, 'none', { x: 330, y: 230, s: 0.62 }) +
+        one(NUBI, { eyes: 'closed', mouth: 'tiny', blush: true }, 'hug', { x: 208, y: 270, s: 0.62, r: 8 }) +
+        prop.heart(256, 96, 0.6, 0, '#b197fc') + prop.heart(120, 120, 0.4, -18, '#d0bfff') + prop.heart(418, 110, 0.4, 18, '#d0bfff'),
+      caption: 'Cozy',
+      captionColor: '#7048e8',
+    }),
+    please: () => ({
+      defs: NUBI.defs,
+      art: one(NUBI, { eyes: 'wide', brows: 'sad', mouth: 'tiny', blush: true }, 'hold', { y: 236, s: 0.9, front: prop.heart(0, 66, 0.7, 0, '#ff8fab') }) + prop.sparkle(424, 110, 0.6, '#d0e7ff'),
+      caption: 'Please?',
+      captionColor: '#4c6ef5',
+    }),
+    'not-talking': () => ({
+      defs: SOL.defs,
+      art: one(SOL, { eyes: 'closed', brows: 'angry', mouth: 'frown', blush: true }, 'hug', { y: 230, s: 0.9 }) + prop.steam(66, 116) + prop.steam(396, 100),
+      caption: 'Not talking',
+      captionColor: '#e03131',
+      motion: 'shake',
+    }),
   },
 
   lumi: (() => {
