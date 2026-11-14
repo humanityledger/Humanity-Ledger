@@ -30,6 +30,16 @@ The HLC recorded on 11 November (`0x2cd0f3775d…e55d`, admin `0x01c7e18f…549b
 
 Sender `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` (admin of the new HLC), recipient `0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a`, both accounts of the operator. Fees paid in Fee Juice by the sender. Proved in Chrome on Windows with MetaMask. Confirmed by the read only preflight, run 43583640304. On chain the transfer shows note hashes, nullifiers and the public fee payment; sender, recipient and amount are not visible. Still open: the recipient opening its wallet and reading 0.10 HLC (needs `NEXT_PUBLIC_AZTEC_TOKENS` switched to the new address).
 
+### Second private payment, from the regular wallet screen (14 November 2026)
+
+The first payment sent with **Send privately** in the wallet panel rather than the operator tool, between the same two accounts of the operator.
+
+| Step | Transaction | L2 block | Status |
+|---|---|---|---|
+| Private transfer of 0.9 HLC | `0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94` | 29771 | mined (Aztecscan) |
+
+Fee 2.858 AZTEC, paid by the sender in Fee Juice; the same transaction claimed a 47 AZTEC Fee Juice deposit bridged from L1. Before that deposit, sends failed with "insufficient fee payer balance": the node accepts a transaction only if the fee payer can cover its maximum fee, which the wallet sets from the protocol gas limit (`lib/aztec/fee-juice.ts`, `maxFeeFor`), far above what is charged. The R1 transfer in block 29012 was charged 1.256 AZTEC. Record: `deployments/aztec-mainnet.json` (`secondPrivatePayment`).
+
 ### Runbook for R1 (one browser, smallest amounts)
 
 1. Production on the merged main; sign in with the wallet that will hold the account.
