@@ -1,0 +1,33 @@
+# Read-only check of a deployed LedgerSponsor on Aztec Alpha (scripts/aztec/verify-sponsor.mjs):
+# the app's public sponsor endpoint, the node, the committed artifact and the deployment record.
+# No keys, no transactions, no value moved. Run it from the GitHub app (Actions, "Run workflow")
+# after deploying or funding the sponsor; docs/SPONSOR.md, "Deployment checklist".
+
+name: Aztec verify sponsor
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App URL serving /api/aztec/sponsor'
+        required: true
+        default: 'https://ledgerchat.org'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --ignore-scripts
+      - name: LedgerSponsor on Alpha, read-only
+        env:
+          APP_URL: ${{ inputs.app }}
+        run: node --conditions=browser --import ./scripts/aztec/register.mjs scripts/aztec/verify-sponsor.mjs --app "$APP_URL"

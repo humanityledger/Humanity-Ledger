@@ -94,3 +94,38 @@ unconstrained fn another_key_is_refused() {
     let (env, user, sponsor) = setup();
     env.call_private(user, LedgerSponsor::at(sponsor).sponsor(1, FUTURE, SIGNER_Y, SIGNER_X, SIG_V2));
 }
+
+#[test(should_fail_with = "LedgerSponsor: zero voucher")]
+unconstrained fn voucher_id_zero_is_refused() {
+    let (env, user, sponsor) = setup();
+    env.call_private(user, LedgerSponsor::at(sponsor).sponsor(0, FUTURE, SIGNER_X, SIGNER_Y, SIG_V2));
+}
+
+// The constructor refuses a deployment that could never pay (no key) or never refuse (no cap).
+#[test(should_fail_with = "LedgerSponsor: zero key")]
+unconstrained fn the_constructor_refuses_a_zero_key() {
+    let mut env = TestEnvironment::new();
+    let user = env.create_contract_account();
+    let _ = env.deploy("LedgerSponsor").with_public_initializer(
+        user,
+        LedgerSponsor::interface().constructor(0, 0, SIGNER_FIELDS[2], SIGNER_FIELDS[3], CAP),
+    );
+}
+
+#[test(should_fail_with = "LedgerSponsor: zero cap")]
+unconstrained fn the_constructor_refuses_a_zero_cap() {
+    let mut env = TestEnvironment::new();
+    let user = env.create_contract_account();
+    let _ = env.deploy("LedgerSponsor").with_public_initializer(
+        user,
+        LedgerSponsor::interface().constructor(SIGNER_FIELDS[0], SIGNER_FIELDS[1], SIGNER_FIELDS[2], SIGNER_FIELDS[3], 0),
+    );
+}
+
+// Not covered in TXE, and why:
+// - "fee above cap": the vectors are signed for the instance deployed with CAP; an instance with a
+//   small cap has another address, so its vouchers would need new vectors from a TXE run. The check's
+//   place and its Field comparison are pinned by test/unit/aztec/ledger-sponsor.test.ts.
+// - a voucher used twice: TXE runs the call in the revertible phase, so the first use reverts at the
+//   fee-payer election and its nullifier is never kept. On Alpha the node rejects the duplicate
+//   nullifier; docs/SPONSOR.md lists it in the checks after deployment.
