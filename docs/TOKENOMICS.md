@@ -50,7 +50,9 @@ It never entitles anyone to fees, ETH or USDC.
 ## Fee arithmetic (Phase 0)
 
 `fee = max(minFee, ceil(amount × feeBps / 10,000))`, in bigint base units: rounding up means splitting a payment never
-pays less, and the minimum makes dust pay. The fee is taken inside the private deposit as a private note to the treasury,
+pays less, and the minimum makes dust pay. An agreement whose fee would take more than `maxFeeShareBps` of the amount
+is refused, not charged (finding T-5). Reference implementation: `protocolFee` in `lib/protocol/fees.ts` (real only in
+tests); contract specification, test vectors and the decisions still open: `docs/protocol/FEE_CONTRACT_SPEC.md`. The fee is taken inside the private deposit as a private note to the treasury,
 so it reveals no amount; the treasury publishes the weekly aggregate when it converts it, which is what makes protocol
 revenue verifiable without revealing any payment.
 
@@ -70,7 +72,7 @@ block 29012. That is the product working; it meets none of conditions 1 to 4 by 
 
 | # | Next step | Funding |
 |---|---|---|
-| 1 | Fee contract written against the Phase 0 arithmetic (`protocolFee`), then hardened and packaged for an external audit | NLnet proposal `2027-01-04e` (D-4, D-5), submitted 14 November 2026, under review |
+| 1 | Engineering: implement `docs/protocol/FEE_CONTRACT_SPEC.md` in `PrivateEscrow` and `PaymentStream` (acceptance criteria in its section 5). Operator: decisions D-1 to D-4 of that spec, including the treasury's Aztec account. Then hardening and an external audit | NLnet proposal `2027-01-04e` (D-4, D-5), submitted 14 November 2026, under review |
 | 2 | The six months start the day the fee contract is live; `/protocol` reads fees on chain and shows "Not deployed" until then | None needed |
 | 3 | 4-of-7 treasury multisig set up, allocations moved, minters revoked and admin renounced on chain | Operator |
 | 4 | Counsel engaged for the MiCA / ESMA classification; crypto-asset white paper prepared for notification | Operator |
