@@ -56,6 +56,8 @@ export interface ConnectViewProps {
 
   onWallet: (id: string) => void;
   onOtherWallets: () => void;
+  /** False on a phone, where the one wallet button already opens the full wallet list. */
+  showOtherWallets?: boolean;
   onPhone: () => void;
   onBack: () => void;
   onRetry: () => void;
@@ -153,12 +155,14 @@ function Choose(p: ConnectViewProps) {
         {p.wallets.map((w) => (
           <Option key={w.id} logo={w.logo || undefined} icon={Wallet} name={w.name} hint={w.hint} onClick={() => p.onWallet(w.id)} />
         ))}
-        <Option
-          icon={Wallet}
-          name="Other wallets"
-          hint={p.isMobile ? "Choose any wallet app on this phone" : "Connect with WalletConnect"}
-          onClick={p.onOtherWallets}
-        />
+        {p.showOtherWallets !== false && (
+          <Option
+            icon={Wallet}
+            name="Other wallets"
+            hint={p.isMobile ? "Choose any wallet app on this phone" : "Connect with WalletConnect"}
+            onClick={p.onOtherWallets}
+          />
+        )}
       </div>
 
       <div className={s.divider}>or</div>

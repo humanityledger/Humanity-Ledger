@@ -1,113 +1,166 @@
 "use client";
 
-import { useEffect } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
-import { Inter } from 'next/font/google';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Inter } from "next/font/google";
+import { HLLogo } from "@/components/shared/HLLogo";
+import { isChunkLoadError, reloadForFreshChunks } from "@/lib/errors/chunk-recovery";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  reset: () => void
-}) {
+/**
+ * Root error boundary. It replaces the whole layout, so it draws with inline styles only.
+ *
+ * Before (14 Nov 2026): an alarming title and the raw stack trace, shown on iPhone when a chunk failed
+ * to load after coming back from MetaMask. A chunk error now reloads the page once it is in
+ * front (lib/errors/chunk-recovery.ts); the screen below is shown only if that is not possible, and it
+ * never shows error text outside development.
+ */
+export default function GlobalError({ error }: { error: Error & { digest?: string }; reset: () => void }) {
+  const chunk = isChunkLoadError(error);
+  const [reloading, setReloading] = useState(false);
+
   useEffect(() => {
-    console.error("Global Application Fault:", error);
-    
-    // [ABYSMALLY COMPLEX OPTIMIZATION]: Auto-heal Next.js Server Action mismatch
+    console.error("[HL] Root error:", error);
+
+    // A Server Action from an older build: the page must be loaded again.
     if (error?.message?.includes("Failed to find Server Action") || error?.digest?.includes("Failed to find Server Action")) {
-      console.warn("Server Action Desync Detected. Initiating auto-reload...");
-      window.location.reload();
+      if (reloadForFreshChunks()) setReloading(true);
       return;
     }
 
-    // [ABYSMALLY COMPLEX OPTIMIZATION]: Auto-heal ChunkLoadError (Stale build cache)
-    const isChunkError =
-      error?.name === 'ChunkLoadError' ||
-      error?.message?.includes('Loading chunk') ||
-      error?.message?.includes('Failed to fetch dynamically imported module') ||
-      error?.message?.includes('Importing a module script failed');
+    if (chunk) {
+      if (reloadForFreshChunks()) setReloading(true);
+      return;
+    }
 
-    if (isChunkError) {
-      const reloadKey = 'global_root_chunk_reload_attempted';
+    // Wallet provider crash: reload once to recover it. Never mark the session as signed out here: a crash
+    // anywhere (any message containing "timeout") used to set __disconnected__, so the next load showed
+    // every page as signed out for the rest of the tab. Signing out is only nuclearDisconnect.
+    const msg = (error?.message || "").toLowerCase();
+    const isWalletCrash =
+      msg.includes("wagmi") ||
+      msg.includes("walletconnect") ||
+      msg.includes("connector") ||
+      msg.includes("appkit") ||
+      msg.includes("socket stall") ||
+      msg.includes("timeout") ||
+      msg.includes("unhandled promise");
+    if (isWalletCrash) {
+      const key = "global_provider_reload_attempted";
       try {
-        if (!sessionStorage.getItem(reloadKey)) {
-          sessionStorage.setItem(reloadKey, '1');
-          console.warn('Global Root ChunkLoadError detected. Initiating auto-reload to fetch fresh chunks...');
-          window.location.reload();
-        } else {
-          sessionStorage.removeItem(reloadKey);
+        if (sessionStorage.getItem(key)) {
+          sessionStorage.removeItem(key);
+          return;
         }
-      } catch (e) {
-        console.error("Session storage failed during chunk reload", e);
+        sessionStorage.setItem(key, "1");
+      } catch {
+        return;
       }
-    }
-    // [ABYSMALLY COMPLEX OPTIMIZATION]: Auto-heal Wagmi / WalletConnect Provider Crashes
-    const msg = (error?.message || '').toLowerCase();
-    const isWagmiCrash = msg.includes('wagmi') || 
-                         msg.includes('walletconnect') || 
-                         msg.includes('connector') || 
-                         msg.includes('appkit') ||
-                         msg.includes('socket stall') ||
-                         msg.includes('timeout') ||
-                         msg.includes('unhandled promise');
-    if (isWagmiCrash) {
-      // Reload once to recover the provider. Never mark the session as signed out here: a crash anywhere
-      // (any message containing "timeout") used to set __disconnected__, so the next load showed every
-      // page (Studio included) as signed out for the rest of the tab. Signing out is only nuclearDisconnect.
-      const key = 'global_provider_reload_attempted';
-      try {
-        if (sessionStorage.getItem(key)) { sessionStorage.removeItem(key); return; }
-        sessionStorage.setItem(key, '1');
-      } catch { return; }
+      setReloading(true);
       setTimeout(() => window.location.reload(), 100);
-      return;
     }
-  }, [error]);
+  }, [error, chunk]);
+
+  const dev = process.env.NODE_ENV !== "production";
+  const title = chunk ? "Ledger Chat was updated" : "Something went wrong";
+  const text = chunk
+    ? "Part of the page could not load. Reload to get the latest version."
+    : "The page stopped because of an unexpected error. Reload to continue.";
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-transparent text-[#050505] antialiased`}>
-        <div className="flex flex-col items-center justify-center min-h-screen space-y-8 text-center px-4">
-          
-          <div className="relative z-10 w-full max-w-lg p-10 bg-white border border-black/5 rounded-[2.5rem] shadow-2xl flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full bg-[#FF3B30]/10 text-[#FF3B30] flex items-center justify-center mb-6 ring-[12px] ring-[#FF3B30]/5">
-              <AlertTriangle size={40} />
+      <body className={inter.className} style={{ margin: 0, background: "#f2f3f5", color: "#0A0A0A" }}>
+        <main
+          style={{
+            minHeight: "100dvh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              background: "#fff",
+              border: "1px solid rgba(16,24,40,0.06)",
+              borderRadius: 28,
+              padding: "40px 28px 32px",
+              textAlign: "center",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <HLLogo size={44} />
             </div>
-
-            <h1 className="text-3xl font-black text-black uppercase tracking-widest mb-3">
-              Fatal Kernel Panic
-            </h1>
-            
-            <p className="text-sm font-bold text-black/50 leading-relaxed mb-8 max-w-sm">
-              The System Terminal encountered a critical root fault in the React mounting tree. The system halted to prevent state corruption.
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em" }}>{title}</h1>
+            <p style={{ margin: "8px 0 0", fontSize: 15, lineHeight: 1.5, color: "#6b7280" }}>
+              {reloading ? "Reloading…" : text} Your wallet, keys and messages are not affected.
             </p>
-            <pre className="w-full text-left text-[10px] text-red-500 font-mono bg-red-50 rounded-xl px-4 py-3 mb-8 overflow-x-auto whitespace-pre-wrap break-all border border-red-100">
-              {error.message}
-              {error.stack ? `\n\n${error.stack}` : ''}
-            </pre>
 
-            {error.digest && (
-              <div className="w-full bg-black/5 rounded-2xl p-4 mb-8 border border-black/10 flex items-center justify-between">
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/40">Fault Digest ID:</span>
-                <span className="text-xs font-mono font-bold text-[#FF3B30] bg-[#FF3B30]/10 px-2 py-0.5 rounded">{error.digest}</span>
-              </div>
-            )}
+            {dev && error?.message ? (
+              <pre
+                style={{
+                  margin: "16px 0 0",
+                  padding: "8px 12px",
+                  textAlign: "left",
+                  fontSize: 12,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  background: "#f9fafb",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  color: "#4b5563",
+                }}
+              >
+                {error.message}
+                {error.digest ? ` (digest ${error.digest})` : ""}
+              </pre>
+            ) : null}
 
-            <button 
-              onClick={() => reset()}
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-black hover:bg-black/90 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-black/10 hover:shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <RefreshCw size={16} className="opacity-50" />
-              Force Terminal Restart
-            </button>
-            <p className="mt-6 text-[10px] font-black text-black/20 uppercase tracking-widest">
-              Action forces complete DOM remount
-            </p>
+            <div style={{ marginTop: 28, display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                style={{
+                  height: 44,
+                  padding: "0 22px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#0A0A0A",
+                  color: "#fff",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Reload
+              </button>
+              <Link
+                href="/"
+                style={{
+                  height: 44,
+                  padding: "0 22px",
+                  borderRadius: 999,
+                  border: "1px solid #e5e7eb",
+                  color: "#0A0A0A",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  textDecoration: "none",
+                  boxSizing: "border-box",
+                }}
+              >
+                Home
+              </Link>
+            </div>
           </div>
-        </div>
+        </main>
       </body>
     </html>
   );

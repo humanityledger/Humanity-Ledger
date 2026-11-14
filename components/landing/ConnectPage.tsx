@@ -47,11 +47,9 @@ import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { classifySignError, SIGN_MESSAGES } from "@/lib/auth/sign-error";
 import { failedBeforeWallet, personalSign, type Eip1193Provider } from "@/lib/auth/wallet-sign";
-import { isWalletConnectUri, safeWalletHref, walletConnectLink } from "@/lib/auth/wallet-links";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
 import { ONE_CLICK_AUTH } from "@/config/appkit";
-import { injected } from "wagmi/connectors";
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
@@ -82,15 +80,15 @@ const DESKTOP_WALLETS: DesktopWallet[] = [
   { id: "rainbow", name: "Rainbow", hint: "Browser extension", logo: "/wallets/rainbow.png", rdns: "me.rainbow", installUrl: "https://rainbow.me/extension" },
 ];
 
+/**
+ * A phone browser (Safari, Chrome) signs in through the AppKit wallet list: MetaMask, Rainbow, Coinbase
+ * Wallet, Trust, OKX and the rest of the WalletConnect registry. That list pairs and opens the wallet from
+ * the person's tap, which is what iOS requires, and it is the path verified to sign on iPhone (14 Nov 2026).
+ * The named buttons this page had before ran a pairing of their own and opened MetaMask by its universal
+ * link outside the tap: on iOS that failed to connect or never brought the signature request.
+ */
 const MOBILE_WALLETS: WalletOption[] = [
-  // Every option signs in from THIS browser (Safari, Chrome) through the wallet app; none sends the
-  // visitor into a wallet's in-app browser, where their session would live in another browser.
-  { id: "metamask-mobile", name: "MetaMask", hint: "Opens the MetaMask app, you stay in this browser", logo: "/wallets/metamask.svg" },
-  { id: "coinbase-mobile", name: "Coinbase Wallet", hint: "Opens the Coinbase Wallet app", logo: "/wallets/coinbase.png" },
-  { id: "rainbow-mobile", name: "Rainbow", hint: "Opens the Rainbow app", logo: "/wallets/rainbow.png" },
-  // public/wallets/trust.png was an HTML page saved as .png (broken image); OKX showed Coinbase's logo. Generic icon until real assets are added.
-  { id: "trust-mobile", name: "Trust Wallet", hint: "Opens Trust Wallet app", logo: "" },
-  { id: "okx-mobile", name: "OKX Wallet", hint: "Opens OKX app", logo: "" },
+  { id: "appkit-mobile", name: "Connect your wallet", hint: "MetaMask, Rainbow, Coinbase Wallet, Trust, OKX and more", logo: "" },
 ];
 
 /**
@@ -180,8 +178,6 @@ export default function ConnectPage() {
   const signingStartTimeRef = useRef(0);
   // True while a wallet signature request is awaiting an answer (the user may be in the wallet app).
   const signPendingRef = useRef(false);
-  // Detaches the listener of the WalletConnect pairing started by a named wallet button.
-  const wcPairingCleanupRef = useRef<(() => void) | null>(null);
 
   const effectiveIsConnected = mounted && isConnected && !readDisconnectGuard();
 
@@ -421,8 +417,6 @@ export default function ConnectPage() {
     }
     if (readDisconnectGuard()) return;
 
-    // The pairing did its job: stop listening and drop its link.
-    wcPairingCleanupRef.current?.();
     setMobileDeepLink(null);
 
     signingRef.current = true;
@@ -727,95 +721,26 @@ export default function ConnectPage() {
   );
 
   const handleMobileWallet = useCallback(
-    (walletId: string) => {
+    (_walletId: string) => {
       try {
         clearDisconnectGuard();
         localStorage.setItem("system_pending_wakeup", "1");
         localStorage.setItem("system_pending_wakeup_ts", Date.now().toString());
+        // The wallet is chosen in the list now: "Open … to sign" follows the connected session's own
+        // metadata (lib/wallet/mobileWallet.ts), not a brand tapped on an earlier visit.
+        sessionStorage.removeItem("preferred_mobile_wallet");
+        localStorage.removeItem("preferred_mobile_wallet");
       } catch {
         /* storage unavailable */
       }
-      const brand = walletId.split("-")[0];
-      try {
-        sessionStorage.setItem("preferred_mobile_wallet", brand);
-        localStorage.setItem("preferred_mobile_wallet", brand);
-      } catch {}
-
-      // 1. If inside an in-app browser (MetaMask / Coinbase in-app browser)
-      //    connect directly via the injected provider — no deep link needed.
-      const hasProvider =
-        typeof window !== "undefined" &&
-        Boolean((window as unknown as { ethereum?: unknown }).ethereum);
-      const inj = hasProvider
-        ? connectors.find(
-            (c) =>
-              c.id === "injected" ||
-              (c as { type?: string }).type === "injected" ||
-              c.id === "io.metamask" ||
-              c.name.toLowerCase().includes(brand),
-          )
-        : undefined;
-      if (hasProvider) {
-        const w = MOBILE_WALLETS.find((x) => x.id === walletId) ?? inAppWalletOption();
-        if (w) setPendingWallet({ id: w.id, name: w.name.replace(/^Continue with /, ""), logo: w.logo });
-        // A wallet that injected itself after this page's wagmi config was built has no connector yet:
-        // an injected connector made now reaches the same window.ethereum.
-        connect({ connector: inj ?? injected({ shimDisconnect: true }) });
-        return;
-      }
-
-      // Safari / Chrome on a phone, a named wallet: this page asks WalletConnect for one pairing and
-      // opens that wallet's own link with it. The link is followed from the tap when the pairing is
-      // ready in time (iOS only lets a page open an app from a person's tap); otherwise the "Open …"
-      // button in the next screen is a plain link, which every phone opens. "Other wallets" (the 500+
-      // in the WalletConnect registry) goes through the AppKit sheet, which never runs alongside this.
-      const w = MOBILE_WALLETS.find((x) => x.id === walletId);
-      const wc = connectors.find((c) => c.id === "walletConnect" || (c as { type?: string }).type === "walletConnect");
-      if (!w || !wc) {
-        setMobileDeepLink(null);
-        openAppKitSafe();
-        return;
-      }
-      wcPairingCleanupRef.current?.();
-      setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
+      // Every wallet on a phone goes through the AppKit list, in Safari as in a wallet's own browser.
+      // In MetaMask's browser, connecting its injected provider from this page directly did not bring a
+      // working signature request, while choosing MetaMask in the list did (report of 14 Nov 2026).
+      setPendingWallet(null);
       setMobileDeepLink(null);
-      const tappedAt = Date.now();
-      let paired = false;
-      const onMessage = (m: { type: string; data?: unknown }) => {
-        if (m.type !== "display_uri" || paired || !isWalletConnectUri(m.data)) return;
-        const link = safeWalletHref(walletConnectLink(brand, m.data, window.location.origin));
-        if (!link) return;
-        paired = true;
-        setMobileDeepLink(link);
-        if (Date.now() - tappedAt < 1000) {
-          try {
-            window.location.href = link;
-          } catch {
-            /* the button in the next screen opens it */
-          }
-        }
-      };
-      const emitter = (wc as unknown as { emitter: { on: (e: string, f: typeof onMessage) => void; off: (e: string, f: typeof onMessage) => void } }).emitter;
-      emitter.on("message", onMessage);
-      const noAnswer = setTimeout(() => {
-        if (paired) return;
-        cleanup();
-        setPendingWallet(null);
-        wc.disconnect?.().catch(() => {});
-        toast.error("WalletConnect did not answer.", {
-          description: "Check your connection and try again. If it keeps happening, sign in from your wallet app's browser.",
-          duration: 9000,
-        });
-      }, 15_000);
-      const cleanup = () => {
-        clearTimeout(noAnswer);
-        emitter.off("message", onMessage);
-        wcPairingCleanupRef.current = null;
-      };
-      wcPairingCleanupRef.current = cleanup;
-      connect({ connector: wc });
+      openAppKitSafe();
     },
-    [connect, connectors, openAppKitSafe],
+    [openAppKitSafe],
   );
 
   const handleDisconnect = useCallback(() => {
@@ -881,21 +806,13 @@ export default function ConnectPage() {
         qrPin={qrPin}
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}
-        onOtherWallets={() => {
-          // One pairing at a time: a named wallet's pending pairing is dropped before the sheet opens.
-          if (wcPairingCleanupRef.current) {
-            wcPairingCleanupRef.current();
-            setPendingWallet(null);
-            setMobileDeepLink(null);
-          }
-          openAppKitSafe();
-        }}
+        onOtherWallets={openAppKitSafe}
+        showOtherWallets={!isMobile}
         onPhone={handlePhone}
         onBack={handleBack}
         onRetry={handleRetry}
         onDisconnect={handleDisconnect}
         onCancelPending={() => {
-          wcPairingCleanupRef.current?.();
           setPendingWallet(null);
           setMobileDeepLink(null);
           const wc = connectors.find((c) => c.id === "walletConnect");

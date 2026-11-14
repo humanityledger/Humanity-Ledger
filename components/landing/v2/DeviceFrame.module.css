@@ -14,6 +14,9 @@
   left: 50%;
   top: 50%;
   transform-origin: 50% 50%;
+  /* iOS must not enlarge the scaled-down text of the screen on its own. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   opacity: 0;
   transition: opacity 0.3s ease;
 }

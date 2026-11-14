@@ -36,16 +36,21 @@ describe('sign-in signature', () => {
 describe('/connect on phones', () => {
   const page = fs.readFileSync(path.join(process.cwd(), 'components/landing/ConnectPage.tsx'), 'utf8');
   const view = fs.readFileSync(path.join(process.cwd(), 'components/connect/ConnectView.tsx'), 'utf8');
-  it('opens a named wallet with its own WalletConnect link, from the tap or from a plain link', () => {
-    expect(page).toMatch(/m\.type !== "display_uri" \|\| paired \|\| !isWalletConnectUri\(m\.data\)/);
-    expect(page).toMatch(/safeWalletHref\(walletConnectLink\(brand, m\.data, window\.location\.origin\)\)/);
+  it('connects through the AppKit wallet list, which opens the wallet from the tap', () => {
+    // iPhone, 14 Nov 2026: the page's own pairing (universal link opened outside the tap) failed in
+    // Safari; the list signed. A stored link, when there is one, is still a plain link in the view.
+    expect(page).not.toMatch(/display_uri/);
+    expect(page).toMatch(/const handleMobileWallet[\s\S]{0,1500}openAppKitSafe\(\);/);
     expect(view).toMatch(/<a href=\{safeWalletHref\(p\.mobileDeepLink\)!\}/);
   });
   it('never sends a second signature request while the first may be open in the wallet', () => {
     expect(page).toMatch(/!failedBeforeWallet\(e\)/);
     expect(page).not.toMatch(/errMsg\.includes\("pending"\)/);
   });
-  it('signs in inside a wallet browser with the wallet already in the page', () => {
-    expect(page).toMatch(/connect\(\{ connector: inj \?\? injected\(\{ shimDisconnect: true \}\) \}\)/);
+  it('signs in inside a wallet browser through the same list, where the wallet shows as installed', () => {
+    // Connecting MetaMask's injected provider straight from the page did not bring a working signature
+    // in MetaMask's browser on iPhone; choosing MetaMask in the list did.
+    expect(page).toMatch(/Continue with \$\{name\}/);
+    expect(page).not.toMatch(/injected\(\{ shimDisconnect: true \}\)/);
   });
 });
