@@ -145,7 +145,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   const held = typeof aztecUnits === 'bigint' ? aztecUnits : 0n;
   const tooMuch = units !== null && units > held;
   // A deposit is claimed whole by one transaction, which must cover its maximum fee: below this, the
-  // account cannot be created with it (lib/aztec/fee-juice.ts maxFeeFor). AZTEC and Fee Juice are 1:1.
+  // account cannot be created with it (lib/aztec/fee-juice.ts budgetFeeFor, for estimated gas limits). AZTEC and Fee Juice are 1:1.
   const minDeposit = fj?.minForTx && fj.minForTx > 0n ? fj.minForTx : 0n;
   const minWhole = minDeposit > 0n ? ((minDeposit + 10n ** 18n - 1n) / 10n ** 18n).toString() : null;
   const tooSmall = units !== null && minDeposit > 0n && state.phase === 'needs-fee-juice' && units < minDeposit;

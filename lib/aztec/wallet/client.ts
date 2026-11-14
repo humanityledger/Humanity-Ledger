@@ -43,7 +43,7 @@ import {
   agreementFeeCheck,
   bridgeFeeJuice as bridgeOnL1,
   feePlan,
-  maxFeeFor,
+  budgetFeeFor,
   gasLimitsFromSimulation,
   loadClaims,
   mergeClaims,
@@ -506,8 +506,16 @@ class PrivateWallet {
     if (AZTEC_WALLET_CONFIG.network === 'mainnet') {
       const state = await this.refreshFeeJuice();
       const sponsored = state.plan !== 'claim' ? await this.trySponsor() : null;
+      // Some Fee Juice, but less than the budget: creation runs with estimated gas limits, which
+      // usually need far less. The node refuses it if they are not covered, and nothing is lost.
+      const readyClaim = state.plan === 'top-up' ? state.claims.find((c) => c.ready)?.claim : undefined;
       if (sponsored) {
         fee = sponsored;
+      } else if (state.plan === 'top-up' && state.balance > 0n) {
+        fee = undefined;
+      } else if (readyClaim) {
+        fee = { paymentMethod: this.claimMethod(readyClaim) };
+        consumed = readyClaim;
       } else if (state.plan !== 'claim') {
         this.set({
           phase: 'needs-fee-juice',
@@ -753,7 +761,7 @@ class PrivateWallet {
     );
     const minForTx = await this.node
       .getCurrentMinFees()
-      .then((f: any) => maxFeeFor({ feePerL2Gas: BigInt(f.feePerL2Gas.toString()), feePerDaGas: BigInt(f.feePerDaGas.toString()) }))
+      .then((f: any) => budgetFeeFor({ feePerL2Gas: BigInt(f.feePerL2Gas.toString()), feePerDaGas: BigInt(f.feePerDaGas.toString()) }))
       .catch(() => 0n);
     const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: balance, minBalance: minForTx > 0n ? minForTx : 1n, claims }).kind;
     const state: FeeJuiceState = { balance, claims, plan, minForTx };
@@ -803,7 +811,11 @@ class PrivateWallet {
     // Some Fee Juice, but less than the protocol-maximum fee: a transfer with estimated gas limits
     // usually costs far less, so it is tried with the account's own balance. The node still refuses
     // it if the balance cannot cover the estimated maximum, and the error says so.
-    if (opts?.estimated && state.plan === 'top-up' && state.balance > 0n) return { fee: undefined };
+    if (opts?.estimated && state.plan === 'top-up') {
+      if (state.balance > 0n) return { fee: undefined };
+      const ready = state.claims.find((c) => c.ready)?.claim;
+      if (ready) return { fee: { paymentMethod: this.claimMethod(ready) }, consumes: ready };
+    }
     const sponsored = await this.trySponsor();
     if (sponsored) return { fee: sponsored };
     throw new Error(

@@ -224,6 +224,21 @@ export function maxFeeFor(minFees: { feePerL2Gas: bigint; feePerDaGas: bigint })
 }
 
 /**
+ * Fee Juice the wallet asks an account to hold before a transaction, now that transactions carry
+ * gas limits estimated from a simulation (gasLimitsFromSimulation): the maximum fee of a
+ * transaction of TX_L2_GAS_BUDGET L2 gas, at twice the node's current minimum fees.
+ * Measured on Alpha, 14 Nov 2026 (Aztecscan, fee / 3.23e12 per L2 gas): a private transfer
+ * about 0.38M L2 gas (block 29895), an issue about 0.51M (29893), a transfer that also claimed a
+ * Fee Juice deposit about 0.88M (29771). The budget of 3M covers those padded, with room for
+ * account creation, which has not been measured yet. A transaction whose estimate fails is sent
+ * with the protocol defaults, and the node then asks for maxFeeFor instead.
+ */
+export const TX_L2_GAS_BUDGET = 3_000_000n;
+export function budgetFeeFor(minFees: { feePerL2Gas: bigint; feePerDaGas: bigint }): bigint {
+  return (TX_L2_GAS_BUDGET * minFees.feePerL2Gas + TX_DA_GAS_LIMIT * minFees.feePerDaGas) * 2n;
+}
+
+/**
  * Gas limits for a transaction from the `gasUsed` a simulation reports (aztec.js 6.0.0,
  * `simulate({ includeMetadata: true })`): each dimension padded by `factor` (25% by default) plus a fixed margin
  * (4,096 DA, 50,000 L2), teardown likewise when there is one. Built with the same Gas class the

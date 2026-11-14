@@ -294,3 +294,15 @@ describe('gasLimitsFromSimulation with a larger pad (sponsored transactions)', (
     expect(r.gasLimits.daGas).toBe(2000 + 4096);
   });
 });
+
+describe('budgetFeeFor (Fee Juice asked before a transaction with estimated gas)', () => {
+  it('is the fee of 3M L2 gas at twice the minimum fees, below the protocol maximum', async () => {
+    const { budgetFeeFor, maxFeeFor } = await import('@/lib/aztec/fee-juice');
+    const AZTEC = 10n ** 18n;
+    // Alpha, 14 Nov 2026: feePerL2Gas 3,234,617,575,557, feePerDaGas 0 → about 19.4 AZTEC (maximum: about 42.3).
+    const fees = { feePerL2Gas: 3_234_617_575_557n, feePerDaGas: 0n };
+    expect(budgetFeeFor(fees)).toBe(3_000_000n * 3_234_617_575_557n * 2n);
+    expect(budgetFeeFor(fees) / AZTEC).toBe(19n);
+    expect(budgetFeeFor(fees) < maxFeeFor(fees)).toBe(true);
+  });
+});
