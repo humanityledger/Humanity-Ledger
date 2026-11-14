@@ -27,8 +27,11 @@ import { exportableLocalStorage } from '@/lib/settings/exportSafety';
 import { wipeLocalChatData } from '@/lib/settings/localWipe';
 import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
-import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
-import { CHAT_THEMES, findChatTheme } from '@/lib/chat/themes';
+import { ThemePickerSheet, type AppearanceTab } from './ThemePickerSheet';
+import { findChatTheme } from '@/lib/chat/themes';
+import { resolveWallpaper } from '@/lib/chat/wallpapers';
+import { BUBBLE_STYLES } from '@/lib/chat/bubbleStyles';
+import { setStickerEffectsEnabled, stickerEffectsEnabled } from './StickerSceneHost';
 import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
 
 function downloadSettingsBackup(): void {
@@ -342,6 +345,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   const [activeTab, setActiveTab] = useState<string>('home');
   const [modal, setModal] = useState<string | null>(null);
+  // The Appearance studio (theme, wallpaper, bubbles), opened on one of its tabs.
+  const [studio, setStudio] = useState<AppearanceTab | null>(null);
+  // Full-chat sticker moments, per device (components/chat/StickerSceneHost.tsx).
+  const [stickerFx, setStickerFx] = useState(true);
+  useEffect(() => { setStickerFx(stickerEffectsEnabled()); }, []);
   const [copied, setCopied] = useState(false);
   // ── Profile Photo ──────────────────────────────────────────────────────────
   const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -993,13 +1001,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   icon={<Palette size={18} />}
                   label="Color theme"
                   value={findChatTheme(settings.chat_theme).label}
-                  onTap={() => setModal('color_theme')}
+                  onTap={() => setStudio('theme')}
                 />
                 <Row
                   icon={<Sun size={18} />}
                   label="Chat wallpaper"
-                  value={WALLPAPER_OPTIONS.find(w => w.background === settings.chat_background || w.id === settings.chat_background)?.label || 'Default'}
-                  onTap={() => setModal('wallpaper')}
+                  value={(() => { const w = resolveWallpaper(settings.chat_background); return !w || w.id === 'default' ? 'Theme' : w.label; })()}
+                  onTap={() => setStudio('wallpaper')}
                 />
                 <Row
                   icon={<FileText size={18} />}
@@ -1016,8 +1024,15 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<MessageSquare size={18} />}
                   label="Bubble style"
-                  value={settings.bubble_style ? (settings.bubble_style.charAt(0).toUpperCase() + settings.bubble_style.slice(1)) : 'Default'}
-                  onTap={() => setModal('bubble_style')}
+                  value={BUBBLE_STYLES.find(b => b.id === settings.bubble_style)?.label ?? 'Default'}
+                  onTap={() => setStudio('bubbles')}
+                />
+                <Row
+                  icon={<Star size={18} />}
+                  label="Sticker effects"
+                  sublabel="Stickers play a full-chat moment when they arrive (this device)"
+                  toggle={stickerFx}
+                  onToggle={v => { setStickerFx(v); setStickerEffectsEnabled(v); }}
                 />
               </Group>
 
@@ -1273,6 +1288,19 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {/* ════════════════════════════════════════════════════════════════════════
           MODALS (Bottom Sheet)
       ════════════════════════════════════════════════════════════════════════ */}
+      <ThemePickerSheet
+        open={studio !== null}
+        initialTab={studio ?? 'theme'}
+        currentThemeId={findChatTheme(settings.chat_theme).id}
+        currentBubbleStyle={settings.bubble_style || 'default'}
+        currentWallpaper={settings.chat_background || 'default'}
+        wallpaperScope="All chats (a chat's own wallpaper still wins)"
+        onSelectTheme={(t) => updateSetting('chat_theme', t.id as any)}
+        onSelectBubbleStyle={(id) => updateSetting('bubble_style', id as any)}
+        onSelectWallpaper={(w) => updateSetting('chat_background', w.id as any)}
+        onClose={() => setStudio(null)}
+      />
+
       <AnimatePresence>
         {modal && (
           <motion.div
@@ -1399,82 +1427,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               )}
 
-              {/* ── Color Theme ── */}
-              {modal === 'color_theme' && (
-                <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Color theme</h3>
-                  <p className="text-[13px] text-[#727a88] mb-5">Colours for your conversations: the background and both kinds of bubble.</p>
-                  <div className="grid grid-cols-2 gap-3 mb-4" role="radiogroup" aria-label="Color theme">
-                    {CHAT_THEMES.map(p => {
-                      const isSel = findChatTheme(settings.chat_theme).id === p.id;
-                      return (
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={isSel}
-                          key={p.id}
-                          onClick={() => {
-                            updateSetting('chat_theme', p.id as any);
-                            setModal(null);
-                          }}
-                          className={`p-2.5 rounded-2xl text-left transition-shadow ${
-                            isSel ? 'bg-[#f7f8fa] shadow-[inset_0_0_0_2px_#15171c]' : 'bg-white shadow-[inset_0_0_0_1px_#e4e7ec] hover:shadow-[inset_0_0_0_1px_#c9ced6]'
-                          }`}
-                        >
-                          <span className="block w-full h-10 rounded-lg mb-2 relative overflow-hidden" style={{ backgroundColor: p.canvas }} aria-hidden="true">
-                            <span className="absolute left-2 top-2 h-3 w-[46%] rounded-full" style={{ backgroundColor: p.received, boxShadow: `inset 0 0 0 1px ${p.border}` }} />
-                            <span className="absolute right-2 bottom-2 h-3 w-[40%] rounded-full" style={{ backgroundColor: p.accent }} />
-                          </span>
-                          <span className="flex items-center justify-between px-0.5">
-                            <span className="text-[13px] font-medium text-[#15171c]">{p.label}</span>
-                            {isSel && <Check size={14} className="text-[#15171c]" aria-hidden="true" />}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Wallpaper ── */}
-              {modal === 'wallpaper' && (
-                <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Chat wallpaper</h3>
-                  <p className="text-[13px] text-[#727a88] mb-5">Select a background texture, color, or gradient for your conversations.</p>
-                  <div className="grid grid-cols-3 gap-2.5 max-h-[380px] overflow-y-auto pr-1 mb-4">
-                    {WALLPAPER_OPTIONS.map(opt => {
-                      const isSel = (settings.chat_background || 'default') === opt.id || settings.chat_background === opt.background;
-                      return (
-                        <button
-                          type="button"
-                          key={opt.id}
-                          onClick={() => {
-                            updateSetting('chat_background', opt.background as any);
-                            setModal(null);
-                            toast.success(`Wallpaper: ${opt.label}`);
-                          }}
-                          className={`relative rounded-xl overflow-hidden border-2 text-left transition-all ${
-                            isSel ? 'border-[#15171c] shadow-md scale-[1.02]' : 'border-transparent hover:border-black/10'
-                          }`}
-                        >
-                          <div className="w-full h-16" style={opt.preview} />
-                          <div className="bg-white px-2 py-1 text-center">
-                            <span className="text-[11px] font-medium text-[#15171c] truncate block">
-                              {opt.label}
-                            </span>
-                          </div>
-                          {isSel && (
-                            <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#15171c] flex items-center justify-center">
-                              <Check size={9} strokeWidth={3} className="text-white" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               {/* ── Font Family ── */}
               {modal === 'font_family' && (
                 <div className="px-6 pb-6">
@@ -1511,35 +1463,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       </button>
                     );
                   })}
-                </div>
-              )}
-
-              {/* ── Bubble Style ── */}
-              {modal === 'bubble_style' && (
-                <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Bubble style</h3>
-                  {[
-                    { id: 'default',   label: 'Default',   desc: 'Rounded corners, comfortable padding' },
-                    { id: 'glass',     label: 'Glass',     desc: 'Frosted glass with blur effect' },
-                    { id: 'gradient',  label: 'Gradient',  desc: 'Smooth color gradient on sent bubbles' },
-                    { id: 'rounded',   label: 'Pill',      desc: 'Fully rounded pill-shaped bubbles' },
-                    { id: 'minimal',   label: 'Minimal',   desc: 'Clean lines, no heavy backgrounds' },
-                    { id: 'brutalist', label: 'Brutalist', desc: 'Bold borders, raw typography' },
-                    { id: 'cyberpunk', label: 'Cyberpunk', desc: 'Neon accents, angular corners' },
-                  ].map(style => (
-                    <button
-                      type="button"
-                      key={style.id}
-                      onClick={() => { updateSetting('bubble_style', style.id as any); setModal(null); toast.success('Saved'); }}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 ${(settings.bubble_style || 'default') === style.id ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c]'}`}
-                    >
-                      <div className="text-left">
-                        <p className="font-semibold">{style.label}</p>
-                        <p className={`text-[12px] mt-0.5 ${(settings.bubble_style || 'default') === style.id ? 'text-white/70' : 'text-[#727a88]'}`}>{style.desc}</p>
-                      </div>
-                      {(settings.bubble_style || 'default') === style.id && <Check size={18} />}
-                    </button>
-                  ))}
                 </div>
               )}
 

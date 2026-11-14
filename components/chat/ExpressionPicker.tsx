@@ -5,7 +5,8 @@
  *
  * - Emojis: emoji-picker-react with the system's own emoji font (on iPhone and Mac that is
  *   Apple's set), recent emojis first; picking one adds it to the message being written.
- * - Stickers: Ledger Chat's own pack (lib/chat/stickers.ts); one tap sends it.
+ * - Stickers: Ledger Chat's own packs (lib/chat/stickers.ts), one tab per pack; one tap sends it,
+ *   and most stickers play a full-chat moment when they land (components/chat/StickerSceneHost.tsx).
  * - GIFs: GIPHY through /api/gifs (trending, then search as you type), two-column masonry,
  *   with the "Powered by GIPHY" attribution GIPHY requires; one tap sends it.
  */
@@ -16,7 +17,7 @@ import { Loader2, Search } from 'lucide-react';
 // Types only: importing the enums would pull the whole picker (and its emoji data) into the chat
 // bundle; it is loaded with next/dynamic when the picker opens.
 import type { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react';
-import { LEDGER_STICKERS, stickerMessage } from '@/lib/chat/stickers';
+import { STICKER_PACKS, stickerFile, stickerMessage } from '@/lib/chat/stickers';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false, loading: () => <Spinner /> });
 
@@ -123,23 +124,63 @@ function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
   );
 }
 
+const LAST_PACK_KEY = 'ledger_sticker_pack';
+
 function StickerTab({ onSend }: { onSend: (c: string) => void }) {
+  const [packId, setPackId] = useState<string>(() => {
+    try {
+      const v = localStorage.getItem(LAST_PACK_KEY);
+      if (v && STICKER_PACKS.some(p => p.id === v)) return v;
+    } catch { /* ignore */ }
+    return STICKER_PACKS[0].id;
+  });
+  const pack = STICKER_PACKS.find(p => p.id === packId) ?? STICKER_PACKS[0];
+  const choose = (id: string) => {
+    setPackId(id);
+    try { localStorage.setItem(LAST_PACK_KEY, id); } catch { /* ignore */ }
+  };
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
-      <p className="px-1 pt-1 pb-2 text-[12.5px] font-medium text-[#727a88]">Ledger</p>
-      <div className="grid grid-cols-4 gap-1.5">
-        {LEDGER_STICKERS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => onSend(stickerMessage('ledger', s.id))}
-            title={s.label}
-            aria-label={`Send sticker: ${s.label}`}
-            className="aspect-square rounded-2xl hover:bg-[#f2f4f7] active:scale-95 transition-transform flex items-center justify-center p-1"
-          >
-            <img src={`/stickers/ledger/${s.id}.svg`} alt="" className="w-full h-full object-contain" draggable={false} />
-          </button>
-        ))}
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex gap-1.5 px-2.5 pb-2 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Sticker packs">
+        {STICKER_PACKS.map(p => {
+          const on = p.id === pack.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              title={p.name}
+              onClick={() => choose(p.id)}
+              className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${on ? 'bg-[#f2f4f7] shadow-[inset_0_0_0_2px_#15171c]' : 'hover:bg-[#f2f4f7]'}`}
+            >
+              <img src={stickerFile(p.id, p.cover)} alt={p.name} className="w-9 h-9 object-contain" draggable={false} />
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
+        <div className="px-1 pt-0.5 pb-2.5">
+          <p className="text-[13.5px] font-semibold text-[#15171c] flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pack.accent }} aria-hidden="true" />
+            {pack.name}
+          </p>
+          <p className="text-[12px] text-[#727a88] leading-snug mt-0.5">{pack.description}</p>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {pack.stickers.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onSend(stickerMessage(pack.id, s.id))}
+              title={s.scene ? `${s.label} · plays an effect` : s.label}
+              aria-label={`Send sticker: ${s.label}`}
+              className="group relative aspect-square rounded-2xl hover:bg-[#f2f4f7] active:scale-95 transition-transform flex items-center justify-center p-1"
+            >
+              <img src={stickerFile(pack.id, s.id)} alt="" className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-[1.06]" draggable={false} loading="lazy" />
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

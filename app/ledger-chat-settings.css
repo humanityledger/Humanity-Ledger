@@ -65,12 +65,12 @@
    "default" adds nothing, so Classic is exactly the original look. Styles
    with their own fixed colours (Minimal is unboxed, Terminal is neon on
    black) are left as they are. */
-[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-sent:not(.msg-bubble-plain):not(.msg-bubble-fixed) {
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-sent:not(.msg-bubble-plain):not(.msg-bubble-fixed):not(.msg-bubble-own) {
   background: var(--lc-accent) !important;
   color: var(--lc-on-accent) !important;
   border-color: transparent !important;
 }
-[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-plain):not(.msg-bubble-fixed) {
+[data-chat-theme]:not([data-chat-theme="default"]) .msg-bubble-recv:not(.msg-bubble-plain):not(.msg-bubble-fixed):not(.msg-bubble-own) {
   background: var(--lc-bubble-received) !important;
   color: var(--lc-text-primary) !important;
   border-color: var(--lc-border) !important;
@@ -88,3 +88,153 @@
 [data-chat-theme]:not([data-chat-theme="default"]) .msg-meta .msg-time,
 [data-chat-theme]:not([data-chat-theme="default"]) .msg-meta .msg-tick { color: var(--lc-meta) !important; }
 [data-chat-theme]:not([data-chat-theme="default"]) .msg-meta .msg-read { color: var(--lc-read) !important; }
+
+
+/* ── Bubble styles (lib/chat/bubbleStyles.ts) ───────────────────────────────
+   Drawn here, not with Tailwind utilities: lib/ is outside Tailwind's content
+   paths. `bs-<id>` is the style; msg-bubble-sent / -recv say whose message it
+   is. A colour theme recolours the flat styles through the rules above; the
+   styles marked msg-bubble-own paint with the theme's variables themselves
+   (gradients, glass, glow), so Classic keeps its ink colours through the
+   fallbacks. White text on every sent fill stays at or above the theme's own
+   accent contrast: fills only darken the accent, never lighten it. */
+.bs { position: relative; }
+.bs.msg-bubble-sent { background: #15171c; color: #fff; }
+.bs.msg-bubble-recv { background: #fff; color: #15171c; border: 1px solid #e6e8ec; }
+
+.bs-default.msg-bubble-sent { border-radius: 20px 20px 6px 20px; }
+.bs-default.msg-bubble-recv { border-radius: 20px 20px 20px 6px; }
+
+.bs-rounded { border-radius: 24px; }
+
+.bs-soft { border-radius: 22px; }
+.bs-soft.msg-bubble-recv { border-color: transparent; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 16px -10px rgba(16, 24, 40, 0.22); }
+.bs-soft.msg-bubble-sent { box-shadow: 0 8px 18px -12px rgba(16, 24, 40, 0.5); }
+
+.bs-sharp { border-radius: 8px; }
+.bs-sharp.msg-bubble-sent { border-radius: 8px 8px 2px 8px; }
+.bs-sharp.msg-bubble-recv { border-radius: 8px 8px 8px 2px; }
+
+/* Classic tail: a hook drawn in the bubble's own colour, whatever the theme. */
+.bs-tail { border-radius: 19px; }
+.bs-tail.msg-bubble-sent { border-bottom-right-radius: 5px; margin-right: 6px; }
+.bs-tail.msg-bubble-recv { border-bottom-left-radius: 5px; margin-left: 6px; border-color: transparent; box-shadow: 0 1px 1.5px rgba(16, 24, 40, 0.08); }
+.bs-tail::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 15px;
+  height: 17px;
+  background: inherit;
+  pointer-events: none;
+}
+.bs-tail.msg-bubble-sent::after { right: -7px; clip-path: path('M0 0 C0 8 3.5 14 15 17 C8 17.6 2.6 16.4 0 14.4 Z'); }
+.bs-tail.msg-bubble-recv::after { left: -7px; clip-path: path('M15 0 C15 8 11.5 14 0 17 C7 17.6 12.4 16.4 15 14.4 Z'); }
+
+.bs-elevated { border-radius: 20px; }
+.bs-elevated.msg-bubble-sent { border-bottom-right-radius: 8px; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 2px 4px rgba(16, 24, 40, 0.12), 0 14px 26px -14px rgba(16, 24, 40, 0.55); }
+.bs-elevated.msg-bubble-recv { border-bottom-left-radius: 8px; border-color: transparent; box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 14px 26px -16px rgba(16, 24, 40, 0.35); }
+
+/* Own paint: gradient, aurora, glow, glass, tinted. */
+.bs-gradient { border-radius: 20px; }
+.bs-gradient.msg-bubble-sent {
+  border-bottom-right-radius: 6px;
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(135deg, var(--lc-accent, #2d2f36), color-mix(in srgb, var(--lc-accent, #15171c) 62%, #000));
+}
+.bs-gradient.msg-bubble-recv { border-bottom-left-radius: 6px; background: var(--lc-bubble-received, #fff); color: var(--lc-text-primary, #15171c); border-color: var(--lc-border, #e6e8ec); }
+
+.bs-aurora { border-radius: 20px; }
+.bs-aurora.msg-bubble-sent {
+  border-bottom-right-radius: 6px;
+  color: #fff;
+  background-image: linear-gradient(115deg,
+    var(--lc-accent, #15171c),
+    color-mix(in oklab, var(--lc-accent, #15171c) 55%, #3b0764),
+    color-mix(in oklab, var(--lc-accent, #15171c) 55%, #0c4a6e),
+    var(--lc-accent, #15171c));
+  background-size: 300% 100%;
+  animation: bs-aurora 9s ease-in-out infinite;
+}
+.bs-aurora.msg-bubble-recv {
+  border-bottom-left-radius: 6px;
+  background: var(--lc-bubble-received, #fff);
+  color: var(--lc-text-primary, #15171c);
+  border: 1px solid transparent;
+  background-image: linear-gradient(var(--lc-bubble-received, #fff), var(--lc-bubble-received, #fff)),
+    linear-gradient(115deg, color-mix(in srgb, var(--lc-accent, #15171c) 45%, transparent), color-mix(in srgb, var(--lc-accent, #15171c) 10%, transparent));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+@keyframes bs-aurora { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+.bs-glow { border-radius: 20px; }
+.bs-glow.msg-bubble-sent {
+  border-bottom-right-radius: 6px;
+  color: #fff;
+  background: var(--lc-accent, #15171c);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lc-accent, #15171c) 70%, #fff), 0 8px 26px -6px color-mix(in srgb, var(--lc-accent, #15171c) 75%, transparent);
+}
+.bs-glow.msg-bubble-recv {
+  border-bottom-left-radius: 6px;
+  background: var(--lc-bubble-received, #fff);
+  color: var(--lc-text-primary, #15171c);
+  border: 1px solid color-mix(in srgb, var(--lc-accent, #15171c) 28%, var(--lc-border, #e6e8ec));
+  box-shadow: 0 6px 22px -10px color-mix(in srgb, var(--lc-accent, #15171c) 45%, transparent);
+}
+
+.bs-glass { border-radius: 20px; -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); }
+.bs-glass.msg-bubble-sent {
+  border-bottom-right-radius: 6px;
+  color: #fff;
+  background: color-mix(in srgb, var(--lc-accent, #15171c) 88%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 20px -12px rgba(16, 24, 40, 0.45);
+}
+.bs-glass.msg-bubble-recv {
+  border-bottom-left-radius: 6px;
+  color: var(--lc-text-primary, #15171c);
+  background: color-mix(in srgb, var(--lc-bubble-received, #fff) 80%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 55%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 20px -14px rgba(16, 24, 40, 0.35);
+}
+
+/* Tinted: both bubbles are light, tinted with the accent; text stays the theme's own text colour. */
+.bs-tinted { border-radius: 18px; }
+.bs-tinted.msg-bubble-sent {
+  border-bottom-right-radius: 6px;
+  color: var(--lc-text-primary, #15171c);
+  background: color-mix(in srgb, var(--lc-accent, #15171c) 14%, var(--lc-bubble-received, #fff));
+  border: 1px solid color-mix(in srgb, var(--lc-accent, #15171c) 30%, transparent);
+}
+.bs-tinted.msg-bubble-recv { border-bottom-left-radius: 6px; background: var(--lc-bubble-received, #fff); color: var(--lc-text-primary, #15171c); border-color: var(--lc-border, #e6e8ec); }
+/* Inside a tinted sent bubble the replies and links use the received colours. */
+.bs-tinted.msg-bubble-sent .text-white, .bs-tinted.msg-bubble-sent [class*="text-white/"] { color: var(--lc-text-primary, #15171c) !important; }
+.bs-tinted.msg-bubble-sent [class*="bg-white/"] { background: color-mix(in srgb, var(--lc-text-primary, #15171c) 7%, transparent) !important; }
+
+.bs-minimal { background: transparent !important; border: 0; border-radius: 0; padding-bottom: 4px; }
+.bs-minimal.msg-bubble-sent { color: #15171c; border-bottom: 1px solid rgba(21, 23, 28, 0.2); }
+.bs-minimal.msg-bubble-recv { color: #15171c; border-bottom: 1px solid #e6e8ec; }
+
+.bs-brutalist { border-radius: 0; border: 2px solid #15171c; }
+.bs-brutalist.msg-bubble-sent { box-shadow: 3px 3px 0 #000; }
+.bs-brutalist.msg-bubble-recv { box-shadow: 3px 3px 0 #e4e7ec; border-color: #15171c; }
+
+.bs-cyberpunk { border-radius: 4px; }
+.bs-cyberpunk.msg-bubble-sent { background: #0a0a0a; color: #39ff14; border: 1px solid rgba(57, 255, 20, 0.6); box-shadow: 0 0 8px rgba(57, 255, 20, 0.25); }
+.bs-cyberpunk.msg-bubble-recv { background: #111; color: #00d4ff; border: 1px solid rgba(0, 212, 255, 0.5); box-shadow: 0 0 8px rgba(0, 212, 255, 0.2); }
+
+@media (prefers-reduced-motion: reduce) { .bs-aurora.msg-bubble-sent { animation: none; } }
+
+/* ── Dark wallpapers ───────────────────────────────────────────────────────
+   On a dark wallpaper (lib/chat/wallpapers.ts, tone "dark") the time, ticks
+   and day dividers that sit on the canvas are drawn light, whatever the
+   theme, with a soft shadow for the busy parts of a scene. */
+[data-wallpaper-tone="dark"] .msg-meta .msg-time,
+[data-wallpaper-tone="dark"] .msg-meta .msg-tick { color: rgba(255, 255, 255, 0.82) !important; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+[data-wallpaper-tone="dark"] .msg-meta .msg-read { color: #ffffff !important; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.45)); }
+[data-wallpaper-tone="dark"] .bs-minimal { color: #fff !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+/* On a light wallpaper (gradients, scenes) the time gets a soft light halo. */
+[data-wallpaper-tone="light"] .msg-meta .msg-time { text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9); }

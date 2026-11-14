@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+<filter id="cut" x="-15%" y="-15%" width="130%" height="135%" color-interpolation-filters="sRGB">
+<feMorphology in="SourceAlpha" operator="dilate" radius="10" result="d"/>
+<feFlood flood-color="#ffffff"/><feComposite in2="d" operator="in" result="edge"/>
+<feGaussianBlur in="d" stdDeviation="7" result="b"/><feOffset in="b" dy="9" result="o"/>
+<feFlood flood-color="#1c1835" flood-opacity=".24"/><feComposite in2="o" operator="in" result="shadow"/>
+<feMerge><feMergeNode in="shadow"/><feMergeNode in="edge"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+<linearGradient id="spikeG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9be15d"/><stop offset=".55" stop-color="#4caf50"/><stop offset="1" stop-color="#2e7d32"/></linearGradient>
+<linearGradient id="potG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f08a5d"/><stop offset=".6" stop-color="#d2603a"/><stop offset="1" stop-color="#a8462a"/></linearGradient>
+</defs>
+<style>
+.bob{animation:bob 2.6s ease-in-out infinite;transform-box:view-box;transform-origin:256px 400px}
+.bob-fast{animation:bob 1.4s ease-in-out infinite}
+.blink{animation:blink 4.2s infinite;transform-box:fill-box;transform-origin:center}
+.wave{animation:wave 1.1s ease-in-out infinite}
+.pulse{animation:pulse 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.twinkle{animation:twinkle 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.twinkle-slow{animation:twinkle 3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.spin-slow{animation:spin 24s linear infinite;transform-box:fill-box;transform-origin:center}
+.tear{animation:tear 1.2s ease-in infinite}
+.zz{animation:zz 2.4s ease-in-out infinite}
+.steam{animation:steam 2s ease-in-out infinite}
+.flicker{animation:flicker .5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
+.flip{animation:flip 1.6s linear infinite;transform-box:fill-box;transform-origin:center}
+.pop{animation:popin 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.push{animation:push 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.shake{animation:shake .32s linear infinite}
+.sway{animation:sway 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.speed{animation:speed .6s linear infinite}
+.drip{animation:drip 1.6s ease-in infinite}
+.dot{animation:dot 1.2s ease-in-out infinite}.d2{animation-delay:.15s}.d3{animation-delay:.3s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+@keyframes wave{0%,100%{transform:rotate(0)}50%{transform:rotate(-22deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+@keyframes twinkle{0%,100%{transform:scale(.86) rotate(0);opacity:.85}50%{transform:scale(1.1) rotate(12deg);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes tear{0%{stroke-dasharray:0 200;opacity:0}20%{opacity:.95}100%{stroke-dasharray:90 200;opacity:.2}}
+@keyframes zz{0%,100%{transform:translateY(0);opacity:.75}50%{transform:translateY(-12px);opacity:1}}
+@keyframes steam{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(-8px);opacity:1}}
+@keyframes flicker{to{transform:scaleY(1.08) skewX(-3deg)}}
+@keyframes flip{0%{transform:scaleX(1)}50%{transform:scaleX(.15)}100%{transform:scaleX(1)}}
+@keyframes popin{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes push{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes speed{0%{transform:translateX(18px);opacity:0}30%{opacity:1}100%{transform:translateX(-18px);opacity:0}}
+@keyframes drip{0%{transform:translateY(0);opacity:1}100%{transform:translateY(22px);opacity:0}}
+@keyframes dot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<g filter="url(#cut)"><g class="bob"><g transform="translate(256 220) scale(0.9359999999999999)"><g transform="translate(-66 0) rotate(140)"><g transform="scale(1 -1)"><rect x="-16" y="-16" width="68" height="32" rx="16" fill="url(#spikeG)"/><rect x="36" y="-16" width="35.2" height="32" rx="16" fill="url(#spikeG)" transform="rotate(70 36 0)"/><ellipse cx="23.400000000000002" cy="-7.04" rx="15.6" ry="4.48" fill="#fff" opacity=".35"/></g></g><g transform="translate(66 0) rotate(-20)"><g transform=""><rect x="-16" y="-16" width="68" height="32" rx="16" fill="url(#spikeG)"/><ellipse cx="23.400000000000002" cy="-7.04" rx="15.6" ry="4.48" fill="#fff" opacity=".35"/></g></g><path d="M-74 104 H74 L60 176 Q58 186 46 186 H-46 Q-58 186 -60 176Z" fill="url(#potG)"/><rect x="-84" y="92" width="168" height="30" rx="12" fill="#e9774c"/><rect x="-84" y="92" width="168" height="10" rx="5" fill="#fff" opacity=".22"/>
+<rect x="-70" y="-138" width="140" height="244" rx="70" fill="url(#spikeG)"/>
+<path d="M-30 -126 V96 M0 -136 V104 M30 -126 V96" stroke="#256b2a" stroke-opacity=".28" stroke-width="5" stroke-linecap="round"/>
+<rect x="-56" y="-118" width="26" height="150" rx="13" fill="#fff" opacity=".28"/><path d="M-46 -70 l-7 -6 M-46 -70 l7 -6 M-46 -70 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M44 -84 l-7 -6 M44 -84 l7 -6 M44 -84 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M-50 0 l-7 -6 M-50 0 l7 -6 M-50 0 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M52 -20 l-7 -6 M52 -20 l7 -6 M52 -20 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M-40 60 l-7 -6 M-40 60 l7 -6 M-40 60 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M46 50 l-7 -6 M46 50 l7 -6 M46 50 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M-8 -112 l-7 -6 M-8 -112 l7 -6 M-8 -112 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M10 20 l-7 -6 M10 20 l7 -6 M10 20 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M-14 -40 l-7 -6 M-14 -40 l7 -6 M-14 -40 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M20 84 l-7 -6 M20 84 l7 -6 M20 84 v-9" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/>
+<g transform="translate(18 -142)"><ellipse rx="11" ry="17" cy="-14" fill="#ff6fa8" transform="rotate(0)"/><ellipse rx="11" ry="17" cy="-14" fill="#ff6fa8" transform="rotate(72)"/><ellipse rx="11" ry="17" cy="-14" fill="#ff6fa8" transform="rotate(144)"/><ellipse rx="11" ry="17" cy="-14" fill="#ff6fa8" transform="rotate(216)"/><ellipse rx="11" ry="17" cy="-14" fill="#ff6fa8" transform="rotate(288)"/><circle r="9" fill="#ffd23f"/></g><g transform="translate(0 -22)"><ellipse cx="-50.9" cy="20.9" rx="15.2" ry="9.5" fill="#ff8fab" opacity=".75" filter="url(#soft)"/><ellipse cx="50.9" cy="20.9" rx="15.2" ry="9.5" fill="#ff8fab" opacity=".75" filter="url(#soft)"/><path d="M-42.35 -28.5 L-17.65 -25.65" stroke="#2a2433" stroke-width="5.7" stroke-linecap="round"/><path d="M17.65 -30.4 Q30 -41.8 42.35 -34.2" fill="none" stroke="#2a2433" stroke-width="5.7" stroke-linecap="round"/><path d="M-42.35 -0.95 H-17.65 A12.35 12.35 0 0 1 -42.35 -0.95Z" fill="#2a2433"/><path d="M-45.2 -1.9 H-14.8" stroke="#2a2433" stroke-width="4.75" stroke-linecap="round"/><circle cx="-33.8" cy="4.75" r="2.85" fill="#fff"/><path d="M17.65 -0.95 H42.35 A12.35 12.35 0 0 1 17.65 -0.95Z" fill="#2a2433"/><path d="M14.8 -1.9 H45.2" stroke="#2a2433" stroke-width="4.75" stroke-linecap="round"/><circle cx="26.2" cy="4.75" r="2.85" fill="#fff"/><g transform="translate(0 28.5)"><path d="M-13.3 3.8 Q3.8 9.5 15.2 -5.7" fill="none" stroke="#2a2433" stroke-width="5.7" stroke-linecap="round" stroke-linejoin="round"/></g></g></g><g transform="translate(272 64) rotate(8) scale(0.85)"><g class="twinkle-slow"><path d="M-50 20 L-56 -30 L-26 -4 L0 -44 L26 -4 L56 -30 L50 20Z" fill="#ffcf3f" stroke="#e09b14" stroke-width="4" stroke-linejoin="round"/><rect x="-50" y="16" width="100" height="16" rx="6" fill="#f2b51c"/><circle cx="0" cy="-12" r="7" fill="#ff5c8a"/><circle cx="-30" cy="6" r="5" fill="#4fc3f7"/><circle cx="30" cy="6" r="5" fill="#4fc3f7"/><path d="M-40 -18 l10 12" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".7"/></g></g><g transform="translate(96 120) scale(0.9)"><g class="twinkle"><path d="M0 -32 C3.84 -9.6 9.6 -3.84 32 0 C9.6 3.84 3.84 9.6 0 32 C-3.84 9.6 -9.6 3.84 -32 0 C-9.6 -3.84 -3.84 -9.6 0 -32Z" fill="#ffe066" stroke="#fff" stroke-width="4"/></g></g><g transform="translate(430 170) scale(0.7)"><g class="twinkle"><path d="M0 -32 C3.84 -9.6 9.6 -3.84 32 0 C9.6 3.84 3.84 9.6 0 32 C-3.84 9.6 -9.6 3.84 -32 0 C-9.6 -3.84 -3.84 -9.6 0 -32Z" fill="#ffe066" stroke="#fff" stroke-width="4"/></g></g></g><text x="256" y="476" text-anchor="middle" font-family="Avenir Next Rounded, Arial Rounded MT Bold, Nunito, Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-weight="900" font-size="56" letter-spacing="0.5" fill="#e09b14" stroke="#fff" stroke-width="16" stroke-linejoin="round" paint-order="stroke">Queen</text></g>
+</svg>

@@ -4,6 +4,8 @@
 
 > **Normative Authority Notice**: This document is the authoritative specification for the Humanity Ledger protocol. Protocol implementations are conformant only when every acceptance criterion (A1–A7) is met and demonstrated by automated verification suites. All documentation, status trackers, and public materials are subordinate to this specification.
 
+> **Deployment status (14 November 2026).** The private payment path of this specification runs on Aztec Alpha (Ethereum L1 chain 1): the first private payment from Ledger Chat on Aztec Alpha, 14 November 2026: transfer `0x1eb2bb76…40a5` in L2 block 29012 (HLC `0x1f49571a…24e5` deployed in block 28992), confirmed by the mainnet preflight run 43583640304. Acceptance criteria that name the Aztec testnet remain the reproducible path for outside reviewers; the record above is in `deployments/aztec-mainnet.json`.
+
 ---
 
 ## 1. Threat Model

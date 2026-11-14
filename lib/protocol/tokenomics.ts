@@ -87,15 +87,17 @@ export interface LaunchCondition {
   /** Met today? Each is set to true only with evidence recorded in the repository. */
   met: boolean;
   evidence: string;
+  /** The next concrete step, and who or what funds it. Plain text, shown in the docs. */
+  next: string;
 }
 
 /** Non-negotiable. HLC is not launched while any of these is false. */
 export const LAUNCH_CONDITIONS: readonly LaunchCondition[] = [
-  { id: 'fee-contract', label: 'Fee contract deployed on Aztec Alpha and externally audited', met: false, evidence: 'deployments/aztec-mainnet.json: no fee contract, audit null' },
-  { id: 'six-months-fees', label: 'Six months of real fees visible on /protocol', met: false, evidence: '/protocol: protocol fees not deployed' },
-  { id: 'supply-locked', label: 'Supply fixed: minters revoked, admin renounced, allocations in a verified multisig', met: false, evidence: '/protocol: HLC admin is live' },
-  { id: 'legal-opinion', label: 'Legal opinion on MiCA / ESMA classification and a notified white paper', met: false, evidence: 'docs/PENDING_STEFAN.md' },
-  { id: 'no-vc', label: 'No venture capital and no private round, ever', met: true, evidence: 'ALLOCATIONS: no investor allocation' },
+  { id: 'fee-contract', label: 'Fee contract deployed on Aztec Alpha and externally audited', met: false, evidence: 'deployments/aztec-mainnet.json: no fee contract, audit null', next: 'Write the fee contract against the Phase 0 arithmetic (protocolFee); hardening and an audit-ready package are NLnet deliverables D-4 and D-5 (proposal 2027-01-04e, under review)' },
+  { id: 'six-months-fees', label: 'Six months of real fees visible on /protocol', met: false, evidence: '/protocol: protocol fees not deployed', next: 'Starts counting the day the fee contract is live; /protocol already reads fees on chain and shows "Not deployed" until then' },
+  { id: 'supply-locked', label: 'Supply fixed: minters revoked, admin renounced, allocations in a verified multisig (4 of 7)', met: false, evidence: '/protocol: HLC admin is live', next: 'Set up the 4-of-7 treasury multisig, move the allocations, then revoke minters and renounce the admin on chain' },
+  { id: 'legal-opinion', label: 'Legal opinion on MiCA / ESMA classification and a notified white paper', met: false, evidence: 'docs/PENDING_STEFAN.md', next: 'Engage counsel for the MiCA / ESMA classification; prepare the crypto-asset white paper for notification' },
+  { id: 'no-vc', label: 'No venture capital and no private round, ever', met: true, evidence: 'ALLOCATIONS: no investor allocation', next: 'Keep it: grants such as NLnet fund work, not tokens' },
 ];
 
 export const allocationTotalBps = (): bigint => ALLOCATIONS.reduce((s, a) => s + a.bps, 0n);
