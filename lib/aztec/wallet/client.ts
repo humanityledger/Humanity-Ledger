@@ -532,7 +532,12 @@ class PrivateWallet {
     const id = `deploy-${this.me.toString()}`;
     upsertActivity(this.me.toString(), { id, kind: 'deploy', status: 'proving', createdAt: Date.now() });
     const deploy = await this.manager.getDeployMethod();
-    const receipt = await this.sendAndWait(() => deploy.send({ from: sdk.NO_FROM, fee, wait: sdk.NO_WAIT }), id, 'deploy');
+    // Account creation with estimated gas limits, like transfers: the sponsor refuses a transaction
+    // whose maximum fee (limits x max fee per gas) is above its 40 AZTEC cap, which the protocol's
+    // default limits exceed. If the estimate fails, the defaults are kept.
+    const deployGas = await this.estimatedGasSettings(deploy, sdk.NO_FROM, fee);
+    const deployFee = deployGas ? { ...(fee ?? {}), gasSettings: deployGas } : fee;
+    const receipt = await this.sendAndWait(() => deploy.send({ from: sdk.NO_FROM, fee: deployFee, wait: sdk.NO_WAIT }), id, 'deploy');
     if (!receipt) {
       const detail = this.snapshot.activity.find((a) => a.id === id)?.error;
       throw new Error(detail ? `Your private account could not be created: ${detail}` : 'Your private account could not be created. Please try again.');
@@ -550,10 +555,13 @@ class PrivateWallet {
     if (!m.ledgerSponsorAddress()) return null;
     const fee = await m.sponsoredFee({ sdk: this.sdk, wallet: this.wallet, node: this.node });
     this.sponsorIssue = fee ? '' : m.lastSponsorIssue;
+    if (fee) this.sponsoredFees.add(fee);
     return fee;
   }
   /** Why the Ledger sponsor could not pay the last time it was tried (empty when it could or was not tried). */
   private sponsorIssue = '';
+  /** Fee options that the Ledger sponsor pays (their gas is estimated without the sponsor call). */
+  private sponsoredFees = new WeakSet<object>();
 
   // ── Operator tools for the Ledger sponsor (signed by the operator's own wallets) ──
 
@@ -767,9 +775,14 @@ class PrivateWallet {
    */
   private async estimatedGasSettings(interaction: any, from: any, fee: any): Promise<any | undefined> {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return undefined;
+    // A sponsored fee is estimated without the sponsor's call: with the default limits that call
+    // would refuse the simulation ("fee above cap"), and simulating it would spend no voucher but
+    // gain nothing. The sponsor's own private call (a signature check and one nullifier) is covered by
+    // a larger pad (x2 instead of x1.25).
+    const sponsored = !!fee && typeof fee === 'object' && this.sponsoredFees.has(fee);
     try {
-      const sim = await interaction.simulate({ from, fee, includeMetadata: true, skipFeeEnforcement: true });
-      return gasLimitsFromSimulation(sim?.gasUsed);
+      const sim = await interaction.simulate({ from, fee: sponsored ? undefined : fee, includeMetadata: true, skipFeeEnforcement: true });
+      return gasLimitsFromSimulation(sim?.gasUsed, sponsored ? 2 : 1.25);
     } catch (e) {
       console.warn('[aztec] gas estimate failed; using the default limits:', (e as Error)?.message);
       return undefined;
