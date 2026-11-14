@@ -111,7 +111,36 @@
         "block": 29895,
         "what": "private transfer from the regular wallet screen, with gas limits estimated (#104)",
         "feeAztec": "1.233"
+      },
+      {
+        "txHash": "0x14a71087ff658c6d85d37e11a79b487f46aff73b0eea1b4252ece00ebf8bef49",
+        "block": 29923,
+        "what": "private transfer of 0.01 HLC from an account created with a contact's deposit",
+        "feeAztec": "1.307"
       }
     ]
+  },
+  "newUserFlow": {
+    "$comment": "First run of the path a new user takes, 14 Nov 2026: an account with no AZTEC is given Fee Juice by a contact through a fee link, is created, and sends its first private payment. Both accounts belong to the operator. Values from Etherscan, Aztecscan and the wallet screen; the account-creation hash was not copied, only its block.",
+    "account": "0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a",
+    "contactDeposit": {
+      "l1TxHash": "0x8bb89e6c377f28e055e5d7ff8f5809ddaa60585e63783ab416796d598d022cbd",
+      "l1Block": 26415154,
+      "method": "depositToAztecPublic on the pinned FeeJuicePortal 0x534361be805CA30Bdb6404eC5E6cDAFFB3E9f3b3",
+      "amountAztec": "20",
+      "l1GasUsed": 108854
+    },
+    "accountCreated": {
+      "block": 29921,
+      "feeAztec": "1.7989 (20 deposited, 18.2011 Fee Juice left, read in the wallet)"
+    },
+    "firstPayment": {
+      "txHash": "0x14a71087ff658c6d85d37e11a79b487f46aff73b0eea1b4252ece00ebf8bef49",
+      "block": 29923,
+      "amount": "0.01 HLC",
+      "to": "0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42",
+      "feeAztec": "1.307",
+      "onChain": "3 note hashes, 4 nullifiers, revert code 0, fee payer the new account, payment method Fee Juice"
+    }
   }
 }
