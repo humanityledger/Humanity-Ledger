@@ -46,15 +46,16 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
     const [forceVisible, setForceVisible] = useState(false);
 
     useEffect(() => {
-        // [SOVEREIGN FAIL-SAFE] 
-        // Force system visibility after 4 seconds regardless of state.
-        // This is a zero-trust measure against hydration hangs.
+        // Fail-safe against a hydration hang: if the gate has not opened after 5 s, show the app
+        // anyway. Only while it is still closed: once the app is showing there is nothing to force,
+        // and the warning used to print on every page load.
+        if (state === 'APP' || forceVisible) return;
         const emergency = setTimeout(() => {
-            console.warn('[TitaniumGate] Deadlock detected. Forcing emergency visibility.');
+            console.warn('[TitaniumGate] The gate did not open within 5 s; showing the app.');
             setForceVisible(true);
         }, 5000);
         return () => clearTimeout(emergency);
-    }, []);
+    }, [state, forceVisible]);
     
     // Strict Whitelist: connect, docs, terms, privacy, chat and studio are always visible.
     // /chat handles its own auth — TitaniumGate must not gate them.

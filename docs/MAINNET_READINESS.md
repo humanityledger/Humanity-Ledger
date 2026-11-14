@@ -1,6 +1,6 @@
 # Ledger Chat on Aztec Alpha (mainnet): readiness
 
-**Date:** 5 November 2026, updated 10 and 11 November 2026. **Status (11 November):** one contract of ours is on Aztec Alpha, the operator's token HLC (below); no escrow or stream is. Production runs on Alpha since #41 (until then the Dockerfile declared no `ARG`, so every build used the test network defaults). The private wallet's storage bug (#43) and its dead ends are fixed in code; the first real end-to-end run is still to be recorded. The wallet refuses a node that settles on Ethereum mainnet (`assertNetworkAllowed`) unless the build carries **both** `NEXT_PUBLIC_AZTEC_NETWORK=alpha` and `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true`.
+**Date:** 5 November 2026, updated 10 and 11 November 2026. **Status (11 November):** one contract of ours is on Aztec Alpha, the operator's token HLC (below); no escrow or stream is. Production runs on Alpha since #41 (until then the Dockerfile declared no `ARG`, so every build used the test network defaults). The private wallet's storage bug (#43) and its dead ends are fixed in code. **14 November:** the first real end-to-end run is recorded (R1 below: first private payment from Ledger Chat, L2 block 29012). The wallet refuses a node that settles on Ethereum mainnet (`assertNetworkAllowed`) unless the build carries **both** `NEXT_PUBLIC_AZTEC_NETWORK=alpha` and `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true`.
 
 ## State on 12 November 2026: what stands between Ledger Chat and an unqualified "live on mainnet"
 

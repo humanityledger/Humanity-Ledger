@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Check, CircleHelp, Clock, Lock, Mail, X } from 'lucide-react';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
-import { clearLocalSessionMarkers } from '@/lib/auth/session-check';
+import { clearLocalSessionMarkers, hasLocalSessionHint } from '@/lib/auth/session-check';
 
 // ─── Session clearance ────────────────────────────────────────────────────────
 // DUAL STORAGE: sessionStorage (primary) + localStorage (fallback)
@@ -376,6 +376,8 @@ export function TuringShieldGate({
           // No session — retry if we haven't exhausted attempts (wagmi may still be reconnecting,
           // or the user just returned from a wallet deep-link and the SIWE cookie is in-flight).
           if (status === 401 || data?.noSession) {
+            // Nobody signed in on this browser: go to /connect now, no retries to wait through.
+            if (!hasLocalSessionHint()) attempts = MAX_RETRIES - 1;
             attempts++;
             if (attempts < MAX_RETRIES) {
               const delay = RETRY_DELAYS_MS[attempts - 1] ?? 3000;

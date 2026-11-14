@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Launch audit (14 November 2026)
+- Calls: the Dockerfile now passes `NEXT_PUBLIC_PEERJS_HOST` / `_KEY` / `_PORT` / `_PATH` to the build. Before, the variables set on Railway never reached the bundle and every call used the public PeerJS cloud. Hanging up releases the camera and microphone before the hang-up message is sent.
+- A first-time visitor who opens /chat goes to /connect at once (it waited ~11 s of session retries meant for a sign-in in flight).
+- The "[TitaniumGate] Deadlock detected" warning no longer prints on every page load; it only appears if the gate really did not open.
+- Docs: MAINNET_READINESS no longer says the first Alpha run is still to be recorded; a broken glossary link fixed.
+
 ### Launch day: landing and calls under load
 - Landing: a plain headline ("Encrypted messages and private payments, in one place.") and the facts on white cards (network, first private payment in L2 block 29,012, proofs on your device) instead of a badge; the try-it phone is the same iPhone 16 Pro frame as /connect, with the Dynamic Island.
 - Calls: `/api/calls/ice` reuses one set of Cloudflare TURN credentials per server instance for half their lifetime (concurrent requests share one upstream call) instead of asking Cloudflare on every call, and has its own rate limit (30 a minute per account or IP).
