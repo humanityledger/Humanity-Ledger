@@ -6089,7 +6089,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             onAddContact={(addr) => {
               loadContacts();
               setActivePeer(addr);
-              if (isMobile) setShowList(false);
+              if (isMobile || window.innerWidth < 1024) setShowList(false);
             }}
           />
         )}
@@ -6198,7 +6198,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </nav>
 
       {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
-      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden md:flex' : 'flex') : (showList ? 'flex' : 'hidden md:flex')} w-full md:w-80 lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden lg:flex' : 'flex') : (showList ? 'flex' : 'hidden lg:flex')} w-full lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
         {/* ── Sidebar Header ── */}
         <div className="px-4 py-3 md:px-5 md:pt-5 md:pb-3 border-b md:border-b-0 border-[#e4e7ec] bg-white flex flex-col gap-3 md:gap-4" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
@@ -6629,7 +6629,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </div>
 
       {/*  Chat Area  */}
-      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden md:flex') : (!showList ? 'flex' : 'hidden md:flex')} relative flex-1 flex-col w-full h-full min-w-0 min-h-0 overflow-hidden`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden lg:flex') : (!showList ? 'flex' : 'hidden lg:flex')} relative flex-1 flex-col w-full h-full min-w-0 min-h-0 overflow-hidden`}>
         {sidebarTab === 'communities' ? (
           activeCommunity ? (
             <CommunityView 
@@ -6657,7 +6657,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="relative flex flex-col flex-1 min-h-0 min-w-0">
             <div className="h-[72px] pl-2 pr-3 md:pl-5 md:pr-5 border-b border-[#e6e8ec] flex items-center justify-between gap-2 bg-white shrink-0 z-30">
               <div className="flex items-center gap-1 min-w-0">
-                <button type="button" onClick={() => setShowList(true)} className="md:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
+                <button type="button" onClick={() => setShowList(true)} className="lg:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label="Back to chats">
                   <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
                 <button type="button" onClick={openContactInfo} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
@@ -7283,7 +7283,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 e.target.style.height = '44px';
                               } else {
                                 e.target.style.height = 'auto';
-                                e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 134)}px`;
+                                e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 184)}px`;
                               }
                               const now = Date.now();
                               if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0 && ledgerSettings?.typing_indicators !== false) {
@@ -7310,7 +7310,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                             aria-label="Message"
                             rows={1}
                             // 16px stops iOS Safari from zooming in when the field is focused.
-                            className="flex-1 bg-transparent px-4 py-[10px] text-[#15171c] focus:outline-none placeholder:text-[#a3a9b4] disabled:opacity-50 text-[16px] resize-none max-h-[134px] scrollbar-none leading-[1.5] min-h-[44px]"
+                            className="flex-1 min-w-0 w-0 bg-transparent px-4 py-[10px] text-[#15171c] focus:outline-none placeholder:text-[#a3a9b4] disabled:opacity-50 text-[16px] resize-none max-h-[184px] scrollbar-none leading-[1.5] min-h-[44px]"
                           />
                           {/* Character counter — appears when approaching long message */}
                           {inputText.length > 400 && (
