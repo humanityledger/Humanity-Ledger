@@ -30,6 +30,31 @@ in-app browser (where their session would belong to a different browser).
   `Lax` cookies on the request made right after returning from the wallet. Cross-site requests are
   still refused by the middleware's CSRF check (Fetch Metadata, then Origin).
 
+### The signature on iPhone (Safari, Chrome)
+
+Every iOS browser is WebKit, and iOS suspends a tab as soon as another app comes to the front.
+WalletConnect's `request()` sends the request to the relay and, at the same time, opens the wallet by
+itself with the link AppKit stored when the wallet was picked (`WALLETCONNECT_DEEPLINK_CHOICE`), outside
+any tap. Safari and Chrome followed that link before the request had left the page, so the wallet had
+nothing to show and the request failed on return ("Failed to publish payload", shown as "The wallet did
+not return the signature"). The Google app ignores such a link, which is why it signed.
+
+On iPhone, outside a wallet's own browser, /connect therefore (`lib/auth/wc-sign-request.ts`):
+
+1. holds back WalletConnect's own open for the sign-in request (the stored link is put back afterwards,
+   also after a reload);
+2. keeps "Open … to sign" on "Preparing the request" until the relay has acknowledged the request
+   (`session_request_sent`), usually under a second, 8 s at most;
+3. opens the wallet from the tap with WalletConnect's link to that request,
+   `<wallet>://wc?requestId=…&sessionTopic=…` (an app scheme; a universal link opens in a new tab so
+   this one keeps waiting);
+4. does not count the time spent in the wallet against the sign-in timeout, and leaves 30 s on return
+   for the relay to deliver the answer;
+5. sends the request again only if the relay never took it while the page stayed in view; a request the
+   wallet may be showing is never sent twice.
+
+Android, computers, wallet browsers and One-Click Auth are unchanged.
+
 ### One trip to the wallet instead of two (opt-in)
 
 Without it, a phone visitor goes to the wallet twice (connect, then sign) and on iPhone comes back by
@@ -55,6 +80,8 @@ first:
 |---|---|---|
 | iPhone, Safari | /connect → MetaMask → approve → "‹ Safari" → (sign) | Chat opens in the same Safari tab; no second tab |
 | iPhone, Safari | same with Rainbow, Coinbase Wallet | same |
+| iPhone, Chrome | /connect → MetaMask → approve → "‹ Chrome" → "Open MetaMask to sign" → sign → "‹ Chrome" | Chat opens; the wallet shows the signature request directly |
+| iPhone, Safari | after "Open … to sign", stay in the wallet more than two minutes, then sign | Chat opens (no "expired") |
 | Mac, Safari | /connect | Code for the phone; "Other wallets" shows a WalletConnect code |
 | Android, Chrome | /connect → MetaMask → approve → sign | Returns to Chrome by itself; chat opens |
 | Computer, Chrome | /connect → MetaMask extension → sign | Chat opens |

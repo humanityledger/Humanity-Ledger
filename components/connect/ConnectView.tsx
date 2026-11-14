@@ -19,7 +19,7 @@ import {
 import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
-import { safeWalletHref } from "@/lib/auth/wallet-links";
+import { safeNativeWalletLink, safeWalletHref } from "@/lib/auth/wallet-links";
 import { openMobileWalletApp, detectConnectedMobileWallet } from "@/lib/wallet/mobileWallet";
 
 /**
@@ -49,6 +49,12 @@ export interface ConnectViewProps {
   signStep?: 1 | 2 | 3;
   errorMessage?: string | null;
   mobileDeepLink?: string | null;
+  /**
+   * iPhone: the link to this signature request in the connected wallet (lib/auth/wc-sign-request.ts),
+   * and whether the relay has the request yet. False keeps "Open … to sign" waiting.
+   */
+  signLink?: { href: string; target: "_self" | "_blank" } | null;
+  signReady?: boolean;
   /** The rendered QR code, supplied by the container. */
   qr?: React.ReactNode;
   qrPin?: string | null;
@@ -285,8 +291,23 @@ function Connecting(p: ConnectViewProps) {
 
 const STEP_LABELS = ["Wallet connected", "Signature requested", "Session opened"] as const;
 
+/** Opens the wallet on this signature request, from the tap. Re-checked here: an app scheme or https only. */
+function openSignLink(link: ConnectViewProps["signLink"]): boolean {
+  if (!link || typeof window === "undefined") return false;
+  if (link.target === "_self" && safeNativeWalletLink(link.href)) {
+    window.location.href = link.href;
+    return true;
+  }
+  if (link.target === "_blank" && /^https:\/\/[^\s"'<>`]+$/.test(link.href)) {
+    window.open(link.href, "_blank", "noopener,noreferrer");
+    return true;
+  }
+  return false;
+}
+
 function Signing(p: ConnectViewProps) {
   const current = p.signStep ?? 2;
+  const waiting = p.isMobile && p.signReady === false;
   return (
     <>
       <span className={`${s.statusIcon} ${s.statusNeutral}`} aria-hidden="true">
@@ -294,7 +315,9 @@ function Signing(p: ConnectViewProps) {
       </span>
       <h1 className={s.title}>Confirm it is you</h1>
       <p className={s.subtitle}>
-        Your wallet will ask you to sign a message. Signing is free and does not send a transaction.
+        {waiting
+          ? "Sending the request to your wallet. This takes a second."
+          : "Your wallet will ask you to sign a message. Signing is free and does not send a transaction."}
       </p>
 
       <ol className={s.steps} aria-label="Progress">
@@ -321,8 +344,11 @@ function Signing(p: ConnectViewProps) {
           <button
             type="button"
             className={`${s.btn} ${s.btnPrimary}`}
+            disabled={waiting}
+            aria-disabled={waiting || undefined}
             onClick={() => {
-              if (typeof window === "undefined") return;
+              if (typeof window === "undefined" || waiting) return;
+              if (openSignLink(p.signLink)) return;
               const href = safeWalletHref(p.mobileDeepLink);
               if (href) {
                 window.location.href = href;
@@ -331,7 +357,14 @@ function Signing(p: ConnectViewProps) {
               openMobileWalletApp();
             }}
           >
-            Open {detectConnectedMobileWallet().name} to sign
+            {waiting ? (
+              <>
+                <LoaderCircle size={16} strokeWidth={2} className={s.spin} aria-hidden="true" />
+                Preparing the request
+              </>
+            ) : (
+              <>Open {detectConnectedMobileWallet().name} to sign</>
+            )}
           </button>
         )}
         <button type="button" className={s.btnText} onClick={p.onDisconnect}>
