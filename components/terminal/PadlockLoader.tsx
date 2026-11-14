@@ -3,6 +3,22 @@
 import React from 'react';
 import s from './PadlockLoader.module.css';
 import { detectConnectedMobileWallet, openMobileWalletApp, isMobileDevice } from '@/lib/wallet/mobileWallet';
+import { safeNativeWalletLink } from '@/lib/auth/wallet-links';
+import type { WalletOpenLink } from '@/lib/auth/wc-sign-request';
+
+/** Opens the wallet on this exact request, from the tap. An app scheme or https only. */
+function openSignLink(link: WalletOpenLink | null | undefined): boolean {
+  if (!link || typeof window === 'undefined') return false;
+  if (link.target === '_self' && safeNativeWalletLink(link.href)) {
+    window.location.href = link.href;
+    return true;
+  }
+  if (link.target === '_blank' && /^https:\/\/[^\s"'<>`]+$/.test(link.href)) {
+    window.open(link.href, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+  return false;
+}
 
 /**
  * PadlockLoader: the screen Ledger Chat shows before the encrypted channel is
@@ -31,6 +47,8 @@ interface PadlockLoaderProps {
   /** Ends the app session and the wallet connector, then lands on /connect. */
   onSignOut: () => void;
   connectorName?: string;
+  /** Phone over WalletConnect: the link to this request once the relay has it (null: not yet). */
+  signLink?: WalletOpenLink | null;
 }
 
 /** The app session exists but no usable wallet signer: offer reconnect or sign out, never a local wipe. */
@@ -102,19 +120,23 @@ export function PadlockLoader({
   onClearError,
   onSignOut,
   connectorName,
+  signLink,
 }: PadlockLoaderProps) {
   const walletInfo = detectConnectedMobileWallet(connectorName);
 
+  // No automatic open: switching to the wallet before the request reaches the relay leaves the wallet
+  // with nothing to show (iPhone suspends the tab mid-publish), and Android Chrome blocks an open that
+  // is not a tap. The person taps the button below once the request has been sent.
+  // If the relay never confirms (old wallet, slow network), the button opens the wallet anyway after 8 s.
+  const [waitedLong, setWaitedLong] = React.useState(false);
   React.useEffect(() => {
-    if (isWaitingForSignature && isMobileDevice()) {
-      const timer = setTimeout(() => {
-        try {
-          openMobileWalletApp(connectorName);
-        } catch {}
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [isWaitingForSignature, connectorName]);
+    setWaitedLong(false);
+    if (signLink !== null) return;
+    const t = setTimeout(() => setWaitedLong(true), 8000);
+    return () => clearTimeout(t);
+  }, [signLink]);
+  const preparing = signLink === null && !waitedLong;
+  const walletName = walletInfo.name && !/^wallet( app)?$/i.test(walletInfo.name) ? walletInfo.name : 'your wallet';
 
   const lower = initError.toLowerCase();
   const isLimitError = lower.includes('limit') || lower.includes('10/10');
@@ -207,8 +229,14 @@ export function PadlockLoader({
               ]}
             />
             {isWaitingForSignature && isMobileDevice() && (
-              <button type="button" className={`${s.primary} ${s.wide}`} onClick={() => openMobileWalletApp(connectorName)}>
-                Open {walletInfo.name} to approve
+              <button
+                type="button"
+                className={`${s.primary} ${s.wide}`}
+                disabled={preparing}
+                aria-busy={preparing}
+                onClick={() => { if (!openSignLink(signLink)) openMobileWalletApp(connectorName); }}
+              >
+                {preparing ? 'Sending the request to your wallet…' : `Open ${walletName} to approve`}
               </button>
             )}
             {isWaitingForSignature && (

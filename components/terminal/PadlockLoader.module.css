@@ -236,6 +236,8 @@
 }
 .primary { background: #15171c; color: #ffffff; border: 1px solid #15171c; }
 .primary:hover { background: #2b2f38; }
+.primary:disabled { opacity: 0.6; cursor: progress; }
+.primary:disabled:hover { background: #15171c; }
 .secondary { background: #ffffff; color: #15171c; border: 1px solid rgba(16, 24, 40, 0.14); }
 .secondary:hover { background: #f7f8fa; }
 .primary:active,
