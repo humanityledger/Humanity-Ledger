@@ -35,6 +35,7 @@ import {
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import type { Activity } from '@/lib/aztec/wallet/history';
 import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
+import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -941,7 +942,27 @@ function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent
   const [to, setTo] = useState('');
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
+  // The payment in flight: its stage is read from the wallet's own activity record.
+  const [run, setRun] = useState<{ startedAt: number; amount: string; symbol: string; to: string; error?: string; txHash?: string } | null>(null);
   const bal = state.balances.find((b) => b.key === token);
+  const entry = useMemo(() => {
+    if (!run) return undefined;
+    return state.activity
+      .filter((a) => a.kind === 'send' && a.createdAt >= run.startedAt - 2000 && (!a.counterparty || a.counterparty.toLowerCase() === run.to.toLowerCase()))
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+  }, [run, state.activity]);
+  const stage: PaymentStage = run?.error
+    ? 'failed'
+    : entry?.status === 'settled'
+      ? 'settled'
+      : entry?.status === 'failed'
+        ? 'failed'
+        : entry?.status === 'pending'
+          ? 'sending'
+          : entry?.status === 'proving'
+            ? 'proving'
+            : 'preparing';
+  const txHash = entry?.txHash ?? run?.txHash;
 
   const applyScan = (text: string) => {
     const req = decodePaymentRequest(text);
@@ -959,18 +980,37 @@ function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent
     e.preventDefault();
     if (!wallet) return;
     setBusy(true);
-    const id = toast.loading('Making the proof on this device. This can take up to a minute.');
+    setRun({ startedAt: Date.now(), amount, symbol: bal?.symbol ?? symbolOf(token), to });
     try {
       const receipt: any = await wallet.send(token, amount, to);
-      toast.success('Payment sent. Only the recipient can see the amount and who sent it.', { id });
-      onPaymentSent?.({ txHash: String(receipt?.txHash ?? ''), token });
-      onDone();
+      const hash = String(receipt?.txHash ?? '');
+      setRun((r) => (r ? { ...r, txHash: hash || r.txHash } : r));
+      onPaymentSent?.({ txHash: hash, token });
     } catch (err) {
-      toast.error(humanError(err), { id });
+      setRun((r) => (r ? { ...r, error: humanError(err) } : r));
     } finally {
       setBusy(false);
     }
   };
+
+  if (run) {
+    return (
+      <PaymentProgress
+        stage={stage}
+        amount={run.amount}
+        symbol={run.symbol}
+        recipient={run.to}
+        network={networkLabel()}
+        startedAt={run.startedAt}
+        txHash={txHash}
+        blockNumber={entry?.blockNumber}
+        error={run.error ?? entry?.error}
+        explorerUrl={txHash ? explorerTxUrl(txHash) : undefined}
+        onDone={() => { setRun(null); if (stage === 'settled') onDone(); }}
+        onRetry={() => setRun(null)}
+      />
+    );
+  }
 
   return (
     <form onSubmit={submit} className="space-y-4">
