@@ -179,7 +179,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
     if (!publicClient || recovering) return;
     setRecovering(true);
     try {
-      const n = await getPrivateWallet().recoverFeeJuiceClaims({ getLogs: (a) => publicClient.getLogs(a) });
+      const n = await getPrivateWallet().recoverFeeJuiceClaims({ getLogs: (a) => publicClient.getLogs(a), getBlockNumber: () => (publicClient as any).getBlockNumber() });
       toast.success(n ? `Found ${n} deposit${n === 1 ? '' : 's'} on Ethereum.` : 'No deposits to this account were found on Ethereum.');
     } catch (err) {
       toast.error(humanError(err));
