@@ -2,7 +2,7 @@
 
 End-to-end encrypted messaging over XMTP (MLS, RFC 9420), with private payments on Aztec, in one conversation. Built by Humanity Ledger.
 
-`Early access · Aztec Alpha with a cap per payment · not externally audited · status as of 14 November 2026`
+`Early access · Aztec Alpha with a cap per payment · not externally audited · status as of 14 November 2026, 20:30 UTC`
 
 <p align="center">
   <img src="docs/readme/first-payment-record.jpg" width="900" alt="The first private payment from Ledger Chat on Aztec Alpha: L2 block 29,012, HLC deployed in block 28,992, confirmed by preflight run 43583640304">
@@ -14,7 +14,7 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 
 * No external audit has been done. On Aztec Alpha, payments from the app are capped per payment.
 * Aztec Alpha carries real value and is, in Aztec's own words as recorded in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), live but early, with critical bugs expected.
-* Both private payments on Alpha so far went between two accounts of the operator.
+* Every private payment on Alpha so far went between two accounts of the operator. No payment between two different people has been recorded yet (R8).
 * HLC is a token issued by the operator. It is uncapped, unbacked and is not money.
 * Humanity Ledger is not affiliated with, endorsed by or audited by Aztec Labs, the Aztec Foundation or XMTP Labs.
 
@@ -45,14 +45,17 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 | Component | Network | State | Evidence |
 |---|---|---|---|
 | Direct messages | XMTP v3 | Real. MLS is provided by XMTP; we do not implement it | XMTP browser SDK 5.2.0, [`docs/STATUS.md`](docs/STATUS.md) |
-| Private wallet: send, shield, unshield | Aztec Alpha and testnet | Real. Two private payments on Alpha (blocks 29012, 29771) | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), [section 3](#3-private-payments-on-aztec-alpha) |
+| Private wallet: send, shield, unshield | Aztec Alpha and testnet | Real. Four private transfers on Alpha (blocks 29012, 29771, 29895, 29923) | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), [section 3](#3-private-payments-on-aztec-alpha) |
+| Gas estimation for transfers and account creation | Aztec Alpha | Real since 14 Nov 2026: limits from a simulation, so an account holds about 15 AZTEC instead of about 42 | [`lib/aztec/fee-juice.ts`](lib/aztec/fee-juice.ts) (`gasLimitsFromSimulation`, `budgetFeeFor`) |
+| New user with no AZTEC | Aztec Alpha | Real once: a contact paid Fee Juice through a fee link, the account was created and sent its first payment | `newUserFlow` in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
+| LedgerSponsor (fee sponsorship) | Not deployed | Contract, vouchers and wallet flow built; transactions it pays fit its 40 AZTEC cap since #107 | [`docs/SPONSOR.md`](docs/SPONSOR.md) |
 | HLC token | Aztec Alpha | Active since block 28992. An earlier HLC is retired | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
 | G7 peer binding | Client | Real in unit tests. Not yet run between two different people (R8) | [`lib/aztec/peer-binding.ts`](lib/aztec/peer-binding.ts), `test/unit/aztec/peer-binding.test.ts` |
 | Encrypted local message store | Client | Real since 13 Nov 2026 | [`lib/xmtp/db-key.ts`](lib/xmtp/db-key.ts), `test/unit/security/xmtp-db-key.test.ts` |
 | Escrow and payment streams (aztec-nr) | Testnet only | 55 TXE tests in CI; end to end on testnet | [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](docs/AZTEC_TESTNET_DEPLOYMENTS.md) |
 | Escrow and streams on Alpha | Off | Artifacts need a recompile with the deposit and creation nullifiers (R6) | [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md) |
 | Standalone Noir circuits | None | Tests only. Known soundness issues ZK-01 to ZK-07 | [section 7](#7-standalone-noir-circuits-experimental) |
-| Calls (voice, video) | WebRTC | Real. Calls across different networks need a TURN relay (R3) | [`docs/CALLS.md`](docs/CALLS.md) |
+| Calls (voice, video) | WebRTC | Real. TURN relay keys set on 14 Nov 2026; a call across two different networks is not yet recorded (R3) | [`docs/CALLS.md`](docs/CALLS.md) |
 | Community posts | Our server | Readable by our server, and the product says so | [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) |
 | Community apps sandbox | Client | Real: sandboxed frame, no network | `test/eaf_isolation.adversarial.test.ts` |
 | L1 contracts (Solidity) | None | Local tests only, not deployed | `npm run test:contracts` |
@@ -119,9 +122,12 @@ Aztec Alpha is Aztec's network with real value, settled on Ethereum mainnet (cha
 | Issue 1 HLC to the sender's private balance (`mint_to_private`) | `0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940` | 29001 | [view](https://aztecscan.xyz/tx-effects/0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940) |
 | Private transfer of 0.10 HLC (R1, operator tool) | `0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5` | 29012 | [view](https://aztecscan.xyz/tx-effects/0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5) |
 | Private transfer of 0.9 HLC (regular wallet screen) | `0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94` | 29771 | [view](https://aztecscan.xyz/tx-effects/0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94) |
+| Issue 1 HLC | `0x2956a31a9e98199f5efe3c98419db639b61931348734bf4baa9f9d099a02d0f9` | 29893 | [view](https://aztecscan.xyz/tx-effects/0x2956a31a9e98199f5efe3c98419db639b61931348734bf4baa9f9d099a02d0f9) |
+| Private transfer, first with estimated gas limits | `0x2ccd3893dd2fc7e548ef75f04fc6ecbd6870b9db0c06d49875e6b39144cda6db` | 29895 | [view](https://aztecscan.xyz/tx-effects/0x2ccd3893dd2fc7e548ef75f04fc6ecbd6870b9db0c06d49875e6b39144cda6db) |
+| Private transfer of 0.01 HLC from an account created with a contact's deposit | `0x14a71087ff658c6d85d37e11a79b487f46aff73b0eea1b4252ece00ebf8bef49` | 29923 | [view](https://aztecscan.xyz/tx-effects/0x14a71087ff658c6d85d37e11a79b487f46aff73b0eea1b4252ece00ebf8bef49) |
 
 * **Sender** `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` (admin of HLC). **Recipient** `0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a`. Both are accounts of the operator.
-* The first three transactions were proved in Chrome on Windows with MetaMask and confirmed by the read-only workflow "Aztec mainnet preflight", run 43583640304. The block 29771 payment is confirmed on Aztecscan and not yet by a preflight run.
+* The first three transactions were proved in Chrome on Windows with MetaMask and confirmed by the read-only workflow "Aztec mainnet preflight", run 43583640304. The later ones are confirmed on Aztecscan (status mined, revert code 0) and not yet by a preflight run.
 * **On chain**, a transfer shows note hashes, nullifiers and the public fee payment. It does not show the sender, the recipient or the amount.
 
 <p align="center">
@@ -130,16 +136,48 @@ Aztec Alpha is Aztec's network with real value, settled on Ethereum mainnet (cha
 
 ### Fees on Alpha
 
-| | Block 29012 | Block 29771 |
-|---|---|---|
-| Fee charged (Aztecscan) | 1.256 AZTEC | 2.858 AZTEC |
-| Paid by | Sender, in Fee Juice | Sender, in Fee Juice, claiming a 47 AZTEC deposit in the same transaction |
+Fees charged, read from Aztecscan; L2 gas derived from the fee at the day's minimum fee per L2 gas ([`measuredFees`](deployments/aztec-mainnet.json)).
 
-Before that 47 AZTEC deposit, sends failed with "insufficient fee payer balance". The node accepts a transaction only if the fee payer can cover its **maximum** fee. The wallet sets that maximum from the protocol's gas limit (`MAX_PROCESSABLE_L2_GAS`, [`lib/aztec/fee-juice.ts`](lib/aztec/fee-juice.ts) line 217), so the balance required is much larger than what a transfer is charged. A new account also needs Fee Juice before its first transaction ([`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md), R4). Both are open questions in [section 13](#13-open-technical-questions-for-aztec-labs).
+| Transaction | L2 block | Fee charged | About |
+|---|---|---|---|
+| Private transfer (operator tool) | 29012 | 1.256 AZTEC | 0.39M L2 gas |
+| Private transfer that also claimed a 47 AZTEC deposit | 29771 | 2.858 AZTEC | 0.88M L2 gas |
+| Issue HLC | 29893 | 1.657 AZTEC | 0.51M L2 gas |
+| Private transfer with estimated gas limits | 29895 | 1.233 AZTEC | 0.38M L2 gas |
+| Account creation, claiming a contact's deposit | 29921 | 1.7989 AZTEC | 0.56M L2 gas |
+| Private transfer from that new account | 29923 | 1.307 AZTEC | 0.40M L2 gas |
+
+**Why accounts used to need about 42 AZTEC.** The node accepts a transaction only if the fee payer can cover its *maximum* fee: gas limits times maximum fee per gas. The wallet sent every transaction with the protocol's gas limit (`MAX_PROCESSABLE_L2_GAS`), so a payer had to hold about 42 AZTEC for transfers charged 1.2 to 2.9.
+
+**What the wallet does now** ([`lib/aztec/fee-juice.ts`](lib/aztec/fee-juice.ts), [`lib/aztec/wallet/client.ts`](lib/aztec/wallet/client.ts)):
+
+1. Before sending a transfer or creating an account, it simulates the transaction (`simulate({ includeMetadata: true, skipFeeEnforcement: true })`, aztec.js 6.0.0) and sets the gas limits to the gas used, padded by 25% plus a fixed margin (`gasLimitsFromSimulation`).
+2. It asks an account to hold `budgetFeeFor`: the maximum fee of a 3M L2 gas transaction at twice the node's minimum fees, about 15 to 19 AZTEC at the fees of 14 November. Every transaction measured above used under 0.9M.
+3. A transaction the sponsor pays is estimated without the sponsor's call and padded ×2, so its maximum fee stays under the sponsor's 40 AZTEC cap.
+4. If an estimate fails, the protocol defaults are used and the node asks for the full maximum, as before.
 
 <p align="center">
   <img src="docs/readme/fee-juice-panel.jpg" width="520" alt="Fee Juice panel in the private wallet: a 47 AZTEC deposit ready to be used by the next transaction, and what is public and private about paying fees">
 </p>
+
+### A new user, end to end
+
+The path a person with no AZTEC takes, run on 14 November 2026 between two accounts of the operator:
+
+| Step | Evidence | Cost |
+|---|---|---|
+| A contact pays 20 AZTEC of Fee Juice through the account's fee link (`/fees`) | L1 `0x8bb89e6c377f28e055e5d7ff8f5809ddaa60585e63783ab416796d598d022cbd`, block 26415154, to the pinned FeeJuicePortal `0x534361be805CA30Bdb6404eC5E6cDAFFB3E9f3b3` | 108,854 L1 gas |
+| "Check for fees" finds the deposit, searching the portal's logs in 9,000-block windows | Wallet screen | — |
+| The account is created, claiming the deposit | L2 block 29921 | 1.7989 AZTEC |
+| Its first private payment, 0.01 HLC | L2 block 29923 | 1.307 AZTEC |
+
+Record: `newUserFlow` in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) and [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md). The same path between two different people is R8.
+
+<p align="center">
+  <img src="docs/readme/payment-card.jpg" width="900" alt="The payment card in four states: making the proof on this device, sent to Aztec, settled in a block with a green check, and not sent with the reason">
+</p>
+
+While a payment runs, the wallet shows one card with a green ring that fills through the payment's real stages, read from the wallet's own activity record: checking the fee, making the proof on this device, sent to Aztec, settled in block N. It shows what is visible on chain, the fee rule and the transaction hash with an explorer link ([`components/zk/PaymentProgress.tsx`](components/zk/PaymentProgress.tsx)).
 
 ### HLC, active and retired
 
@@ -198,7 +236,7 @@ flowchart LR
 * Fail closed: a refused signature, a signature that is not a 65-byte ECDSA signature, a different check value or a ciphertext that does not authenticate all stop the database from opening.
 
 <p align="center">
-  <img src="docs/readme/entry-screen.jpg" width="900" alt="The entry screen in three states: enter, waiting for the unlock signature with an anti-phishing note naming ledgerchat.org, and opening the encrypted inbox">
+  <img src="docs/readme/entry-screen.jpg" width="900" alt="The entry screen: enter Ledger Chat, and waiting for the unlock signature with an anti-phishing note naming ledgerchat.org">
 </p>
 
 While the wallet asks for this signature, the entry screen names `ledgerchat.org` and tells the user never to sign the message on another site.
@@ -317,7 +355,9 @@ Counts come from [`docs/ARCHITECTURE_AND_SECURITY_DOSSIER.md`](docs/ARCHITECTURE
   <img src="docs/readme/appearance.jpg" width="900" alt="Appearance: 40 themes, 59 wallpapers, 14 bubble styles and original animated stickers, previewed on a phone">
 </p>
 
-* **Sign in** with a browser wallet or WalletConnect (SIWE with a sealed single-use nonce). No phone number, email or password.
+* **Sign in** with a browser wallet or WalletConnect (SIWE with a sealed single-use nonce). No phone number, email or password. On phones over WalletConnect, every signature waits for the relay to acknowledge the request and is opened from a tap, so iPhone and Android Chrome reach the wallet with the request in place ([`lib/auth/wc-sign-request.ts`](lib/auth/wc-sign-request.ts)).
+* **Messages**: sent, delivered (double grey tick) and read (double green tick, if both have read receipts on). Long words wrap inside the bubble; below 1024 px the chat list and the open chat show one at a time; on iPhone the page does not zoom when typing.
+* **Photos** are re-encoded in the browser before sending (JPEG, up to 2048 px, at most 700 KB), which also removes their metadata, including GPS position ([`lib/chat/compress-image.ts`](lib/chat/compress-image.ts)). Other files up to 20 MB need file storage (Cloudflare R2) to be configured.
 * **Calls**: one-to-one voice and video over WebRTC with our own signalling server ([`docs/CALLS.md`](docs/CALLS.md)).
 * **Communities** and community apps in a sandboxed frame with no network access.
 * **Appearance**: 40 themes, 59 wallpapers, 14 bubble styles and original sticker packs drawn for Ledger Chat.
@@ -373,9 +413,9 @@ Each question names the code it concerns and what we do today. We ask only what 
 | 3 | Our contracts call the token through a raw `transfer_in_private` selector to avoid a token crate | Is depending on the standard Token interface preferred, and how do you avoid a duplicated `aztec` crate when doing so? | `contracts/aztec/escrow/src/`, `contracts/aztec/streams/src/` | Raw selector |
 | 4 | Stream cancel shares a per-state nullifier with withdraw; withdrawals give the sender a copy of the next state | Is that the pattern you would use, or a delayed public mutable for the cancellation time? | `contracts/aztec/streams/src/` | Shared state nullifier, 22 TXE tests |
 | 5 | A cancel measures accrual at its anchor block, chosen by the sender's PXE | Is there a better way to bound a time-dependent value in a private function than expiring the cancel 600 s after its anchor? | `contracts/aztec/streams/src/` | 600 s expiry |
-| 6 | The node requires the fee payer's balance to cover the maximum fee; the wallet sets that from the protocol gas limit | What is the recommended way in aztec.js 6.0.0 to estimate gas for a private transfer so the required Fee Juice balance stays close to the real fee? | `lib/aztec/fee-juice.ts` (`maxFeeFor`) | Protocol limit with headroom; 1.256 and 2.858 AZTEC charged |
+| 6 | The node requires the fee payer's balance to cover the maximum fee. Since 14 Nov the wallet sets gas limits from a simulation padded by 25% (section 3) | Is padding `gasUsed` from `simulate({ includeMetadata: true })` the approach you recommend, and what padding is safe for private functions and teardown? | `lib/aztec/fee-juice.ts` (`gasLimitsFromSimulation`) | 25% plus a fixed margin; ×2 for sponsored transactions; defaults if the estimate fails |
 | 7 | Alpha has no Sponsored FPC; paying with one's own Fee Juice makes the account the public fee payer | What is the recommended path to pay fees privately on Alpha today (a private FPC), and is there a reference implementation for apps? | `lib/aztec/fee-juice.ts`, `docs/SPONSOR.md` | Own Fee Juice, disclosed to the user before bridging |
-| 8 | A new account needs Fee Juice before its first transaction (about 28 AZTEC at the time recorded) | How do you expect consumer apps to onboard users with no AZTEC: a sponsor contract per app, or something at the protocol level? | `docs/MAINNET_READINESS.md` (R4) | The user bridges AZTEC from L1 |
+| 8 | A new account needs Fee Juice before its first transaction (about 15 AZTEC asked, 1.8 charged on 14 Nov); a contact can pay it through a fee link | How do you expect consumer apps to onboard users with no AZTEC: a sponsor contract per app, or something at the protocol level? | `docs/MAINNET_READINESS.md` (R4), `app/fees/page.tsx` | The user bridges AZTEC from L1, or a contact pays through a fee link; LedgerSponsor is built, not deployed |
 | 9 | G7 proves control of the signing key, not of the address's privacy keys | Is there a supported way to prove control of an address's privacy keys (or to derive the address so that it implies it) without revealing them? | `lib/aztec/peer-binding.ts` | Signing key proof; limit documented |
 | 10 | A recipient may open the wallet long after a payment | Is note discovery for a recipient who was offline guaranteed without extra tagging by the sender in 6.0.0, and for how long? | `lib/aztec/wallet/client.ts` | Rely on the PXE's note discovery |
 
@@ -389,15 +429,15 @@ In order, from [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md):
 
 | # | Item |
 |---|---|
-| R1 | First real run on Alpha: **done**, 14 November 2026 |
-| R2 | Public and legal texts that match production |
-| R3 | TURN relay for calls across networks |
-| R4 | Onboarding for accounts with no Fee Juice |
-| R5 | A dollar-denominated token |
-| R6 | Escrow and streams on Alpha, after a recompile and a testnet run |
-| R7 | External audit |
-| R8 | G7 between two different people |
-| R9 | Direct database URL for migrations |
+| R1 | First real run on Alpha: **done**, 14 November 2026. Since then: payments from the regular wallet screen and the first new-user run (section 3) |
+| R2 | Public and legal texts that match production: **open**, needs counsel |
+| R3 | TURN relay for calls across networks: keys set in Railway on 14 November; **a call between two different networks still to be confirmed** |
+| R4 | Onboarding for accounts with no Fee Juice: **partly done**. Gas estimation lowered the Fee Juice an account must hold from about 42 to about 15 AZTEC; a contact can pay it through a fee link (run once, section 3). Still open: deploying and funding LedgerSponsor |
+| R5 | A dollar-denominated token: **open**, after R4 and R7 |
+| R6 | Escrow and streams on Alpha, after a recompile and a testnet run: **open** |
+| R7 | External audit: **open** |
+| R8 | G7 and a payment between two different people: **open**. The full path has run between two accounts of the operator |
+| R9 | Direct database URL for migrations: the pre-deploy settles migrations that cannot run on `0_init` (#99); `DATABASE_URL_UNPOOLED` must point at Postgres, not PgBouncer: **to be confirmed in the deploy log** |
 
 NLnet: a proposal was submitted on 14 November 2026 and is under review; nothing has been awarded ([`docs/NLNET_DRAFT.md`](docs/NLNET_DRAFT.md)).
 
