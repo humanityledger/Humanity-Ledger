@@ -40,6 +40,19 @@ The first payment sent with **Send privately** in the wallet panel rather than t
 
 Fee 2.858 AZTEC, paid by the sender in Fee Juice; the same transaction claimed a 47 AZTEC Fee Juice deposit bridged from L1. Before that deposit, sends failed with "insufficient fee payer balance": the node accepts a transaction only if the fee payer can cover its maximum fee, which the wallet sets from the protocol gas limit (`lib/aztec/fee-juice.ts`, `maxFeeFor`), far above what is charged. The R1 transfer in block 29012 was charged 1.256 AZTEC. Record: `deployments/aztec-mainnet.json` (`secondPrivatePayment`).
 
+### A new user, end to end (14 November 2026)
+
+The path a person with no AZTEC takes, run between two accounts of the operator:
+
+| Step | Evidence | Fee |
+|---|---|---|
+| A contact pays 20 AZTEC of Fee Juice through the fee link (`/fees`) | L1 `0x8bb89e6c377f28e055e5d7ff8f5809ddaa60585e63783ab416796d598d022cbd`, block 26415154, pinned FeeJuicePortal | 108,854 L1 gas |
+| "Check for fees" finds the deposit (after #110) | Wallet screen | — |
+| The account is created, claiming the deposit | L2 block 29921 | 1.7989 AZTEC |
+| Its first private payment, 0.01 HLC | `0x14a71087ff658c6d85d37e11a79b487f46aff73b0eea1b4252ece00ebf8bef49`, L2 block 29923 | 1.307 AZTEC |
+
+Account creation measured about 0.56M L2 gas at the day's fees, inside the 3M budget of `budgetFeeFor`. Record: `deployments/aztec-mainnet.json` (`newUserFlow`). Still between two accounts of the operator: R8 (two different people) stays open.
+
 ### Runbook for R1 (one browser, smallest amounts)
 
 1. Production on the merged main; sign in with the wallet that will hold the account.
