@@ -129,6 +129,12 @@ ARG NEXT_PUBLIC_AZTEC_SPONSOR_ADMIN
 ARG NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 ARG NEXT_PUBLIC_WC_PROJECT_ID
 ARG NEXT_PUBLIC_ONE_CLICK_AUTH
+# Calls: our own PeerJS signalling server (docs/CALLS.md). Without these ARGs the Railway variables never
+# reach `next build`, and every call goes through the public PeerJS cloud, which is best effort.
+ARG NEXT_PUBLIC_PEERJS_HOST
+ARG NEXT_PUBLIC_PEERJS_PORT
+ARG NEXT_PUBLIC_PEERJS_PATH
+ARG NEXT_PUBLIC_PEERJS_KEY
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
 # Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.
