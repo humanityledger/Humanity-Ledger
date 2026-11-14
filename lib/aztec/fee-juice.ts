@@ -315,6 +315,8 @@ export interface L1Clients {
   writeContract: (args: any) => Promise<`0x${string}`>;
   waitForTransactionReceipt: (args: { hash: `0x${string}` }) => Promise<{ status: string; logs: any[]; transactionHash: string }>;
   getLogs?: (args: any) => Promise<any[]>;
+  /** viem getBlockNumber. Lets log searches run in block windows when the RPC refuses a long range. */
+  getBlockNumber?: () => Promise<bigint>;
   /** ETH balance of `account` (viem getBalance). Enables the L1 gas check. */
   getBalance?: (args: { address: `0x${string}` }) => Promise<bigint>;
   /** viem estimateFeesPerGas. Enables the L1 gas check. */
@@ -438,13 +440,50 @@ async function findDepositEvent(logs: any[], portal: string, recipient: string, 
  * Already-consumed claims are filtered by the caller (the L2 claim nullifier
  * makes a second consumption fail anyway).
  */
+/** Block window for log searches; most public RPCs refuse eth_getLogs over more than 10,000 blocks. */
+export const LOG_WINDOW = 9_000n;
+/** How far back a windowed search goes when no start block is configured: about 41 days of L1 blocks (the wallet has run on Alpha since 11 Nov 2026). */
+export const LOG_LOOKBACK = 300_000n;
+
+/**
+ * eth_getLogs for the portal's deposits to one recipient. One request first; if the RPC refuses the
+ * range ("RPC Request failed", "block range too large"), the same query again in windows of
+ * LOG_WINDOW blocks, newest first, four at a time, back to `fromBlock` or LOG_LOOKBACK blocks.
+ */
+export async function portalLogs(
+  l1: Required<Pick<L1Clients, 'getLogs'>> & Pick<L1Clients, 'getBlockNumber'>,
+  query: { address: string; event: unknown; args: unknown; fromBlock: bigint },
+): Promise<any[]> {
+  try {
+    return await l1.getLogs(query);
+  } catch (first) {
+    if (!l1.getBlockNumber) throw first;
+    const latest = await l1.getBlockNumber();
+    const floor = query.fromBlock > 0n ? query.fromBlock : latest > LOG_LOOKBACK ? latest - LOG_LOOKBACK : 0n;
+    const windows: Array<[bigint, bigint]> = [];
+    for (let to = latest; to >= floor; to -= LOG_WINDOW) {
+      const from = to - LOG_WINDOW + 1n > floor ? to - LOG_WINDOW + 1n : floor;
+      windows.push([from, to]);
+      if (from === floor) break;
+    }
+    const out: any[] = [];
+    for (let i = 0; i < windows.length; i += 4) {
+      const batch = await Promise.all(
+        windows.slice(i, i + 4).map(([fromBlock, toBlock]) => l1.getLogs({ ...query, fromBlock, toBlock })),
+      );
+      for (const logs of batch) out.push(...logs);
+    }
+    return out;
+  }
+}
+
 export async function recoverClaims(
-  l1: Required<Pick<L1Clients, 'getLogs'>>,
+  l1: Required<Pick<L1Clients, 'getLogs'>> & Pick<L1Clients, 'getBlockNumber'>,
   args: { network: AztecNetworkId; recipient: string; fromBlock: bigint; maxIndex?: number; secretHashForIndex: (i: number) => Promise<string> },
 ): Promise<FeeJuiceClaim[]> {
   const pin = pinnedFeeJuice(args.network);
   const event = FEE_JUICE_PORTAL_ABI[1];
-  const logs = await l1.getLogs({ address: pin.portal, event, args: { to: to32(args.recipient) }, fromBlock: args.fromBlock });
+  const logs = await portalLogs(l1, { address: pin.portal, event, args: { to: to32(args.recipient) }, fromBlock: args.fromBlock });
   const hashes = new Map<string, number>();
   for (let i = 0; i < (args.maxIndex ?? 16); i++) hashes.set((await args.secretHashForIndex(i)).toLowerCase().replace(/^0x/, '').padStart(64, '0'), i);
   const out: FeeJuiceClaim[] = [];
@@ -483,6 +522,7 @@ export function l1ClientsFromViem(publicClient: any, walletClient: any): L1Clien
     writeContract: (a) => walletClient.writeContract({ ...a, chain: walletClient.chain }),
     waitForTransactionReceipt: (a) => publicClient.waitForTransactionReceipt(a),
     getLogs: (a) => publicClient.getLogs(a),
+    getBlockNumber: () => publicClient.getBlockNumber(),
     getBalance: (a) => publicClient.getBalance(a),
     estimateFeesPerGas: () => publicClient.estimateFeesPerGas(),
   };
