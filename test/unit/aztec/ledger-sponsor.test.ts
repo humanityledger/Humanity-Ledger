@@ -33,6 +33,10 @@ describe('Ledger sponsor (P1)', () => {
   it('vouchers need a signed-in wallet and take a slot in both limits or in neither', () => {
     const r = read('app/api/aztec/sponsor/route.ts');
     expect(r).toMatch(/requireWallet\(req\)/);
+    // The path is public in middleware.ts (so the GET can be read without a session): the POST
+    // must check the session itself, first.
+    expect(r.indexOf('requireWallet(req)')).toBeLessThan(r.indexOf('takeSponsorSlot('));
+    expect(r.slice(r.indexOf('export async function POST'), r.indexOf('requireWallet(req)'))).not.toMatch(/sign|Redis|slot/i);
     // Behaviour of the quota itself: test/unit/aztec/sponsor-quota.test.ts.
     expect(r).toMatch(/takeSponsorSlot\(redisQuotaStore\(redis\), wallet, \{ perWallet, perDay \}\)/);
     expect(r).not.toMatch(/checkRateLimit/);
