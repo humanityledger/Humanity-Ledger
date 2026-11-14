@@ -18,6 +18,7 @@ import { BUBBLE_STYLES, bubbleClasses } from "@/lib/chat/bubbleStyles";
 import { STICKER_PACKS, stickerFile, stickerMessage, stickerRef } from "@/lib/chat/stickers";
 import "@/app/ledger-chat-settings.css";
 import s from "./Launch.module.css";
+import { DeviceFrame } from "./DeviceFrame";
 
 /** The first private payment from Ledger Chat on Aztec Alpha (deployments/aztec-mainnet.json). */
 export const FIRST_PAYMENT = {
@@ -79,23 +80,12 @@ export function LaunchHero({ alpha, phone, mode, onMode }: { alpha: boolean; pho
       <div className={s.heroGrid} aria-hidden="true" />
       <div className={s.heroInner}>
         <div className={s.heroCopy}>
-          <a className={s.livePill} href={alpha ? "#record" : "#stack"}>
-            <span className={s.liveDot} aria-hidden="true" />
-            {alpha ? (
-              <>
-                Live on Aztec Alpha <span className={s.livePillSep}>·</span> first private payment in L2 block {FIRST_PAYMENT.block.toLocaleString("en-US")}
-              </>
-            ) : (
-              <>Live on the Aztec test network</>
-            )}
-          </a>
+          <p className={s.kicker}>Ledger Chat</p>
           <h1 id="hero-title" className={s.heroTitle}>
-            Talk freely.
-            <br />
-            <span className={s.heroGradient}>Pay privately.</span>
+            Encrypted messages and private payments, in one place.
           </h1>
           <p className={s.heroLead}>
-            End-to-end encrypted messages with MLS over XMTP. Private payments proved on your own device with Aztec and settled on
+            Messages are end-to-end encrypted with MLS over XMTP. Payments are proved on your own device with Aztec and settled on
             Ethereum. Your wallet is your account.
           </p>
           <div className={s.ctas}>
@@ -106,6 +96,21 @@ export function LaunchHero({ alpha, phone, mode, onMode }: { alpha: boolean; pho
               How it works
             </a>
           </div>
+
+          <dl className={s.facts}>
+            <div className={s.fact}>
+              <dt>Network</dt>
+              <dd>{alpha ? "Aztec Alpha, on Ethereum" : "Aztec test network"}</dd>
+            </div>
+            <div className={s.fact}>
+              <dt>{alpha ? "First private payment" : "Messaging"}</dt>
+              <dd>{alpha ? <a href="#record">L2 block {FIRST_PAYMENT.block.toLocaleString("en-US")}</a> : "MLS over XMTP"}</dd>
+            </div>
+            <div className={s.fact}>
+              <dt>Proofs</dt>
+              <dd>Made on your device</dd>
+            </div>
+          </dl>
 
           <div className={s.availability} aria-label="Where Ledger Chat runs">
             <div className={s.availLive}>
@@ -287,7 +292,7 @@ export function AppearancePlayground() {
   const themes = useMemo(() => THEME_PICKS.map((id) => CHAT_THEMES.find((t) => t.id === id)!).filter(Boolean), []);
   const walls = useMemo(() => WALL_PICKS.map((id) => WALLPAPERS.find((w) => w.id === id)!).filter(Boolean), []);
 
-  const send = useCallback(async (pack: string, id: string, from: HTMLElement | null) => {
+  const send = useCallback(async (pack: string, id: string) => {
     const content = stickerMessage(pack, id);
     const ref = stickerRef(content);
     if (!ref || !hostRef.current) return;
@@ -301,7 +306,7 @@ export function AppearancePlayground() {
       src: ref.src,
       scene: ref.sticker.scene,
       tint: ref.sticker.tint,
-      from: from?.getBoundingClientRect() ?? null,
+      from: null,
       reducedMotion,
     });
   }, []);
@@ -356,7 +361,7 @@ export function AppearancePlayground() {
             <legend>Send a sticker</legend>
             <div className={s.stickerRow}>
               {DEMO_STICKERS.map(([pack, id]) => (
-                <button key={`${pack}/${id}`} type="button" className={s.stickerBtn} aria-label={`Send ${stickerRef(stickerMessage(pack, id))?.sticker.label ?? id}`} onClick={(e) => send(pack, id, e.currentTarget)}>
+                <button key={`${pack}/${id}`} type="button" className={s.stickerBtn} aria-label={`Send ${stickerRef(stickerMessage(pack, id))?.sticker.label ?? id}`} onClick={() => send(pack, id)}>
                   <img src={stickerFile(pack, id)} alt="" draggable={false} />
                 </button>
               ))}
@@ -365,22 +370,34 @@ export function AppearancePlayground() {
         </div>
 
         <div className={s.device}>
-          <div ref={frameRef} className={s.deviceScreen} data-chat-theme={theme.id} data-wallpaper-tone={tone} style={{ ...(chatThemeVars(theme) as unknown as React.CSSProperties), ...canvasCss(wall, theme.canvas) }}>
-            <div className={s.deviceBar}>
-              <span className={s.avatar}>IV</span>
-              <span>
-                <b>Irina</b>
-                <i className={s.verified}>Verified Aztec address</i>
-              </span>
+          <DeviceFrame island="idle" fit={0.97} label="Ledger Chat with the theme, wallpaper and bubbles picked on the left">
+            <div ref={frameRef} className={s.deviceScreen} data-chat-theme={theme.id} data-wallpaper-tone={tone} style={{ ...(chatThemeVars(theme) as unknown as React.CSSProperties), ...canvasCss(wall, theme.canvas) }}>
+              <div className={s.deviceBar}>
+                <span className={s.statusRow} aria-hidden="true">
+                  <span>9:41</span>
+                  <span className={s.statusIcons}>
+                    <svg width="19" height="12" viewBox="0 0 19 12"><rect x="0" y="8" width="3.2" height="4" rx="1" fill="currentColor" /><rect x="5.2" y="5.5" width="3.2" height="6.5" rx="1" fill="currentColor" /><rect x="10.4" y="3" width="3.2" height="9" rx="1" fill="currentColor" /><rect x="15.6" y="0" width="3.2" height="12" rx="1" fill="currentColor" /></svg>
+                    <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity="0.4" /><rect x="2" y="2" width="20" height="9" rx="2.2" fill="currentColor" /></svg>
+                  </span>
+                </span>
+                <span className={s.peer}>
+                  <span className={s.avatar}>IV</span>
+                  <span>
+                    <b>Irina</b>
+                    <i className={s.verified}>Verified Aztec address</i>
+                  </span>
+                </span>
+              </div>
+              <div className={s.thread}>
+                <div className={`${bubbleClasses(bubble, false)} ${s.msg}`}>Did the payment land?</div>
+                <div className={`${bubbleClasses(bubble, true)} ${s.msg} ${s.me}`}>Yes, 0.10 HLC, private.</div>
+                <div className={`${bubbleClasses(bubble, false)} ${s.msg}`}>Then this calls for a sticker.</div>
+                {sent && <img key={sent} src={sent} alt="" className={s.sentSticker} />}
+              </div>
+              <div className={s.composer} aria-hidden="true"><span>Message</span></div>
+              <div ref={hostRef} className={s.sceneHost} aria-hidden="true" />
             </div>
-            <div className={s.thread}>
-              <div className={`${bubbleClasses(bubble, false)} ${s.msg}`}>Did the payment land?</div>
-              <div className={`${bubbleClasses(bubble, true)} ${s.msg} ${s.me}`}>Yes, 0.10 HLC, private. 🔒</div>
-              <div className={`${bubbleClasses(bubble, false)} ${s.msg}`}>Then this calls for a sticker.</div>
-              {sent && <img key={sent} src={sent} alt="" className={s.sentSticker} />}
-            </div>
-            <div ref={hostRef} className={s.sceneHost} aria-hidden="true" />
-          </div>
+          </DeviceFrame>
         </div>
       </div>
     </section>
@@ -393,7 +410,7 @@ export function LaunchClose({ alpha }: { alpha: boolean }) {
   return (
     <section id="start" className={s.close} aria-labelledby="closing-title">
       <h2 id="closing-title" className={s.closeTitle}>
-        Start a private <span className={s.heroGradient}>conversation.</span>
+        Start a private conversation.
       </h2>
       <p className={s.heroLead}>Free. Runs in your browser, nothing to install.</p>
       <div className={s.ctas}>

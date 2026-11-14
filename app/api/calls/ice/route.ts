@@ -18,6 +18,49 @@ export const runtime = 'nodejs';
  */
 const TTL_SECONDS = 6 * 60 * 60;
 
+/**
+ * Cloudflare credentials are bearer credentials for the TURN service, not tied to a person: one set
+ * serves every signed-in caller of this instance until half its lifetime has passed. Without this,
+ * every call (and every refresh) made one request to Cloudflare's API, so a rush of new users meant
+ * thousands of upstream requests a minute and, past its limits, calls without a relay. Concurrent
+ * misses share one request; a failed refresh keeps serving the last good set while it is valid.
+ */
+type IceServers = ReturnType<typeof shapeIceServers>;
+let cfCache: { iceServers: IceServers; expiresAt: number; validUntil: number } | null = null;
+let cfInFlight: Promise<IceServers | null> | null = null;
+
+async function cloudflareIce(cfId: string, cfToken: string): Promise<IceServers | null> {
+  const now = Date.now();
+  if (cfCache && now < cfCache.expiresAt) return cfCache.iceServers;
+  if (cfInFlight) return cfInFlight;
+  const stale = cfCache && now < cfCache.validUntil - 30 * 60_000 ? cfCache.iceServers : null;
+  cfInFlight = (async () => {
+    try {
+      const res = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${cfId}/credentials/generate-ice-servers`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${cfToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ttl: TTL_SECONDS }),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!res.ok) return stale;
+      const data = await res.json();
+      // Cloudflare lists ~8 URLs (anycast, so already the nearest location). Trimmed to STUN plus
+      // one TURN URL per transport: each extra URL is one more allocation before the call connects.
+      const iceServers = shapeIceServers(data?.iceServers);
+      if (!iceServers.length) return stale;
+      const at = Date.now();
+      cfCache = { iceServers, expiresAt: at + (TTL_SECONDS * 1000) / 2, validUntil: at + TTL_SECONDS * 1000 };
+      return iceServers;
+    } catch {
+      return stale;
+    } finally {
+      cfInFlight = null;
+    }
+  })();
+  return cfInFlight;
+}
+
 function urlsFrom(raw: string | undefined): string[] {
   return (raw || '')
     .split(',')
@@ -31,25 +74,10 @@ export async function GET() {
   const cfId = process.env.CLOUDFLARE_TURN_KEY_ID;
   const cfToken = process.env.CLOUDFLARE_TURN_API_TOKEN;
   if (cfId && cfToken && /^[A-Za-z0-9_-]{8,128}$/.test(cfId)) {
-    try {
-      const res = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${cfId}/credentials/generate-ice-servers`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${cfToken}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ ttl: TTL_SECONDS }),
-        cache: 'no-store',
-        signal: AbortSignal.timeout(5_000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Cloudflare lists ~8 URLs (anycast, so already the nearest location). Trimmed to STUN plus
-        // one TURN URL per transport: each extra URL is one more allocation before the call connects.
-        const iceServers = shapeIceServers(data?.iceServers);
-        if (iceServers.length) {
-          return NextResponse.json({ iceServers, ttl: TTL_SECONDS, source: 'cloudflare' }, { headers });
-        }
-      }
-    } catch {
-      /* fall through to the other options */
+    const iceServers = await cloudflareIce(cfId, cfToken);
+    if (iceServers?.length) {
+      // Valid at least half the TTL from now; the client refreshes before that (lib/calls/media.ts).
+      return NextResponse.json({ iceServers, ttl: TTL_SECONDS / 2, source: 'cloudflare' }, { headers });
     }
   }
 

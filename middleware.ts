@@ -374,6 +374,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
           ? applyRateLimit((relay ? 'relay:' : 'u:') + earlySession, relay ? 1200 : 600)
           : applyRateLimit((relay ? 'relay-ip:' : 'ip:') + clientIp, relay ? 60 : 150);
         if (rateLimitRes) return rateLimitRes;
+        // TURN credentials: a call needs one, a refresh every few hours. Its own small bucket, so a
+        // script cannot drain the relay quota through the general one.
+        if (pathname === '/api/calls/ice') {
+          const iceLimit = applyRateLimit('ice:' + (earlySession || clientIp), 30);
+          if (iceLimit) return iceLimit;
+        }
       }
     }
 

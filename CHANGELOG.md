@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Launch day: landing and calls under load
+- Landing: a plain headline ("Encrypted messages and private payments, in one place.") and the facts on white cards (network, first private payment in L2 block 29,012, proofs on your device) instead of a badge; the try-it phone is the same iPhone 16 Pro frame as /connect, with the Dynamic Island.
+- Calls: `/api/calls/ice` reuses one set of Cloudflare TURN credentials per server instance for half their lifetime (concurrent requests share one upstream call) instead of asking Cloudflare on every call, and has its own rate limit (30 a minute per account or IP).
+
 ### Launch on Aztec Alpha
 - **14 November 2026: first private payment from Ledger Chat on Aztec Alpha.** 0.10 HLC, transfer `0x1eb2bb76…40a5`, checkpointed in L2 block 29012; HLC `0x1f49571a…24e5` deployed in block 28992; both confirmed by the mainnet preflight run 43583640304. STATUS, README, the protocol specification and the Aztec dossier no longer say "testnet only".
 - NLnet proposal `2027-01-04e` submitted (€40,000, deliverables D-1 to D-5). Under review.
