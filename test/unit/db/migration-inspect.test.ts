@@ -93,6 +93,23 @@ describe('superseded migrations', () => {
     const hash = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root, 'prisma/migrations', m.name, 'migration.sql'))).digest('hex');
     expect(hash).toBe(m.sha256);
   });
+  it('every entry is pinned to the hash of the migration as reviewed', () => {
+    for (const m of list) {
+      const hash = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root, 'prisma/migrations', m.name, 'migration.sql'))).digest('hex');
+      expect(hash, m.name).toBe(m.sha256);
+    }
+  });
+  it('covers every migration that cannot run on top of 0_init (replayed on PostgreSQL 16, 14 Nov 2026)', () => {
+    const names = list.map((x: { name: string }) => x.name);
+    for (const n of [
+      '20260128062035_init_railway_production',
+      '20260128192526_add_risk_level',
+      '20260131000000_add_auth_user',
+      '20260131120000_phase2_3_4_init',
+      '20260523000000_hpf_product_passport',
+      '20260708000000_add_quest_social_airdrop_tables',
+    ]) expect(names).toContain(n);
+  });
   it('every entry names migrations that exist', () => {
     for (const m of list) {
       expect(fs.existsSync(path.join(root, 'prisma/migrations', m.name, 'migration.sql'))).toBe(true);

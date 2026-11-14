@@ -70,17 +70,19 @@ async function failedMigrations(client) {
   return r.rows.map((x) => x.migration_name);
 }
 
-/** What the public schema has, by name and case-sensitive (tables like "User" are quoted). */
+/**
+ * What the public schema has, by name and case-sensitive (tables like "User" are quoted).
+ * One query at a time: a pg Client has one socket, and concurrent client.query() calls on it are
+ * deprecated in node-postgres (DeprecationWarning in the deploy log of 14 Nov 2026).
+ */
 async function existingObjects(client) {
-  const [tables, indexes, columns, constraints, types] = await Promise.all([
-    client.query(`SELECT tablename AS n FROM pg_tables WHERE schemaname = 'public'`),
-    client.query(`SELECT indexname AS n FROM pg_indexes WHERE schemaname = 'public'`),
-    client.query(`SELECT table_name || '.' || column_name AS n FROM information_schema.columns WHERE table_schema = 'public'`),
-    client.query(`SELECT c.conname AS n FROM pg_constraint c JOIN pg_namespace ns ON ns.oid = c.connamespace WHERE ns.nspname = 'public'`),
-    client.query(`SELECT t.typname AS n FROM pg_type t JOIN pg_namespace ns ON ns.oid = t.typnamespace WHERE ns.nspname = 'public'`),
-  ]);
-  const set = (r) => new Set(r.rows.map((x) => x.n));
-  return { tables: set(tables), indexes: set(indexes), columns: set(columns), constraints: set(constraints), types: set(types) };
+  const names = async (sql) => new Set((await client.query(sql)).rows.map((x) => x.n));
+  const tables = await names(`SELECT tablename AS n FROM pg_tables WHERE schemaname = 'public'`);
+  const indexes = await names(`SELECT indexname AS n FROM pg_indexes WHERE schemaname = 'public'`);
+  const columns = await names(`SELECT table_name || '.' || column_name AS n FROM information_schema.columns WHERE table_schema = 'public'`);
+  const constraints = await names(`SELECT c.conname AS n FROM pg_constraint c JOIN pg_namespace ns ON ns.oid = c.connamespace WHERE ns.nspname = 'public'`);
+  const types = await names(`SELECT t.typname AS n FROM pg_type t JOIN pg_namespace ns ON ns.oid = t.typnamespace WHERE ns.nspname = 'public'`);
+  return { tables, indexes, columns, constraints, types };
 }
 
 function cli(args) {
