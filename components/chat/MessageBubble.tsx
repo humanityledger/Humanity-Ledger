@@ -670,7 +670,7 @@ export const MessageBubble = React.memo(({
   const isMedia      = content.startsWith('__MEDIA__:');
   const isGif        = content.startsWith('[GIF]');
   const isLocation   = content.startsWith('[LOCATION]') || content.startsWith('[LIVELOCATION]');
-  const isSystemMsg  = content.startsWith('__PIN__') || content.startsWith('__REVOKE__') || content.startsWith('__READ__') || content.startsWith('__VOTE__') || content.startsWith('__EDIT__') || content.startsWith('__UNPIN__');
+  const isSystemMsg  = content.startsWith('__PIN__') || content.startsWith('__REVOKE__') || content.startsWith('__READ__') || content.startsWith('__DELIVERED__') || content.startsWith('__VOTE__') || content.startsWith('__EDIT__') || content.startsWith('__UNPIN__');
   const audioSrc     = isAudio ? content.slice('__AUDIO__'.length) : null;
   const gifUrl       = isGif ? content.slice('[GIF]'.length) : null;
   const locationCoords = isLocation
@@ -1082,7 +1082,7 @@ export const MessageBubble = React.memo(({
             </span>
             {isMe && !msg.failed && (
               <span
-                className={msg.status === 'read' && readReceipts ? 'msg-read text-[#15171c]' : 'msg-tick text-[#a3a9b4]'}
+                className={msg.status === 'read' && readReceipts ? 'msg-read text-[#13a87a]' : 'msg-tick text-[#a3a9b4]'}
                 role="img"
                 aria-label={sendStatusLabel(msg.status, { readReceipts })}
                 title={sendStatusLabel(msg.status, { readReceipts })}

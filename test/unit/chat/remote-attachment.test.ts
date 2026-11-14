@@ -202,3 +202,21 @@ describe('signV4 (R2 / S3)', () => {
     );
   });
 });
+
+describe('photos re-encoded before sending (lib/chat/compress-image.ts)', () => {
+  it('re-encodes camera photos, keeps small PNGs, GIFs and SVGs as they are', async () => {
+    const { isCompressiblePhoto } = await import('@/lib/chat/compress-image');
+    const T = 700 * 1024;
+    expect(isCompressiblePhoto('image/jpeg', 50_000, T)).toBe(true);
+    expect(isCompressiblePhoto('image/heic', 3_000_000, T)).toBe(true);
+    expect(isCompressiblePhoto('image/png', 200_000, T)).toBe(false);
+    expect(isCompressiblePhoto('image/png', 2_000_000, T)).toBe(true);
+    expect(isCompressiblePhoto('image/gif', 2_000_000, T)).toBe(false);
+    expect(isCompressiblePhoto('image/svg+xml', 2_000_000, T)).toBe(false);
+    expect(isCompressiblePhoto('application/pdf', 2_000_000, T)).toBe(false);
+  });
+  it('sends the original when the browser cannot decode (no document here)', async () => {
+    const { shrinkPhoto } = await import('@/lib/chat/compress-image');
+    expect(await shrinkPhoto(new Blob([new Uint8Array(10)]), 700 * 1024)).toBe(null);
+  });
+});

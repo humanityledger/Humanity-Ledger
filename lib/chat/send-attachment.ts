@@ -14,6 +14,7 @@
  *
  * Plaintext never leaves this function except inside that inline XMTP message.
  */
+import { isCompressiblePhoto, shrinkPhoto } from './compress-image';
 import {
   MAX_ATTACHMENT_BYTES,
   encodeAttachmentMessage,
@@ -81,11 +82,24 @@ async function upload(ciphertext: Uint8Array, fetchImpl: typeof fetch): Promise<
 }
 
 export async function prepareAttachmentMessage(
-  file: Blob,
-  input: AttachmentInput,
+  original: Blob,
+  originalInput: AttachmentInput,
   fetchImpl: typeof fetch = fetch,
 ): Promise<PreparedAttachment> {
-  if (file.size === 0) throw new AttachmentError('The file is empty');
+  if (original.size === 0) throw new AttachmentError('The file is empty');
+
+  // Photos are re-encoded first (lib/chat/compress-image.ts): smaller, metadata removed, and small
+  // enough for the inline path when file storage is unavailable.
+  let file: Blob = original;
+  let input: AttachmentInput = originalInput;
+  const originalMime = (originalInput.mimeType || original.type || '').split(';')[0].trim().toLowerCase();
+  if (!originalInput.isVoiceNote && isCompressiblePhoto(originalMime, original.size, INLINE_MAX_BYTES)) {
+    const shrunk = await shrinkPhoto(original, INLINE_MAX_BYTES).catch(() => null);
+    if (shrunk) {
+      file = shrunk;
+      input = { ...originalInput, mimeType: 'image/jpeg', filename: (originalInput.filename || 'photo').replace(/\.[A-Za-z0-9]{1,5}$/, '') + '.jpg' };
+    }
+  }
   if (file.size > MAX_ATTACHMENT_BYTES) throw new AttachmentError('Files can be up to 20 MB');
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -120,7 +134,7 @@ export async function prepareAttachmentMessage(
     if (up.reason === 'plaintext' && attempt === 0) continue;
     if (up.reason === 'unavailable') {
       if (bytes.byteLength <= INLINE_MAX_BYTES) return { mode: 'inline', message: inlineMessage(bytes, input, mime) };
-      throw new AttachmentError('File storage is unavailable, so attachments are limited to 700 KB right now');
+      throw new AttachmentError('File storage is unavailable, so files are limited to 700 KB right now. Photos are reduced automatically; this file could not be.');
     }
     throw new AttachmentError(up.reason === 'error' && up.message ? up.message : 'Could not upload the attachment');
   }
