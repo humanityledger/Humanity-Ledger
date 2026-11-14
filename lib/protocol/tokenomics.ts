@@ -74,7 +74,11 @@ export function teamVested(months: number): bigint {
   return (team * BigInt(months)) / BigInt(TEAM_VESTING.totalMonths);
 }
 
-/** Agreement fee: ceiling division so splitting a payment never pays less; a minimum per agreement. */
+/**
+ * Agreement fee: ceiling division so splitting a payment never pays less; a minimum per agreement.
+ * Kept for existing callers; the reference for the fee contract is `protocolFee` in lib/protocol/fees.ts,
+ * which is u128-safe and refuses fees above a share of the amount (T-5).
+ */
 export function agreementFee(amount: bigint, feeBps: bigint, minFee: bigint): bigint {
   if (amount <= 0n || feeBps < 0n || minFee < 0n) throw new Error('invalid fee input');
   const proportional = (amount * feeBps + BPS - 1n) / BPS;
