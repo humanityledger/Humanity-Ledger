@@ -106,3 +106,14 @@ describe('minimumAmount', () => {
     expect(minimumAmount({ ...S, maxFeeShareBps: 0n })).toBe(null);
   });
 });
+
+describe('D-2 placeholder schedule (pending operator confirmation)', () => {
+  const P: FeeSchedule = { feeBps: 50n, minFee: 1n, maxFeeShareBps: 1_000n };
+  it('matches the vectors in FEE_CONTRACT_SPEC.md section 6', () => {
+    expect(minimumAmount(P)).toBe(10n);
+    expect(protocolFee(9n, P)).toEqual({ ok: false, reason: 'fee-exceeds-share' });
+    expect(protocolFee(10n, P)).toEqual({ ok: true, fee: 1n, net: 9n });
+    expect(protocolFee(1_000_000n, P)).toEqual({ ok: true, fee: 5_000n, net: 995_000n });
+    expect(protocolFee(10n ** 18n, P)).toEqual({ ok: true, fee: 5n * 10n ** 15n, net: 995n * 10n ** 15n });
+  });
+});

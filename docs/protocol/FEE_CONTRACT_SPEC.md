@@ -118,12 +118,12 @@ The fee contract is done when all of these hold:
 ## 6. Decisions before deployment
 
 These change what users pay and are not engineering choices. Each needs the operator's decision, recorded in
-`docs/TOKENOMICS.md`.
+`docs/TOKENOMICS.md`. Status of every row: **engineering recommendation, pending operator confirmation.**
 
-| ID | Decision | Recommendation |
+| ID | Decision | Engineering recommendation (pending operator confirmation) |
 |---|---|---|
-| D-1 | Fee on settlement (claim, withdraw) or on deposit | Settlement: a refunded agreement should not pay |
-| D-2 | `feeBps`, `minFee`, `maxFeeShareBps` for escrow | Not proposed here; needs a decision with the expected agreement sizes |
-| D-3 | Stream fee: per withdrawal with `minFee = 0`, or once at creation | Per withdrawal, `minFee = 0` |
-| D-4 | `TREASURY`: an Aztec account controlled by the 4-of-7 multisig (launch condition 3) | Required before any deployment; there is no such account today |
+| D-1 | Fee on settlement (claim, withdraw) or on deposit | **On settlement.** A refunded agreement pays no fee |
+| D-2 | `feeBps`, `minFee`, `maxFeeShareBps` for escrow | **Placeholder only:** `feeBps = 50` (0.5 %), `minFee = 1` base unit, `maxFeeShareBps = 1000` (10 %). With 18-decimal tokens, `minFee = 1` is in effect no minimum; smallest accepted amount: 10 base units. The operator sets the final values before the contract is compiled for deployment (they pin the class ID, section 4) |
+| D-3 | Stream fee: per withdrawal with `minFee = 0`, or once at creation | **Per withdrawal, `minFee = 0`,** so small streams are never blocked by a minimum |
+| D-4 | `TREASURY`: an Aztec account controlled by the 4-of-7 multisig (launch condition 3) | **Operator requirement.** No code assumes an address; there is no such account today, and nothing deploys until it exists |
 | D-5 | Staking tiers (a lower `feeBps` for stakers) | Out of Phase 0: a tier would need a proof of stake inside the private call; not specified here |
