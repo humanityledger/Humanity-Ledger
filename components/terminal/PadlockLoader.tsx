@@ -8,9 +8,10 @@ import { detectConnectedMobileWallet, openMobileWalletApp, isMobileDevice } from
  * PadlockLoader: the screen Ledger Chat shows before the encrypted channel is
  * open. The name is kept so LedgerChatV2 does not change; the padlock is gone.
  *
- * The emblem is the company mark (the world map disc, see HLLogo) inside a
- * fine dial. While the channel is being set up, a single arc sweeps the dial
- * and a thin bar runs under the status line. Nothing else moves.
+ * The emblem is the company mark (the world map disc, see HLLogo) inside three
+ * thin orbits; while the channel opens, three real steps show where it is
+ * (wallet, the unlock signature, the inbox). Pure CSS motion, stopped under
+ * prefers-reduced-motion.
  *
  * Copy rules: the status names what is actually happening, never a made up
  * stage, and nothing here claims more than the product does. "End to end
@@ -47,16 +48,48 @@ export function isWalletInitError(initError: string): boolean {
   );
 }
 
+/**
+ * The emblem: the company mark at the centre of three thin orbits, one per layer the channel is
+ * built on (your device, XMTP with MLS, Aztec). At rest they turn slowly; while the channel opens
+ * they speed up and a light arc sweeps the outer ring; on an error they stop and turn red.
+ */
 function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
-  const cls = [s.emblem, state === 'working' ? s.breathing : '', state === 'error' ? s.error : ''].join(' ');
   return (
-    <div className={cls} aria-hidden="true">
+    <div className={`${s.emblem} ${s[state] ?? ""}`} aria-hidden="true">
+      <span className={`${s.orbit} ${s.o3}`}><i /></span>
+      <span className={`${s.orbit} ${s.o2}`}><i /></span>
+      <span className={`${s.orbit} ${s.o1}`}><i /></span>
+      <span className={s.sweep} />
       <span className={s.mark}>
         <img src="/worldmap.png" alt="" draggable={false} />
       </span>
     </div>
   );
 }
+
+type Step = 'done' | 'active' | 'todo';
+
+function Steps({ items }: { items: { label: string; note: string; state: Step }[] }) {
+  return (
+    <ol className={s.steps}>
+      {items.map((it) => (
+        <li key={it.label} className={`${s.step} ${s[it.state]}`} aria-current={it.state === 'active' ? 'step' : undefined}>
+          <span className={s.dot} aria-hidden="true">
+            {it.state === 'done' ? (
+              <svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.4l2.9 2.9 6.1-6.6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            ) : null}
+          </span>
+          <span className={s.stepText}>
+            <span className={s.stepLabel}>{it.label}</span>
+            <span className={s.stepNote}>{it.note}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const PROMISES = ['Free, no transaction', 'Encrypted on this device', 'MLS over XMTP'];
 
 export function PadlockLoader({
   isInitializing,
@@ -89,8 +122,22 @@ export function PadlockLoader({
 
   const state: 'idle' | 'working' | 'error' = initError ? 'error' : isInitializing ? 'working' : 'idle';
 
+  // One signature request per tap: a double tap must not open two wallet prompts (a second prompt
+  // races the first and is the classic way this flow gets stuck). Re-armed whenever we return to idle.
+  const armed = React.useRef(true);
+  React.useEffect(() => {
+    if (state === 'idle') armed.current = true;
+  }, [state]);
+  const activate = React.useCallback(() => {
+    if (!armed.current) return;
+    armed.current = false;
+    onActivate();
+  }, [onActivate]);
+
   return (
     <div className={s.root}>
+      <span className={s.aurora} aria-hidden="true" />
+      <span className={s.grid} aria-hidden="true" />
       <Emblem state={state} />
 
       <div className={s.content}>
@@ -145,41 +192,48 @@ export function PadlockLoader({
         )}
 
         {state === 'working' && (
-          <div key={isWaitingForSignature ? 'sign' : 'work'} className={s.fade} aria-live="polite" aria-busy="true">
+          <div key="work" className={s.fade} aria-live="polite" aria-busy="true">
+            <p className={s.kicker}>Opening your channel</p>
             <p className={s.title}>Ledger Chat</p>
-            {isWaitingForSignature ? (
-              <>
-                <p className={s.status}>Waiting for your wallet</p>
-                <p className={s.hint}>
-                  Approve the signature request in your wallet. It is free and sends no transaction.
-                </p>
-                {isMobileDevice() && (
-                  <button
-                    type="button"
-                    className={s.primary}
-                    style={{ marginTop: '16px', width: '100%' }}
-                    onClick={() => openMobileWalletApp(connectorName)}
-                  >
-                    Open {walletInfo.name} to approve
-                  </button>
-                )}
-              </>
-            ) : (
-              <p className={s.status}>Securing your channel</p>
+            <Steps
+              items={[
+                { label: 'Wallet connected', note: walletInfo.name && walletInfo.name !== 'Wallet App' ? walletInfo.name : 'Your account', state: 'done' },
+                {
+                  label: 'Unlock this device',
+                  note: isWaitingForSignature ? 'Approve the signature in your wallet. It is free and sends no transaction.' : 'Signed',
+                  state: isWaitingForSignature ? 'active' : 'done',
+                },
+                { label: 'Open your encrypted inbox', note: 'Messages are decrypted here, on your device', state: isWaitingForSignature ? 'todo' : 'active' },
+              ]}
+            />
+            {isWaitingForSignature && isMobileDevice() && (
+              <button type="button" className={`${s.primary} ${s.wide}`} onClick={() => openMobileWalletApp(connectorName)}>
+                Open {walletInfo.name} to approve
+              </button>
             )}
-            <div className={s.bar} role="progressbar" aria-label="Securing your channel" />
+            {isWaitingForSignature && (
+              <p className={s.guard}>
+                Your wallet should name <strong>ledgerchat.org</strong>. Never sign this message on any other site.
+              </p>
+            )}
+            <div className={s.bar} role="progressbar" aria-label={isWaitingForSignature ? 'Waiting for your wallet' : 'Opening your encrypted inbox'} />
           </div>
         )}
 
         {state === 'idle' && (
           <div key="idle" className={s.fade}>
-            <p className={s.title}>Ledger Chat</p>
-            <p className={s.lede}>Direct messages are encrypted on your device before they are sent.</p>
+            <p className={s.kicker}>Private by design</p>
+            <p className={`${s.title} ${s.titleLg}`}>Ledger Chat</p>
+            <p className={s.lede}>Messages encrypted on your device. Private payments in the same conversation.</p>
             <div className={s.actions}>
-              <button type="button" className={s.primary} onClick={onActivate}>
+              <button type="button" className={`${s.primary} ${s.cta}`} onClick={activate}>
                 Enter Ledger Chat
+                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 10h11M11 5.5 15.5 10 11 14.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             </div>
+            <ul className={s.promises}>
+              {PROMISES.map((p) => <li key={p}>{p}</li>)}
+            </ul>
             <p className={s.foot}>Non-custodial. Early access.</p>
           </div>
         )}
