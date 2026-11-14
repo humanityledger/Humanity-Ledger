@@ -306,3 +306,36 @@ describe('budgetFeeFor (Fee Juice asked before a transaction with estimated gas)
     expect(budgetFeeFor(fees) < maxFeeFor(fees)).toBe(true);
   });
 });
+
+describe('portalLogs (Check for fees when the RPC refuses a long block range)', () => {
+  const q = { address: '0xportal', event: {}, args: {}, fromBlock: 0n };
+  it('uses one request when the RPC accepts it', async () => {
+    const { portalLogs } = await import('@/lib/aztec/fee-juice');
+    let calls = 0;
+    const logs = await portalLogs({ getLogs: async () => { calls++; return [{ n: 1 }]; } }, q);
+    expect(calls).toBe(1);
+    expect(logs.length).toBe(1);
+  });
+  it('falls back to 9,000-block windows, newest first, covering the lookback', async () => {
+    const { portalLogs, LOG_WINDOW, LOG_LOOKBACK } = await import('@/lib/aztec/fee-juice');
+    const ranges: Array<[bigint, bigint]> = [];
+    const latest = 26_415_200n;
+    const getLogs = async (a: any) => {
+      if (a.toBlock === undefined) throw new Error('RPC Request failed.');
+      ranges.push([a.fromBlock, a.toBlock]);
+      return a.fromBlock <= 26_415_154n && 26_415_154n <= a.toBlock ? [{ block: 26_415_154n }] : [];
+    };
+    const logs = await portalLogs({ getLogs, getBlockNumber: async () => latest }, q);
+    expect(logs).toEqual([{ block: 26_415_154n }]);
+    expect(ranges[0]).toEqual([latest - LOG_WINDOW + 1n, latest]);
+    const covered = ranges.reduce((s, [f, t]) => s + (t - f + 1n), 0n);
+    expect(covered).toBe(LOG_LOOKBACK + 1n);
+    for (const [f, t] of ranges) expect(t - f + 1n <= LOG_WINDOW).toBe(true);
+  });
+  it('still reports the error when it cannot window', async () => {
+    const { portalLogs } = await import('@/lib/aztec/fee-juice');
+    let err = '';
+    try { await portalLogs({ getLogs: async () => { throw new Error('RPC Request failed.'); } }, q); } catch (e: any) { err = e.message; }
+    expect(err).toBe('RPC Request failed.');
+  });
+});

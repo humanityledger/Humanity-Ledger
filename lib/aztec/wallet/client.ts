@@ -855,7 +855,7 @@ class PrivateWallet {
    * browser, or on a new device) by re-deriving claim secrets. `l1.getLogs`
    * is viem's PublicClient.getLogs.
    */
-  async recoverFeeJuiceClaims(l1: Required<Pick<L1Clients, 'getLogs'>>) {
+  async recoverFeeJuiceClaims(l1: Required<Pick<L1Clients, 'getLogs'>> & Pick<L1Clients, 'getBlockNumber'>) {
     if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
     const me = this.me.toString();
     const sdk = this.sdk;

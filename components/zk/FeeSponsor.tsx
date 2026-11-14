@@ -166,7 +166,7 @@ export function FeeRequestBox() {
     setNote(null);
     try {
       const { getPrivateWallet } = await import('@/lib/aztec/wallet/client');
-      const n = await getPrivateWallet().recoverFeeJuiceClaims({ getLogs: (a: any) => (publicClient as any).getLogs(a) });
+      const n = await getPrivateWallet().recoverFeeJuiceClaims({ getLogs: (a: any) => (publicClient as any).getLogs(a), getBlockNumber: () => (publicClient as any).getBlockNumber() });
       setNote(n ? 'Fee Juice found. Your account is created as soon as it reaches Aztec (a few minutes).' : 'Nothing has arrived yet. Deposits show up a minute or two after the contact pays.');
     } catch (e) {
       setNote(humanError(e));
