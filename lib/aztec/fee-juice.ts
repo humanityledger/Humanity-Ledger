@@ -223,6 +223,25 @@ export function maxFeeFor(minFees: { feePerL2Gas: bigint; feePerDaGas: bigint })
   return (TX_L2_GAS_LIMIT * minFees.feePerL2Gas + TX_DA_GAS_LIMIT * minFees.feePerDaGas) * 2n;
 }
 
+/**
+ * Gas limits for a transaction from the `gasUsed` a simulation reports (aztec.js 6.0.0,
+ * `simulate({ includeMetadata: true })`): each dimension padded by 25% plus a fixed margin
+ * (4,096 DA, 50,000 L2), teardown likewise when there is one. Built with the same Gas class the
+ * SDK returned, so no SDK import is needed here. Undefined when there is nothing usable or when the
+ * padded L2 limit would reach the protocol maximum, which the defaults already use.
+ */
+export function gasLimitsFromSimulation(gasUsed: any): { gasLimits: unknown; teardownGasLimits: unknown } | undefined {
+  const total = gasUsed?.totalGas;
+  if (!total || !(Number(total.l2Gas) > 0)) return undefined;
+  const GasCtor = total.constructor as new (daGas: number, l2Gas: number) => unknown;
+  const pad = (g: any) => new GasCtor(Math.ceil(Number(g?.daGas ?? 0) * 1.25) + 4096, Math.ceil(Number(g?.l2Gas ?? 0) * 1.25) + 50_000);
+  const teardown = gasUsed.teardownGas;
+  const hasTeardown = teardown && (Number(teardown.l2Gas) > 0 || Number(teardown.daGas) > 0);
+  const gasLimits = pad(total) as { l2Gas: number };
+  if (gasLimits.l2Gas >= Number(TX_L2_GAS_LIMIT)) return undefined;
+  return { gasLimits, teardownGasLimits: hasTeardown ? pad(teardown) : new GasCtor(0, 0) };
+}
+
 // ─── L1 bridge (browser, user's own Ethereum wallet) ────────────────────────
 
 export const FEE_JUICE_PORTAL_ABI = [

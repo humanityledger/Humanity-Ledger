@@ -44,6 +44,7 @@ import {
   bridgeFeeJuice as bridgeOnL1,
   feePlan,
   maxFeeFor,
+  gasLimitsFromSimulation,
   loadClaims,
   mergeClaims,
   nextSecretIndex,
@@ -758,8 +759,25 @@ class PrivateWallet {
     assertNodeForValue((await this.node.getNodeInfo()) as any, 'mainnet');
   }
 
+  /**
+   * Gas limits for one interaction, from a simulation that does not enforce the fee (aztec.js 6.0.0:
+   * `simulate({ includeMetadata: true })` returns `gasUsed`; apps that declare their own limits pad
+   * `totalGas`, per the SDK's own note on SimulationResult). Padded by 25% plus a fixed margin.
+   * Returns undefined when the simulation fails or reports no gas, so the caller keeps the defaults.
+   */
+  private async estimatedGasSettings(interaction: any, from: any, fee: any): Promise<any | undefined> {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return undefined;
+    try {
+      const sim = await interaction.simulate({ from, fee, includeMetadata: true, skipFeeEnforcement: true });
+      return gasLimitsFromSimulation(sim?.gasUsed);
+    } catch (e) {
+      console.warn('[aztec] gas estimate failed; using the default limits:', (e as Error)?.message);
+      return undefined;
+    }
+  }
+
   /** Fee options for the next transaction, and the deposit it consumes (if any). */
-  private async resolveFee(): Promise<{ fee: any; consumes?: FeeJuiceClaim }> {
+  private async resolveFee(opts?: { estimated?: boolean }): Promise<{ fee: any; consumes?: FeeJuiceClaim }> {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return { fee: this.sponsoredFee };
     await this.assertNodeStillPinned();
     const state = await this.refreshFeeJuice();
@@ -769,6 +787,10 @@ class PrivateWallet {
       return { fee: { paymentMethod: this.claimMethod(c) }, consumes: c };
     }
     if (state.plan === 'balance') return { fee: undefined };
+    // Some Fee Juice, but less than the protocol-maximum fee: a transfer with estimated gas limits
+    // usually costs far less, so it is tried with the account's own balance. The node still refuses
+    // it if the balance cannot cover the estimated maximum, and the error says so.
+    if (opts?.estimated && state.plan === 'top-up' && state.balance > 0n) return { fee: undefined };
     const sponsored = await this.trySponsor();
     if (sponsored) return { fee: sponsored };
     throw new Error(
@@ -1187,14 +1209,20 @@ class PrivateWallet {
     let fee: any;
     let consumes: any;
     try {
-      ({ fee, consumes } = await this.resolveFee());
+      ({ fee, consumes } = await this.resolveFee({ estimated: true }));
     } catch (err: any) {
       upsertActivity(this.me.toString(), { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
       this.set({ activity: await this.loadActivity().catch(() => this.snapshot.activity) });
       throw err;
     }
+    // Gas limits from a simulation, so the network asks the fee payer to hold the fee this
+    // transfer can cost rather than the protocol's maximum (README question 6). Any failure keeps
+    // the previous behaviour: the wallet's own per-transaction limits.
+    const interaction = build(contract);
+    const gasSettings = await this.estimatedGasSettings(interaction, from ?? this.me, fee);
+    const sendFee = gasSettings ? { ...(fee ?? {}), gasSettings } : fee;
     const receipt = await this.sendAndWait(
-      () => build(contract).send({ from: from ?? this.me, fee, wait: this.sdk!.NO_WAIT }),
+      () => interaction.send({ from: from ?? this.me, fee: sendFee, wait: this.sdk!.NO_WAIT }),
       id,
       kind,
     );

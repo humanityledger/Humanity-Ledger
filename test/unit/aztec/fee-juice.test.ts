@@ -260,3 +260,27 @@ describe('humanError: encrypted store failures', () => {
     expect(humanError(new Error('[ENCRYPTED STORE ERROR] This browser cannot keep an encrypted private wallet'))).toBe('This browser cannot keep an encrypted private wallet');
   });
 });
+
+describe('gasLimitsFromSimulation (estimated gas, README question 6)', () => {
+  class Gas { constructor(public daGas: number, public l2Gas: number) {} }
+  it('pads the simulated gas and keeps the SDK class', async () => {
+    const { gasLimitsFromSimulation } = await import('@/lib/aztec/fee-juice');
+    const r = gasLimitsFromSimulation({ totalGas: new Gas(1000, 200_000), teardownGas: new Gas(0, 0) }) as any;
+    expect(r.gasLimits instanceof Gas).toBe(true);
+    expect(r.gasLimits.l2Gas).toBe(300_000);
+    expect(r.gasLimits.daGas).toBe(1250 + 4096);
+    expect(r.teardownGasLimits.l2Gas).toBe(0);
+  });
+  it('pads teardown when there is one', async () => {
+    const { gasLimitsFromSimulation } = await import('@/lib/aztec/fee-juice');
+    const r = gasLimitsFromSimulation({ totalGas: new Gas(0, 400_000), teardownGas: new Gas(0, 40_000) }) as any;
+    expect(r.teardownGasLimits.l2Gas).toBe(100_000);
+    expect(r.gasLimits.l2Gas).toBeGreaterThan(r.teardownGasLimits.l2Gas);
+  });
+  it('falls back to the defaults when nothing usable is reported or the limit would reach the maximum', async () => {
+    const { gasLimitsFromSimulation, TX_L2_GAS_LIMIT } = await import('@/lib/aztec/fee-juice');
+    expect(gasLimitsFromSimulation(undefined)).toBeUndefined();
+    expect(gasLimitsFromSimulation({ totalGas: new Gas(0, 0) })).toBeUndefined();
+    expect(gasLimitsFromSimulation({ totalGas: new Gas(0, Number(TX_L2_GAS_LIMIT)) })).toBeUndefined();
+  });
+});
