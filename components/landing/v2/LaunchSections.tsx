@@ -126,7 +126,7 @@ export function LaunchHero({ alpha, phone, mode, onMode }: { alpha: boolean; pho
                   <small>iPhone · TestFlight first</small>
                   App Store
                 </span>
-                <span className={s.soon}>Soon</span>
+                <span className={s.soon}>Coming soon</span>
               </span>
               <span className={s.store}>
                 <PlayGlyph />
@@ -134,7 +134,7 @@ export function LaunchHero({ alpha, phone, mode, onMode }: { alpha: boolean; pho
                   <small>Android</small>
                   Google Play
                 </span>
-                <span className={s.soon}>Soon</span>
+                <span className={s.soon}>Coming soon</span>
               </span>
             </div>
           </div>

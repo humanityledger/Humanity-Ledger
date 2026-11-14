@@ -24,8 +24,8 @@ function openSignLink(link: WalletOpenLink | null | undefined): boolean {
  * PadlockLoader: the screen Ledger Chat shows before the encrypted channel is
  * open. The name is kept so LedgerChatV2 does not change; the padlock is gone.
  *
- * The emblem is the company mark (the world map disc, see HLLogo) inside three
- * thin orbits; while the channel opens, three real steps show where it is
+ * The emblem is the company mark (the world map disc, see HLLogo) with one thin
+ * arc that turns while the channel opens; three real steps show where it is
  * (wallet, the unlock signature, the inbox). Pure CSS motion, stopped under
  * prefers-reduced-motion.
  *
@@ -67,17 +67,13 @@ export function isWalletInitError(initError: string): boolean {
 }
 
 /**
- * The emblem: the company mark at the centre of three thin orbits, one per layer the channel is
- * built on (your device, XMTP with MLS, Aztec). At rest they turn slowly; while the channel opens
- * they speed up and a light arc sweeps the outer ring; on an error they stop and turn red.
+ * The emblem: the company mark in a plain white disc. While the channel opens, one thin arc turns
+ * around it; on an error the ring turns red. Nothing else moves.
  */
 function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
   return (
     <div className={`${s.emblem} ${s[state] ?? ""}`} aria-hidden="true">
-      <span className={`${s.orbit} ${s.o3}`}><i /></span>
-      <span className={`${s.orbit} ${s.o2}`}><i /></span>
-      <span className={`${s.orbit} ${s.o1}`}><i /></span>
-      <span className={s.sweep} />
+      <span className={s.arc} />
       <span className={s.mark}>
         <img src="/worldmap.png" alt="" draggable={false} />
       </span>
@@ -158,8 +154,6 @@ export function PadlockLoader({
 
   return (
     <div className={s.root}>
-      <span className={s.aurora} aria-hidden="true" />
-      <span className={s.grid} aria-hidden="true" />
       <Emblem state={state} />
 
       <div className={s.content}>

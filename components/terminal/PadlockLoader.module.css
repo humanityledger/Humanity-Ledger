@@ -1,11 +1,12 @@
 /*
  * PadlockLoader: the screen shown while Ledger Chat opens its encrypted channel.
- * White, quiet and exact: a soft aurora wash, the mark inside three slow orbits,
- * and the real steps of opening the channel. Ink is the only strong colour; green
+ * White, quiet and exact: the mark, one thin turning arc while it works, and the
+ * real steps of opening the channel. Ink is the only strong colour; green
  * marks a finished step, red an error (the trust colours of the app).
  * Motion is transform and opacity only, and stops under prefers-reduced-motion.
  */
 
+/* Plain and quiet: white page, one card of steps, the mark. */
 .root {
   position: relative;
   flex: 1;
@@ -23,96 +24,39 @@
   isolation: isolate;
 }
 
-/* ---------- Atmosphere ---------- */
-
-.aurora {
-  position: absolute;
-  inset: -30%;
-  z-index: -2;
-  background:
-    radial-gradient(28% 24% at 32% 38%, rgba(124, 92, 255, 0.12), transparent 70%),
-    radial-gradient(26% 22% at 68% 36%, rgba(46, 196, 182, 0.11), transparent 70%),
-    radial-gradient(30% 24% at 50% 70%, rgba(255, 170, 90, 0.08), transparent 70%);
-  animation: drift 22s ease-in-out infinite alternate;
-}
-.grid {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: radial-gradient(rgba(16, 24, 40, 0.09) 1px, transparent 1px);
-  background-size: 22px 22px;
-  mask-image: radial-gradient(46% 42% at 50% 42%, #000, transparent 78%);
-  -webkit-mask-image: radial-gradient(46% 42% at 50% 42%, #000, transparent 78%);
-}
-@keyframes drift { to { transform: translate3d(3%, -2%, 0) rotate(6deg) scale(1.06); } }
-
 /* ---------- Emblem ---------- */
 
 .emblem {
   position: relative;
-  width: 196px;
-  height: 196px;
-  margin-bottom: 26px;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 22px;
   display: grid;
   place-items: center;
 }
-.orbit {
+.arc {
   position: absolute;
+  inset: 0;
   border-radius: 50%;
-  border: 1px solid rgba(16, 24, 40, 0.1);
-  animation: spin linear infinite;
-}
-.orbit i {
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  width: 7px;
-  height: 7px;
-  margin-left: -3.5px;
-  border-radius: 50%;
-  background: #15171c;
-  box-shadow: 0 0 0 3px #fff;
-}
-.o1 { inset: 46px; animation-duration: 14s; }
-.o2 { inset: 24px; animation-duration: 22s; animation-direction: reverse; border-style: dashed; border-color: rgba(16, 24, 40, 0.12); }
-.o2 i { background: #7c5cff; }
-.o3 { inset: 2px; animation-duration: 34s; }
-.o3 i { background: #13a87a; top: auto; bottom: -4px; }
-.sweep {
-  position: absolute;
-  inset: 2px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0 78%, rgba(21, 23, 28, 0.32) 96%, transparent 100%);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  border: 1.5px solid rgba(16, 24, 40, 0.08);
 }
 .mark {
   position: relative;
-  width: 84px;
-  height: 84px;
+  width: 72px;
+  height: 72px;
   border-radius: 999px;
   overflow: hidden;
   background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.08), 0 10px 30px -10px rgba(16, 24, 40, 0.35), 0 0 0 10px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.08), 0 6px 18px -8px rgba(16, 24, 40, 0.25);
   display: grid;
   place-items: center;
-  transition: transform 0.4s cubic-bezier(.3, 1.4, .5, 1);
 }
 .mark img { width: 118%; height: 118%; object-fit: cover; pointer-events: none; }
 
-.emblem.working .orbit { animation-duration: 3.2s; }
-.emblem.working .o2 { animation-duration: 4.6s; }
-.emblem.working .o3 { animation-duration: 6.4s; }
-.emblem.working .sweep { opacity: 1; animation: spin 1.6s linear infinite; }
-.emblem.working .mark { animation: breathe 2.4s ease-in-out infinite; }
-.emblem.error .orbit { animation-play-state: paused; border-color: rgba(229, 72, 77, 0.35); }
-.emblem.error .orbit i { background: #e5484d; }
-.emblem.error .mark { box-shadow: 0 0 0 1px rgba(229, 72, 77, 0.4), 0 10px 30px -10px rgba(229, 72, 77, 0.45), 0 0 0 10px rgba(255, 255, 255, 0.7); }
+.emblem.working .arc { border-color: rgba(16, 24, 40, 0.08); border-top-color: #15171c; animation: spin 1.1s linear infinite; }
+.emblem.error .arc { border-color: rgba(229, 72, 77, 0.45); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 
 /* ---------- Text ---------- */
 
@@ -254,14 +198,9 @@
 @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
 
-@media (max-width: 420px) {
-  .emblem { width: 168px; height: 168px; }
-  .o1 { inset: 40px; }
-  .o2 { inset: 20px; }
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .aurora, .orbit, .sweep, .mark, .fade, .bar::after, .step.active .dot { animation: none !important; }
+  .arc, .fade, .bar::after, .step.active .dot { animation: none !important; }
 }
 
 /* Anti-phishing note shown while the wallet asks for the unlock signature */
