@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/SPONSOR.md`: state table, deployment checklist, V2 digest, the Alpha-only signer key, and that
   Fee Juice in the sponsor cannot be withdrawn. /protocol: the 24 h counter now reads "vouchers issued".
 
+### Protocol fee foundation (14 November 2026)
+
+- `lib/protocol/fees.ts`: Phase 0 fee arithmetic (`protocolFee`, `ceilBps`, `minimumAmount`), u128-safe, refusing a
+  fee above `maxFeeShareBps` of the amount (finding T-5). Real only in tests: `test/unit/protocol/fees.test.ts`.
+- `docs/protocol/FEE_CONTRACT_SPEC.md`: where the fee is taken, the fee note, why the schedule is a compiled
+  constant (class ID), test vectors, acceptance criteria and the decisions still open (D-1 to D-5).
+- `docs/TOKENOMICS.md` and `docs/MAINNET_READINESS.md`: next engineering and operator steps for launch condition 1.
+
 ### Launch audit (14 November 2026)
 - Calls: the Dockerfile now passes `NEXT_PUBLIC_PEERJS_HOST` / `_KEY` / `_PORT` / `_PATH` to the build. Before, the variables set on Railway never reached the bundle and every call used the public PeerJS cloud. Hanging up releases the camera and microphone before the hang-up message is sent.
 - A first-time visitor who opens /chat goes to /connect at once (it waited ~11 s of session retries meant for a sign-in in flight).

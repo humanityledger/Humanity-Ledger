@@ -53,6 +53,18 @@ The path a person with no AZTEC takes, run between two accounts of the operator:
 
 Account creation measured about 0.56M L2 gas at the day's fees, inside the 3M budget of `budgetFeeFor`. Record: `deployments/aztec-mainnet.json` (`newUserFlow`). Still between two accounts of the operator: R8 (two different people) stays open.
 
+### Protocol fee (launch condition 1 of docs/TOKENOMICS.md)
+
+Not a blocker for any R item: no contract charges a fee, and none may until launch condition 1 is met.
+
+| Step | State | Owner |
+|---|---|---|
+| Phase 0 arithmetic, u128-safe, with the T-5 refusal | Real only in tests: `lib/protocol/fees.ts`, `test/unit/protocol/fees.test.ts` | Done |
+| Contract specification with test vectors and acceptance criteria | `docs/protocol/FEE_CONTRACT_SPEC.md` | Done |
+| Decisions D-1 to D-4 (where the fee is taken, the schedule, streams, the treasury's Aztec account) | Open | Operator |
+| Implementation in `PrivateEscrow` and `PaymentStream`, TXE tests, testnet e2e | Not implemented; after the decisions | Engineer |
+| External audit, then Alpha | Not started | Operator |
+
 ### Runbook for R1 (one browser, smallest amounts)
 
 1. Production on the merged main; sign in with the wallet that will hold the account.
