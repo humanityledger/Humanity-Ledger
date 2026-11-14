@@ -112,8 +112,8 @@ describe('pre-deploy wiring', () => {
     expect(pre).toContain("require('../lib/db/migration-inspect.js')");
   });
 
-  it('does not boot the app when migrations fail', () => {
-    expect(start).not.toMatch(/railway-pre-deploy\.js \|\| true/);
-    expect(start).toMatch(/railway-pre-deploy\.js \|\| exit 1/);
+  it('still boots when migrations need a person, and says so in the log', () => {
+    expect(start).not.toMatch(/railway-pre-deploy\.js \|\| exit 1/);
+    expect(start).toMatch(/railway-pre-deploy\.js \|\| echo "\[start\.sh\] WARNING/);
   });
 });
