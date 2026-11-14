@@ -4352,15 +4352,29 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             // replays recent messages. Their IDs may be in confirmedMsgIds, but the
             // React state may have been wiped (e.g. peer switch + remount).
             // Only skip if the ID is already IN React state — not just in the Set.
+            let firstSight = false;
             if (confirmedMsgIds.current.has(realId)) {
               const alreadyInState = messagesRef.current?.some((m: any) => m.id === realId);
               if (alreadyInState) continue;
               // ID was in dedup Set but NOT in state — re-insert (fall through).
             } else {
               confirmedMsgIds.current.add(realId);
+              firstSight = true;
             }
             pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
             pruneOptimisticMap(); // prune stale optimistic entries
+
+            // Delivery receipt (double grey tick on the sender's side) for a message that arrived on
+            // this device but is not being read now: page hidden, or another chat open. Sent once,
+            // the first time this device sees the message. A message read now gets __READ__ instead.
+            if (
+              firstSight && fromPeer && msg.id && typeof content === 'string' && !content.startsWith('__') &&
+              ledgerSettings?.show_read_receipts !== false &&
+              /^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(String(msgConvPeer)) &&
+              (document.hidden || String(msgConvPeer).toLowerCase() !== activePeerRef.current?.toLowerCase())
+            ) {
+              sendMessage(client, msgConvPeer, `__DELIVERED__${realId}`, address).catch(() => {});
+            }
             // ─────────────────────────────────────────────────────────────────────
 
             // Phase 2: Intercept Reactions
@@ -5101,6 +5115,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         const mappedMsgs: any[] = [];
         const reactions: Record<string, Record<string, string[]>> = {};
         const readReceipts = new Set<string>();
+        const deliveredReceipts = new Set<string>();
         const revokedIds = new Set<string>();
         let latestPinnedId: string | null = null;
         let lastPeerMsgId: string | null = null;
@@ -5136,6 +5151,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           } else if (typeof content === 'string' && content.startsWith('__READ__')) {
             const readId = content.replace('__READ__', '');
             readReceipts.add(readId);
+          } else if (typeof content === 'string' && content.startsWith('__DELIVERED__')) {
+            deliveredReceipts.add(content.replace('__DELIVERED__', ''));
           } else if (typeof content === 'string' && content.startsWith('__PIN__')) {
             latestPinnedId = content.replace('__PIN__', '');
           } else if (typeof content === 'string' && content.startsWith('__UNPIN__')) {
@@ -5196,6 +5213,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         for (const m of processedMsgs) {
           if (reactions[m.id]) m.reactions = reactions[m.id];
           if (readReceipts.has(m.id)) m.status = 'read';
+          else if (deliveredReceipts.has(m.id) && m.status !== 'read') m.status = 'delivered';
         }
 
         // Auto-send read receipt if there is an unread message from the peer
@@ -6910,6 +6928,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   if (c.startsWith('__REVOKE__')) return false;
                   if (c.startsWith('__EDIT__')) return false;
                   if (c.startsWith('__READ__')) return false;
+                  if (c.startsWith('__DELIVERED__')) return false;
                   if (c.startsWith('__VOTE__')) return false;
                   // __PAYMENT__ messages ARE rendered (as PaymentBubble) — do NOT filter them out
                   if (c.startsWith('__TYPING__')) return false;

@@ -330,10 +330,15 @@ export default async function RootLayout({
         {/* Wallet in-app browsers (MetaMask, Trust, Coinbase, Rainbow, OKX, Phantom…) draw pages larger
             than Safari or Chrome on the same phone, so Ledger Chat looked zoomed in. There the page
             is laid out ~10% wider and shown at 0.9, which matches what the phone's own browser shows.
-            Pinch zoom stays available (WCAG 1.4.4). Runs now and again once Next's viewport tag exists. */}
+            Pinch zoom stays available (WCAG 1.4.4). Runs now and again once Next's viewport tag exists.
+            iPhone and iPad (Safari, Chrome, any iOS browser): maximum-scale=1 stops the page from zooming
+            in when a field gets focus. iOS ignores it for the person's own pinch zoom, which keeps
+            working; Android is not given it, because there it would block pinch zoom. */}
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){try{
 var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);
 var named=/MetaMaskMobile|TrustWallet|Trust\\/|CoinbaseWallet|CoinbaseBrowser|Rainbow|OKApp|Phantom|imToken|TokenPocket|BitKeep|Bitget|Zerion|BinanceWeb3|Rabby|SafePal|Uniswap/i.test(ua);
+var ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+if(ios&&!(named||window.ethereum)){var ci='width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content';var si=function(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=ci;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)m[i].setAttribute('content',ci)};si();document.addEventListener('DOMContentLoaded',si,{once:true});return}
 if(!mobile||!(named||window.ethereum))return;
 document.documentElement.setAttribute('data-wallet-browser','1');
 var c='width=device-width, initial-scale=0.9, viewport-fit=cover, interactive-widget=resizes-content';
