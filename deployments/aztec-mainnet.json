@@ -19,12 +19,13 @@
       "address": "0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5",
       "admin": "0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42",
       "artifact": "@aztec-labs/noir-contracts.js/Token",
-      "classId": null,
+      "classId": "0x067df4ddda0b0872ef604f47f3681d5e8c0de98280ac6b79963851c055ba91e0",
       "deployTx": "0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c",
-      "deployBlock": 0,
+      "deployBlock": 28992,
       "deployedOn": "2026-11-14",
-      "status": "pending-preflight",
-      "deployedBy": "Ledger Chat private wallet of 0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675 (operator tool #r1, PR #91); universal deployment"
+      "status": "active",
+      "deployedBy": "Ledger Chat private wallet of 0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675 (operator tool #r1, PR #91); universal deployment",
+      "confirmedBy": "Aztec mainnet preflight run 43583640304 (14 Nov 2026): deploy tx checkpointed in L2 block 28992, universal deployment (deployer zero), checkTokenInstance ok (Token)"
     }
   ],
   "retiredTokens": [
@@ -55,19 +56,20 @@
       {
         "step": "deploy HLC",
         "txHash": "0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c",
-        "block": 0
+        "block": 28992
       },
       {
         "step": "issue 1 HLC to the sender's private balance (mint_to_private)",
         "txHash": "0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940",
-        "block": 0
+        "block": 29001
       },
       {
         "step": "private transfer of 0.10 HLC",
         "txHash": "0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5",
-        "block": 0
+        "block": 29012
       }
     ],
-    "device": "Chrome on Windows with MetaMask (desktop)"
+    "device": "Chrome on Windows with MetaMask (desktop)",
+    "confirmedBy": "Aztec mainnet preflight run 43583640304: all three transactions checkpointed (blocks 28992, 29001, 29012)"
   }
 }

@@ -8,7 +8,7 @@ Production runs on Aztec Alpha (Ethereum mainnet, chain 1) and HLC is confirmed 
 
 | # | Remaining | Why it matters | Owner | How it is closed |
 | --- | --- | --- | --- | --- |
-| R1 | First real run on Alpha | No transaction hash yet proves a private payment from Ledger Chat on mainnet | Stefan | Runbook below; record hashes in this file |
+| R1 | First real run on Alpha | **Done 14 November 2026.** First private payment from Ledger Chat on Alpha, confirmed by the preflight (run 43583640304); record below | Stefan | `deployments/aztec-mainnet.json` (`firstPrivatePayment`) |
 | R2 | Public and legal texts | `lib/docs/pages/legal.ts` and `protocol.ts` say the wallet is test-network only and will not touch real value before an audit; production does | Stefan with counsel | Decide the wording; agents do not edit legal text |
 | R3 | TURN relay | Calls between different networks cannot connect (`/api/calls/ice` answers `source: none`) | Stefan | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` in Railway (`docs/CALLS.md`) |
 | R4 | Zero-balance onboarding | A new account needs about 28 AZTEC of Fee Juice before its first transaction | Decision, then build | Proposal P1 below |
@@ -17,6 +17,18 @@ Production runs on Aztec Alpha (Ethereum mainnet, chain 1) and HLC is confirmed 
 | R7 | External audit | G8 open; no claim of audited contracts may be made | Stefan | Engage an auditor; record the report under `audit` |
 | R8 | Two-browser G7 run | Peer address proof verified only in tests | Stefan + one tester | `docs/chat/G6_SESSION_CHECKLIST.md` |
 | R9 | `DATABASE_URL_UNPOOLED` | #63 works around it; the correct value is the direct database | Stefan | `${{Postgres.DATABASE_URL}}` in Railway |
+
+### R1 record: first private payment on Aztec Alpha (14 November 2026)
+
+The HLC recorded on 11 November (`0x2cd0f3775d…e55d`, admin `0x01c7e18f…549b`) can never be issued: nobody holds the key of its admin account. It is kept under `retiredTokens` with status do-not-use. A new HLC was deployed from the Ledger Chat private wallet of `0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675` (operator tool `#r1`, PR #91), with that account as admin.
+
+| Step | Transaction | L2 block | Status |
+|---|---|---|---|
+| Deploy HLC `0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5` (class `0x067df4dd…91e0`, universal deployment) | `0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c` | 28992 | checkpointed |
+| Issue 1 HLC to the sender's private balance (`mint_to_private`) | `0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940` | 29001 | checkpointed |
+| Private transfer of 0.10 HLC | `0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5` | 29012 | checkpointed |
+
+Sender `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` (admin of the new HLC), recipient `0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a`, both accounts of the operator. Fees paid in Fee Juice by the sender. Proved in Chrome on Windows with MetaMask. Confirmed by the read only preflight, run 43583640304. On chain the transfer shows note hashes, nullifiers and the public fee payment; sender, recipient and amount are not visible. Still open: the recipient opening its wallet and reading 0.10 HLC (needs `NEXT_PUBLIC_AZTEC_TOKENS` switched to the new address).
 
 ### Runbook for R1 (one browser, smallest amounts)
 

@@ -19,7 +19,7 @@ Source of truth: code and `deployments/*.json` on `main` at `926013e` (merge of 
 |---|---|---|
 | HLC token | Deployed and confirmed | `deployments/aztec-mainnet.json`: address `0x2cd0f3775d129210ecf2165e338e1b6b708f2243ac1b30feb0ac49875366e55d`, class `0x067df4ddda0b0872ef604f47f3681d5e8c0de98280ac6b79963851c055ba91e0`, deploy tx `0x0dfc7146b9f807432d06bccf43d3cea88e849455f8f62372ea2b93d41be29136`, block 24544, confirmed by "Aztec mainnet preflight" run 42990431384, 6 decimals |
 | Our contracts | None | `contracts: []`, `sponsoredFpc: null`, `audit: null` |
-| Private HLC transfer from Ledger Chat | Pending first recorded run (R1) | No transaction hash in `MAINNET_READINESS.md`; private payments on Alpha are **unproven in production** |
+| Private HLC transfer from Ledger Chat | **Real on Alpha** (R1, 14 November) | Transfer `0x1eb2bb76…40a5` in L2 block 29012, issue `0x1d90c138…8940` in 29001, new HLC `0x1f49571a…24e5` deployed in 28992; preflight run 43583640304. Record in `MAINNET_READINESS.md` |
 | Fees | Fee Juice only, no sponsored payer | `lib/aztec/fee-juice.ts`; `needs-fee-juice` state in `lib/aztec/wallet/client.ts`; about 28 AZTEC before the first transaction (R4) |
 | Agreements | Refused by policy | `lib/aztec/agreement-policy.ts` accepts on Alpha only a class recorded in `deployments/aztec-mainnet.json`, which has none; and R6: escrow and stream artifacts predate the deposit and creation nullifiers (`deployments/aztec-pending-recompile.json`) |
 | Sponsor | Not deployed; V2 digest in source (#84) | `contracts/aztec/sponsor`, TXE 7 tests on #84 |
@@ -41,7 +41,7 @@ Full addresses and class IDs: `deployments/aztec-testnet.json`. Recorded e2e run
 
 | Priority | Gap | Location | Fix | Depends on | Effort | Owner |
 |---|---|---|---|---|---|---|
-| Critical | First recorded private payment on Alpha (R1) | `MAINNET_READINESS.md` runbook | One browser, smallest amount, record tx hashes and blocks | Fee Juice on an account | 2 h | Stefan |
+| Done | First recorded private payment on Alpha (R1) | `deployments/aztec-mainnet.json` `firstPrivatePayment` | Recorded 14 November, blocks 28992 to 29012 | — | — | — |
 | Critical | Legal text says test network only (R2) | `lib/docs/pages/legal.ts` | Counsel wording for Alpha | Counsel | Days | Stefan |
 | Critical | No external audit (G8, R7) | All contracts | Engage auditor; record under `audit` | Budget | External | Stefan |
 | High | Escrow and stream artifacts behind source (R6) | `deployments/aztec-pending-recompile.json` | Recompile (Aztec contracts workflow), record class IDs, testnet e2e, clear entries, then Alpha deploy | Toolchain, testnet funds | 1 to 2 days | Engineer + Stefan |
