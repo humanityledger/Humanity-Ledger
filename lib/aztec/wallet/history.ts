@@ -11,7 +11,7 @@
 
 import type { TokenKey } from './config';
 
-export type ActivityKind = 'shield' | 'unshield' | 'send' | 'receive' | 'faucet' | 'deploy';
+export type ActivityKind = 'shield' | 'unshield' | 'send' | 'receive' | 'faucet' | 'deploy' | 'issue';
 export type ActivityStatus = 'proving' | 'pending' | 'settled' | 'failed';
 
 export interface Activity {
