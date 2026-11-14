@@ -300,11 +300,11 @@
 }
 
 
-/* ── Obsidian launch theme ──────────────────────────────────────────────
+/* ── Dark mode, only when the visitor picks it (white is the landing) ────
    The page is dark; the product cards stay light, so their charts, phones
    and tables keep the colours they were drawn with. Text that sits on the
    page itself (statements, footer) reads the light inks set here. */
-.page.page {
+.page.page[data-landing-theme="dark"] {
   --page-bg: #06070b;
   --hl-ink: #f5f6f9;
   --hl-ink-2: #b9bfcc;
@@ -317,7 +317,7 @@
     #06070b;
   color: var(--hl-ink);
 }
-.page .card {
+.page[data-landing-theme="dark"] .card {
   --hl-ink: #15171c;
   --hl-ink-2: #475061;
   --hl-ink-3: #727a88;

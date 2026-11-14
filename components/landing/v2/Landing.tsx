@@ -1,20 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { AZTEC_WALLET_CONFIG, networkLabel } from "@/lib/aztec/wallet/config";
 import { SiteFooter } from "./SiteFooter";
 import { GlyphField } from "@/components/immersive/GlyphField";
 import { SiteNav } from "@/components/immersive/SiteNav";
 import { LivePhone, PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
-import { AppearancePlayground, FirstPaymentRecord, LaunchClose, LaunchHero, StackExplorer } from "./LaunchSections";
+import { AppearancePlayground, FirstPaymentRecord, LaunchClose, LaunchHero, StackExplorer, type LandingMode } from "./LaunchSections";
 import { AztecSection, DesktopTour, LiveActivities } from "./Showcase";
 import { DevicesSection, TokenSection } from "./ProtocolSections";
 import s from "./Landing.module.css";
 import st from "./Story.module.css";
 
 /**
- * Ledger Chat landing page, on obsidian: the launch on Aztec Alpha first (LaunchSections.tsx),
- * then the product in light cards.
+ * Ledger Chat landing page, in white (a switch in the hero offers dark): the launch on Aztec
+ * Alpha first (LaunchSections.tsx), then the product in cards.
  *
  * Few words, each one true. The page says what Ledger Chat is in one line, shows the real
  * interface, and keeps the details (protocol, limits, comparisons) in the documentation, where
@@ -75,15 +75,34 @@ const STATEMENTS: { n: string; label: string; title: string; line: string }[] = 
   },
 ];
 
+const MODE_KEY = "hl_landing_mode";
+
 export function HumanityLanding() {
+  // White is the landing. Dark only if the visitor picks it, remembered on this device.
+  const [mode, setMode] = useState<LandingMode>("light");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(MODE_KEY) === "dark") setMode("dark");
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const pickMode = (m: LandingMode) => {
+    setMode(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      /* storage unavailable */
+    }
+  };
   return (
-    <div className={`${s.page} ${st.page}`}>
+    <div className={`${s.page} ${st.page}`} data-landing-theme={mode}>
       <GlyphField ambient />
       <SiteNav />
 
       <main id="main-content">
         {/* Hero: live on Alpha, one action, where it runs today. */}
-        <LaunchHero alpha={ALPHA} phone={<LivePhone id="stickers" fill={0.92} />} />
+        <LaunchHero alpha={ALPHA} mode={mode} onMode={pickMode} phone={<LivePhone id="stickers" fill={0.92} />} />
 
         <div className={`${s.wrap} ${st.stack}`}>
           {ALPHA && <FirstPaymentRecord />}

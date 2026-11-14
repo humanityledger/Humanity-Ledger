@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Landing sections for the launch on Aztec Alpha: the dark hero, the on-chain record of the first
+ * Landing sections for the launch on Aztec Alpha, white by default (a switch offers dark): the hero, the on-chain record of the first
  * private payment, the interactive stack and the appearance playground.
  *
  * Every figure here comes from the repository: the record from deployments/aztec-mainnet.json,
@@ -61,9 +61,20 @@ function GlobeGlyph() {
 
 /* ── Hero ───────────────────────────────────────────────────────────── */
 
-export function LaunchHero({ alpha, phone }: { alpha: boolean; phone?: React.ReactNode }) {
+export type LandingMode = "light" | "dark";
+
+export function LaunchHero({ alpha, phone, mode, onMode }: { alpha: boolean; phone?: React.ReactNode; mode?: LandingMode; onMode?: (m: LandingMode) => void }) {
   return (
     <section className={s.hero} aria-labelledby="hero-title">
+      {onMode && (
+        <div className={s.modeSwitch} role="group" aria-label="Page colours">
+          {(["light", "dark"] as const).map((m) => (
+            <button key={m} type="button" aria-pressed={(mode ?? "light") === m} onClick={() => onMode(m)}>
+              {m === "light" ? "Light" : "Dark"}
+            </button>
+          ))}
+        </div>
+      )}
       <div className={s.heroGlow} aria-hidden="true" />
       <div className={s.heroGrid} aria-hidden="true" />
       <div className={s.heroInner}>
@@ -263,8 +274,8 @@ const DEMO_STICKERS = [
 ] as const;
 
 export function AppearancePlayground() {
-  const [themeId, setThemeId] = useState("midnight");
-  const [wallId, setWallId] = useState("nebula");
+  const [themeId, setThemeId] = useState("ocean");
+  const [wallId, setWallId] = useState("iridescent");
   const [bubble, setBubble] = useState("aurora");
   const [sent, setSent] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
