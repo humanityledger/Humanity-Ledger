@@ -11,8 +11,8 @@ const inter = Inter({ subsets: ["latin"] });
 /**
  * Root error boundary. It replaces the whole layout, so it draws with inline styles only.
  *
- * Before (14 Nov 2026): "Fatal Kernel Panic" with the raw stack trace, shown on iPhone when a chunk
- * failed to load after coming back from MetaMask. A chunk error now reloads the page once it is in
+ * Before (14 Nov 2026): an alarming title and the raw stack trace, shown on iPhone when a chunk failed
+ * to load after coming back from MetaMask. A chunk error now reloads the page once it is in
  * front (lib/errors/chunk-recovery.ts); the screen below is shown only if that is not possible, and it
  * never shows error text outside development.
  */
