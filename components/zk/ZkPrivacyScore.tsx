@@ -33,7 +33,7 @@ function ZkPrivacyScoreInner({
   const [expanded, setExpanded] = useState(false);
 
   const txUrl = txHash
-    ? `${AZTEC_EXPLORER}/tx-effect/${txHash.replace('0x', '')}`
+    ? `${AZTEC_EXPLORER}/tx-effects/${txHash}`
     : null;
 
   return (

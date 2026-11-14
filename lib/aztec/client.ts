@@ -5,12 +5,12 @@ export const AZTEC_EXPLORER = 'https://aztecscan.xyz';
 /**
  * Aztec mainnet explorer URL for a given transaction hash.
  *
- * AztecScan SPA uses /tx-effect/:hash (NOT /tx/:hash — that route does not exist).
+ * AztecScan uses /tx-effects/0x<hash> (checked 14 Nov 2026; /tx-effect/ and /tx/ answer 404).
  * Virtual/synthetic hashes generated server-side are never indexed on-chain, so we
  * route them to the explorer root to avoid the "Page does not exist" 404 screen.
  *
  * Rules:
- *  - Real Aztec tx hash: starts with 0x and is 66 chars (32-byte hex) → /tx-effect/
+ *  - Real Aztec tx hash: starts with 0x and is 66 chars (32-byte hex) → /tx-effects/
  *  - Virtual hash (aztec-airdrop-*, or sha256 0x but >66 chars): → explorer root
  *  - Empty/null: → explorer root
  */
@@ -18,7 +18,7 @@ export function explorerTxUrl(txHash: string | null | undefined): string {
   if (!txHash) return AZTEC_EXPLORER;
   // A real Aztec tx hash is exactly 66 chars: '0x' + 64 hex digits
   const isRealHash = /^0x[a-fA-F0-9]{64}$/.test(txHash);
-  if (isRealHash) return `${AZTEC_EXPLORER}/tx-effect/${txHash.replace('0x', '')}`;
+  if (isRealHash) return `${AZTEC_EXPLORER}/tx-effects/${txHash.toLowerCase()}`;
   // Virtual hash — route to root so user sees the live explorer, not a 404
   return AZTEC_EXPLORER;
 }
@@ -28,23 +28,18 @@ export function explorerTxUrl(txHash: string | null | undefined): string {
  * sanitise it to the correct AztecScan path format.
  *
  * AztecScan routes:
- *  - /tx-effect/:hash — transaction effect detail (preferred, 64-char hex)
+ *  - /tx-effects/0x<hash> — transaction effect detail
  *  - /address/:addr   — account page
  *  - /               — root explorer (fallback for virtual hashes)
  */
 export function sanitiseExplorerUrl(stored: string | null | undefined): string {
   if (!stored) return AZTEC_EXPLORER;
 
-  // Already a valid /tx-effect/ or /address/ URL — keep as-is
-  if (stored.includes('/tx-effect/') || stored.includes('/address/')) return stored;
+  if (stored.includes('/tx-effects/0x') || stored.includes('/address/')) return stored;
 
-  // Old /tx/:hash format — upgrade to /tx-effect/
-  const txMatch = stored.match(/\/tx\/(0x[a-fA-F0-9]{64})$/);
-  if (txMatch) return `${AZTEC_EXPLORER}/tx-effect/${txMatch[1]}`;
-
-  // Bare hash (0x + 64 hex) — wrap in /tx-effect/
-  const hashMatch = stored.match(/(0x[a-fA-F0-9]{64})$/);
-  if (hashMatch) return `${AZTEC_EXPLORER}/tx-effect/${hashMatch[1]}`;
+  // Older formats (/tx/0x…, /tx-effect/…, a bare hash, with or without 0x): rebuilt as /tx-effects/0x…
+  const hashMatch = stored.match(/(?:0x)?([a-fA-F0-9]{64})$/);
+  if (hashMatch) return `${AZTEC_EXPLORER}/tx-effects/0x${hashMatch[1].toLowerCase()}`;
 
   // Root or just the explorer domain — fine
   if (stored.startsWith('https://aztecscan.xyz')) return stored;
