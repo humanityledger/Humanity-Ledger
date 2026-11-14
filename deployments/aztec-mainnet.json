@@ -84,5 +84,34 @@
     "fee": "2.858 AZTEC, paid by the sender in Fee Juice (the same transaction claimed a 47 AZTEC Fee Juice deposit bridged from L1)",
     "onChain": "1 note hash, 4 nullifiers, revert code 0; sender, recipient and amount not visible",
     "confirmedBy": "Aztecscan tx-effects page, status mined (14 Nov 2026); not yet in a preflight run"
+  },
+  "measuredFees": {
+    "$comment": "Fees charged on Alpha, read from Aztecscan (tx-effects pages) on 14 Nov 2026; L2 gas derived as fee / 3.2346e12 (feePerL2Gas read from the node the same day). Used to size TX_L2_GAS_BUDGET in lib/aztec/fee-juice.ts. Amounts and parties are not visible on chain.",
+    "txs": [
+      {
+        "txHash": "0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5",
+        "block": 29012,
+        "what": "private transfer (operator tool)",
+        "feeAztec": "1.256"
+      },
+      {
+        "txHash": "0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94",
+        "block": 29771,
+        "what": "private transfer that also claimed a 47 AZTEC Fee Juice deposit",
+        "feeAztec": "2.858"
+      },
+      {
+        "txHash": "0x2956a31a9e98199f5efe3c98419db639b61931348734bf4baa9f9d099a02d0f9",
+        "block": 29893,
+        "what": "issue HLC to the issuer's private balance",
+        "feeAztec": "1.657"
+      },
+      {
+        "txHash": "0x2ccd3893dd2fc7e548ef75f04fc6ecbd6870b9db0c06d49875e6b39144cda6db",
+        "block": 29895,
+        "what": "private transfer from the regular wallet screen, with gas limits estimated (#104)",
+        "feeAztec": "1.233"
+      }
+    ]
   }
 }
