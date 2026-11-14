@@ -1,162 +1,411 @@
-<img width="2531" height="400" alt="humanity-ledger-private-credentials" src="https://github.com/user-attachments/assets/393a0266-4ddb-426a-af2d-da76fbe5cec2" />
+# Ledger Chat
 
+End-to-end encrypted messaging over XMTP (MLS, RFC 9420), with private payments on Aztec, in one conversation. Built by Humanity Ledger.
 
+`Early access · Aztec Alpha with a cap per payment · not externally audited · status as of 14 November 2026`
 
-# Humanity Ledger Protocol
+<p align="center">
+  <img src="docs/readme/first-payment-record.jpg" width="900" alt="The first private payment from Ledger Chat on Aztec Alpha: L2 block 29,012, HLC deployed in block 28,992, confirmed by preflight run 43583640304">
+</p>
 
-A messaging application (Ledger Chat) that uses XMTP for end-to-end encrypted direct messages and the Aztec network (testnet) for private payments, plus experimental standalone Noir circuits.
+This file is an evaluation dossier. It is written so that an engineer can decide in about fifteen minutes whether the project deserves a deeper review. Every value below is copied from a file in this repository; [`docs/readme/FACTS.md`](docs/readme/FACTS.md) lists each one with its source file and line.
 
-```
-Proving (wallet):       Aztec PXE in the browser, Token and SponsoredFPC contracts (Aztec testnet)
-Proving (circuits):     UltraHonk over BN254 with Barretenberg (@aztec/bb.js 5.3.0), experimental, tests only
-Direct messages:        XMTP v3 (MLS, RFC 9420, implemented by XMTP through OpenMLS)
-Community posts:        Stored by the application server, readable by it (see below)
-L1 contracts:           Solidity, Cancun EVM, not audited, not deployed to mainnet
-Release stage:          Live on Aztec Alpha (first private payment: L2 block 29012, 14 Nov 2026) · cap per payment · no external audit
-Engineering plan:       docs/zk/MASTER_PROMPT.md
-Aztec review dossier:   docs/AZTEC_FOUNDATION_DOSSIER.md
-```
+**Read this first.**
 
----
-
-## 1. Architecture
-
-1. **Private payments (real on testnet).** `lib/aztec/wallet/` runs an Aztec PXE in the browser with a Schnorr account whose keys are derived from a signature by the user's EVM wallet. It shields, sends privately and unshields with the standard `Token` contract, paying fees through `SponsoredFPC`.
-2. **Private agreements (testnet).** In a direct conversation, an escrow or a payment stream runs in its own keyed instance of our aztec-nr contracts (`contracts/aztec/`). The invitation travels in the encrypted DM; the receiver verifies it against the shared secret, the deployment record and the contract's stored note before accepting (`lib/aztec/chat-agreements.ts`, [`docs/chat/AGREEMENTS.md`](docs/chat/AGREEMENTS.md)). Aztec Alpha (mainnet) is not used yet: see [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md).
-   Two hardening changes in the contract source (a deposit nullifier in the escrow and a creation nullifier in the stream) are not compiled into the deployed contracts yet; the app deploys and recognises the committed artifacts (`deployments/aztec-pending-recompile.json`).
-   An **exits-only** switch (`AZTEC_VALUE_MODE=exits-only`, read by open tabs before every new payment) makes the app refuse new value and keep claim, refund, cancel and withdraw. It stops the interface, not the contracts, which cannot be paused.
-3. **Direct messages (real, provided by XMTP).** One-to-one messages travel over XMTP v3, which uses MLS (RFC 9420). Humanity Ledger does not implement MLS itself.
-4. **Communities (server-readable).** Community posts and community channel messages are stored in PostgreSQL by the application server and are readable by it. The interface says so. Moving communities to XMTP MLS groups is planned in [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) (task R-17).
-5. **Standalone Noir circuits (experimental).** `circuits/escrow`, `circuits/identity` and `circuits/streams` compile with nargo 1.0.0 and prove with Barretenberg in tests. They are not used by the app and have known soundness issues (section 5).
-
-```
-+----------------------------------------------------------------------+
-|                 Client (browser / desktop)                           |
-|                                                                      |
-|  +-------------------------+        +-----------------------------+  |
-|  | XMTP v3 client          |        | Aztec PXE (lib/aztec/wallet)|  |
-|  | direct messages (MLS)   |        | Token + SponsoredFPC        |  |
-|  +-------------------------+        +--------------+--------------+  |
-+--------------------------------------------------- | ----------------+
-                                                     | private tx
-                                                     v
-                                     +-------------------------------+
-                                     | Aztec testnet                 |
-                                     +-------------------------------+
-
-  Not connected to the above:
-  circuits/  (escrow, identity, streams)  ->  lib/zk/prover.ts  ->  tests only
-```
+* No external audit has been done. On Aztec Alpha, payments from the app are capped per payment.
+* Aztec Alpha carries real value and is, in Aztec's own words as recorded in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), live but early, with critical bugs expected.
+* Both private payments on Alpha so far went between two accounts of the operator.
+* HLC is a token issued by the operator. It is uncapped, unbacked and is not money.
+* Humanity Ledger is not affiliated with, endorsed by or audited by Aztec Labs, the Aztec Foundation or XMTP Labs.
 
 ---
 
-## 2. Repository layout
+## Contents
 
-| Directory | What it holds |
-|---|---|
-| `circuits/` | Experimental standalone Noir circuits: v1 (`escrow`, `identity`, `streams`, pinned VKs) and v2 (`*_v2`, shared `hl_lib`, not pinned) |
-| `contracts/` | Solidity contracts (Cancun EVM). Not audited |
-| `lib/aztec/` | Aztec wallet (PXE, keys, tokens), agreements (keyed deployment, invitations, confirmation, chat integration), fees per network, mainnet policy, and the VK pinning checks (`verifier.ts`) |
-| `lib/zk/` | `prover.ts`: Node-only UltraHonk proving and verification for the standalone circuits |
-| `lib/community-apps/` | Community apps sandbox: a separate document served with CSP `sandbox allow-scripts` and no network |
-| `scripts/` | Tooling: testnet wallet script, artifact checks, copy checks |
-| `test/` | Vitest and Hardhat tests |
-| `docs/` | Specifications, the engineering plan (`docs/zk/`) and the Aztec dossier |
+1. [Status](#1-status-as-of-14-november-2026)
+2. [Architecture](#2-architecture)
+3. [Private payments on Aztec Alpha](#3-private-payments-on-aztec-alpha)
+4. [G7: binding a chat identity to an Aztec address](#4-g7-binding-a-chat-identity-to-an-aztec-address)
+5. [Encrypted local storage](#5-encrypted-local-storage)
+6. [aztec-nr contracts](#6-aztec-nr-contracts-aztec-600)
+7. [Standalone Noir circuits](#7-standalone-noir-circuits-experimental)
+8. [Cryptographic anchors](#8-cryptographic-anchors)
+9. [What the tests prove, and what they do not](#9-what-the-tests-prove-and-what-they-do-not)
+10. [Explicit non-claims](#10-explicit-non-claims)
+11. [The product](#11-the-product)
+12. [Reproduce](#12-reproduce)
+13. [Open technical questions for Aztec Labs](#13-open-technical-questions-for-aztec-labs)
+14. [Roadmap](#14-roadmap)
+15. [Governance, security and licence](#15-governance-security-and-licence)
 
 ---
 
-## 3. What the tests show, and what they do not
+## 1. Status as of 14 November 2026
 
-| Property | Evidence | Limit |
+| Component | Network | State | Evidence |
+|---|---|---|---|
+| Direct messages | XMTP v3 | Real. MLS is provided by XMTP; we do not implement it | XMTP browser SDK 5.2.0, [`docs/STATUS.md`](docs/STATUS.md) |
+| Private wallet: send, shield, unshield | Aztec Alpha and testnet | Real. Two private payments on Alpha (blocks 29012, 29771) | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), [section 3](#3-private-payments-on-aztec-alpha) |
+| HLC token | Aztec Alpha | Active since block 28992. An earlier HLC is retired | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
+| G7 peer binding | Client | Real in unit tests. Not yet run between two different people (R8) | [`lib/aztec/peer-binding.ts`](lib/aztec/peer-binding.ts), `test/unit/aztec/peer-binding.test.ts` |
+| Encrypted local message store | Client | Real since 13 Nov 2026 | [`lib/xmtp/db-key.ts`](lib/xmtp/db-key.ts), `test/unit/security/xmtp-db-key.test.ts` |
+| Escrow and payment streams (aztec-nr) | Testnet only | 55 TXE tests in CI; end to end on testnet | [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](docs/AZTEC_TESTNET_DEPLOYMENTS.md) |
+| Escrow and streams on Alpha | Off | Artifacts need a recompile with the deposit and creation nullifiers (R6) | [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md) |
+| Standalone Noir circuits | None | Tests only. Known soundness issues ZK-01 to ZK-07 | [section 7](#7-standalone-noir-circuits-experimental) |
+| Calls (voice, video) | WebRTC | Real. Calls across different networks need a TURN relay (R3) | [`docs/CALLS.md`](docs/CALLS.md) |
+| Community posts | Our server | Readable by our server, and the product says so | [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) |
+| Community apps sandbox | Client | Real: sandboxed frame, no network | `test/eaf_isolation.adversarial.test.ts` |
+| L1 contracts (Solidity) | None | Local tests only, not deployed | `npm run test:contracts` |
+| External audit | — | None | `audit: null` in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
+
+---
+
+## 2. Architecture
+
+```mermaid
+flowchart LR
+  subgraph Device["Your device: the browser"]
+    W["Wallet<br/>signs; private keys stay here"]
+    S["Encrypted message store<br/>SQLite, key from HKDF-SHA256"]
+    G["G7 peer check<br/>inbox bound to Aztec address"]
+    P["Aztec PXE (WebAssembly)<br/>builds the proof locally"]
+  end
+  X["XMTP v3 network<br/>relays MLS ciphertext"]
+  A["Aztec Alpha (L2)<br/>verifies proofs, private notes"]
+  E["Ethereum (L1)<br/>secures the rollup"]
+  S -- "MLS ciphertext" --> X
+  P -- "proof and encrypted notes" --> A
+  A -- "settles on" --> E
+```
+
+| Boundary | What crosses it | What never does |
 |---|---|---|
-| Wallet keys never leave the device | `test/key_custody.test.ts`, `test/pxe_boundary_security.test.ts` | Unit tests of the key helpers, not an end-to-end audit |
-| MLS forward secrecy and post-compromise security | Provided by XMTP | `test/mls_post_compromise.test.ts` models an MLS key schedule inside the test file; it does not exercise the app or XMTP |
-| Standalone circuits reject the cases their asserts cover | `test/circuits/`, `test/unit/aztec/circuit-proving.test.ts` (real proving) | Each test proves one withdrawal in isolation; ZK-01 shows the streams circuit accepts repeated claims |
-| Verification keys are pinned | `test/zk/vk-pinning.test.ts`, `scripts/zk/check-artifacts.mjs` | The on-chain VK registry (`contracts/ZKVerificationKeyRegistry.sol`) is tested but not deployed |
-| aztec-nr contracts settle once, refund after the deadline, isolate escrows and streams | 55 TXE tests in `contracts/aztec/*/src/test.nr` (Aztec 6.0.0, CI); keyed escrow (claim, refund) and stream (withdraw) end to end on testnet, workflow "Aztec escrow e2e (testnet)" | Test tokens only; see `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
-| Sign-in (SIWE) rejects replays, forged nonces and foreign domains | `test/auth/siwe-routes.test.ts` (real route handlers and signatures) | Domain comes from `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_DOMAIN` |
-| Community apps cannot reach the network or the parent window | `test/eaf_isolation.adversarial.test.ts` | Checks the frame policy; an app can still navigate its own frame |
-| L1 contract invariants | `npm run test:contracts` | Local Hardhat tests; no external audit |
+| Device to XMTP | MLS ciphertext, inbox IDs, timing | Plaintext messages, the local database key |
+| Device to Aztec Alpha | A zero-knowledge proof, note hashes, nullifiers, encrypted notes, the public fee payment | Private keys, amounts, recipients, private inputs |
+| Device to Ledger Chat servers | Sign-in (SIWE), presence, encrypted offline messages, community posts | Message content of direct messages, wallet keys |
+| Aztec to Ethereum | Rollup proofs and state roots | Anything about an individual private transfer |
+
+1. **Messaging.** One-to-one messages travel over XMTP v3, which implements MLS (RFC 9420). Keys are updated as the conversation goes on (TreeKEM). XMTP protects content, not all metadata: the network sees that two inboxes exchange traffic.
+2. **Payments.** The browser runs Aztec's Private Execution Environment (PXE) with a Schnorr account. Its keys are derived from a signature by the user's Ethereum wallet ([`lib/aztec/wallet/`](lib/aztec/wallet/)). The PXE builds an UltraHonk proof on the device and sends only the proof and encrypted outputs to the network.
+3. **Fees.** On Alpha, the account pays its own fees in Fee Juice, which is AZTEC bridged one way from L1. There is no Sponsored FPC on Alpha, so the account is the visible fee payer of each transaction: amounts and recipients stay private, but the account's transactions can be linked to each other ([`lib/aztec/fee-juice.ts`](lib/aztec/fee-juice.ts), lines 1 to 40).
+4. **Binding chat and payments.** Before any private payment, G7 checks that the Aztec address belongs to the person at the other end of the XMTP conversation ([section 4](#4-g7-binding-a-chat-identity-to-an-aztec-address)).
+
+### A payment, step by step
+
+```mermaid
+sequenceDiagram
+  participant A as Alice (browser)
+  participant X as XMTP (MLS)
+  participant B as Bob (browser)
+  participant Z as Aztec Alpha
+  B->>X: Announce Aztec address with a G7 proof (Schnorr over Grumpkin)
+  X->>A: Delivered to Alice, encrypted
+  A->>A: Check the three G7 conditions, pin the address as verified
+  A->>A: PXE builds the UltraHonk proof locally
+  A->>Z: Proof, nullifiers, note hashes, encrypted note, public fee
+  Z-->>A: Mined in an L2 block
+  B->>B: Discovers the note and decrypts the amount
+```
 
 ---
 
-## 4. Noir circuits (experimental)
+## 3. Private payments on Aztec Alpha
 
-The three circuits use `pedersen_hash` and compile with nargo 1.0.0. The binary verification keys were generated with @aztec/bb.js 5.3.0 and their SHA-256 hashes are pinned in `lib/zk/vk-pins.ts` (re-exported by `lib/aztec/verifier.ts`).
+Aztec Alpha is Aztec's network with real value, settled on Ethereum mainnet (chain 1). Node and rollup are recorded in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) (`network`: Aztec 6.0.0 Tierra, rollup version 2070860440).
 
-| Circuit | Pinned VK SHA-256 |
+| Step | Transaction | L2 block | Explorer |
+|---|---|---|---|
+| Deploy HLC | `0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c` | 28992 | [view](https://aztecscan.xyz/tx-effects/0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c) |
+| Issue 1 HLC to the sender's private balance (`mint_to_private`) | `0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940` | 29001 | [view](https://aztecscan.xyz/tx-effects/0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940) |
+| Private transfer of 0.10 HLC (R1, operator tool) | `0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5` | 29012 | [view](https://aztecscan.xyz/tx-effects/0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5) |
+| Private transfer of 0.9 HLC (regular wallet screen) | `0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94` | 29771 | [view](https://aztecscan.xyz/tx-effects/0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94) |
+
+* **Sender** `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` (admin of HLC). **Recipient** `0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a`. Both are accounts of the operator.
+* The first three transactions were proved in Chrome on Windows with MetaMask and confirmed by the read-only workflow "Aztec mainnet preflight", run 43583640304. The block 29771 payment is confirmed on Aztecscan and not yet by a preflight run.
+* **On chain**, a transfer shows note hashes, nullifiers and the public fee payment. It does not show the sender, the recipient or the amount.
+
+<p align="center">
+  <img src="docs/readme/aztecscan-29012.jpg" width="330" alt="Aztecscan page of the transfer in L2 block 29,012: status mined, fee 1.256 AZTEC, 3 note hashes, 4 nullifiers, no amount or parties shown">
+</p>
+
+### Fees on Alpha
+
+| | Block 29012 | Block 29771 |
+|---|---|---|
+| Fee charged (Aztecscan) | 1.256 AZTEC | 2.858 AZTEC |
+| Paid by | Sender, in Fee Juice | Sender, in Fee Juice, claiming a 47 AZTEC deposit in the same transaction |
+
+Before that 47 AZTEC deposit, sends failed with "insufficient fee payer balance". The node accepts a transaction only if the fee payer can cover its **maximum** fee. The wallet sets that maximum from the protocol's gas limit (`MAX_PROCESSABLE_L2_GAS`, [`lib/aztec/fee-juice.ts`](lib/aztec/fee-juice.ts) line 217), so the balance required is much larger than what a transfer is charged. A new account also needs Fee Juice before its first transaction ([`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md), R4). Both are open questions in [section 13](#13-open-technical-questions-for-aztec-labs).
+
+<p align="center">
+  <img src="docs/readme/fee-juice-panel.jpg" width="520" alt="Fee Juice panel in the private wallet: a 47 AZTEC deposit ready to be used by the next transaction, and what is public and private about paying fees">
+</p>
+
+### HLC, active and retired
+
+| | Active HLC | Retired HLC (do not use) |
+|---|---|---|
+| Address | `0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5` | `0x2cd0f3775d129210ecf2165e338e1b6b708f2243ac1b30feb0ac49875366e55d` |
+| Class ID (standard `Token`) | `0x067df4ddda0b0872ef604f47f3681d5e8c0de98280ac6b79963851c055ba91e0` | same class |
+| Deploy transaction | `0x1b1031703d15a1cd77507a241c8d3715fb6b80baf484fc9676ad968f3ae47d1c` | `0x0dfc7146b9f807432d06bccf43d3cea88e849455f8f62372ea2b93d41be29136` |
+| L2 block | 28992 | 24544 |
+| Admin | `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` | `0x01c7e18f1751ea94e3d63aad2d0b7221642ad299454f769103f0d32364ce549b` |
+| Why | Deployed from the Ledger Chat private wallet, universal deployment | Nobody holds the key of its admin account, so it can never be issued |
+
+Name "Humanity Ledger Corp.", symbol HLC, 6 decimals. The wallet keeps HLC in an internal slot named `USDC`; that name is never shown to users and HLC has no relation to USDC.
+
+---
+
+## 4. G7: binding a chat identity to an Aztec address
+
+**The problem.** XMTP authenticates the peer's inbox, which is bound to an Ethereum identity. It says nothing about Aztec. Without a binding, a relay or a third party could substitute its own Aztec address for the peer's, and a payment would go to the wrong person.
+
+**The proof.** The peer announces its Aztec address in the same encrypted DM, with a Schnorr signature over Grumpkin made with the account's signing key:
+
+```text
+sha256ToField("hl/aztec-binding/v1 | <address> | <signerInboxId> | dm:<recipientInboxId>")
+```
+
+**What the receiver checks**, in this order ([`lib/aztec/peer-binding.ts`](lib/aztec/peer-binding.ts), lines 30 to 41):
+
+1. `signerInboxId` is the XMTP-authenticated sender of the message, and `recipientInboxId` is the receiver. A proof made for one person cannot be replayed to another.
+2. The announced address is exactly the Schnorr account address computed from the signing public key, salt and public keys, as `AccountManager.create` does in aztec.js 6.0.0.
+3. The signature verifies with that signing public key over the message above.
+
+Only then is the address pinned as verified, keyed by the peer's inbox ID. A later, different address is reported as a conflict and never replaces the pinned one silently.
+
+**What it does not prove.** A valid proof shows the sender holds the signing key that authorises transactions for that address. It does not show the sender holds that address's privacy keys, which are public data. A dishonest peer could announce an address built from someone else's public keys; funds sent there would be unusable by both. That harms only people who pay that peer, which a dishonest peer can do anyway. G7 closes the attack it is about: a third party substituting its own address.
+
+**Status.** Unit tests in `test/unit/aztec/peer-binding.test.ts`. A run between two different people on Alpha is still open (R8).
+
+---
+
+## 5. Encrypted local storage
+
+The browser keeps the XMTP message history in a local SQLite database. Since 13 November 2026, nothing that can decrypt it is ever stored ([`lib/xmtp/db-key.ts`](lib/xmtp/db-key.ts), lines 1 to 26).
+
+```mermaid
+flowchart LR
+  M["Fixed message<br/>(per address, hl/xmtp-db/v1)"] --> SIG["EIP-191 signature<br/>from the user's wallet"]
+  SIG --> K1["HKDF-SHA256 'hl/xmtp/v1/db-key'<br/>32-byte database key"]
+  SIG --> K2["HKDF-SHA256 'hl/xmtp/v1/wrap'<br/>AES-256-GCM key for a legacy key"]
+  SIG --> K3["HKDF-SHA256 'hl/xmtp/v1/check'<br/>16-byte public check value"]
+```
+
+* The signature is requested once per page load and kept in memory only. It is free and sends no transaction.
+* The check value detects a different signature before the database is touched.
+* Users from before 13 November keep their history: their old random key is encrypted with the wrap key and the plaintext copy is deleted. Until that date the key was stored in plaintext in `localStorage` (finding F-01).
+* Fail closed: a refused signature, a signature that is not a 65-byte ECDSA signature, a different check value or a ciphertext that does not authenticate all stop the database from opening.
+
+<p align="center">
+  <img src="docs/readme/entry-screen.jpg" width="900" alt="The entry screen in three states: enter, waiting for the unlock signature with an anti-phishing note naming ledgerchat.org, and opening the encrypted inbox">
+</p>
+
+While the wallet asks for this signature, the entry screen names `ledgerchat.org` and tells the user never to sign the message on another site.
+
+---
+
+## 6. aztec-nr contracts (Aztec 6.0.0)
+
+Three contracts written against `aztec-nr` v6.0.0 in [`contracts/aztec/`](contracts/aztec/). They compile with Aztec 6.0.0 in CI (workflow "Aztec contracts") and pass 55 TXE tests there, using a test-only token. **They run on testnet only.**
+
+| Contract | What it does | TXE tests | Current class ID (testnet) |
+|---|---|---|---|
+| `PrivateEscrow` | A claim note for the recipient and a refund note for the sender emit the same settlement nullifier, so only one of claim and refund can land. Claim requires `anchor <= deadline`; refund requires `anchor > deadline`; a deposit cannot land after its own deadline | 13 | `0x1fc9702de2946be7308126990f4cf3b8a3fbe9a4c53dc072d9ccb95bf9f04b5e` |
+| `PaymentStream` | Accrual from the start time, capped at the total without overflow. Each state has an index and a state nullifier emitted by both withdraw and cancel; withdrawals hand the sender a copy of the next state | 22 | `0x1fd6afbe0bffe6a7cb675927dedc0aed886a46bf7c6d58edc32854af073701f2` |
+| `IdentityCredential` | Depth-32 Poseidon2 membership, committed sanction lists, one `SingleUseClaim` per scope, issuer rotation in two steps | 20 | `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06` |
+
+* **Keyed deployment.** Escrow and stream balances are token notes owned by the contract, so each agreement gets its own instance, deployed with public keys derived from a secret only its two parties hold ([`lib/aztec/keyed-deploy.ts`](lib/aztec/keyed-deploy.ts)).
+* **End to end on testnet.** Keyed escrow (claim, and refund after the deadline) and stream (withdrawal bounded by accrual) ran in workflow "Aztec escrow e2e (testnet)", run 41881180186. The stored-terms views ran in run 42030688268. Every instance and transaction is in [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](docs/AZTEC_TESTNET_DEPLOYMENTS.md) and [`deployments/aztec-testnet.json`](deployments/aztec-testnet.json), checked daily against the node.
+* **Do not use.** The first escrow and stream instances of 4 November were deployed without keys; tokens sent to them could never be spent.
+* **Review.** Findings AZ-01 to AZ-23, fixes and open limits are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](docs/zk/AZTEC_CONTRACTS_REVIEW.md).
+
+---
+
+## 7. Standalone Noir circuits (experimental)
+
+`circuits/escrow`, `circuits/identity` and `circuits/streams` compile with nargo 1.0.0 and prove with Barretenberg (@aztec/bb.js 5.3.0) in tests. **No page uses them.** The direction is the aztec-nr contracts of section 6.
+
+| Circuit | Pinned VK SHA-256 ([`lib/zk/vk-pins.ts`](lib/zk/vk-pins.ts)) |
 |---|---|
 | `escrow` | `0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2` |
 | `identity` | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` |
 | `streams` | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` |
 
-Known soundness issues of v1, documented in [`docs/zk/MASTER_PROMPT.md`](docs/zk/MASTER_PROMPT.md):
+| ID | Severity | Issue in v1 |
+|---|---|---|
+| ZK-01 | Critical | Streams: the same accrual can be claimed many times (reproduced in `test/circuits/streams_zk01_known_issue.test.ts`) |
+| ZK-02 | Critical | Escrow and streams: proofs are not bound to the payout address, so they can be front-run |
+| ZK-03 | High | Escrow: claiming requires the sender's secret; no refund path |
+| ZK-04 | High | Identity: no domain separation between leaf and nullifier hashes |
+| ZK-05 | High | Identity: depth-1 tree, an anonymity set of two |
+| ZK-06 | Medium | Timestamps are chosen by the prover |
+| ZK-07 | Medium | Verification did not pin the VK (fixed) |
 
-* **ZK-01 (critical):** the streams circuit does not chain state, so the same accrual can be claimed many times. `test/circuits/streams_zk01_known_issue.test.ts` reproduces it.
-* **ZK-02 (critical):** escrow and streams proofs are not bound to the address that receives the funds.
-* **ZK-03:** claiming an escrow requires the sender's secret; there is no refund path.
-* **ZK-04, ZK-05:** the identity circuit lacks domain separation and has an anonymity set of two.
-* **ZK-06, ZK-07:** timestamps are chosen by the prover; verification must use the pinned VK (now enforced in `lib/zk/prover.ts`).
-
-**v2 circuits (experimental).** `circuits/escrow_v2`, `circuits/identity_v2` and `circuits/streams_v2` (with the shared `circuits/hl_lib`) fix ZK-01 to ZK-05 and close gaps G2 (committed sanction list), G3 (depth-32 identity tree) and G5 (Poseidon2 with domain separators). They compile and pass their tests in CI (workflow "Noir circuits") but are not pinned and need a verifier that stores state: see [`docs/zk/V2_CIRCUITS.md`](docs/zk/V2_CIRCUITS.md).
-
-The long-term plan is to replace escrow, streams and identity with aztec-nr contracts (tasks R-08 to R-10; API notes in [`docs/zk/AZTEC_NR_V6_NOTES.md`](docs/zk/AZTEC_NR_V6_NOTES.md)), not to deploy any of these circuits.
-
----
-
-## 5. Layer 1 contracts
-
-Solidity contracts for the Cancun EVM live in `contracts/`. None has had an external audit and none is deployed to mainnet.
-
-* **`HumanityTimeLockVault.sol`:** per-user dead-man switch vault that releases a token balance to a backup wallet after a timeout.
-* **`LedgerDeadmanSwitch.sol`:** inheritance switch with a minimum inactivity threshold and a two-step backup change.
-* **`ZKIdentityRegistry.sol`:** anchors identity roots. `verifyCredential` always reverts (`VerifierNotConnected`) until a real proof verifier is connected; it used to accept any proof.
-
-`scripts/verify-l1-bytecode.ts` scans bytecode for known drain patterns. It is a lint, not an audit.
+**v2** (`circuits/*_v2`, shared `circuits/hl_lib`) fixes ZK-01 to ZK-05 with Poseidon2 and domain separators, a depth-32 tree and a committed sanction list. It compiles and passes 36 tests in CI; its VK hashes are pinned in `scripts/zk/v2-vks.mjs`. No deployed verifier stores its state ([`docs/zk/V2_CIRCUITS.md`](docs/zk/V2_CIRCUITS.md)).
 
 ---
 
-## 6. Explicit non-claims
+## 8. Cryptographic anchors
 
-1. **No quantum resistance.** BN254, secp256k1 and Curve25519 are not quantum resistant.
-2. **No traffic-analysis protection.** MLS protects message content, not IP addresses, sizes or timing.
-3. **Live on Aztec Alpha, not audited.** The first private payment from Ledger Chat settled on 14 November 2026 (L2 block 29012). No external security audit has concluded; payments have a cap.
-4. **No formal verification.** Tests and fuzzing are not machine-checked proofs.
+Each value is copied from its source; [`docs/readme/FACTS.md`](docs/readme/FACTS.md) gives the line.
+
+| Anchor | Value | Source |
+|---|---|---|
+| VK SHA-256, escrow | `0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2` | `lib/zk/vk-pins.ts` |
+| VK SHA-256, identity | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` | `lib/zk/vk-pins.ts` |
+| VK SHA-256, streams | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` | `lib/zk/vk-pins.ts` |
+| Class ID, `PrivateEscrow` (keyed, current) | `0x1fc9702de2946be7308126990f4cf3b8a3fbe9a4c53dc072d9ccb95bf9f04b5e` | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
+| Class ID, `PaymentStream` (keyed, current) | `0x1fd6afbe0bffe6a7cb675927dedc0aed886a46bf7c6d58edc32854af073701f2` | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
+| Class ID, `IdentityCredential` (current) | `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06` | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
+| Class ID, HLC (standard `Token`) | `0x067df4ddda0b0872ef604f47f3681d5e8c0de98280ac6b79963851c055ba91e0` | `deployments/aztec-mainnet.json` |
+| HLC, active | `0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5`, block 28992 | `deployments/aztec-mainnet.json` |
+| HLC, retired | `0x2cd0f3775d129210ecf2165e338e1b6b708f2243ac1b30feb0ac49875366e55d`, block 24544 | `deployments/aztec-mainnet.json` |
+| Issue 1 HLC | `0x1d90c138f482e08f2fe4d5cc28e5131a4811ab561e17e6994eab50113fd68940`, block 29001 | `deployments/aztec-mainnet.json` |
+| Private transfer 0.10 HLC | `0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5`, block 29012 | `deployments/aztec-mainnet.json` |
+| Private transfer 0.9 HLC | `0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94`, block 29771 | `deployments/aztec-mainnet.json` |
+| Mainnet preflight | run 43583640304 | `deployments/aztec-mainnet.json` |
+| G7 binding scheme | `hl/aztec-binding/v1` | `lib/aztec/peer-binding.ts` |
+| Local store key version | `hl/xmtp-db/v1` | `lib/xmtp/db-key.ts` |
 
 ---
 
-## 7. Reproduce
+## 9. What the tests prove, and what they do not
 
-Requires Node 22.22.2 or later and, for the circuits, nargo 1.0.0.
+| Suite | Count and date | What it shows | What it does not |
+|---|---|---|---|
+| Vitest unit and integration | 1,338 passing (CI, 4 Nov 2026) | Logic of the app, routes, key helpers, G7, the local store key | External services are mocked; not an end-to-end audit |
+| aztec-nr TXE | 55 (escrow 13, identity 20, streams 22) | Settle once, refund after the deadline, isolation between instances | Uses a test token; not run against Alpha |
+| Testnet end to end | Runs 41881180186, 42030688268 | Keyed escrow and stream work on a live network | Test tokens only |
+| Mainnet preflight | Run 43583640304 (weekly) | Our records on Alpha match the node | Read-only; sends nothing |
+| Noir circuits v2 | 36 | v2 constraints | No verifier stores their state |
+| L1 contract invariants (Hardhat) | 43 of 43 | Local invariants | Not deployed, not audited |
+| Property fuzzing | 60,000 iterations | Inputs to the tested functions | Not formal verification |
+
+Counts come from [`docs/ARCHITECTURE_AND_SECURITY_DOSSIER.md`](docs/ARCHITECTURE_AND_SECURITY_DOSSIER.md) and [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md) and are as of the dates given. Run the commands in [section 12](#12-reproduce) for current numbers.
+
+---
+
+## 10. Explicit non-claims
+
+1. **No external audit.** Payments on Alpha are capped. No claim of audited security is made.
+2. **Not adoption.** Both payments on Alpha went between two accounts of the operator.
+3. **HLC is not money.** It is issued by the operator, uncapped and unbacked.
+4. **No quantum resistance.** BN254, secp256k1 and Curve25519 are classical.
+5. **No traffic-analysis protection.** MLS protects content, not IP addresses, sizes or timing; on Alpha the fee payer of each transaction is public.
+6. **No formal verification.** Tests and fuzzing are not machine-checked proofs.
+7. **Community posts are readable by our server** until they move to XMTP MLS groups.
+8. **No affiliation.** Aztec Labs, the Aztec Foundation and XMTP Labs have not reviewed, endorsed or audited this project.
+
+---
+
+## 11. The product
+
+<p align="center">
+  <img src="docs/readme/landing-mobile.jpg" width="250" alt="ledgerchat.org on a phone: encrypted messages and private payments, in one place">
+  &nbsp;
+  <img src="docs/readme/connect-mobile.jpg" width="250" alt="Sign-in page: connect a wallet or link a computer; signing in is free and writes nothing to the blockchain">
+  &nbsp;
+  <img src="docs/readme/entry-screen-mobile.jpg" width="250" alt="Opening the channel on a phone: wallet connected, unlock this device, open the encrypted inbox; and the error state">
+</p>
+
+<p align="center">
+  <img src="docs/readme/stack.jpg" width="900" alt="How it works: four layers, Ledger Chat, XMTP with MLS, Aztec, Ethereum">
+</p>
+
+<p align="center">
+  <img src="docs/readme/appearance.jpg" width="900" alt="Appearance: 40 themes, 59 wallpapers, 14 bubble styles and original animated stickers, previewed on a phone">
+</p>
+
+* **Sign in** with a browser wallet or WalletConnect (SIWE with a sealed single-use nonce). No phone number, email or password.
+* **Calls**: one-to-one voice and video over WebRTC with our own signalling server ([`docs/CALLS.md`](docs/CALLS.md)).
+* **Communities** and community apps in a sandboxed frame with no network access.
+* **Appearance**: 40 themes, 59 wallpapers, 14 bubble styles and original sticker packs drawn for Ledger Chat.
+
+Screenshots: `ledgerchat.org` on 14 November 2026 (phone), and components rendered from this repository. Images that still need a live session are listed in [`docs/readme/IMAGES_TODO.md`](docs/readme/IMAGES_TODO.md).
+
+---
+
+## 12. Reproduce
+
+Requires Node 22.22.2 or later; nargo 1.0.0 for the circuits; the Aztec 6.0.0 toolchain for the aztec-nr contracts.
 
 ```bash
 git clone https://github.com/humanityledger/Humanity-Ledger.git
 cd Humanity-Ledger
 npm ci
 
-# Circuits: types, tests, and that the committed artifacts are the compiled ones
+# Unit and integration tests
+npm run test:run
+
+# Claims and security patterns (run on every change)
+npm run check:copy
+npm run check:patterns
+
+# aztec-nr contracts: compile and TXE tests (Aztec 6.0.0 toolchain)
+(cd contracts/aztec/test_token && aztec compile)
+for c in escrow identity streams; do (cd contracts/aztec/$c && aztec compile && aztec test); done
+
+# Standalone circuits, artifacts and VK pins
 for c in escrow identity streams; do (cd circuits/$c && nargo check && nargo test); done
 node scripts/zk/check-artifacts.mjs
-for c in hl_lib escrow_v2 identity_v2 streams_v2; do (cd circuits/$c && nargo test); done
+npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/ test/circuits/
 
-# Proving, VK pinning and the ZK-01 reproduction
-npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/ test/circuits/ test/aztec_vk_integrity.test.ts
-
-# Contracts
+# L1 contracts
 npm run test:contracts
 
-# Everything else
-npx vitest run
+# Aztec testnet end to end (needs testnet configuration, see docs/AZTEC_E2E.md)
+npm run test:aztec:e2e
 ```
 
-Test counts are not kept in this file; run the commands or read the latest CI run.
+The read-only Alpha checks run in GitHub Actions: "Aztec mainnet preflight" (`.github/workflows/aztec-mainnet-preflight.yml`) and "Aztec testnet deployments" (`.github/workflows/aztec-deployments.yml`). Neither sends a transaction.
 
 ---
 
-## 8. Governance
+## 13. Open technical questions for Aztec Labs
 
-* **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
-* **Security policy:** [`SECURITY.md`](SECURITY.md)
-* **License:** [`LICENSE`](LICENSE). Proprietary, source available for evaluation and study.
-* **Vulnerability disclosure:** [`docs/BUG_BOUNTY.md`](docs/BUG_BOUNTY.md)
-* **Contact:** `humanityledger@icloud.com`
+Each question names the code it concerns and what we do today. We ask only what the code leaves us genuinely unsure about.
+
+| # | Context | Question | Code | What we do today |
+|---|---|---|---|---|
+| 1 | Claim and refund notes emit one settlement nullifier; claim needs `anchor <= deadline`, refund `anchor > deadline` | Is a shared settlement nullifier with these timestamp checks an idiomatic way to express "claim before the deadline, refund after it"? | `contracts/aztec/escrow/src/` | As described, 13 TXE tests and testnet runs |
+| 2 | Each agreement is its own instance, deployed with public keys from a secret the two parties share | Is a keyed deployment with a shared secret the pattern you recommend for a contract that holds a private balance? | `lib/aztec/keyed-deploy.ts` | One instance per agreement, verified by recomputing address and class |
+| 3 | Our contracts call the token through a raw `transfer_in_private` selector to avoid a token crate | Is depending on the standard Token interface preferred, and how do you avoid a duplicated `aztec` crate when doing so? | `contracts/aztec/escrow/src/`, `contracts/aztec/streams/src/` | Raw selector |
+| 4 | Stream cancel shares a per-state nullifier with withdraw; withdrawals give the sender a copy of the next state | Is that the pattern you would use, or a delayed public mutable for the cancellation time? | `contracts/aztec/streams/src/` | Shared state nullifier, 22 TXE tests |
+| 5 | A cancel measures accrual at its anchor block, chosen by the sender's PXE | Is there a better way to bound a time-dependent value in a private function than expiring the cancel 600 s after its anchor? | `contracts/aztec/streams/src/` | 600 s expiry |
+| 6 | The node requires the fee payer's balance to cover the maximum fee; the wallet sets that from the protocol gas limit | What is the recommended way in aztec.js 6.0.0 to estimate gas for a private transfer so the required Fee Juice balance stays close to the real fee? | `lib/aztec/fee-juice.ts` (`maxFeeFor`) | Protocol limit with headroom; 1.256 and 2.858 AZTEC charged |
+| 7 | Alpha has no Sponsored FPC; paying with one's own Fee Juice makes the account the public fee payer | What is the recommended path to pay fees privately on Alpha today (a private FPC), and is there a reference implementation for apps? | `lib/aztec/fee-juice.ts`, `docs/SPONSOR.md` | Own Fee Juice, disclosed to the user before bridging |
+| 8 | A new account needs Fee Juice before its first transaction (about 28 AZTEC at the time recorded) | How do you expect consumer apps to onboard users with no AZTEC: a sponsor contract per app, or something at the protocol level? | `docs/MAINNET_READINESS.md` (R4) | The user bridges AZTEC from L1 |
+| 9 | G7 proves control of the signing key, not of the address's privacy keys | Is there a supported way to prove control of an address's privacy keys (or to derive the address so that it implies it) without revealing them? | `lib/aztec/peer-binding.ts` | Signing key proof; limit documented |
+| 10 | A recipient may open the wallet long after a payment | Is note discovery for a recipient who was offline guaranteed without extra tagging by the sender in 6.0.0, and for how long? | `lib/aztec/wallet/client.ts` | Rely on the PXE's note discovery |
+
+Questions 1 to 5 also appear in [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md), section 5.
+
+---
+
+## 14. Roadmap
+
+In order, from [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md):
+
+| # | Item |
+|---|---|
+| R1 | First real run on Alpha: **done**, 14 November 2026 |
+| R2 | Public and legal texts that match production |
+| R3 | TURN relay for calls across networks |
+| R4 | Onboarding for accounts with no Fee Juice |
+| R5 | A dollar-denominated token |
+| R6 | Escrow and streams on Alpha, after a recompile and a testnet run |
+| R7 | External audit |
+| R8 | G7 between two different people |
+| R9 | Direct database URL for migrations |
+
+NLnet: a proposal was submitted on 14 November 2026 and is under review; nothing has been awarded ([`docs/NLNET_DRAFT.md`](docs/NLNET_DRAFT.md)).
+
+---
+
+## 15. Governance, security and licence
+
+* **Security policy:** [`SECURITY.md`](SECURITY.md). **Vulnerability disclosure:** [`docs/BUG_BOUNTY.md`](docs/BUG_BOUNTY.md).
+* **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
+* **Licence:** dual-licensed under MIT or Apache-2.0, at your option ([`LICENSE`](LICENSE), [`LICENSE-MIT`](LICENSE-MIT), [`LICENSE-APACHE`](LICENSE-APACHE)).
+* **Contact:** Stefan Antonio Cirisanu, `humanityledger@icloud.com`.

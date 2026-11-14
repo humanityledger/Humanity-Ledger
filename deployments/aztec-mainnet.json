@@ -43,7 +43,7 @@
       "deployedOn": "2026-11-11",
       "status": "do-not-use",
       "confirmedBy": "Aztec mainnet preflight run 42990431384 (11 Nov 2026): deploy tx checkpointed in L2 block 24544, instance deployer = admin, checkTokenInstance ok (Token)",
-      "retired": "2026-11-14: no one holds the key of its admin account (0x01c7\u2026549b), so it can never be issued. Replaced by the HLC below; never list it in NEXT_PUBLIC_AZTEC_TOKENS."
+      "retired": "2026-11-14: no one holds the key of its admin account (0x01c7…549b), so it can never be issued. Replaced by the HLC below; never list it in NEXT_PUBLIC_AZTEC_TOKENS."
     }
   ],
   "firstPrivatePayment": {
@@ -71,5 +71,18 @@
     ],
     "device": "Chrome on Windows with MetaMask (desktop)",
     "confirmedBy": "Aztec mainnet preflight run 43583640304: all three transactions checkpointed (blocks 28992, 29001, 29012)"
+  },
+  "secondPrivatePayment": {
+    "$comment": "The first private payment sent from the regular wallet screen (Send privately), not the operator tool. Same two accounts of the operator as R1. Values read from Aztecscan on 14 Nov 2026; recipient and amount from the sender's wallet, since the chain does not show them.",
+    "date": "2026-11-14",
+    "from": "0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42",
+    "to": "0x2ce757e8fc073f67b9e9307ed255fa37ac69b05f6712af31517d6c1e79abb11a",
+    "token": "0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5",
+    "amount": "0.9 HLC",
+    "txHash": "0x0a333fc0b698454e51f28d8ee18dcf3174a21605479a40a67568d4295c6fcc94",
+    "block": 29771,
+    "fee": "2.858 AZTEC, paid by the sender in Fee Juice (the same transaction claimed a 47 AZTEC Fee Juice deposit bridged from L1)",
+    "onChain": "1 note hash, 4 nullifiers, revert code 0; sender, recipient and amount not visible",
+    "confirmedBy": "Aztecscan tx-effects page, status mined (14 Nov 2026); not yet in a preflight run"
   }
 }
