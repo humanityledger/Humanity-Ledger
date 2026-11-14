@@ -225,16 +225,16 @@ export function maxFeeFor(minFees: { feePerL2Gas: bigint; feePerDaGas: bigint })
 
 /**
  * Gas limits for a transaction from the `gasUsed` a simulation reports (aztec.js 6.0.0,
- * `simulate({ includeMetadata: true })`): each dimension padded by 25% plus a fixed margin
+ * `simulate({ includeMetadata: true })`): each dimension padded by `factor` (25% by default) plus a fixed margin
  * (4,096 DA, 50,000 L2), teardown likewise when there is one. Built with the same Gas class the
  * SDK returned, so no SDK import is needed here. Undefined when there is nothing usable or when the
  * padded L2 limit would reach the protocol maximum, which the defaults already use.
  */
-export function gasLimitsFromSimulation(gasUsed: any): { gasLimits: unknown; teardownGasLimits: unknown } | undefined {
+export function gasLimitsFromSimulation(gasUsed: any, factor = 1.25): { gasLimits: unknown; teardownGasLimits: unknown } | undefined {
   const total = gasUsed?.totalGas;
   if (!total || !(Number(total.l2Gas) > 0)) return undefined;
   const GasCtor = total.constructor as new (daGas: number, l2Gas: number) => unknown;
-  const pad = (g: any) => new GasCtor(Math.ceil(Number(g?.daGas ?? 0) * 1.25) + 4096, Math.ceil(Number(g?.l2Gas ?? 0) * 1.25) + 50_000);
+  const pad = (g: any) => new GasCtor(Math.ceil(Number(g?.daGas ?? 0) * factor) + 4096, Math.ceil(Number(g?.l2Gas ?? 0) * factor) + 50_000);
   const teardown = gasUsed.teardownGas;
   const hasTeardown = teardown && (Number(teardown.l2Gas) > 0 || Number(teardown.daGas) > 0);
   const gasLimits = pad(total) as { l2Gas: number };

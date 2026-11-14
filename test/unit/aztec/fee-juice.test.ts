@@ -284,3 +284,13 @@ describe('gasLimitsFromSimulation (estimated gas, README question 6)', () => {
     expect(gasLimitsFromSimulation({ totalGas: new Gas(0, Number(TX_L2_GAS_LIMIT)) })).toBeUndefined();
   });
 });
+
+describe('gasLimitsFromSimulation with a larger pad (sponsored transactions)', () => {
+  class Gas { constructor(public daGas: number, public l2Gas: number) {} }
+  it('doubles the simulated gas when asked, for the sponsor call that the simulation leaves out', async () => {
+    const { gasLimitsFromSimulation } = await import('@/lib/aztec/fee-juice');
+    const r = gasLimitsFromSimulation({ totalGas: new Gas(1000, 900_000), teardownGas: new Gas(0, 0) }, 2) as any;
+    expect(r.gasLimits.l2Gas).toBe(1_850_000);
+    expect(r.gasLimits.daGas).toBe(2000 + 4096);
+  });
+});
