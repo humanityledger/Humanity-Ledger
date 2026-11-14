@@ -299,6 +299,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             </Section>
 
             {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
+            {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#r1' && <FirstPayment disabled={state.busy} />}
             {ALPHA && state.phase === 'ready' && <IssueTokens disabled={state.busy} />}
 
             <ActivityList items={state.activity} />
@@ -626,6 +627,57 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
           {busy ? 'Issuing…' : 'Issue'}
         </button>
       </div>
+    </div>
+  );
+}
+
+function FirstPayment({ disabled }: { disabled: boolean }) {
+  const { wallet } = useAztecWallet('');
+  const [to, setTo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [log, setLog] = useState<{ step: string; token?: string; txHash?: string }[]>([]);
+  const [err, setErr] = useState('');
+  if (!wallet) return null;
+  const run = async () => {
+    setBusy(true); setErr(''); setLog([]);
+    try {
+      await wallet.firstPaymentWithNewToken(
+        { name: 'Humanity Ledger Corp.', symbol: 'HLC', decimals: 6, mint: '1', pay: '0.10', to: to.trim() },
+        (step, info) => setLog((l) => [...l, { step, ...info }]),
+      );
+      toast.success('First private payment settled on Aztec Alpha.');
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const done = log.filter((l) => l.txHash);
+  const token = log.find((l) => l.token)?.token;
+  return (
+    <div className="bg-white rounded-2xl border border-black/[0.05] p-4">
+      <div className="text-[13px] font-semibold">First private payment (operator)</div>
+      <p className="mt-1 text-[12px] leading-relaxed text-black/50">
+        Creates HLC with this account as issuer, issues 1 HLC to your private balance and pays 0.10 HLC privately to the address below. Three transactions, each paid in Fee Juice. Keep this tab open until all three settle.
+      </p>
+      <input
+        value={to}
+        onChange={(e) => setTo(e.target.value)}
+        placeholder="Recipient Aztec address (0x… 64 characters)"
+        className="mt-3 h-11 w-full rounded-xl border border-black/10 px-3 text-[12px] font-mono"
+        aria-label="Recipient Aztec address"
+      />
+      <button
+        type="button"
+        disabled={disabled || busy || to.trim().length !== 66}
+        onClick={run}
+        className="mt-2 h-11 w-full rounded-xl bg-[#15171c] text-white text-[13px] font-semibold disabled:opacity-40"
+      >
+        {busy ? `Working: ${log[log.length - 1]?.step ?? 'starting'}…` : 'Create HLC and pay 0.10'}
+      </button>
+      {token && <CopyRow k="Token" v={token} />}
+      {done.map((l) => <CopyRow key={l.step + l.txHash} k={l.step === 'deploy' ? 'Hash 0 (token)' : l.step === 'mint' ? 'Hash 1 (issue)' : 'Hash 2 (payment)'} v={l.txHash!} />)}
+      {err && <p className="mt-2 text-[12px] text-red-700">{err}</p>}
     </div>
   );
 }

@@ -588,6 +588,84 @@ class PrivateWallet {
     return address;
   }
 
+  /**
+   * R1, operator only: the first private payment on Alpha with a token this account issues.
+   *
+   * The recorded HLC (deployments/aztec-mainnet.json) has an admin key nobody holds any more, so no
+   * HLC can ever be minted. This deploys a fresh standard Token with THIS account as admin, mints
+   * `mint` to this account's PRIVATE balance, and pays `pay` privately to `to`. Every step pays its
+   * fee in Fee Juice. The new token's address is kept on this device (public data, no secret) so a
+   * reload resumes after the deploy instead of deploying twice. Returns the transaction hashes.
+   */
+  async firstPaymentWithNewToken(
+    opts: { name: string; symbol: string; decimals: number; mint: string; pay: string; to: string },
+    onStep?: (step: 'deploy' | 'mint' | 'pay', info: { token?: string; txHash?: string }) => void,
+  ): Promise<{ token: string; deployTx?: string; mintTx: string; payTx: string }> {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') throw new Error('This tool is for Aztec Alpha only.');
+    await assertNewValueAllowed();
+    const ctx = this.agreementContext();
+    const sdk = this.sdk!;
+    const me = ctx.me;
+    const target = await this.validAddress(opts.to);
+    if (target.equals?.(me)) throw new Error('Pay another account, not your own.');
+    const mintUnits = parseUnits(opts.mint, opts.decimals);
+    const payUnits = parseUnits(opts.pay, opts.decimals);
+    if (mintUnits <= 0n || payUnits <= 0n || payUnits > mintUnits) throw new Error('The payment must be more than 0 and no more than the amount issued.');
+    if (mintUnits > issueCap(opts.decimals)) throw new Error('Issue at most 1,000 at a time.');
+    const artifact = sdk.TokenContract.artifact;
+    const KEY = `hl:r1-token:${me.toString().toLowerCase()}`;
+    const txOf = (r: any) => (r?.txHash?.toString?.() ?? (r?.txHash ? String(r.txHash) : ''));
+    const withFee = async (label: string, kind: ActivityKind, send: (fee: any) => Promise<any>) => {
+      const { fee, consumes } = await this.resolveFee();
+      const receipt = await this.sendAndWait(() => send(fee), `${label}-${Date.now()}`, kind);
+      if (!receipt) throw new Error(this.snapshot.activity[0]?.error || `The ${label} transaction failed. Nothing more was sent.`);
+      if (consumes) this.dropClaim(consumes);
+      return receipt;
+    };
+
+    // 1. Deploy (or resume with the token deployed earlier from this device).
+    let token = '';
+    let deployTx: string | undefined;
+    try { token = localStorage.getItem(KEY) || ''; } catch { /* not kept */ }
+    if (!token) {
+      const [{ Contract, DeployMethod }, { randomField }] = await Promise.all([import('@aztec-labs/aztec.js/contracts'), import('../random')]);
+      const args = [me, opts.name, opts.symbol, opts.decimals];
+      const salt = randomField();
+      // Universal deployment, as for the sponsor: the address does not depend on the deployer and is known before sending.
+      const expected = await sdk.getContractInstanceFromInstantiationParams(artifact, { constructorArgs: args, salt, deployer: sdk.AztecAddress.ZERO });
+      token = expected.address.toString();
+      onStep?.('deploy', { token });
+      const deployment = (DeployMethod as any).create(
+        ctx.wallet,
+        { artifact, args, postDeployCtor: (instance: any, w: any) => (Contract as any).at(instance.address, artifact, w) },
+        { salt, universalDeploy: true },
+      );
+      const r = await withFee('token-deploy', 'deploy', (fee) => deployment.send({ from: me, fee, wait: sdk.NO_WAIT }));
+      deployTx = txOf(r);
+      try { localStorage.setItem(KEY, token); } catch { /* not kept */ }
+      onStep?.('deploy', { token, txHash: deployTx });
+    }
+    const addr = sdk.AztecAddress.fromStringUnsafe(token);
+    try {
+      const instance = await this.node.getContract(addr);
+      if (instance) await this.wallet.registerContract(instance, artifact);
+    } catch { /* already known to this wallet */ }
+    const contract = sdk.TokenContract.at(addr, this.wallet);
+
+    // 2. Issue privately to this account.
+    onStep?.('mint', { token });
+    const fn = artifact.functions?.find((f: any) => f.name === 'mint_to_private');
+    const mintCall = fn?.parameters?.length === 3 ? contract.methods.mint_to_private(me, me, mintUnits) : contract.methods.mint_to_private(me, mintUnits);
+    const mintTx = txOf(await withFee('issue', 'issue', (fee) => mintCall.send({ from: me, fee, wait: sdk.NO_WAIT })));
+    onStep?.('mint', { token, txHash: mintTx });
+
+    // 3. Pay privately.
+    onStep?.('pay', { token });
+    const payTx = txOf(await withFee('send', 'send', (fee) => contract.methods.transfer(target, payUnits).send({ from: me, fee, wait: sdk.NO_WAIT })));
+    onStep?.('pay', { token, txHash: payTx });
+    return { token, deployTx, mintTx, payTx };
+  }
+
   /** Bridges AZTEC from the operator's Ethereum wallet to the sponsor's address (L1 deposit). */
   async bridgeToSponsor(l1: L1Clients, sponsor: string, amount: string, onStep?: (step: BridgeStep, l1TxHash?: string) => void) {
     if (!this.sdk) throw new Error('Open your private wallet first.');
