@@ -61,7 +61,11 @@ Deploy, from the phone:
 
 1. Ledger Chat with the admin wallet, private wallet, Settings, Network fees, **Ledger sponsor**,
    **Deploy the sponsor**.
-2. Copy the address it shows into `NEXT_PUBLIC_AZTEC_SPONSOR` in Railway; Railway redeploys.
+2. Copy the address it shows into `NEXT_PUBLIC_AZTEC_SPONSOR` in Railway. `NEXT_PUBLIC_*` values are
+   written into the build, so the deployment must be a **new build**: a deployment that only restarts
+   the previous build keeps the old value (seen on 15 November 2026: `GET /api/aztec/sponsor` still
+   answered `"address": null`). Check that it answers the new address; if not, a commit to `main`
+   forces a fresh build.
 3. Back in Ledger sponsor: enter a small amount, **Add AZTEC** (your Ethereum wallet signs the
    deposit), wait a few minutes, **Claim into the sponsor**.
 4. GitHub, Actions, **Aztec verify sponsor**, Run workflow. Expected: every line PASS except `record`
