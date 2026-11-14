@@ -2,7 +2,7 @@
 
 **Date:** 4 November 2026 (updated 16:30 CET)
 **Repository:** [github.com/humanityledger/Humanity-Ledger](https://github.com/humanityledger/Humanity-Ledger)
-**Status:** Pre-release. Aztec testnet only. No external audit. Not affiliated with the Aztec Foundation.
+**Status:** Live on Aztec Alpha since the first private payment on 14 November 2026 (L2 block 29012). No external audit. Not affiliated with the Aztec Foundation.
 **Engineering plan and full state table:** [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md) (Spanish)
 
 ---
@@ -103,7 +103,7 @@ Our direction is the aztec-nr contracts of section 2.1, so that note ownership a
 
 1. No quantum resistance (BN254, secp256k1 and Curve25519 are classical).
 2. No traffic-analysis protection.
-3. Testnet only; no external audit; not production ready.
+3. No external audit; payments on Alpha are capped. Agreements (escrow, streams) remain testnet only.
 
 ## 7. Contact
 

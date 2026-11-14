@@ -2,7 +2,8 @@
 
 import { revealMessage } from '@/lib/chat/reveal-message';
 import { sendStatusLabel } from '@/lib/chat/optimistic-send';
-import { stickerLabel, stickerSrc } from '@/lib/chat/stickers';
+import { stickerRef } from '@/lib/chat/stickers';
+import { claimAutoPlay, requestStickerScene } from './StickerSceneHost';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import {
@@ -514,20 +515,42 @@ const GroupCallBubble = React.memo(({ isMe }: { content: string; isMe: boolean; 
 GroupCallBubble.displayName = 'GroupCallBubble';
 
 // ─── Sticker ─────────────────────────────────────────────────────────────────
-// A plain div with a CSS animation: no nested Framer Motion scale (iOS blur bug).
-const StickerBubble = React.memo(({ content }: { content: string }) => {
-  // Ledger Chat's own stickers (lib/chat/stickers.ts): an image from this site only.
-  const src = stickerSrc(content);
-  if (src) {
-    return (
+// A plain element with a CSS animation: no nested Framer Motion scale (iOS blur bug).
+// Our own stickers (lib/chat/stickers.ts) are an image from this site only. A sticker with a scene
+// plays its full-chat moment once when it arrives fresh (also for the sender), and again on tap.
+const StickerBubble = React.memo(({ content, msgKey, fresh }: { content: string; msgKey?: string; fresh?: boolean }) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  const info = stickerRef(content);
+  const hasScene = Boolean(info?.sticker.scene);
+  useEffect(() => {
+    if (!hasScene || !fresh || !msgKey) return;
+    if (!claimAutoPlay(msgKey)) return;
+    // Let the bubble land first, so the moment starts from where it sits.
+    const t = window.setTimeout(() => requestStickerScene(content, ref.current, true), 120);
+    return () => window.clearTimeout(t);
+  }, [content, fresh, msgKey, hasScene]);
+  if (info) {
+    const img = (
       <img
-        src={src}
-        alt={stickerLabel(content) ?? 'Sticker'}
+        src={info.src}
+        alt={info.sticker.label}
         width={148}
         height={148}
         draggable={false}
         className="block w-[148px] h-[148px] select-none opacity-0 animate-[stickerPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
       />
+    );
+    if (!hasScene) return img;
+    return (
+      <button
+        ref={ref}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); requestStickerScene(content, ref.current); }}
+        aria-label={`${info.sticker.label} sticker. Play its effect`}
+        className="block rounded-[28px] active:scale-[0.96] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
+      >
+        {img}
+      </button>
     );
   }
   return (
@@ -839,7 +862,15 @@ export const MessageBubble = React.memo(({
             ) : remoteAttachment ? (
               <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
             ) : isSticker ? (
-              <StickerBubble content={content} />
+              <StickerBubble
+                content={content}
+                msgKey={typeof msg.id === 'string' ? msg.id : undefined}
+                fresh={(() => {
+                  const raw: any = typeof msg.sentAtNs === 'number' ? (msg.sentAtNs > 1e15 ? msg.sentAtNs / 1e6 : msg.sentAtNs) : (msg.sent || msg.sentAt || Date.now());
+                  const t = new Date(raw).getTime();
+                  return Number.isFinite(t) && Math.abs(Date.now() - t) < 15000;
+                })()}
+              />
             ) : isPoll ? (
               <PollBubble content={content} msg={msg} isMe={isMe} onVotePoll={onVotePoll} clientInboxId={clientInboxId} />
             ) : isZkPayment ? (

@@ -8,7 +8,10 @@ const css = read('components/landing/v2/Protocol.module.css');
 
 describe('landing: HLC and protocol sections', () => {
   it('the sections exist on the page with the ids the navigation links to', () => {
-    for (const id of ['stack', 'devices', 'hlc']) expect(landing).toMatch(new RegExp(`<section id="${id}"`));
+    for (const id of ['devices', 'hlc']) expect(landing).toMatch(new RegExp(`<section id="${id}"`));
+    // The stack is the interactive explorer of the launch sections.
+    expect(landing).toMatch(/<StackExplorer \/>/);
+    expect(read('components/landing/v2/LaunchSections.tsx')).toMatch(/<section id="stack"/);
     expect(read('components/immersive/SiteNav.tsx')).toMatch(/href: "\/#hlc"/);
   });
 

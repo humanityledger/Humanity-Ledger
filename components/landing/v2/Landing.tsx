@@ -1,19 +1,20 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
+import React, { useEffect, useState } from "react";
 import { AZTEC_WALLET_CONFIG, networkLabel } from "@/lib/aztec/wallet/config";
 import { SiteFooter } from "./SiteFooter";
 import { GlyphField } from "@/components/immersive/GlyphField";
 import { SiteNav } from "@/components/immersive/SiteNav";
-import { PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
+import { LivePhone, PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
+import { AppearancePlayground, FirstPaymentRecord, LaunchClose, LaunchHero, StackExplorer, type LandingMode } from "./LaunchSections";
 import { AztecSection, DesktopTour, LiveActivities } from "./Showcase";
-import { DevicesSection, StackSection, TokenSection } from "./ProtocolSections";
+import { DevicesSection, TokenSection } from "./ProtocolSections";
 import s from "./Landing.module.css";
 import st from "./Story.module.css";
 
 /**
- * Ledger Chat landing page.
+ * Ledger Chat landing page, in white (a switch in the hero offers dark): the launch on Aztec
+ * Alpha first (LaunchSections.tsx), then the product in cards.
  *
  * Few words, each one true. The page says what Ledger Chat is in one line, shows the real
  * interface, and keeps the details (protocol, limits, comparisons) in the documentation, where
@@ -74,39 +75,38 @@ const STATEMENTS: { n: string; label: string; title: string; line: string }[] = 
   },
 ];
 
+const MODE_KEY = "hl_landing_mode";
+
 export function HumanityLanding() {
+  // White is the landing. Dark only if the visitor picks it, remembered on this device.
+  const [mode, setMode] = useState<LandingMode>("light");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(MODE_KEY) === "dark") setMode("dark");
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const pickMode = (m: LandingMode) => {
+    setMode(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      /* storage unavailable */
+    }
+  };
   return (
-    <div className={`${s.page} ${st.page}`}>
+    <div className={`${s.page} ${st.page}`} data-landing-theme={mode}>
       <GlyphField ambient />
       <SiteNav />
 
       <main id="main-content">
-        {/* Hero: one line, one action. */}
-        <section className={st.hero} aria-labelledby="hero-title">
-          <div className={st.heroField} aria-hidden="true" />
-          <div className={st.heroInner}>
-            <h1 id="hero-title" className={st.heroTitle}>
-              <span className={st.heroLine}>Talk freely.</span>
-              <span className={`${st.heroLine} ${st.heroLine2}`}>
-                <em>Pay privately.</em>
-              </span>
-            </h1>
-            <p className={st.heroLead}>
-              Messages, calls and private payments in one encrypted place. Your wallet is your account.
-            </p>
-            <div className={st.heroCtas}>
-              <Link href="/chat" className={`${s.btn} ${s.btnLg} ${s.btnPrimary}`}>
-                Open Ledger Chat
-              </Link>
-              <a href="#desktop" className={`${s.btn} ${s.btnLg} ${s.btnSecondary}`}>
-                See it
-              </a>
-            </div>
-          </div>
-          <span className={st.scrollCue} aria-hidden="true" />
-        </section>
+        {/* Hero: live on Alpha, one action, where it runs today. */}
+        <LaunchHero alpha={ALPHA} mode={mode} onMode={pickMode} phone={<LivePhone id="stickers" fill={0.92} />} />
 
         <div className={`${s.wrap} ${st.stack}`}>
+          {ALPHA && <FirstPaymentRecord />}
+
           {/* The real interface on a computer, pinned while you scroll through it. */}
           <DesktopTour />
 
@@ -145,9 +145,10 @@ export function HumanityLanding() {
           <AztecSection />
 
           {/* How the layers fit: Ledger Chat, XMTP with MLS, Aztec Alpha, Ethereum. */}
-          <section id="stack" className={s.card} aria-labelledby="stack-title">
-            <StackSection />
-          </section>
+          <StackExplorer />
+
+          {/* Themes, wallpapers, bubbles and stickers, to try on the page. */}
+          <AppearancePlayground />
 
           {/* Computer, iPhone, Android. */}
           <section id="devices" className={s.card} aria-labelledby="devices-title">
@@ -160,27 +161,7 @@ export function HumanityLanding() {
           </section>
 
           {/* Close. */}
-          <section id="start" className={st.closing} aria-labelledby="closing-title">
-            <span className={st.closingField} aria-hidden="true" />
-            <h2 id="closing-title" className={st.closingTitle}>
-              <Words text="Start a private" /> <em><Words text="conversation." from={3} /></em>
-            </h2>
-            <p className={st.closingLead}>Free. Runs in your browser, nothing to install.</p>
-            <div className={st.heroCtas}>
-              <Link href="/chat" className={`${s.btn} ${s.btnLg} ${s.btnPrimary}`}>
-                Open Ledger Chat
-              </Link>
-              <Link href="/docs/overview" className={`${s.btn} ${s.btnLg} ${s.btnSecondary}`}>
-                Read the documentation
-              </Link>
-            </div>
-            <p className={st.closingNote}>
-              {ALPHA
-                ? "Private payments use real funds on Aztec Alpha, with a cap per payment. The contracts are not audited yet."
-                : "Private payments run on the Aztec test network, with tokens that have no value."}{" "}
-              iPhone and Android apps are in development.
-            </p>
-          </section>
+          <LaunchClose alpha={ALPHA} />
         </div>
       </main>
 
