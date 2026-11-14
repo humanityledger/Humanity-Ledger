@@ -1,1 +1,1 @@
-**Glossary** — see [docs/glossary.md](glossary.md)
+**Glossary** — see [docs/GLOSSARY.md](GLOSSARY.md)

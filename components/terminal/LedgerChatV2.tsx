@@ -3233,20 +3233,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     // Hanging up before the other side picked up is a call with no answer,
     // not an answered call of 0 seconds.
     const wasConnected = callStateRef.current === 'active';
-    try {
-      if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__', { to: callPeerAddrRef.current || undefined });
-    } catch {}
+    const hangupTo = callPeerAddrRef.current || undefined;
+    const durationSeconds = wasConnected ? callElapsedSeconds() : 0;
+    const wasCaller = isCallerRef.current; // performEndCall resets it
+    // Camera and microphone are released first (performEndCall stops every track): the hang-up
+    // message goes over the network after, so a slow send never leaves the camera light on.
+    performEndCall();
     // Log completed call to sovereign history
     if (address && activePeer) {
       saveCallRecord(address, {
         peerAddress: activePeer,
         type: callType || 'audio',
-        direction: isCallerRef.current ? 'outgoing' : 'incoming',
+        direction: wasCaller ? 'outgoing' : 'incoming',
         status: wasConnected ? 'answered' : 'missed',
-        durationSeconds: wasConnected ? callElapsedSeconds() : 0,
+        durationSeconds,
       });
     }
-    performEndCall();
+    try {
+      if (executeSendRef.current) await executeSendRef.current('__CALL_HANGUP__', { to: hangupTo });
+    } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer, callType]);
 

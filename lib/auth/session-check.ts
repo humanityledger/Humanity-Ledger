@@ -32,6 +32,21 @@ export async function hasServerSession(fetchImpl: typeof fetch = fetch): Promise
   }
 }
 
+/**
+ * Whether this browser shows any sign of a sign-in: the session hints set by /connect, or the
+ * system_handshake cookie. A first-time visitor has none, so the chat gate can send them to
+ * /connect at once instead of retrying for ~11 s (retries exist for a session cookie still in
+ * flight after a wallet sign-in, which always leaves these hints behind).
+ */
+export function hasLocalSessionHint(): boolean {
+  try {
+    if (document.cookie.split('; ').some((c) => c.startsWith('system_handshake='))) return true;
+    return LOCAL_KEYS.some((k) => localStorage.getItem(k) || sessionStorage.getItem(k));
+  } catch {
+    return true; // storage blocked: keep the patient path
+  }
+}
+
 /** Removes the local sign-in hints so they cannot send the user to the chat without a session. */
 export function clearLocalSessionMarkers(): void {
   try {

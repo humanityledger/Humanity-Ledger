@@ -71,7 +71,23 @@ Cloudflare Realtime TURN, step by step (free tier: 1,000 GB a month):
    `CLOUDFLARE_TURN_API_TOKEN` = the API token. Deploy.
 4. Check: signed in, `/api/calls/ice` answers `"source":"cloudflare"`.
 
-### Own signalling server (optional, recommended)
+### Own signalling server (required before heavy traffic)
+
+On Railway, in the same project:
+
+1. New → Docker Image → `peerjs/peerjs-server`.
+2. Settings → Deploy → Custom Start Command:
+   `peerjs --port $PORT --path / --key ledgerchat --proxied true --concurrent_limit 20000`
+   (`--proxied` because Railway's proxy terminates TLS; the default limit is 5000 sockets).
+3. Settings → Networking → Generate Domain, or add `peer.ledgerchat.org` (CNAME at your DNS).
+4. Check: `https://peer.ledgerchat.org/` answers with a small JSON naming the PeerJS server.
+5. In the web service's Variables: `NEXT_PUBLIC_PEERJS_HOST=peer.ledgerchat.org`,
+   `NEXT_PUBLIC_PEERJS_KEY=ledgerchat`. Redeploy (they are build variables, passed by the Dockerfile ARGs).
+
+The key is not a secret (it is in the page); it only keeps other apps off the server.
+
+#### Background
+
 
 By default PeerJS uses its free public cloud server (shared, best effort). One small Railway
 service from the `peerjs/peerjs-server` image removes that dependency. Then set, as build
