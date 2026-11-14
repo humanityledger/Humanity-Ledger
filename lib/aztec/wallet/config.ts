@@ -178,5 +178,5 @@ export function assertNetworkAllowed(l1ChainId: number, cfg: Pick<typeof AZTEC_W
 }
 
 export function explorerTxUrl(txHash: string) {
-  return AZTEC_WALLET_CONFIG.explorer ? `${AZTEC_WALLET_CONFIG.explorer}/tx-effect/${txHash}` : '';
+  return AZTEC_WALLET_CONFIG.explorer ? `${AZTEC_WALLET_CONFIG.explorer}/tx-effects/${txHash}` : '';
 }

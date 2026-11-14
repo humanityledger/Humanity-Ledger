@@ -6,6 +6,36 @@
       "supersededBy": "0_init",
       "sha256": "713e95ec5fa5f114dfae480b3ba3ad203909f833738a032c84b8da581d38925a",
       "reason": "Initial schema of an earlier data model. 0_init creates User, IntelItem, MarketProposal, ProposalVote and UserMetrics; the other eight tables and its eight enums are not in prisma/schema.prisma. Running it fails with 42P07 (relation User already exists), which blocked every later migration (P3018, 13 Nov 2026)."
+    },
+    {
+      "name": "20260128192526_add_risk_level",
+      "supersededBy": "0_init",
+      "sha256": "4c2bef190d17683d6f233d496307c250108d3d8b38acfbbfc0603ad8ed06e679",
+      "reason": "Adds RiskLevel to the table Market of the earlier data model. Neither Market nor the enum RiskLevel is in 0_init or prisma/schema.prisma. Running it fails with 42P01 (relation Market does not exist): the P3018 of 14 Nov 2026."
+    },
+    {
+      "name": "20260131000000_add_auth_user",
+      "supersededBy": "0_init",
+      "sha256": "31c67e4400af7227997cd702712e5c71333d781f3ffd6010628bac814ca5ed75",
+      "reason": "Creates AuthUser and an earlier VerificationCode. 0_init already creates AuthUser, and 20260717000000_add_verification_code_table creates VerificationCode in its current shape. The two indexes only this migration makes (VerificationCode_userId_code_idx, VerificationCode_expiresAt_idx) are not in the schema. Running it fails with 42P07 (AuthUser already exists)."
+    },
+    {
+      "name": "20260131120000_phase2_3_4_init",
+      "supersededBy": "0_init",
+      "sha256": "15fb5aee3946513d2f58520436d884ab42e528549acc59d2bad4660b8fc02f91",
+      "reason": "Custodial wallet tables of an earlier model: WalletAccount, Authenticator, the Wallet* enums and AuthUser.encryptedPrivateKey, encryptedMnemonic, walletSalt. None is in the schema (the custodial columns were removed on purpose, see 20261019150000). The Transaction and AddressBookEntry it touches are created by 0_init in their current shape. Running it fails with 42703 (column hash does not exist)."
+    },
+    {
+      "name": "20260523000000_hpf_product_passport",
+      "supersededBy": "0_init",
+      "sha256": "71afdd66621a709c92302d4009c4535450cd6f9ac7cc8543e35bc4c8a329825e",
+      "reason": "Creates ProductPassport and ProvenanceEvent with their indexes and key; 0_init creates all eight objects. Running it fails with 42P07 (ProductPassport already exists)."
+    },
+    {
+      "name": "20260708000000_add_quest_social_airdrop_tables",
+      "supersededBy": "0_init",
+      "sha256": "43a91d30198c891b16a321b47c7e3a8cc11a3b39267712c00ef5535eb4c78cfb",
+      "reason": "Creates the quest, social and airdrop tables with an aztecAddress column on QuestClaim and seeds two quests. 0_init creates these tables in their current shape, where QuestClaim is keyed by identityHash; the aztecAddress column and its two indexes are not in the schema. Running it fails with 42703 (column aztecAddress does not exist)."
     }
   ]
 }

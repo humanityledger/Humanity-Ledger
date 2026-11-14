@@ -590,7 +590,7 @@ export async function executeShieldedPayment(
     amount,
     recipientTag: recipientCanon,
     senderTag,
-    aztecExplorerUrl: `${AZTEC_EXPLORER}/tx-effect/${txHash.slice(2)}`,
+    aztecExplorerUrl: `${AZTEC_EXPLORER}/tx-effects/${txHash}`,
     nullifierHash,
     memo,
   };
@@ -1015,7 +1015,7 @@ export function formatAmount(amount: string, token: string): string {
 }
 
 export function getAztecExplorerTxUrl(txHash: string): string {
-  return `${AZTEC_EXPLORER}/tx-effect/${txHash.startsWith('0x') ? txHash.slice(2) : txHash}`;
+  return `${AZTEC_EXPLORER}/tx-effects/${txHash.startsWith('0x') ? txHash : `0x${txHash}`}`;
 }
 
 export function getAztecExplorerAddressUrl(address: string): string {

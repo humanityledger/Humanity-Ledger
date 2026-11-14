@@ -971,6 +971,15 @@ class PrivateWallet {
 
   private async loadActivity(): Promise<Activity[]> {
     const me = this.me.toString();
+    // An entry left "proving" with no transaction hash while nothing is in flight never reached the
+    // network (the tab closed, or an earlier build did not record a fee failure): say so once.
+    if (this.inflight === 0) {
+      for (const a of loadLocalActivity(me)) {
+        if (a.status === 'proving' && !a.txHash && Date.now() - (a.createdAt ?? 0) > 15 * 60_000) {
+          upsertActivity(me, { ...a, status: 'failed', error: 'Not sent: the proof did not finish. Nothing left this device.' });
+        }
+      }
+    }
     const local = loadLocalActivity(me);
     const fromEvents: Activity[] = [];
     const sdk = this.sdk!;
@@ -1173,7 +1182,17 @@ class PrivateWallet {
       createdAt: Date.now(),
     });
     this.set({ activity: await this.loadActivity() });
-    const { fee, consumes } = await this.resolveFee();
+    // A fee that cannot be paid (no Fee Juice, a claim still arriving) stops here, before any proof:
+    // the entry must say failed, or it stays "Proving on this device" forever (14 Nov 2026).
+    let fee: any;
+    let consumes: any;
+    try {
+      ({ fee, consumes } = await this.resolveFee());
+    } catch (err: any) {
+      upsertActivity(this.me.toString(), { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
+      this.set({ activity: await this.loadActivity().catch(() => this.snapshot.activity) });
+      throw err;
+    }
     const receipt = await this.sendAndWait(
       () => build(contract).send({ from: from ?? this.me, fee, wait: this.sdk!.NO_WAIT }),
       id,
