@@ -38,12 +38,15 @@ describe('/connect never redirects on local hints alone', () => {
     expect(src).toMatch(/if \(!hasCookie && !hasLocal\) return;[\s\S]{0,600}await hasServerSession\(\)[\s\S]{0,300}clearLocalSessionMarkers\(\)/);
     expect(src).not.toMatch(/if \(hasCookie \|\| hasLocal\) \{\s*setLinked\(true\);/);
   });
-  it('runs one WalletConnect pairing at a time on a phone browser', () => {
-    // A named wallet button starts its own pairing (to open that wallet from the tap); the AppKit
-    // sheet ("Other wallets") drops it first, so two pairings never compete for one wallet.
-    expect(src).toMatch(/wcPairingCleanupRef\.current\?\.\(\);\s*setPendingWallet\(\{ id: w\.id/);
-    expect(src).toMatch(/if \(wcPairingCleanupRef\.current\) \{\s*wcPairingCleanupRef\.current\(\);[\s\S]{0,120}openAppKitSafe\(\);/);
-    expect(src).not.toMatch(/connect\(\{ connector: wcConnector \}\)/);
+  it('signs in on a phone through the AppKit wallet list only', () => {
+    // iPhone, 14 Nov 2026: the named MetaMask button (its own pairing, universal link opened outside the
+    // tap) and the direct injected connect in MetaMask's browser failed; the AppKit list signed. Every
+    // phone path now opens that list, and no second pairing is started next to it.
+    const handler = src.slice(src.indexOf('const handleMobileWallet'), src.indexOf('const handleDisconnect'));
+    expect(handler).toMatch(/openAppKitSafe\(\);/);
+    expect(handler).not.toMatch(/connect\(\{/);
+    expect(src).not.toMatch(/walletConnectLink|wcPairingCleanupRef|emitter\.on\("message"/);
+    expect(src).toMatch(/showOtherWallets=\{!isMobile\}/);
   });
 });
 

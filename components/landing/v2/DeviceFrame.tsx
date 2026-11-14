@@ -22,6 +22,7 @@
 
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import s from "./DeviceFrame.module.css";
+import { canUseCssZoom } from "./deviceScale";
 
 // ─── Geometry ───────────────────────────────────────────────────────────────
 
@@ -190,10 +191,11 @@ export function DeviceFrame({
   const ref = useRef<HTMLDivElement>(null);
   const [k, setK] = useState<number | null>(null);
   // Decided after mount, so the server and the first client render agree (transform), and the switch
-  // to zoom is an ordinary update. Every current engine supports zoom (Chrome, Edge, Safari, Firefox 126+).
+  // to zoom is an ordinary update. Never on WebKit: see canUseCssZoom.
   const [zoomOk, setZoomOk] = useState(false);
   useEffect(() => {
-    setZoomOk(typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("zoom", "2"));
+    const supports = typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("zoom", "2");
+    setZoomOk(canUseCssZoom(navigator.userAgent || "", supports));
   }, []);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (n: string) => `${n}-${uid}`;
