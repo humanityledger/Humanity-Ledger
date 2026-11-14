@@ -128,11 +128,13 @@ export interface LedgerProtocolSettings {
   /** Text size scale (1–7) */
   text_size: number;
   /** Message bubble visual style */
-  bubble_style: 'default' | 'brutalist' | 'glass' | 'minimal';
+  /** An id from lib/chat/bubbleStyles.ts (BUBBLE_STYLES). */
+  bubble_style: string;
   /** Primary accent color (hex) */
   accent_color: string;
   /** Chat background type */
-  chat_background: 'default' | 'amoled' | 'holographic' | 'matrix' | 'gradient';
+  /** A wallpaper id from lib/chat/wallpapers.ts; older values resolve through resolveWallpaper(). */
+  chat_background: string;
   /** Active chat color theme palette id */
   chat_theme?: string;
   /** Enable glowing NFT border on avatars */

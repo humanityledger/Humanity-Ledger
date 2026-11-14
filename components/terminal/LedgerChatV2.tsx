@@ -50,10 +50,12 @@ import { revealMessage } from '@/lib/chat/reveal-message';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
-import { ThemePickerSheet, chatThemeStyle } from '@/components/chat/ThemePickerSheet';
+import { ThemePickerSheet, chatThemeStyle, canvasStyle, canvasTone, type AppearanceTab } from '@/components/chat/ThemePickerSheet';
 import { CHAT_THEMES, findChatTheme, isChatThemeId, type ChatTheme } from '@/lib/chat/themes';
 import { BUBBLE_STYLES, isBubbleStyleId } from '@/lib/chat/bubbleStyles';
-import { WallpaperPickerSheet, WALLPAPER_OPTIONS, type WallpaperOption } from '@/components/chat/WallpaperPickerSheet';
+import { WALLPAPER_OPTIONS } from '@/components/chat/WallpaperPickerSheet';
+import { resolveWallpaper } from '@/lib/chat/wallpapers';
+import { StickerSceneHost } from '@/components/chat/StickerSceneHost';
 // Panels, sheets and tabs that open on demand load on demand: less JavaScript to parse and keep
 // in memory when the chat opens (the emoji picker and QR scanner alone are several hundred KB).
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then(m => m.QrScanner), { ssr: false });
@@ -942,6 +944,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // ─── UI Maturity: Theme picker, pin, mute, per-conv wallpaper ────────────
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [themePickerTab, setThemePickerTab] = useState<AppearanceTab>('theme');
+  const openAppearance = useCallback((tab: AppearanceTab = 'theme') => {
+    setThemePickerTab(tab);
+    setShowThemePicker(true);
+  }, []);
   // One source of truth: the `chat_theme` setting (synced across devices by
   // pxeEngine). A theme picked with the old picker lived only in this
   // browser's localStorage; it is moved into the setting once, then removed.
@@ -987,6 +994,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
 
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
+  // The wallpaper on the canvas: this chat's own if one was picked for it, else the one for all
+  // chats (Settings → Chat appearance), else the colour theme's canvas. Stored values are ids
+  // (lib/chat/wallpapers.ts); CSS stored by older builds resolves to its id or to nothing.
+  const activeWallpaper = useMemo(() => {
+    const own = activePeer ? resolveWallpaper(convWallpapers[activePeer.toLowerCase()]) : null;
+    return own ?? resolveWallpaper(chatBackground);
+  }, [activePeer, convWallpapers, chatBackground]);
 
   // Pinned and muted chats live in the per-account device store
   // (lib/sync/deviceState.ts): saved across reloads, synced to the account's
@@ -6283,7 +6297,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         { label: 'New chat', icon: <SquarePen size={16} strokeWidth={1.75} />, onClick: () => document.getElementById('ledger-new-chat-input')?.focus() },
                         { label: 'New group', icon: <Users size={16} strokeWidth={1.75} />, onClick: () => setShowCreateGroup(true) },
                         { label: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Private wallet' : 'Private wallet (testnet)', icon: <Lock size={16} strokeWidth={1.75} />, onClick: () => setShowZkWallet(true) },
-                        { label: 'Appearance', icon: <Palette size={16} strokeWidth={1.75} />, onClick: () => setShowThemePicker(true) },
+                        { label: 'Appearance', icon: <Palette size={16} strokeWidth={1.75} />, onClick: () => openAppearance() },
                         { label: 'Settings', icon: <Settings size={16} strokeWidth={1.75} />, onClick: () => setShowFullSettings(true) },
                       ].map((item, i) => (
                         <button
@@ -6705,8 +6719,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         {[
                           { label: 'Contact info', icon: <Info size={17} strokeWidth={1.8} />, onClick: openContactInfo },
                           { label: 'Search in chat', icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
-                          { label: 'Wallpaper', icon: <ImageIcon size={17} strokeWidth={1.8} />, onClick: () => setShowWallpaperPicker(true) },
-                          { label: 'Appearance', icon: <Palette size={17} strokeWidth={1.8} />, onClick: () => setShowThemePicker(true) },
+                          { label: 'Wallpaper', icon: <ImageIcon size={17} strokeWidth={1.8} />, onClick: () => openAppearance('wallpaper') },
+                          { label: 'Appearance', icon: <Palette size={17} strokeWidth={1.8} />, onClick: () => openAppearance() },
                           { label: 'Save contact', icon: <UserPlus size={17} strokeWidth={1.8} />, onClick: () => { const n = getDisplayName(activePeer!); setSaveContactName(/^0x[0-9a-f]{4}/i.test(n) ? '' : n); setShowSaveContactModal(true); } },
                           { label: isSecretChat ? 'Turn off secret chat' : 'Secret chat', icon: <Flame size={17} strokeWidth={1.8} />, onClick: () => setIsSecretChat(!isSecretChat) },
                           { label: 'Private wallet', icon: <ShieldCheck size={17} strokeWidth={1.8} />, onClick: () => setShowZkWallet(v => !v) },
@@ -6786,12 +6800,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             />
 
             {/* Dynamic Chat Background */}
-            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f4f5f7]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : (activePeer && convWallpapers[activePeer.toLowerCase()] ? { background: convWallpapers[activePeer.toLowerCase()] } : chatTheme.id !== 'default' ? { background: chatTheme.canvas } : bgStyle)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
+            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f4f5f7]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} data-wallpaper-tone={isSecretChat ? 'light' : canvasTone(chatTheme, activeWallpaper)} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : canvasStyle(chatTheme, activeWallpaper)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
               )}
               
+              {/* Sticker moments play over the conversation (lib/chat/sticker-scenes.ts). */}
+              <StickerSceneHost />
+
               {/* Confidential Watermark Overlay */}
               <div className="ledger-watermark">
                 <span>Confidential</span>
@@ -7392,7 +7409,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   { icon: <Lock size={16} strokeWidth={1.75} />, title: 'Encrypted direct messages', text: 'One-to-one chats use MLS end-to-end encryption through XMTP.' },
                   { icon: <Users size={16} strokeWidth={1.75} />, title: 'Communities', text: 'Channels, roles, invite links and apps. Community posts are stored on our server.' },
                   ...((ledgerSettings as any)?.payments_enabled !== false ? [{ icon: <Wallet size={16} strokeWidth={1.75} />, title: 'Payments', text: 'Send tokens from your wallet without leaving the chat.' }] : []),
-                  { icon: <Palette size={16} strokeWidth={1.75} />, title: 'Appearance', text: `${CHAT_THEMES.length} themes, ${WALLPAPER_OPTIONS.length} wallpapers and ${BUBBLE_STYLES.length} bubble styles.`, onClick: () => setShowThemePicker(true) },
+                  { icon: <Palette size={16} strokeWidth={1.75} />, title: 'Appearance', text: `${CHAT_THEMES.length} themes, ${WALLPAPER_OPTIONS.length} wallpapers and ${BUBBLE_STYLES.length} bubble styles.`, onClick: () => openAppearance() },
                 ].map((f, idx) => {
                   const body = (
                     <>
@@ -8610,35 +8627,26 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         document.body
       )}
 
-      {/* ── Appearance (theme + bubbles) ───────────────────────────────────── */}
+      {/* ── Appearance studio (theme, wallpaper, bubbles) ──────────────────── */}
       <ThemePickerSheet
         open={showThemePicker}
+        initialTab={themePickerTab}
         currentThemeId={chatTheme.id}
-        currentBubbleStyle={(['default', 'glass', 'brutalist', 'minimal'] as const).find((b) => b === bubbleStyle) ?? 'default'}
+        currentBubbleStyle={isBubbleStyleId(bubbleStyle) ? bubbleStyle : 'default'}
+        currentWallpaper={activeWallpaper?.id ?? 'default'}
+        wallpaperScope={activePeer ? `Chat with ${getDisplayName(activePeer)}` : 'All chats'}
         onSelectTheme={(t: ChatTheme) => {
           updateBatch({ chat_theme: t.id });
         }}
         onSelectBubbleStyle={(id: string) => {
-          // Settings store four bubble styles; the picker may list more.
-          const style = (['default', 'glass', 'brutalist', 'minimal'] as const).find((b) => b === id);
-          if (style && isBubbleStyleId(id)) updateBatch({ bubble_style: style });
+          if (isBubbleStyleId(id)) updateBatch({ bubble_style: id });
+        }}
+        onSelectWallpaper={(w) => {
+          if (activePeer) setConvWallpaper(activePeer, w.id);
+          else updateBatch({ chat_background: w.id });
         }}
         onClose={() => setShowThemePicker(false)}
-        onOpenWallpaper={activePeer ? () => setShowWallpaperPicker(true) : undefined}
       />
-
-      {/* ── Wallpaper Picker Sheet ────────────────────────────────────────── */}
-      {activePeer && (
-        <WallpaperPickerSheet
-          open={showWallpaperPicker}
-          currentWallpaperId={WALLPAPER_OPTIONS.find(o => o.background === convWallpapers[activePeer.toLowerCase()])?.id || 'default'}
-          peerDisplayName={getDisplayName(activePeer)}
-          onSelect={(opt: WallpaperOption) => {
-            setConvWallpaper(activePeer, opt.background);
-          }}
-          onClose={() => setShowWallpaperPicker(false)}
-        />
-      )}
 
       </div>{/* end h-full flex-col layout wrapper */}
     </TuringShieldGate>

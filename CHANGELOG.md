@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Chat appearance and stickers
+- **Appearance studio** (Settings → Chat appearance, and Appearance inside a chat): one place with a live preview and three tabs. **40 colour themes** in six families (every pair contrast-tested to WCAG AA), **60 wallpapers** in six families (soft colours, gradients, mesh, patterns, doodles and illustrated scenes, all drawn on the device, nothing downloaded) and **14 bubble styles** (classic tail, soft, elevated, gradient, aurora, glow, glass, tinted…). A chat can keep its own wallpaper; on dark wallpapers the time under messages turns light.
+- Fixed: a wallpaper picked in Settings never reached the chat (the chat read ids, Settings stored CSS), and the in-chat picker only offered four bubble styles. Wallpapers are now stored as ids only; values from older builds are mapped.
+- **Three original sticker packs** drawn for Ledger Chat (36 stickers): *Nubi & Sol*, a little cloud and a little sun; *Lumi*, a jelly drop; *Spike*, a sassy cactus. Volumetric, die-cut, with idle motion.
+- **Sticker moments**: when a sticker arrives (and when it is tapped) it leaves its bubble and plays a 4–5 s scene over the whole chat: paint that splats on the glass and drips, rain of hearts, lipstick kisses, fireworks, a quake with cracks, money rain, fire, sunrise, night sky… 19 scenes. Reduced motion gets a short still pop; Settings → Chat appearance → Sticker effects turns automatic moments off on a device.
+
 ### Aztec Alpha (mainnet)
 - **Found 11 November 2026:** the Dockerfile declared no `ARG`, so Railway never passed `NEXT_PUBLIC_AZTEC_*` to `next build`. Every production build used the defaults (Aztec test network, no tokens), although the Alpha variables were set in Railway. The `ARG` lines are added; merging them is what switches production to Alpha.
 - `scripts/aztec/check-alpha-config.mjs` runs before `next build` and checks `NEXT_PUBLIC_AZTEC_TOKENS` and `NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS` against `deployments/aztec-mainnet.json` (mode `strict` in the Dockerfile: a mismatch fails the build and the running deployment stays).
