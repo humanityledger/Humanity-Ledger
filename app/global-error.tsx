@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Inter } from "next/font/google";
 import { HLLogo } from "@/components/shared/HLLogo";
 import { isChunkLoadError, reloadForFreshChunks } from "@/lib/errors/chunk-recovery";
@@ -139,7 +140,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
               >
                 Reload
               </button>
-              <a
+              <Link
                 href="/"
                 style={{
                   height: 44,
@@ -156,7 +157,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
                 }}
               >
                 Home
-              </a>
+              </Link>
             </div>
           </div>
         </main>
