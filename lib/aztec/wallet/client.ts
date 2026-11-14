@@ -29,6 +29,7 @@ import { AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, assertNetworkAllowed, isWalletConfi
 import { deriveAccountKeys, deriveFeeJuiceClaimSecrets, type WalletTypedData } from './keys';
 import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
+import { issueCap, recordedAdmin } from '../token-issuer';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { assertFeeChoice, identifyNode } from '../fees';
 import { valueActionsRunning } from '../single-flight';
@@ -963,6 +964,32 @@ class PrivateWallet {
     const addr = this.sdk!.AztecAddress.fromStringUnsafe(value.trim());
     if (!(await addr.isValid())) throw new Error('That Aztec address is not valid. Check it and try again.');
     return addr;
+  }
+
+  /** Tokens this account may issue on Alpha: it is the admin recorded in deployments/aztec-mainnet.json. */
+  issuableTokens(): TokenKey[] {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet' || !this.me || this.snapshot.phase !== 'ready') return [];
+    const me = String(this.me.toString()).toLowerCase();
+    return AZTEC_WALLET_CONFIG.tokens.filter((t) => recordedAdmin(t.address) === me).map((t) => t.key);
+  }
+
+  /**
+   * Issues `amount` of a token into this account's PRIVATE balance (Alpha, admin only, capped).
+   * The token contract checks the minter again; this only keeps the button from being offered to others.
+   */
+  async issue(key: TokenKey, amount: string) {
+    await assertNewValueAllowed();
+    if (!this.issuableTokens().includes(key)) throw new Error('Only the account that issues this token can mint it.');
+    const { decimals } = tokenConfig(key);
+    const units = parseUnits(amount, decimals);
+    if (units <= 0n) throw new Error('Enter an amount to issue.');
+    if (units > issueCap(decimals)) throw new Error('That is more than one issue may create. Use a smaller amount.');
+    const me = this.me;
+    return this.run('issue', key, units, undefined, (c) => {
+      // Standard Token: mint_to_private(to, amount); older releases took (from, to, amount).
+      const fn = c.artifact?.functions?.find((f: any) => f.name === 'mint_to_private');
+      return fn?.parameters?.length === 3 ? c.methods.mint_to_private(me, me, units) : c.methods.mint_to_private(me, units);
+    });
   }
 
   /** Mints test tokens to your public balance. Test network only; the tokens have no value. */

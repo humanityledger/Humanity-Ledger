@@ -299,6 +299,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             </Section>
 
             {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
+            {ALPHA && state.phase === 'ready' && <IssueTokens disabled={state.busy} />}
 
             <ActivityList items={state.activity} />
 
@@ -582,6 +583,53 @@ function Gate(props: {
   );
 }
 
+function IssueTokens({ disabled }: { disabled: boolean }) {
+  const { wallet } = useAztecWallet('');
+  const keys = wallet?.issuableTokens() ?? [];
+  const [amount, setAmount] = useState('1');
+  const [busy, setBusy] = useState(false);
+  if (!wallet || keys.length === 0) return null;
+  const key = keys[0];
+  const sym = symbolOf(key);
+  const run = async () => {
+    setBusy(true);
+    const id = toast.loading(`Issuing ${amount} ${sym} to your private balance. The proof is made on this device.`);
+    try {
+      await wallet.issue(key, amount);
+      toast.success(`${amount} ${sym} issued to your private balance.`, { id });
+    } catch (err) {
+      toast.error(humanError(err), { id });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="bg-white rounded-2xl border border-black/[0.05] p-4">
+      <div className="text-[13px] font-semibold">Issue {sym}</div>
+      <p className="mt-1 text-[12px] leading-relaxed text-black/50">
+        This account is the issuer of {sym} on Aztec Alpha. Issued tokens go to your private balance. At most 1,000 {sym} per issue; the fee is paid in Fee Juice.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <input
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+          className="h-11 flex-1 rounded-xl border border-black/10 px-3 text-[14px] font-mono"
+          aria-label={`Amount of ${sym} to issue`}
+        />
+        <button
+          type="button"
+          disabled={disabled || busy || !amount}
+          onClick={run}
+          className="h-11 px-4 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold disabled:opacity-40"
+        >
+          {busy ? 'Issuing…' : 'Issue'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Faucet({ disabled }: { disabled: boolean }) {
   const { wallet } = useAztecWallet('');
   const [busy, setBusy] = useState<TokenKey | null>(null);
@@ -629,6 +677,7 @@ const KIND_LABEL: Record<Activity['kind'], string> = {
   send: 'Sent',
   receive: 'Received',
   faucet: 'Test tokens',
+  issue: 'Issued',
   deploy: 'Private account created',
 };
 
@@ -657,7 +706,7 @@ function ActivityList({ items }: { items: Activity[] }) {
       ) : (
         <ul className="divide-y divide-black/[0.04]">
           {items.slice(0, 40).map((a) => {
-            const inbound = a.kind === 'receive' || a.kind === 'faucet';
+            const inbound = a.kind === 'receive' || a.kind === 'faucet' || a.kind === 'issue';
             return (
               <li key={a.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center shrink-0">
