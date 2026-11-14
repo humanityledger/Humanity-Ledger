@@ -133,15 +133,15 @@ export const zeroKnowledge: DocPage = {
   slug: "zero-knowledge",
   href: "/docs/zero-knowledge",
   label: "Private payments on Aztec",
-  summary: "How the private payments wallet works, what it hides, what it does not, and why it runs on a test network.",
+  summary: "How the private payments wallet works, what it hides, what it does not, and what runs on Aztec Alpha today.",
   keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet", "escrow", "stream", "agreement"],
   updated: "2026-11-13",
   blocks: [
     {
       t: "hint",
       tone: "warning",
-      title: "Test network only",
-      text: "The private payments wallet runs on the Aztec test network (version 6.0.0, settled on Ethereum Sepolia). Its tokens have no value. It will not be connected to a network with real value until our contracts have been reviewed by an independent auditor.",
+      title: "Aztec Alpha: real network, no audit, small amounts",
+      text: "The private payments wallet on ledgerchat.org runs on Aztec Alpha (version 6.0.0, settled on Ethereum mainnet), which Aztec itself describes as an alpha where serious bugs are expected. The only token listed there is HLC, issued by Humanity Ledger. No contract of ours has had an independent audit. Fees are paid in Fee Juice, which you bridge from Ethereum yourself; there is no sponsored fee payer. Escrows and payment streams are refused on Alpha. Use amounts you can afford to lose.",
     },
     {
       t: "p",
@@ -151,10 +151,10 @@ export const zeroKnowledge: DocPage = {
     {
       t: "steps",
       items: [
-        { title: "Your wallet signs a statement", text: "The first time you open the private wallet, your Ethereum wallet asks you to sign a typed message that names Humanity Ledger and the Aztec test network. Signing is free and sends no transaction." },
+        { title: "Your wallet signs a statement", text: "The first time you open the private wallet, your Ethereum wallet asks you to sign a typed message that names Humanity Ledger and the Aztec network it is for (Alpha and the test network give different accounts). Signing is free and sends no transaction." },
         { title: "Your browser derives the keys", text: "The signature is turned into the secret of an Aztec account with HKDF-SHA256, inside your browser. The same wallet always produces the same account, so you can open it on any device, and nothing that can spend it is ever sent to us." },
         { title: "Your browser runs a private node", text: "A Private eXecution Environment (PXE) runs in your browser, stores your notes in its local database, decrypts them and produces the proofs for your transactions." },
-        { title: "The account is deployed", text: "Your Aztec account contract is deployed on the test network the first time it is needed. Fees on the test network are covered by Aztec's sponsored fee contract, so you do not need any tokens to start." },
+        { title: "The account is deployed", text: "Your Aztec account contract is deployed the first time it is needed. On Alpha that first transaction is paid in Fee Juice: the wallet waits until you have bridged AZTEC from Ethereum through Aztec's Fee Juice portal, then deploys and claims in one transaction. On the test network, Aztec's sponsored fee contract pays instead." },
       ],
     },
     { t: "h2", text: "The four actions" },
@@ -213,7 +213,7 @@ export const zeroKnowledge: DocPage = {
         "The agreement contracts have no external audit. On the test network the tokens have no value.",
       ],
     },
-    { t: "h2", text: "Test tokens" },
+    { t: "h2", text: "Test tokens (test network only)" },
     {
       t: "p",
       text: "The wallet shows three test tokens, zkUSDC, zkDAI and zkETH. They are instances of Aztec's standard token contract that we deployed on the test network, and they have no relation to the real USDC, DAI or ETH. A faucet in the wallet mints a small public amount so you can try shielding and sending. The faucet's key is published on purpose so that anyone can mint, which is one more reason the tokens have no value.",
@@ -222,11 +222,11 @@ export const zeroKnowledge: DocPage = {
     {
       t: "status",
       items: [
-        { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. Contracts not independently audited." },
+        { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. On Alpha the code paths are the same, but no private payment from Ledger Chat has been recorded there yet (first run pending). Not independently audited." },
         { label: "Bridge from Ethereum", state: "development", text: "Moving real tokens from Ethereum into Aztec and back needs a bridge contract on each side. It is not built." },
         { label: "Agreements (escrow and payment stream)", state: "partial", text: "In conversations on the Aztec test network. Contracts not independently audited. Two hardening changes to the contract source (a nullifier on each deposit and on each stream creation) are not compiled into the deployed contracts yet, so the app uses the previous versions until they are." },
         { label: "Pausing new payments", state: "partial", text: "We can switch the app to exits only: new payments and agreements are refused, while claiming, refunding, cancelling and withdrawing keep working. This stops our interface, not the contracts, which have no pause. A modified client can still call them." },
-        { label: "Aztec Alpha (mainnet)", state: "unavailable", text: "Alpha runs the same version 6.0.0, but it holds real value and has no sponsored fees. The wallet refuses it until the gates in our mainnet readiness plan are met, including fees paid in Fee Juice and limits for unaudited contracts." },
+        { label: "Aztec Alpha (mainnet)", state: "partial", text: "Production is built for Alpha. The HLC token is deployed there (block 24544) and checked by our preflight. Fees in Fee Juice and per token caps are built; agreements are refused; the external audit and the first recorded private payment are still open." },
       ],
     },
     { t: "h2", text: "Status of the Aztec network" },
