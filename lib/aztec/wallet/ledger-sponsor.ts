@@ -57,6 +57,23 @@ export async function sponsorContract(ctx: Ctx, address: string) {
   return { addr, contract: (Contract as any).at(addr, artifact, ctx.wallet) };
 }
 
+/**
+ * Whether the contract at `address` runs this build's LedgerSponsor class. false: another class, e.g.
+ * the first Alpha instance (0x268bb3e4…, before #[allow_phase_change]), which can never pay; the
+ * operator panel then offers to deploy the current version. null: unknown (not deployed, node error).
+ */
+export async function sponsorRunsCurrentClass(ctx: { sdk: any; node: any }, address: string): Promise<boolean | null> {
+  try {
+    const [artifact, { getContractClassFromArtifact }] = await Promise.all([sponsorArtifact(), import('@aztec-labs/stdlib/contract')]);
+    const instance = await ctx.node.getContract(ctx.sdk.AztecAddress.fromStringUnsafe(address));
+    if (!instance) return null;
+    const cls = await getContractClassFromArtifact(artifact as any);
+    return instance.currentContractClassId.toString().toLowerCase() === cls.id.toString().toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 const USED_KEY = 'hl:aztec-sponsor-used';
 function usedVouchers(): string[] {
   try { return JSON.parse(sessionStorage.getItem(USED_KEY) || '[]'); } catch { return []; }
@@ -77,8 +94,12 @@ export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | n
   const address = ledgerSponsorAddress();
   lastSponsorIssue = '';
   if (!address) return null;
-  let stage = 'voucher';
+  let stage = 'contract';
   try {
+    // The contract first: a sponsor this build does not recognise (another class) is refused here,
+    // before a voucher is asked for, so it never uses up the account's sponsored transactions.
+    const { addr, contract } = await sponsorContract(ctx, address);
+    stage = 'voucher';
     const res = await fetch('/api/aztec/sponsor', {
       method: 'POST',
       credentials: 'include',
@@ -95,8 +116,6 @@ export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | n
       lastSponsorIssue = 'The server and this page name different sponsors. Reload the page.';
       return null;
     }
-    stage = 'contract';
-    const { addr, contract } = await sponsorContract(ctx, address);
     stage = 'call';
     const call = contract.methods.sponsor(ctx.sdk.Fr.fromString(v.voucherId), BigInt(v.expiresAt), v.signerX, v.signerY, v.signature);
     return {

@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fix: LedgerSponsor could not pay (15 November 2026)
+
+- `sponsor()` ends the setup phase but lacked `#[allow_phase_change]`; aztec-nr 6.0.0 then fails every real
+  sponsored transaction with "Phase change detected on function with phase check". TXE tests stop at the
+  fee-payer election, before `end_setup`, so they could not see it. Fixed, recompiled, TXE vectors regenerated;
+  `test/unit/aztec/phase-change.test.ts` now requires the attribute on any private function that ends setup.
+- The first instance on Alpha (`0x268bb3e4…090aafa8`) is retired: it keeps 74 AZTEC of Fee Juice that cannot be
+  withdrawn. A new instance is to be deployed and funded.
+
 ### Licence made consistent, README brought to 15 November (15 November 2026)
 
 - Licence: one statement everywhere, `MIT OR Apache-2.0`. `LICENSE` now gives the SPDX expression, the

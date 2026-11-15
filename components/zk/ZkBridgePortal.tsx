@@ -353,7 +353,11 @@ function SponsorOperator({ publicClient, walletClient }: { publicClient: any; wa
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [balance, setBalance] = useState<bigint | null>(null);
-  const target = configured || deployed;
+  // A sponsor that runs an older class can never pay (the first Alpha instance lacked
+  // #[allow_phase_change]): it is skipped, so the operator can deploy the current version.
+  const [retired, setRetired] = useState<string[]>([]);
+  const target = [configured, deployed].find((a) => a && !retired.includes(a.toLowerCase())) || '';
+  const lastRetired = retired[retired.length - 1];
   const run = async (label: string, fn: () => Promise<string | void>) => {
     if (busy) return;
     setBusy(true); setMsg(label);
@@ -363,6 +367,14 @@ function SponsorOperator({ publicClient, walletClient }: { publicClient: any; wa
     if (!target) return;
     getPrivateWallet().sponsorBalance(target).then(setBalance).catch(() => setBalance(null));
   }, [target, msg]);
+  useEffect(() => {
+    if (!target) return;
+    let live = true;
+    getPrivateWallet().sponsorIsCurrent(target).then((ok) => {
+      if (live && ok === false) setRetired((r) => (r.includes(target.toLowerCase()) ? r : [...r, target.toLowerCase()]));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [target]);
   return (
     <div className="rounded-2xl border border-[#15171C] px-4 py-4 space-y-3">
       <div>
@@ -371,6 +383,11 @@ function SponsorOperator({ publicClient, walletClient }: { publicClient: any; wa
           Pays account creation and the first transactions of people without Fee Juice, a few per account and up to a daily limit. You deploy it and fund it from here; every step is signed by your own wallets.
         </p>
       </div>
+      {lastRetired && !target && (
+        <p className="text-[12.5px] text-[#B42318] break-all">
+          The sponsor at {lastRetired} runs an older contract and cannot pay; the Fee Juice it holds stays there. Deploy the current version below.
+        </p>
+      )}
       {!target ? (
         <button type="button" disabled={busy} onClick={() => run('Deploying the sponsor from your private wallet…', async () => {
           const a = await getPrivateWallet().deployLedgerSponsor();
@@ -380,7 +397,7 @@ function SponsorOperator({ publicClient, walletClient }: { publicClient: any; wa
       ) : (
         <>
           <button type="button" onClick={() => navigator.clipboard?.writeText(target).catch(() => {})} className="w-full text-left text-[12.5px] font-mono text-[#15171C] break-all">{target}</button>
-          {!configured && <p className="text-[12.5px] text-[#475467]">Not active yet: set <strong>NEXT_PUBLIC_AZTEC_SPONSOR</strong> to this address in Railway, then redeploy.</p>}
+          {configured.toLowerCase() !== target.toLowerCase() && <p className="text-[12.5px] text-[#475467]">Not active yet: set <strong>NEXT_PUBLIC_AZTEC_SPONSOR</strong> to this address in Railway, then redeploy.</p>}
           <p className="text-[13px] text-[#15171C]">Fee Juice in the sponsor: <strong>{balance === null ? '…' : formatUnits(balance, 18)}</strong></p>
           <div className="flex gap-2">
             <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-11 flex-1 rounded-xl border border-[#E4E7EC] px-3 text-[14px]" aria-label="AZTEC to add to the sponsor" />

@@ -7,7 +7,7 @@
     "rollupVersion": 2070860440
   },
   "sponsoredFpc": {
-    "$comment": "LedgerSponsor (contracts/aztec/sponsor, docs/SPONSOR.md): pays the fee of a transaction for a signed-in user without Fee Juice, once per server-signed voucher, max fee 40 AZTEC. Deployed from the Ledger Chat private wallet of 0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675 (operator tool), universal deployment, 14 Nov 2026. Workflow 'Aztec verify sponsor' on 15 Nov 2026: network, class, server key and cap all PASS. Funded with 9 AZTEC of Fee Juice (claimed 15 Nov 2026); Fee Juice in the sponsor cannot be withdrawn. Not audited.",
+    "$comment": "RETIRED 15 Nov 2026: this instance cannot pay. Its sponsor() lacks #[allow_phase_change], so every sponsored transaction fails with 'Phase change detected on function with phase check' (first account attempt, 15 Nov 2026). It holds 74 AZTEC of Fee Juice that cannot be withdrawn. Replace this record with the new instance once deployed. Original note: LedgerSponsor (contracts/aztec/sponsor, docs/SPONSOR.md): pays the fee of a transaction for a signed-in user without Fee Juice, once per server-signed voucher, max fee 40 AZTEC. Deployed from the Ledger Chat private wallet of 0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675 (operator tool), universal deployment, 14 Nov 2026. Workflow 'Aztec verify sponsor' on 15 Nov 2026: network, class, server key and cap all PASS. Funded with 9 AZTEC of Fee Juice (claimed 15 Nov 2026); Fee Juice in the sponsor cannot be withdrawn. Not audited.",
     "contract": "LedgerSponsor",
     "address": "0x268bb3e40fc6fdb39e482ef1214788b5cbedf5ddadb658367ef6df41090aafa8",
     "classId": "0x0c1fc3f9c3d5f7fad2fcd8508122b711cfe48564253fc095271661a849e58102",

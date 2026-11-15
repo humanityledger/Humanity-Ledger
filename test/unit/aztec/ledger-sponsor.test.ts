@@ -8,7 +8,8 @@ const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 describe('Ledger sponsor (P1)', () => {
   it('the contract checks the signer, signature, expiry, one use and the fee cap before paying', () => {
     const c = read('contracts/aztec/sponsor/src/main.nr');
-    const order = ['voucher expired', 'unknown signer', 'bad signature', 'fee above cap', 'push_nullifier_unsafe', 'set_as_fee_payer', 'end_setup'].map((k) => c.indexOf(k));
+    // The calls themselves (comments may name them earlier: the #[allow_phase_change] note does).
+    const order = ['voucher expired', 'unknown signer', 'bad signature', 'fee above cap', 'self.context.push_nullifier_unsafe(', 'self.context.set_as_fee_payer()', 'self.context.end_setup()'].map((k) => c.indexOf(k));
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // Fees compared as Fields, never through a truncating u128 cast.
@@ -59,4 +60,19 @@ describe('Ledger sponsor (P1)', () => {
       expect(i > 0 && g > i && sd > g).toBe(true);
     }
   });
+
+  it('a sponsor this build does not recognise is refused before a voucher is asked for', () => {
+    const l = read('lib/aztec/wallet/ledger-sponsor.ts');
+    const fn = l.slice(l.indexOf('export async function sponsoredFee('), l.indexOf('// ── Operator tools'));
+    expect(fn.indexOf('await sponsorContract(ctx, address)')).toBeGreaterThan(0);
+    expect(fn.indexOf('await sponsorContract(ctx, address)')).toBeLessThan(fn.indexOf("fetch('/api/aztec/sponsor'"));
+    expect(l).toMatch(/return instance\.currentContractClassId\.toString\(\)\.toLowerCase\(\) === cls\.id\.toString\(\)\.toLowerCase\(\);/);
+  });
+
+  it('the operator panel skips a sponsor that runs an older class and offers to deploy again', () => {
+    const b = read('components/zk/ZkBridgePortal.tsx');
+    expect(b).toMatch(/const target = \[configured, deployed\]\.find\(\(a\) => a && !retired\.includes\(a\.toLowerCase\(\)\)\) \|\| '';/);
+    expect(b).toMatch(/sponsorIsCurrent\(target\)\.then\(\(ok\) => \{\n\s+if \(live && ok === false\)/);
+  });
 });
+
