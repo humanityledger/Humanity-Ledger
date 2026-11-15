@@ -60,4 +60,19 @@ describe('Ledger sponsor (P1)', () => {
       expect(i > 0 && g > i && sd > g).toBe(true);
     }
   });
+
+  it('a sponsor this build does not recognise is refused before a voucher is asked for', () => {
+    const l = read('lib/aztec/wallet/ledger-sponsor.ts');
+    const fn = l.slice(l.indexOf('export async function sponsoredFee('), l.indexOf('// ── Operator tools'));
+    expect(fn.indexOf('await sponsorContract(ctx, address)')).toBeGreaterThan(0);
+    expect(fn.indexOf('await sponsorContract(ctx, address)')).toBeLessThan(fn.indexOf("fetch('/api/aztec/sponsor'"));
+    expect(l).toMatch(/return instance\.currentContractClassId\.toString\(\)\.toLowerCase\(\) === cls\.id\.toString\(\)\.toLowerCase\(\);/);
+  });
+
+  it('the operator panel skips a sponsor that runs an older class and offers to deploy again', () => {
+    const b = read('components/zk/ZkBridgePortal.tsx');
+    expect(b).toMatch(/const target = \[configured, deployed\]\.find\(\(a\) => a && !retired\.includes\(a\.toLowerCase\(\)\)\) \|\| '';/);
+    expect(b).toMatch(/sponsorIsCurrent\(target\)\.then\(\(ok\) => \{\n\s+if \(live && ok === false\)/);
+  });
 });
+

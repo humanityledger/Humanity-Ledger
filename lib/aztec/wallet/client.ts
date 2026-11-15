@@ -774,6 +774,13 @@ class PrivateWallet {
     return { claimed, waiting, failed, ...(error ? { error } : {}) };
   }
 
+  /** Whether the sponsor at `address` runs this build's LedgerSponsor class (null: unknown). */
+  async sponsorIsCurrent(address: string): Promise<boolean | null> {
+    if (!this.sdk) return null;
+    const m = await import('./ledger-sponsor');
+    return m.sponsorRunsCurrentClass({ sdk: this.sdk, node: this.node }, address);
+  }
+
   /** Fee Juice the sponsor holds (base units). */
   async sponsorBalance(sponsor: string): Promise<bigint> {
     if (!this.sdk) throw new Error('Open your private wallet first.');
