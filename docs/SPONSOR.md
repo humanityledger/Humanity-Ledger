@@ -8,7 +8,7 @@ account and up to a daily limit. Everyone else keeps paying with their own Fee J
 
 | Part | State | Evidence |
 |---|---|---|
-| Contract `LedgerSponsor` | **Real on Aztec Alpha:** deployed at `0x268bb3e4…090aafa8` (block 30105, 14 Nov 2026), funded with 9 AZTEC of Fee Juice, recorded in `deployments/aztec-mainnet.json` → `sponsoredFpc`; workflow "Aztec verify sponsor" passes (network, class, key and cap). No sponsored transaction yet | TXE tests, `contracts/aztec/sponsor/src/test.nr` (10), run by the "Aztec contracts" workflow |
+| Contract `LedgerSponsor` | **Code ready, not deployed** (fixed 15 Nov 2026: `#[allow_phase_change]` on `sponsor`). The first instance on Alpha, `0x268bb3e4…090aafa8` (block 30105), **cannot pay**: its `sponsor` lacked the attribute, so every sponsored transaction failed with "Phase change detected". It keeps its 74 AZTEC of Fee Juice, which cannot be withdrawn. A new instance must be deployed and funded | TXE tests (10), `test/unit/aztec/phase-change.test.ts` |
 | Voucher signing (V2 digest) | **Real only in tests** | `test/unit/aztec/sponsor-voucher.test.ts` |
 | Per-wallet and daily limits | **Real only in tests** | `test/unit/aztec/sponsor-quota.test.ts` |
 | Wallet path "no Fee Juice → sponsor" | **Real only in tests** (source checks; the sponsor has never paid on Alpha) | `test/unit/aztec/ledger-sponsor.test.ts` |
