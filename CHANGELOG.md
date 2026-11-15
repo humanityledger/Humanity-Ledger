@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Licence made consistent, README brought to 15 November (15 November 2026)
+
+- Licence: one statement everywhere, `MIT OR Apache-2.0`. `LICENSE` now gives the SPDX expression, the
+  scope (code, contracts, circuits, scripts, tests, deployment records and documentation), inbound =
+  outbound contributions and the names-and-logos exclusion. `NOTICE` replaces the "All Rights Reserved"
+  ownership notice, whose restrictions contradicted both licences, with an Apache-style notice: copyright,
+  names and logos, third-party dependencies and the logos of other projects in `public/`. `LICENSE-MIT`
+  names the same copyright holders.
+- Website: the protocol, company, developers and legal pages, the page metadata, the structured data and
+  `llms.txt` said "source available, not open source" under a proprietary licence; they now say open
+  source, MIT OR Apache-2.0, with the names and logos excluded.
+- README: status as of 15 November; LedgerSponsor deployed on Aztec Alpha (block 30105, 9 AZTEC of Fee
+  Juice, verify workflow passes, not yet used) in the status table, section 3, the anchors, R4 and
+  questions 7 and 8; TXE counts from the "Aztec contracts" run 43646090307 (escrow 16, identity 20,
+  streams 25, sponsor 10); NLnet proposal reference; licence section. `docs/readme/FACTS.md` line numbers
+  regenerated and the new values added. `docs/SPONSOR.md`, `docs/MAINNET_READINESS.md` (R4) and
+  `docs/STATUS.md` no longer say the sponsor is undeployed or unchecked.
+
 ### Fix: a Fee Juice deposit claimed twice blocked every transaction (15 November 2026)
 
 - The sponsor tools (deploy, claim into the sponsor) paid their fee by claiming the operator's own arrived

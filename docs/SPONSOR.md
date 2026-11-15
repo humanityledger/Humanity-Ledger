@@ -12,7 +12,7 @@ account and up to a daily limit. Everyone else keeps paying with their own Fee J
 | Voucher signing (V2 digest) | **Real only in tests** | `test/unit/aztec/sponsor-voucher.test.ts` |
 | Per-wallet and daily limits | **Real only in tests** | `test/unit/aztec/sponsor-quota.test.ts` |
 | Wallet path "no Fee Juice → sponsor" | **Real only in tests** (source checks; the sponsor has never paid on Alpha) | `test/unit/aztec/ledger-sponsor.test.ts` |
-| Post-deployment check | Script ready, never run against a deployed sponsor | `scripts/aztec/verify-sponsor.mjs`, `test/unit/aztec/verify-sponsor.test.ts` |
+| Post-deployment check | **Passed** against the Alpha deployment on 15 November 2026 (workflow "Aztec verify sponsor": network, class, server key and cap) | `scripts/aztec/verify-sponsor.mjs`, `test/unit/aztec/verify-sponsor.test.ts` |
 | Audit | Not audited (G8) | |
 
 ## How it works
