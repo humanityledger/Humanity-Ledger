@@ -11,7 +11,7 @@ const GROUPS: ReadonlyArray<{ id: Metric['group']; title: string; note: string }
   { id: 'network', title: 'Network', note: 'The Aztec node, the Ethereum pins and what is deployed.' },
   { id: 'value', title: 'Value through the protocol', note: 'Agreements, private volume and protocol revenue.' },
   { id: 'token', title: 'HLC', note: 'The protocol token, read from public storage on Aztec Alpha.' },
-  { id: 'onboarding', title: 'Onboarding sponsorship', note: 'Network fees paid for new accounts.' },
+  { id: 'onboarding', title: 'Network fees', note: 'Who pays the fee of each transaction.' },
 ];
 
 const DOT: Record<MetricStatus, string> = {

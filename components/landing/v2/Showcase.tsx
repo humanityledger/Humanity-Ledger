@@ -546,7 +546,7 @@ function PhoneTop({ state }: { state: number }) {
           <div className={s.phoneSearch}>Search</div>
           {[
             ["MO", "Maya Okafor", "Only the two of us. Not even the network.", "#e7ecf7"],
-            ["CT", "Core team", "Leo: shipping the sponsor build tonight", "#ece9f6"],
+            ["CT", "Core team", "Leo: shipping the build tonight", "#ece9f6"],
             ["LB", "Leo Brandt", "On a call", "#e5f3ea"],
           ].map(([ini, name, last, tint]) => (
             <div key={ini} className={s.phoneRow}>

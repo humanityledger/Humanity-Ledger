@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### No fee sponsorship (15 November 2026)
+
+- Product decision: Ledger Chat sponsors no network fee. Every account pays its own fees on Aztec Alpha, with
+  Fee Juice it bridges or that a contact bridges for it through a fee link.
+- Removed: the LedgerSponsor contract and artifact, `/api/aztec/sponsor` (now 410 at the edge), voucher signing
+  and quotas, the wallet's sponsor path, the operator screen, the verify script and workflow, the `/protocol`
+  sponsorship metrics, and the `AZTEC_SPONSOR_*` / `NEXT_PUBLIC_AZTEC_SPONSOR*` variables. `sponsoredFpc` is null
+  in `deployments/aztec-mainnet.json`. `test/unit/aztec/no-sponsorship.test.ts` keeps it that way.
+- Public texts (protocol docs, landing staking paragraph, tokenomics) no longer mention sponsored onboarding.
+
 ### Ledger Chat motion: send, presence, ticks, expression panel (15 November 2026)
 
 - Send: the double jump is gone. A confirmed message kept its bubble only by id, which changes from

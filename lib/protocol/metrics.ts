@@ -97,14 +97,6 @@ export interface RecordedToken {
   deployBlock: number;
 }
 
-export interface RecordedSponsor {
-  address: string;
-  /** Fee Juice protocol contract, as captured from the SDK (scripts/aztec/fee-juice-slot.mjs). */
-  feeJuiceContract: string | null;
-  /** Public storage slot of the sponsor's Fee Juice balance, captured from the SDK. */
-  feeJuiceBalanceSlot: string | null;
-}
-
 export const FEE_JUICE_DECIMALS = 18;
 
 export interface Snapshot {
@@ -119,21 +111,11 @@ export interface Snapshot {
     contracts: string[];
     tokens: RecordedToken[];
     audit: boolean;
-    /** LedgerSponsor as recorded at deployment, with where its Fee Juice balance lives. */
-    sponsoredFpc: RecordedSponsor | null;
   };
   /** Public storage reads of the recorded token, at node.blockNumber. */
   token?: {
     totalSupply: bigint | { error: string };
     admin: bigint | { error: string };
-  };
-  sponsor: {
-    /** Fee Juice balance of the recorded sponsor at node.blockNumber (base units, 18 decimals). */
-    balance?: bigint | { error: string };
-    /** NEXT_PUBLIC_AZTEC_SPONSOR, if set. */
-    configuredAddress: string | null;
-    /** Vouchers signed in the last 24 h (refused requests are not counted). null: not read. */
-    requests24h: number | null;
   };
   pins: { l1ChainId: number; rollup: string; feeJuicePortal: string; nodeVersion: string; rollupVersion: number };
 }
@@ -316,70 +298,18 @@ export function buildMetrics(s: Snapshot): Metric[] {
     }
   }
 
-  // ── Onboarding sponsorship ──
-  const sponsorRecorded = s.record?.sponsoredFpc ?? null;
-  if (!sponsorRecorded) {
-    out.push({
-      id: 'sponsor-pool',
-      group: 'onboarding',
-      label: 'Gas sponsorship pool (Fee Juice)',
-      status: 'not-deployed',
-      detail: s.sponsor.configuredAddress
-        ? `An address is configured on the server (${short(s.sponsor.configuredAddress)}) but no sponsor deployment is recorded in ${RECORD}. Aztec Alpha has no canonical Sponsored FPC.`
-        : 'No sponsor contract is deployed on Aztec Alpha, and Alpha has no canonical Sponsored FPC. New accounts pay their own Fee Juice.',
-      source: RECORD,
-    });
-  } else if (typeof s.sponsor.balance === 'bigint') {
-    out.push({
-      id: 'sponsor-pool',
-      group: 'onboarding',
-      label: 'Gas sponsorship pool (Fee Juice)',
-      status: 'live',
-      value: `${formatUnits(s.sponsor.balance, FEE_JUICE_DECIMALS, 4)} Fee Juice`,
-      raw: s.sponsor.balance.toString(),
-      detail: `Public Fee Juice balance of LedgerSponsor ${short(sponsorRecorded.address)}${
-        s.node.ok ? ` at L2 block ${s.node.blockNumber.toLocaleString('en-US')}` : ''
-      }. It pays network fees for new accounts within the per-wallet and daily limits.`,
-      source: `${nodeSource}, public storage of the Fee Juice contract`,
-    });
-  } else {
-    out.push({
-      id: 'sponsor-pool',
-      group: 'onboarding',
-      label: 'Gas sponsorship pool (Fee Juice)',
-      status: 'unavailable',
-      detail: `LedgerSponsor ${short(sponsorRecorded.address)} is recorded, but its balance was not read${
-        s.sponsor.balance ? `: ${s.sponsor.balance.error}` : ''
-      }. No figure is shown rather than one that may be wrong.`,
-      source: `${nodeSource}, public storage of the Fee Juice contract`,
-    });
-  }
-  if (!s.sponsor.configuredAddress) {
-    out.push({
-      id: 'sponsor-requests',
-      group: 'onboarding',
-      label: 'Sponsored vouchers issued, 24 h',
-      status: 'not-deployed',
-      value: '0',
-      raw: '0',
-      detail: 'Sponsorship is off on this server, so no voucher can be issued.',
-      source: 'Server configuration (NEXT_PUBLIC_AZTEC_SPONSOR)',
-    });
-  } else {
-    out.push({
-      id: 'sponsor-requests',
-      group: 'onboarding',
-      label: 'Sponsored vouchers issued, 24 h',
-      status: s.sponsor.requests24h === null ? 'unavailable' : 'live',
-      value: s.sponsor.requests24h === null ? undefined : s.sponsor.requests24h.toLocaleString('en-US'),
-      raw: s.sponsor.requests24h === null ? undefined : String(s.sponsor.requests24h),
-      detail:
-        s.sponsor.requests24h === null
-          ? 'The counter could not be read.'
-          : 'New vouchers the server signed (a refused request is not counted, a retry that gets the same voucher back is not counted twice). A voucher is not a sponsored transaction: the proof may never be sent.',
-      source: 'Server rate counter (aztec-sponsor-day)',
-    });
-  }
+  // ── Network fees ──
+  // Product decision (15 Nov 2026): Ledger Chat sponsors no fee. Nothing is read: it is a fact of the
+  // product, not a figure, and it holds whatever any server variable says.
+  out.push({
+    id: 'fee-payer',
+    group: 'onboarding',
+    label: 'Network fees',
+    status: 'live',
+    value: 'Paid by each account',
+    detail: 'Every transaction, including the one that creates an account, is paid in that account\'s own Fee Juice: bridged by the user, or by a contact through a fee link. Ledger Chat does not pay network fees for anyone.',
+    source: 'Product decision, docs/MAINNET_READINESS.md',
+  });
 
   return out;
 }

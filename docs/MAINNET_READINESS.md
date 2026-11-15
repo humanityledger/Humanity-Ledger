@@ -11,7 +11,7 @@ Production runs on Aztec Alpha (Ethereum mainnet, chain 1) and HLC is confirmed 
 | R1 | First real run on Alpha | **Done 14 November 2026.** First private payment from Ledger Chat on Alpha, confirmed by the preflight (run 43583640304); record below | Stefan | `deployments/aztec-mainnet.json` (`firstPrivatePayment`) |
 | R2 | Public and legal texts | `lib/docs/pages/legal.ts` and `protocol.ts` say the wallet is test-network only and will not touch real value before an audit; production does | Stefan with counsel | Decide the wording; agents do not edit legal text |
 | R3 | TURN relay | Calls between different networks cannot connect (`/api/calls/ice` answers `source: none`) | Stefan | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` in Railway (`docs/CALLS.md`) |
-| R4 | Zero-balance onboarding | A new account needs Fee Juice before its first transaction (about 28 AZTEC when recorded; the wallet's protocol-maximum fee was about 42 AZTEC on 14 Nov). LedgerSponsor (`contracts/aztec/sponsor`, `docs/SPONSOR.md`) caps each transaction it pays at 40 AZTEC; it is deployed on Alpha (state on 15 Nov below). Since 14 Nov, token transfers set gas limits from a simulation (`gasLimitsFromSimulation`), so the fee the payer must hold follows the transfer, not the protocol maximum; account deployment does the same. Sponsored transactions are estimated without the sponsor's call and padded x2, so their maximum fee stays under the sponsor's cap; since 14 Nov a sponsored transaction whose estimate fails is not sent (its voucher stays usable), a refused voucher request uses up none of the account's limit, and the server issues no voucher without Redis. State on 15 Nov: the first LedgerSponsor instance (`0x268bb3e4…090aafa8`) cannot pay: `sponsor` lacked `#[allow_phase_change]` ("Phase change detected", first account attempt). Fixed in source and recompiled; a new instance must be deployed and funded, then one account created through it. Deployment checklist and the read-only check (`scripts/aztec/verify-sponsor.mjs`, workflow "Aztec verify sponsor"): `docs/SPONSOR.md` | Stefan | Estimated transfers are confirmed on Alpha (blocks 29895, 29923). The `docs/SPONSOR.md` checklist is done (deployed, funded with 9 AZTEC, check passed, recorded, 15 Nov). Next: one account created by the sponsor |
+| R4 | Zero-balance onboarding | **Closed by product decision (15 Nov 2026): Ledger Chat sponsors no fee.** Every account pays its own network fees: Fee Juice it bridges, or Fee Juice a contact bridges for it through a fee link. Since 14 Nov transfers and account creation set gas limits from a simulation (`gasLimitsFromSimulation`), so the Fee Juice an account must hold follows the transaction, not the protocol maximum (about 15 AZTEC asked and 1.8 charged for an account creation). See "Network fees: no sponsorship" below | — | Done: estimated transfers confirmed on Alpha (blocks 29895, 29923) |
 | R5 | A dollar-denominated token | HLC is issued by the operator, uncapped and unbacked; nobody holds it as money | Decision, then build | Proposal P2 below |
 | R6 | Agreements (escrow, streams) on Alpha | Off: artifacts must be recompiled with the deposit and creation nullifiers and run on testnet first | Engineer with the Aztec toolchain, then Stefan deploys | `deployments/aztec-pending-recompile.json`; G5 |
 | R7 | External audit | G8 open; no claim of audited contracts may be made | Stefan | Engage an auditor; record the report under `audit` |
@@ -78,9 +78,17 @@ Not a blocker for any R item: no contract charges a fee, and none may until laun
 
 Source: the L2BEAT privacy review of zk.money (v5 page, archived after v6 became canonical). zk.money brings dollars to Aztec through **its own L1 portal** (DAI, with USDC and USDT swapped to DAI on Curve) that credits private notes through the Inbox, and **sponsors users' L2 fees with a claim fee-paying contract funded by a 0.1 DAI charge on deposits and withdrawals**; names resolve through an onchain registry; per-payment and daily caps apply. There is no canonical, issuer-backed private stablecoin on Alpha to plug into: each application that wants dollars runs its own portal.
 
-### Proposal P1: sponsored onboarding (needs approval before any code)
+### Network fees: no sponsorship
 
-A Noir fee-paying contract owned by Humanity Ledger that pays only (a) account deployment and (b) the first N private transfers of an account, with a per-account and per-day ceiling; funded by Humanity Ledger's Fee Juice and, once P2 exists, by a small fixed charge on deposits (the zk.money model). Needs the Aztec toolchain (`aztec-nargo`), testnet first, then a recorded deployment and audit scope added to G8.
+**Sponsor deployed but disabled by product decision (15 November 2026). Users pay their own fees.**
+Every transaction on Alpha, including the one that creates an account, is paid with the account's own Fee
+Juice: bridged by the user, or by a contact through a fee link (`/fees`). The code holds no sponsor contract,
+route, client path or operator screen (`test/unit/aztec/no-sponsorship.test.ts`), so no variable can turn
+sponsorship on; `/api/aztec/sponsor` answers 410.
+
+Technical reference only, **not used**: two LedgerSponsor instances were deployed on Alpha on 14 and 15 Nov 2026
+(`0x268bb3e4…090aafa8`, block 30105, holding 74 AZTEC of Fee Juice that cannot be withdrawn; and
+`0x231080b2…0d14b95b`, unfunded). Nothing in Ledger Chat calls either.
 
 ### Proposal P2: a dollar portal (needs approval before any code)
 

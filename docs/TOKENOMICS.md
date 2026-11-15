@@ -19,7 +19,7 @@ Fixed supply: **1,000,000,000 HLC** (6 decimals). Never inflationary.
 | --- | --- | --- | --- |
 | Community airdrop | 45% | 450,000,000 | Real users only, weighted by settled escrow activity, sybil-filtered. No purchase. |
 | Fair launch | 20% | 200,000,000 | One price for everyone. No discounts, no private round, no venture capital. |
-| Protocol treasury | 20% | 200,000,000 | Multisig 4 of 7, 48-hour timelock, every movement public on-chain. Also funds the onboarding sponsor (Fee Juice). |
+| Protocol treasury | 20% | 200,000,000 | Multisig 4 of 7, 48-hour timelock, every movement public on-chain. |
 | Team | 15% | 150,000,000 | Nothing before month 18; vests linearly to month 48 from genesis; unvested tokens can be cancelled back to the treasury. |
 
 No investor allocation exists, and none will.
@@ -44,7 +44,7 @@ Locking HLC gives a staking weight = amount × lock multiplier:
 | 12 months | 3.0× |
 | 24 months | 5.0× |
 
-Weight sets a lower fee tier on agreements and a quota of sponsored onboarding transactions for the staker's community.
+Weight sets a lower fee tier on agreements.
 It never entitles anyone to fees, ETH or USDC.
 
 ## Fee arithmetic (Phase 0)

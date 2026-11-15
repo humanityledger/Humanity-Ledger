@@ -205,12 +205,6 @@ export function decodePaymentRequest(raw: string): { address: string; token?: To
   };
 }
 
-/**
- * Shown when a sponsored transaction could not be estimated. Nothing was sent and the voucher was not
- * put into a transaction, so a retry within its 15 minutes gets the same voucher back from the server.
- */
-const SPONSOR_NEEDS_ESTIMATE =
-  'The network fee for this sponsored transaction could not be estimated, so nothing was sent. Try again in the next few minutes: the same sponsorship is reused.';
 
 class PrivateWallet {
   private sdk: Sdk | null = null;
@@ -514,13 +508,10 @@ class PrivateWallet {
     let consumed: FeeJuiceClaim | undefined;
     if (AZTEC_WALLET_CONFIG.network === 'mainnet') {
       const state = await this.refreshFeeJuice();
-      const sponsored = state.plan !== 'claim' ? await this.trySponsor() : null;
       // Some Fee Juice, but less than the budget: creation runs with estimated gas limits, which
       // usually need far less. The node refuses it if they are not covered, and nothing is lost.
       const readyClaim = state.plan === 'top-up' ? state.claims.find((c) => c.ready)?.claim : undefined;
-      if (sponsored) {
-        fee = sponsored;
-      } else if (state.plan === 'top-up' && state.balance > 0n) {
+      if (state.plan === 'top-up' && state.balance > 0n) {
         fee = undefined;
       } else if (readyClaim) {
         fee = { paymentMethod: this.claimMethod(readyClaim) };
@@ -534,7 +525,6 @@ class PrivateWallet {
               : state.plan === 'top-up'
                 ? `Your Fee Juice arrived, but creating the account needs up to ${fmtAztec(state.minForTx)} AZTEC of Fee Juice (only the gas used is charged, the rest stays yours). Add at least ${fmtAztec(state.minForTx)} AZTEC in one deposit. You can already receive payments at your address.`
                 : 'You can already receive private payments at your address. To send, your account needs Fee Juice: bridge AZTEC from your Ethereum wallet.',
-          ...(this.sponsorIssue ? { error: this.sponsorIssue } : {}),
         });
         if (state.plan === 'wait-claim') this.pollClaims();
         return false;
@@ -549,14 +539,9 @@ class PrivateWallet {
     const id = `deploy-${this.me.toString()}`;
     upsertActivity(this.me.toString(), { id, kind: 'deploy', status: 'proving', createdAt: Date.now() });
     const deploy = await this.manager.getDeployMethod();
-    // Account creation with estimated gas limits, like transfers: the sponsor refuses a transaction
-    // whose maximum fee (limits x max fee per gas) is above its 40 AZTEC cap, which the protocol's
-    // default limits exceed. If the estimate fails, the defaults are kept.
+    // Account creation with estimated gas limits, like transfers: the account's own Fee Juice then
+    // only has to cover the estimated maximum. If the estimate fails, the defaults are kept.
     const deployGas = await this.estimatedGasSettings(deploy, sdk.NO_FROM, fee);
-    if (this.sponsoredWithoutLimits(fee, deployGas)) {
-      upsertActivity(this.me.toString(), { id, kind: 'deploy', status: 'failed', error: SPONSOR_NEEDS_ESTIMATE, createdAt: Date.now() });
-      throw new Error(SPONSOR_NEEDS_ESTIMATE);
-    }
     const deployFee = deployGas ? { ...(fee ?? {}), gasSettings: deployGas } : fee;
     const receipt = await this.sendAndWait(() => deploy.send({ from: sdk.NO_FROM, fee: deployFee, wait: sdk.NO_WAIT }), id, 'deploy');
     if (!receipt) {
@@ -568,70 +553,6 @@ class PrivateWallet {
   }
 
   /* ------------------------------------------------------------- Fee Juice */
-
-  /** A fee paid by the Ledger sponsor (lib/aztec/wallet/ledger-sponsor.ts), or null. Alpha only. */
-  private async trySponsor(): Promise<any | null> {
-    if (AZTEC_WALLET_CONFIG.network !== 'mainnet' || !this.wallet || !this.sdk) return null;
-    const m = await import('./ledger-sponsor');
-    if (!m.ledgerSponsorAddress()) return null;
-    const fee = await m.sponsoredFee({ sdk: this.sdk, wallet: this.wallet, node: this.node });
-    this.sponsorIssue = fee ? '' : m.lastSponsorIssue;
-    if (fee) this.sponsoredFees.add(fee);
-    return fee;
-  }
-  /** Why the Ledger sponsor could not pay the last time it was tried (empty when it could or was not tried). */
-  private sponsorIssue = '';
-  /** Fee options that the Ledger sponsor pays (their gas is estimated without the sponsor call). */
-  private sponsoredFees = new WeakSet<object>();
-  /**
-   * A sponsored fee about to go out without estimated gas limits. With the protocol's default
-   * limits its maximum fee is above the sponsor's 40 AZTEC cap, so the sponsor would refuse the
-   * transaction after its voucher was put into it (a voucher put into a transaction is never asked
-   * back, so it would use up one of the account's sponsored transactions for nothing). Stopping
-   * before the send keeps the voucher: the server hands the same one back on the next try.
-   */
-  private sponsoredWithoutLimits(fee: any, gasSettings: any): boolean {
-    return !gasSettings && !!fee && typeof fee === 'object' && this.sponsoredFees.has(fee);
-  }
-
-  // ── Operator tools for the Ledger sponsor (signed by the operator's own wallets) ──
-
-  /** Deploys LedgerSponsor from this private wallet; returns its address. */
-  async deployLedgerSponsor(): Promise<string> {
-    const ctx = this.agreementContext();
-    const sdk = this.sdk!;
-    const m = await import('./ledger-sponsor');
-    const [artifact, { Contract, DeployMethod }, { randomField }, args] = await Promise.all([
-      m.sponsorArtifact(),
-      import('@aztec-labs/aztec.js/contracts'),
-      import('../random'),
-      m.sponsorDeployArgs(),
-    ]);
-    const ctorArgs = [sdk.Fr.fromString(args.xHi), sdk.Fr.fromString(args.xLo), sdk.Fr.fromString(args.yHi), sdk.Fr.fromString(args.yLo), m.SPONSOR_MAX_FEE];
-    // Universal deployment (no deployer in the address), the same pattern as the agreement contracts:
-    // the address is computed here first, so it is known even if confirmation is slow.
-    const salt = randomField();
-    const expected = await sdk.getContractInstanceFromInstantiationParams(artifact, {
-      constructorArgs: ctorArgs,
-      salt,
-      deployer: sdk.AztecAddress.ZERO,
-    });
-    const address = expected.address.toString();
-    try { localStorage.setItem('hl:aztec-sponsor-deployed', address); } catch { /* not kept */ }
-    const deployment = (DeployMethod as any).create(
-      ctx.wallet,
-      { artifact, args: ctorArgs, postDeployCtor: (instance: any, w: any) => (Contract as any).at(instance.address, artifact, w) },
-      { salt, universalDeploy: true },
-    );
-    const { fee, consumes } = await this.resolveFee();
-    const receipt = await this.sendAndWait(() => deployment.send({ from: ctx.me, fee, wait: sdk.NO_WAIT }), `sponsor-deploy-${address}`, 'operator');
-    if (!receipt) {
-      try { localStorage.removeItem('hl:aztec-sponsor-deployed'); } catch { /* nothing kept */ }
-      throw new Error(this.snapshot.activity.find((a) => a.id === `sponsor-deploy-${address}`)?.error ?? 'The sponsor could not be deployed. Nothing was spent; try again.');
-    }
-    if (consumes) this.dropClaim(consumes);
-    return address;
-  }
 
   /**
    * R1, operator only: the first private payment on Alpha with a token this account issues.
@@ -676,7 +597,7 @@ class PrivateWallet {
       const [{ Contract, DeployMethod }, { randomField }] = await Promise.all([import('@aztec-labs/aztec.js/contracts'), import('../random')]);
       const args = [me, opts.name, opts.symbol, opts.decimals];
       const salt = randomField();
-      // Universal deployment, as for the sponsor: the address does not depend on the deployer and is known before sending.
+      // Universal deployment: the address does not depend on the deployer and is known before sending.
       const expected = await sdk.getContractInstanceFromInstantiationParams(artifact, { constructorArgs: args, salt, deployer: sdk.AztecAddress.ZERO });
       token = expected.address.toString();
       onStep?.('deploy', { token });
@@ -709,82 +630,6 @@ class PrivateWallet {
     const payTx = txOf(await withFee('send', 'send', (fee) => contract.methods.transfer(target, payUnits).send({ from: me, fee, wait: sdk.NO_WAIT })));
     onStep?.('pay', { token, txHash: payTx });
     return { token, deployTx, mintTx, payTx };
-  }
-
-  /** Bridges AZTEC from the operator's Ethereum wallet to the sponsor's address (L1 deposit). */
-  async bridgeToSponsor(l1: L1Clients, sponsor: string, amount: string, onStep?: (step: BridgeStep, l1TxHash?: string) => void) {
-    if (!this.sdk) throw new Error('Open your private wallet first.');
-    await this.assertNodeStillPinned();
-    const m = await import('./ledger-sponsor');
-    // A fresh secret for this deposit (31 random bytes: always a valid field element).
-    const rnd = crypto.getRandomValues(new Uint8Array(31));
-    const secret = new this.sdk.Fr(BigInt('0x' + Array.from(rnd, (b) => b.toString(16).padStart(2, '0')).join('')));
-    const secretHash = (await this.sdk.computeSecretHash(secret)).toString();
-    const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: sponsor, amount: parseUnits(amount, 18), secretHash, secretIndex: -1 }, onStep);
-    m.saveFundings([...m.loadFundings(), { sponsor, secret: secret.toString(), claimAmount: String(claim.claimAmount), messageHash: claim.messageHash, messageLeafIndex: String(claim.messageLeafIndex), l1TxHash: claim.l1TxHash }]);
-  }
-
-  /**
-   * Claims every arrived deposit into the sponsor. A deposit counts as claimed only with a receipt
-   * (before 15 Nov 2026 a failed claim was marked claimed too; such entries, without `claimTx`, are
-   * tried again: if the node says the deposit was already claimed, it is marked so). If the fee tried
-   * to claim one of this account's own deposits that was already claimed, that deposit is forgotten
-   * (healConsumedClaim) and the claim is tried once more, paid from the balance.
-   */
-  async claimIntoSponsor(): Promise<{ claimed: number; waiting: number; failed: number; error?: string }> {
-    const ctx = this.agreementContext();
-    const m = await import('./ledger-sponsor');
-    const list = m.loadFundings();
-    let claimed = 0, waiting = 0, failed = 0;
-    let error: string | undefined;
-    for (const f of list) {
-      if (f.claimed && f.claimTx) continue;
-      if (!(await this.sdk!.isL1ToL2MessageReady(this.node, this.sdk!.Fr.fromString(f.messageHash)))) { waiting++; continue; }
-      const { contract } = await m.sponsorContract({ sdk: this.sdk, wallet: ctx.wallet, node: this.node }, f.sponsor);
-      const id = `sponsor-fund-${f.messageHash}`;
-      let receipt: any = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const { fee, consumes } = await this.resolveFee();
-        const call = contract.methods.fund(BigInt(f.claimAmount), this.sdk!.Fr.fromString(f.secret), BigInt(f.messageLeafIndex));
-        receipt = await this.sendAndWait(() => call.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), id, 'operator');
-        if (receipt) {
-          if (consumes) this.dropClaim(consumes);
-          break;
-        }
-        const h = consumedMessageHash(this.lastSendError);
-        if (h === null) break;
-        if (sameMessageHash(f.messageHash, h)) break; // this deposit itself was claimed before
-        // Otherwise an own deposit the fee tried to claim was already claimed: healed, try once more.
-      }
-      const own = consumedMessageHash(this.lastSendError);
-      if (receipt) {
-        f.claimed = true;
-        f.claimTx = receipt.txHash?.toString?.() ?? String(receipt.txHash ?? 'settled');
-        claimed++;
-      } else if (own !== null && sameMessageHash(f.messageHash, own)) {
-        f.claimed = true;
-        f.claimTx = 'already-claimed';
-      } else {
-        f.claimed = false;
-        failed++;
-        error = this.snapshot.activity.find((a) => a.id === id)?.error ?? 'The claim did not go through. Nothing was lost; try again.';
-      }
-      m.saveFundings(list);
-    }
-    return { claimed, waiting, failed, ...(error ? { error } : {}) };
-  }
-
-  /** Whether the sponsor at `address` runs this build's LedgerSponsor class (null: unknown). */
-  async sponsorIsCurrent(address: string): Promise<boolean | null> {
-    if (!this.sdk) return null;
-    const m = await import('./ledger-sponsor');
-    return m.sponsorRunsCurrentClass({ sdk: this.sdk, node: this.node }, address);
-  }
-
-  /** Fee Juice the sponsor holds (base units). */
-  async sponsorBalance(sponsor: string): Promise<bigint> {
-    if (!this.sdk) throw new Error('Open your private wallet first.');
-    return this.sdk.getFeeJuiceBalance(this.sdk.AztecAddress.fromStringUnsafe(sponsor), this.node);
   }
 
   private claimMethod(c: FeeJuiceClaim) {
@@ -848,14 +693,9 @@ class PrivateWallet {
    */
   private async estimatedGasSettings(interaction: any, from: any, fee: any): Promise<any | undefined> {
     if (AZTEC_WALLET_CONFIG.network !== 'mainnet') return undefined;
-    // A sponsored fee is estimated without the sponsor's call: with the default limits that call
-    // would refuse the simulation ("fee above cap"), and simulating it would spend no voucher but
-    // gain nothing. The sponsor's own private call (a signature check and one nullifier) is covered by
-    // a larger pad (x2 instead of x1.25).
-    const sponsored = !!fee && typeof fee === 'object' && this.sponsoredFees.has(fee);
     try {
-      const sim = await interaction.simulate({ from, fee: sponsored ? undefined : fee, includeMetadata: true, skipFeeEnforcement: true });
-      return gasLimitsFromSimulation(sim?.gasUsed, sponsored ? 2 : 1.25);
+      const sim = await interaction.simulate({ from, fee, includeMetadata: true, skipFeeEnforcement: true });
+      return gasLimitsFromSimulation(sim?.gasUsed, 1.25);
     } catch (e) {
       console.warn('[aztec] gas estimate failed; using the default limits:', (e as Error)?.message);
       return undefined;
@@ -881,10 +721,6 @@ class PrivateWallet {
       const ready = state.claims.find((c) => c.ready)?.claim;
       if (ready) return { fee: { paymentMethod: this.claimMethod(ready) }, consumes: ready };
     }
-    // Only transactions sent with estimated gas limits may be sponsored (sponsoredWithoutLimits):
-    // the operator's own transactions (deploy and fund the sponsor, R1) are not estimated.
-    const sponsored = opts?.estimated ? await this.trySponsor() : null;
-    if (sponsored) return { fee: sponsored };
     throw new Error(
       state.plan === 'wait-claim'
         ? 'Your Fee Juice is still arriving from Ethereum. Try again in a few minutes.'
@@ -1312,11 +1148,6 @@ class PrivateWallet {
     // the previous behaviour: the wallet's own per-transaction limits.
     const interaction = build(contract);
     const gasSettings = await this.estimatedGasSettings(interaction, from ?? this.me, fee);
-    if (this.sponsoredWithoutLimits(fee, gasSettings)) {
-      upsertActivity(this.me.toString(), { id, kind, status: 'failed', error: SPONSOR_NEEDS_ESTIMATE, createdAt: Date.now() });
-      this.set({ activity: await this.loadActivity().catch(() => this.snapshot.activity) });
-      throw new Error(SPONSOR_NEEDS_ESTIMATE);
-    }
     const sendFee = gasSettings ? { ...(fee ?? {}), gasSettings } : fee;
     const receipt = await this.sendAndWait(
       () => interaction.send({ from: from ?? this.me, fee: sendFee, wait: this.sdk!.NO_WAIT }),
@@ -1338,7 +1169,7 @@ class PrivateWallet {
    * A transaction failed because a Fee Juice deposit it tried to claim was already claimed on Aztec
    * ("No non-nullified L1 to L2 message found for message hash 0x…"): that deposit is in the balance
    * already, so it is forgotten here and the next transaction pays from the balance. Without this, a
-   * deposit claimed by a path that did not drop it (the sponsor tools, before 15 Nov 2026) made every
+   * deposit claimed by a path that did not drop it (seen on Alpha, 15 Nov 2026) made every
    * later transaction fail the same way. Returns true when a deposit was dropped.
    */
   private healConsumedClaim(err: unknown): boolean {

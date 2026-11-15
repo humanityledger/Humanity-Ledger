@@ -12,7 +12,7 @@ describe('.env.example', () => {
 
   it('documents the Aztec operator variables', () => {
     const src = readFileSync('.env.example', 'utf8');
-    for (const n of ['NEXT_PUBLIC_AZTEC_NETWORK', 'NEXT_PUBLIC_AZTEC_ALPHA_ENABLED', 'NEXT_PUBLIC_AZTEC_SPONSOR', 'NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS']) {
+    for (const n of ['NEXT_PUBLIC_AZTEC_NETWORK', 'NEXT_PUBLIC_AZTEC_ALPHA_ENABLED', 'NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS']) {
       expect(src).toMatch(new RegExp(`# [^\\n]+\\n# Read in: [^\\n]+\\n${n}=\\n`));
     }
   });

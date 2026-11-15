@@ -370,8 +370,7 @@ export function TokenSection() {
 
       <h3 className={p.subhead}>Staking lowers fees. It pays nothing.</h3>
       <p className={p.subLead}>
-        Locking HLC gives a weight that lowers your fees on agreements and sponsors network fees for new members of your
-        community. Longer locks weigh more.
+        Locking HLC gives a weight that lowers your fees on agreements. Longer locks weigh more.
       </p>
       <div className={p.locks}>
         {STAKING_LOCKS.map((l) => (

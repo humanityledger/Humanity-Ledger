@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import { consumedMessageHash, sameMessageHash } from '@/lib/aztec/fee-juice';
 
-// 15 Nov 2026, Alpha: the sponsor tools paid their fee by claiming the operator's own deposit and
-// never dropped it, so every later transaction failed with this error (message from the PXE).
+// 15 Nov 2026, Alpha: a path that paid its fee by claiming the account's own deposit never dropped it,
+// so every later transaction failed with this error (message from the PXE).
 const PXE_ERROR = 'No non-nullified L1 to L2 message found for message hash 0x00e7b65294673af444cd4066743061b3ac6970fcdc2e4cebe88fc58882b55a68';
 
 describe('a deposit already claimed on Aztec', () => {
@@ -31,22 +31,5 @@ describe('wallet paths that claim a deposit for their fee', () => {
   it('a failed send forgets an own deposit the node says was already claimed', () => {
     const send = between('private async sendAndWait(', 'agreementContext()');
     expect(send).toMatch(/status: 'failed'[\s\S]{0,200}this\.healConsumedClaim\(err\);[\s\S]{0,40}return null;/);
-  });
-
-  it('the sponsor tools drop the deposit their fee consumed, and fail loudly', () => {
-    const deploy = between('async deployLedgerSponsor()', 'async firstPaymentWithNewToken(');
-    expect(deploy).toMatch(/const \{ fee, consumes \} = await this\.resolveFee\(\);/);
-    expect(deploy).toMatch(/if \(!receipt\) \{[\s\S]{0,400}throw new Error/);
-    expect(deploy).toMatch(/if \(consumes\) this\.dropClaim\(consumes\);/);
-    const claim = between('async claimIntoSponsor()', 'async sponsorBalance(');
-    expect(claim).toMatch(/if \(receipt\) \{\n\s+if \(consumes\) this\.dropClaim\(consumes\);/);
-  });
-
-  it('a sponsor deposit counts as claimed only with a receipt, or when the node says it was', () => {
-    const claim = between('async claimIntoSponsor()', 'async sponsorBalance(');
-    expect(claim).toMatch(/if \(f\.claimed && f\.claimTx\) continue;/);
-    expect(claim).toMatch(/if \(receipt\) \{\n\s+f\.claimed = true;\n\s+f\.claimTx = /);
-    expect(claim).toMatch(/sameMessageHash\(f\.messageHash, own\)\) \{\n\s+f\.claimed = true;\n\s+f\.claimTx = 'already-claimed';/);
-    expect(claim).toMatch(/\} else \{\n\s+f\.claimed = false;\n\s+failed\+\+;/);
   });
 });
