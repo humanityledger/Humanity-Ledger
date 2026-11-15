@@ -9,8 +9,9 @@
 // elects itself fee payer. The voucher is not bound to an account (account deployment runs before
 // the account exists); a leaked voucher pays for at most one capped transaction.
 //
-// Funding: bridge AZTEC through the FeeJuicePortal to this contract's address and claim it. To change
-// the key or the cap, deploy a new instance and move the funds.
+// Funding: bridge AZTEC through the FeeJuicePortal to this contract's address and claim it. Fee Juice
+// held here cannot be withdrawn: it is only ever spent on sponsored fees. To change the key or the
+// cap, deploy a new instance and fund it; the old one keeps what it holds.
 
 use aztec::macros::aztec;
 
@@ -20,7 +21,7 @@ mod test;
 #[aztec]
 pub contract LedgerSponsor {
     use aztec::{
-        macros::{functions::{external, initializer}, storage::storage},
+        macros::{functions::{allow_phase_change, external, initializer}, storage::storage},
         protocol::{
             abis::function_selector::FunctionSelector, constants::FEE_JUICE_ADDRESS,
             hash::poseidon2_hash_with_separator, traits::ToField,
@@ -78,7 +79,14 @@ pub contract LedgerSponsor {
     }
 
     /// Called first in a transaction (setup phase). Pays its fee if the voucher is valid and unused.
+    ///
+    /// #[allow_phase_change]: this function ends the setup phase (end_setup below). aztec-nr 6.0.0
+    /// checks, at the end of every private function without it, that the phase did not change, and
+    /// fails with "Phase change detected on function with phase check" (the first instance, deployed
+    /// on Alpha on 14 Nov 2026, lacked it and could never pay). Same pattern as FeeJuice's
+    /// claim_and_end_setup. No note is read here, so nothing crosses the phase barrier.
     #[external("private")]
+    #[allow_phase_change]
     fn sponsor(voucher_id: Field, expires_at: u64, signer_x: [u8; 32], signer_y: [u8; 32], signature: [u8; 64]) {
         let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
         assert(voucher_id != 0, "LedgerSponsor: zero voucher");

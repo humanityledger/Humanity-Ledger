@@ -123,6 +123,10 @@ unconstrained fn the_constructor_refuses_a_zero_cap() {
 }
 
 // Not covered in TXE, and why:
+// - the phase change: TXE stops at the fee-payer election (above), before end_setup, so a missing
+//   #[allow_phase_change] passes every TXE test and fails every real transaction ("Phase change
+//   detected", Alpha, 15 Nov 2026). test/unit/aztec/phase-change.test.ts checks the attribute on every
+//   private function that ends the setup phase.
 // - "fee above cap": the vectors are signed for the instance deployed with CAP; an instance with a
 //   small cap has another address, so its vouchers would need new vectors from a TXE run. The check's
 //   place and its Field comparison are pinned by test/unit/aztec/ledger-sponsor.test.ts.
