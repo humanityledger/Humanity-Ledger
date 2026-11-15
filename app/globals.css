@@ -35,6 +35,40 @@
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
+/* MESSAGE ENTRANCE (Ledger Chat) — one motion, transform + opacity only, never a layout property.
+   Own messages rise from the composer; incoming ones settle in. 180 ms, ease-out without overshoot.
+   Applied once per message (components/chat/MessageBubble.tsx, `enter`); will-change lives only on
+   the class, which the bubble removes on animationend. */
+@keyframes hlMsgInMe {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes hlMsgInPeer {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+.hl-msg-in-me {
+  transform-origin: 100% 100%;
+  animation: hlMsgInMe 180ms cubic-bezier(0.22, 0.8, 0.24, 1) both;
+  will-change: transform, opacity;
+}
+.hl-msg-in-peer {
+  transform-origin: 0% 100%;
+  animation: hlMsgInPeer 180ms cubic-bezier(0.22, 0.8, 0.24, 1) both;
+  will-change: transform, opacity;
+}
+
+/* PRESENCE + TICKS (Ledger Chat) — opacity/transform and colour only, fixed boxes, no layout shift. */
+@keyframes hlFadeIn {
+  from { opacity: 0; transform: translate3d(0, 3px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+.hl-fade-in { animation: hlFadeIn 150ms cubic-bezier(0.22, 0.8, 0.24, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-msg-in-me, .hl-msg-in-peer, .hl-fade-in { animation: none; will-change: auto; }
+}
+
 /* NO HYPHENS GLOBALLY */
 
 

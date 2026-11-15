@@ -107,10 +107,14 @@ export interface MessageProps {
   onJoinGroupCall?: (roomId: string, password: string) => void;
   /** The other person's XMTP inbox when this is a direct conversation; agreements need it. */
   dmPeerInboxId?: string;
+  /**
+   * Play the entrance once, at mount (VirtualizedMessageList decides: sent or received while the chat
+   * is open). Read only at mount: a later change of the prop never replays it.
+   */
+  enter?: boolean;
 }
 
 // A spring that only translates. Nested scale transforms blur text on iOS Safari.
-const SPRING = { type: 'spring', stiffness: 420, damping: 36, mass: 0.9 } as const;
 
 export { PREMIUM_STICKERS as STICKERS, RenderPremiumSticker } from './StickerPicker';
 
@@ -573,12 +577,41 @@ const TapbackPicker = React.memo(({ isMe, onReact, onClose }: {
 TapbackPicker.displayName = 'TapbackPicker';
 
 // ─── Message ─────────────────────────────────────────────────────────────────
+/**
+ * Status ticks of our own message, WhatsApp-style: clock = sending (or scheduled), one grey tick =
+ * sent, two grey = delivered to the peer's device, two green = read (the peer opened the chat; the
+ * green needs read receipts on, like WhatsApp). All glyphs sit in one fixed 18x14 box and cross-fade
+ * (opacity + colour, 120 ms), so a status change never moves the time or the bubble's width.
+ */
+const MessageTicks = React.memo(({ status, readReceipts }: { status?: string; readReceipts: boolean }) => {
+  const pending = status === 'sending' || status === 'scheduled';
+  const two = status === 'delivered' || status === 'read';
+  const read = status === 'read' && readReceipts;
+  const layer = 'absolute inset-0 flex items-center justify-center transition-opacity duration-[120ms] ease-out';
+  return (
+    <span
+      className={`msg-tick relative inline-block w-[18px] h-[14px] shrink-0 align-middle transition-colors duration-[120ms] ease-out ${read ? 'msg-read text-[#13a87a]' : 'text-[#a3a9b4]'}`}
+      role="img"
+      aria-label={sendStatusLabel(status, { readReceipts })}
+      title={sendStatusLabel(status, { readReceipts })}
+    >
+      <span className={`${layer} ${pending ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true"><Clock size={12} strokeWidth={2} className={status === 'sending' ? 'opacity-70' : undefined} /></span>
+      <span className={`${layer} ${!pending && !two ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true"><Check size={14} strokeWidth={2} /></span>
+      <span className={`${layer} ${!pending && two ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true"><CheckCheck size={14} strokeWidth={2} /></span>
+    </span>
+  );
+});
+MessageTicks.displayName = 'MessageTicks';
+
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId,
+  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, enter = false,
 }: MessageProps) => {
   const controls = useAnimation();
+  // Captured at mount only (see `enter`). The class carries `will-change`, removed when the
+  // animation ends so the layer is not kept alive for every bubble on screen.
+  const [entering, setEntering] = useState(enter);
   const [showTapback, setShowTapback] = useState(false);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -799,20 +832,15 @@ export const MessageBubble = React.memo(({
         )}
       </AnimatePresence>
 
-      <motion.div
+      {/* Entrance: one CSS animation of transform + opacity (globals.css, .hl-msg-in-*), no layout
+          property, no spring overshoot. It used to be a Framer Motion `initial` that replayed each
+          time the bubble remounted, which it did when the sent message took its real id. */}
+      <div
         id={`msg-${msg.id}`}
         data-allow-context="true"
-        initial={isMe
-          ? { opacity: 0, scale: 0.88, y: 10 }
-          : { opacity: 0, y: -6 }
-        }
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={isMe
-          ? { type: 'spring', stiffness: 500, damping: 30, mass: 0.8 }
-          : SPRING
-        }
-        className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}`}
+        className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}${entering ? (isMe ? ' hl-msg-in-me' : ' hl-msg-in-peer') : ''}`}
         style={{ marginBottom: 2 }}
+        onAnimationEnd={entering ? (e) => { if (e.target === e.currentTarget) setEntering(false); } : undefined}
       >
         <motion.div
           drag="x"
@@ -1080,26 +1108,13 @@ export const MessageBubble = React.memo(({
             <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">
               {new Date(sentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
-            {isMe && !msg.failed && (
-              <span
-                className={msg.status === 'read' && readReceipts ? 'msg-read text-[#13a87a]' : 'msg-tick text-[#a3a9b4]'}
-                role="img"
-                aria-label={sendStatusLabel(msg.status, { readReceipts })}
-                title={sendStatusLabel(msg.status, { readReceipts })}
-              >
-                {msg.status === 'scheduled' || msg.status === 'sending'
-                  ? <Clock size={12} strokeWidth={2} className={msg.status === 'sending' ? 'opacity-70' : undefined} />
-                  : (msg.status === 'read' || msg.status === 'delivered') && readReceipts
-                    ? <CheckCheck size={14} strokeWidth={2} />
-                    : <Check size={14} strokeWidth={2} />}
-              </span>
-            )}
+            {isMe && !msg.failed && <MessageTicks status={msg.status} readReceipts={readReceipts} />}
             {isMe && msg.failed && (
               <span className="text-[12px] font-medium text-[#d93036]">Not sent</span>
             )}
           </div>
         </motion.div>
-      </motion.div>
+      </div>
     </React.Fragment>
   );
 });

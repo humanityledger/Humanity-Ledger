@@ -60,18 +60,38 @@ export function ExpressionPicker({
       ref={ref}
       role="dialog"
       aria-label="Emojis, stickers and GIFs"
-      className="absolute bottom-[68px] left-2 z-50 w-[min(372px,calc(100vw-16px))] h-[min(470px,62vh)] flex flex-col bg-white rounded-[28px] border border-[#e4e7ec] shadow-[0_28px_60px_-18px_rgba(16,24,40,0.30)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
+      className="absolute bottom-[68px] left-2 z-50 w-[min(392px,calc(100vw-16px))] h-[min(480px,62vh)] flex flex-col bg-white rounded-[28px] border border-[#e4e7ec] shadow-[0_28px_60px_-18px_rgba(16,24,40,0.30)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
     >
-      <div className="p-2.5 pb-1.5">
-        <div className="grid grid-cols-3 p-1 rounded-full bg-[#f2f4f7]" role="tablist">
-          {([['emoji', 'Emojis'], ['sticker', 'Stickers'], ['gif', 'GIF']] as const).map(([id, label]) => (
+      <div className="px-3.5 pt-3.5 pb-3">
+        {/* Segmented tabs: 8 px between tabs, one white indicator that slides (transform only). */}
+        <div
+          className="relative grid grid-cols-3 gap-2 p-1.5 rounded-full bg-[#f2f4f7]"
+          role="tablist"
+          aria-label="Emojis, stickers and GIFs"
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+            e.preventDefault();
+            const i = TABS.findIndex(([id]) => id === tab);
+            const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length][0];
+            setTab(next);
+            (e.currentTarget.querySelector(`[data-tab="${next}"]`) as HTMLElement | null)?.focus();
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="absolute top-1.5 bottom-1.5 left-1.5 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)] transition-transform duration-200 ease-[cubic-bezier(0.22,0.8,0.24,1)] motion-reduce:transition-none"
+            style={{ width: 'calc((100% - 28px) / 3)', transform: `translateX(calc(${TABS.findIndex(([id]) => id === tab)} * (100% + 8px)))` }}
+          />
+          {TABS.map(([id, label]) => (
             <button
               key={id}
+              data-tab={id}
               type="button"
               role="tab"
               aria-selected={tab === id}
+              tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
-              className={`h-9 rounded-full text-[14px] font-medium transition-colors ${tab === id ? 'bg-white text-[#15171c] shadow-[0_1px_3px_rgba(16,24,40,0.12)]' : 'text-[#475061] hover:text-[#15171c]'}`}
+              className={`relative z-[1] h-10 rounded-full text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${tab === id ? 'text-[#15171c]' : 'text-[#475061] hover:text-[#15171c]'}`}
             >
               {label}
             </button>
@@ -87,9 +107,11 @@ export function ExpressionPicker({
   );
 }
 
+const TABS = [['emoji', 'Emojis'], ['sticker', 'Stickers'], ['gif', 'GIF']] as const;
+
 function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
   return (
-    <div className="ledger-emoji flex-1 min-h-0 px-1.5 pb-1.5">
+    <div className="ledger-emoji flex-1 min-h-0 px-2.5 pb-2.5">
       <EmojiPicker
         onEmojiClick={(d: EmojiClickData) => onEmoji(d.emoji)}
         emojiStyle={'native' as unknown as EmojiStyle}
@@ -107,7 +129,9 @@ function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
           ['--epr-category-label-bg-color' as string]: 'rgba(255,255,255,0.96)',
           ['--epr-category-label-text-color' as string]: '#475061',
           ['--epr-emoji-size' as string]: '30px',
-          ['--epr-emoji-padding' as string]: '6px',
+          ['--epr-emoji-padding' as string]: '8px',
+          ['--epr-category-padding' as string]: '0 6px',
+          ['--epr-horizontal-padding' as string]: '8px',
           ['--epr-search-input-bg-color' as string]: '#f2f4f7',
           ['--epr-search-input-bg-color-active' as string]: '#ffffff',
           ['--epr-search-input-border-radius' as string]: '999px',
@@ -141,7 +165,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
   };
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex gap-1.5 px-2.5 pb-2 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Sticker packs">
+      <div className="flex gap-2.5 px-3.5 pb-3 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Sticker packs">
         {STICKER_PACKS.map(p => {
           const on = p.id === pack.id;
           return (
@@ -159,15 +183,15 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
           );
         })}
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
-        <div className="px-1 pt-0.5 pb-2.5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 pb-3.5">
+        <div className="px-1 pt-0.5 pb-3">
           <p className="text-[13.5px] font-semibold text-[#15171c] flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pack.accent }} aria-hidden="true" />
             {pack.name}
           </p>
           <p className="text-[12px] text-[#727a88] leading-snug mt-0.5">{pack.description}</p>
         </div>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-3">
           {pack.stickers.map((s) => (
             <button
               key={s.id}
@@ -175,7 +199,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
               onClick={() => onSend(stickerMessage(pack.id, s.id))}
               title={s.scene ? `${s.label} · plays an effect` : s.label}
               aria-label={`Send sticker: ${s.label}`}
-              className="group relative aspect-square rounded-2xl hover:bg-[#f2f4f7] active:scale-95 transition-transform flex items-center justify-center p-1"
+              className="group relative aspect-square rounded-2xl hover:bg-[#f2f4f7] active:scale-95 transition-transform flex items-center justify-center p-1.5"
             >
               <img src={stickerFile(pack.id, s.id)} alt="" className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-[1.06]" draggable={false} loading="lazy" />
             </button>
@@ -230,7 +254,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
 
   return (
     <>
-      <div className="px-3 pb-2">
+      <div className="px-3.5 pb-3">
         <div className="relative">
           <Search size={16} strokeWidth={1.9} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a9b4]" aria-hidden="true" />
           <input
@@ -243,7 +267,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
         </div>
       </div>
       <div
-        className="relative flex-1 min-h-0 overflow-y-auto px-3 pb-10"
+        className="relative flex-1 min-h-0 overflow-y-auto px-3.5 pb-10"
         onScroll={(e) => {
           const el = e.currentTarget;
           if (state === 'ready' && el.scrollTop + el.clientHeight > el.scrollHeight - 200) { setState('loading'); load(q, next); }
@@ -253,9 +277,9 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
         {state === 'error' && <p className="text-center text-[13.5px] text-[#727a88] py-10">GIFs could not be loaded. Try again.</p>}
         {state === 'empty' && <p className="text-center text-[13.5px] text-[#727a88] py-10">No GIFs for “{q}”.</p>}
         {items.length > 0 && (
-          <div className="grid grid-cols-2 gap-1.5 items-start">
+          <div className="grid grid-cols-2 gap-2.5 items-start">
             {cols.map((col, ci) => (
-              <div key={ci} className="flex flex-col gap-1.5">
+              <div key={ci} className="flex flex-col gap-2.5">
                 {col.map((g) => (
                   <button
                     key={g.id}
