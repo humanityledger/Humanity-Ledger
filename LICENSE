@@ -1,12 +1,30 @@
-Humanity Ledger Protocol
-Copyright (c) 2024-2026 Humanity Ledger Protocol Contributors
+Ledger Chat, by Humanity Ledger
+Copyright (c) 2024-2026 Stefan Antonio Cirisanu and the Humanity Ledger contributors
 
-This project is dual-licensed under either:
+SPDX-License-Identifier: MIT OR Apache-2.0
 
-  * Apache License, Version 2.0 (LICENSE-APACHE or https://www.apache.org/licenses/LICENSE-2.0)
-  * MIT License (LICENSE-MIT or https://opensource.org/licenses/MIT)
+This repository is dual-licensed under either of
+
+  * the Apache License, Version 2.0 (LICENSE-APACHE or
+    https://www.apache.org/licenses/LICENSE-2.0), or
+  * the MIT License (LICENSE-MIT or https://opensource.org/licenses/MIT),
 
 at your option.
 
-All source code, Noir circuits (contracts/aztec/), client SDKs, and integration
-tooling are licensed under these terms.
+Scope. These terms cover everything in this repository unless a file or a
+directory states otherwise: the application source code, the aztec-nr
+contracts (contracts/aztec/), the standalone Noir circuits (circuits/), the
+Solidity contracts (contracts/), scripts, tests, deployment records, and the
+documentation (README.md, docs/). The exceptions are listed in NOTICE:
+third-party dependencies keep their own licences, and third-party logos and
+images are not licensed by us.
+
+Contributions. Unless you explicitly state otherwise, any contribution
+intentionally submitted for inclusion in this work by you, as defined in the
+Apache License, Version 2.0, shall be dual-licensed as above, without any
+additional terms or conditions.
+
+Names and logos. Neither licence grants permission to use the names
+"Humanity Ledger" and "Ledger Chat" or their logos, except as needed to
+describe the origin of the work (Apache License, Version 2.0, section 6).
+See NOTICE.

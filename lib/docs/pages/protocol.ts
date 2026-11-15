@@ -408,7 +408,7 @@ export const ecosystem: DocPage = {
   title: "Ecosystem and source code",
   summary: "Every part of Humanity Ledger, how ready it is, and where its code lives.",
   keywords: ["open source", "source code", "github", "ecosystem", "components", "status", "public goods", "map"],
-  updated: "2026-11-13",
+  updated: "2026-11-15",
   blocks: [
     {
       t: "p",
@@ -430,7 +430,7 @@ export const ecosystem: DocPage = {
     { t: "h2", text: "Licence", id: "licence" },
     {
       t: "p",
-      text: "The code is source available, not open source: the licence lets you read and audit it, not reuse it. See [Content and copyright](/docs/content-policy).",
+      text: "The code is open source, dual-licensed MIT OR Apache-2.0 at your option: you may read, audit, modify and redistribute it. The names Humanity Ledger and Ledger Chat and their logos are not covered by the licence. See [Content and copyright](/docs/content-policy).",
     },
     { t: "h2", text: "How each part works", id: "design" },
     {
