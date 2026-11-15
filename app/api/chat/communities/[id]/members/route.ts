@@ -44,6 +44,48 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+// Add a member by Ethereum address (admin or owner). Adding someone already there updates nothing
+// but their role; the owner's role is never changed here.
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const caller = await resolveVerifiedCaller(req);
+    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { id: communityId } = await params;
+    if (!(await isAdminOrOwner(communityId, caller)))
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { walletAddress, role = 'MEMBER' } = await req.json().catch(() => ({}));
+    if (typeof walletAddress !== 'string' || !ADDRESS.test(walletAddress))
+      return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
+    if (typeof role !== 'string' || !ALLOWED_ROLES.includes(role))
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+
+    const target = walletAddress.toLowerCase();
+    if (await isOwner(communityId, target))
+      return NextResponse.json({ error: 'The owner is already a member' }, { status: 409 });
+
+    const member = await (prisma as any).communityMember.upsert({
+      where: { communityId_walletAddress: { communityId, walletAddress: target } },
+      create: { communityId, walletAddress: target, role },
+      update: { role },
+    });
+
+    try {
+      await (prisma as any).communityPost.create({
+        data: { communityId, authorAddress: 'system', content: `__SYSTEM__${target} was added to the group` },
+      });
+    } catch (e) {
+      console.error('[communities members POST] welcome post', e);
+    }
+
+    return NextResponse.json({ ok: true, member }, { status: 201 });
+  } catch (e: any) {
+    console.error('[communities members POST]', e);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 // Change member role (admin can promote or demote). The owner's role is fixed.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

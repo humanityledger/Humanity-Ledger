@@ -110,17 +110,12 @@ export default async function JoinCommunityPage({ params }: Props) {
         </div>
 
         <div className="w-full max-w-xs mx-auto space-y-3">
-          <div className="bg-[#f2f4f7] border border-black/[0.05] rounded-2xl p-4 text-center">
-            <p className="text-[12.5px] font-medium text-[#727a88] leading-relaxed">
-              This group is private. New members must be invited directly by an administrator.
-            </p>
-          </div>
-          <Link
-            href="/chat"
-            className="flex items-center justify-center gap-2 w-full py-3 bg-[#15171c] hover:bg-black text-white rounded-xl font-semibold text-[14px] transition-all active:scale-95 shadow-sm"
-          >
-            Open Ledger Chat
+          <Link href={'/chat?join=' + code} className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#15171c] hover:bg-black text-white rounded-xl font-semibold text-[15px] transition-all active:scale-95 shadow-sm">
+            Join Private Community <ArrowRight size={16} />
           </Link>
+          <p className="text-[12.5px] font-medium text-[#727a88] leading-relaxed text-center">
+            You were invited to this private group. Only people with this link can join.
+          </p>
         </div>
       </Layout>
     );

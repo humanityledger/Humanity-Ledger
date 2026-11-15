@@ -176,6 +176,9 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
   const [search, setSearch] = useState('');
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [fetchedMembers, setFetchedMembers] = useState<Member[] | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [addAddr, setAddAddr] = useState('');
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     if (!community?.id) return;
@@ -195,7 +198,32 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
         }
       })
       .catch(() => {});
-  }, [community?.id, myAddress]);
+  }, [community?.id, myAddress, reloadKey]);
+
+  const addMember = async () => {
+    const inputAddr = addAddr.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(inputAddr)) { toast.error('Enter a valid 0x address'); return; }
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/chat/communities/${community.id}/members`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        body: JSON.stringify({ walletAddress: inputAddr, role: 'MEMBER' }),
+      });
+      if (res.status !== 201) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Could not add the member');
+      }
+      toast.success('Member added');
+      setAddAddr('');
+      setReloadKey((k) => k + 1);
+    } catch (e: any) {
+      toast.error(e.message || 'Could not add the member');
+    } finally {
+      setAdding(false);
+    }
+  };
 
   // Derive members from native database query
   const members: Member[] = useMemo(() => {
@@ -413,6 +441,26 @@ export function CommunityMemberPanel({ community, myAddress, onClose }: Communit
                   className="w-10 h-10 rounded-xl bg-[#2754d6] text-white flex items-center justify-center hover:bg-[#128C7E] transition-colors shrink-0"
                 >
                   <Link size={16} />
+                </button>
+              </div>
+              <p className="text-[11px] font-semibold uppercase text-black/30 mt-4 mb-2">Add by address</p>
+              <div className="flex items-center gap-2">
+                <input
+                  value={addAddr}
+                  onChange={(e) => setAddAddr(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !adding) addMember(); }}
+                  placeholder="0x…"
+                  spellCheck={false}
+                  autoComplete="off"
+                  aria-label="Ethereum address to add"
+                  className="flex-1 min-w-0 bg-white border border-[#E4E7EC] rounded-xl px-3 py-2.5 text-[13px] font-mono text-[#15171c] outline-none focus:border-[#15171c]"
+                />
+                <button
+                  onClick={addMember}
+                  disabled={adding || !addAddr.trim()}
+                  className="h-10 px-4 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold hover:bg-black disabled:opacity-40 transition-colors shrink-0"
+                >
+                  {adding ? 'Adding…' : 'Add'}
                 </button>
               </div>
             </div>

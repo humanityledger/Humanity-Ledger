@@ -92,18 +92,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'joinCode or invite token is required' }, { status: 400 });
     }
 
-    // ── GATE 2: Privacy Enforcement ──────────────────────────────────────────
+    // ── GATE 2: Membership ───────────────────────────────────────────────────
+    // A private community is joined with its secret joinCode (the invite link an admin shares) or a
+    // signed invite: holding either is the invitation. Addresses are stored lower-case, as every
+    // membership query reads them.
+    const member = caller.toLowerCase();
     const existing = await (prisma as any).communityMember.findUnique({
-      where: { communityId_walletAddress: { communityId: community.id, walletAddress: caller } }
+      where: { communityId_walletAddress: { communityId: community.id, walletAddress: member } }
     });
-
-    // If private and NOT a cryptographic invite and not already a member, block entry
-    if (community.isPrivate && !existing && !isCryptographicInvite) {
-      return NextResponse.json({
-        error: 'This is a private group. Direct link joining is closed. Request a cryptographic invite from an administrator.',
-        code: 'GROUP_CLOSED'
-      }, { status: 403 });
-    }
 
     // ── GATE 3: Already a Member ─────────────────────────────────────────────
     if (existing) {
@@ -125,7 +121,7 @@ export async function POST(req: NextRequest) {
       await (prisma as any).communityMember.create({
         data: {
           communityId: community.id,
-          walletAddress: caller,
+          walletAddress: member,
           role: assignedRole
         }
       });
