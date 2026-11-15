@@ -155,7 +155,7 @@ export const terms: DocPage = {
     { t: "h2", text: "9. Our software and our name" },
     {
       t: "p",
-      text: "The source code of the service is published in our [GitHub repository](https://github.com/humanityledger/Humanity-Ledger) so that anyone can read what it does. It is **source available, not open source**: it is licensed under the proprietary licence in the repository's `LICENSE` file, which allows reading it but not copying, redistributing or running it as a competing service. The names Humanity Ledger and Ledger Chat, and our logos, may not be used for another product. Software by others that we use keeps its own licence.",
+      text: "The source code of the service is published in our [GitHub repository](https://github.com/humanityledger/Humanity-Ledger) so that anyone can read what it does. It is **open source**, dual-licensed under the MIT License or the Apache License 2.0, at your option, as set out in the repository's `LICENSE` file. The licence does not cover the names Humanity Ledger and Ledger Chat or our logos, which may not be used for another product (see the repository's `NOTICE` file). Software by others that we use keeps its own licence.",
     },
     { t: "h2", text: "10. Services we do not control" },
     {
@@ -422,7 +422,7 @@ export const contentPolicy: DocPage = {
     { t: "h2", text: "Our own software and names" },
     {
       t: "p",
-      text: `The Humanity Ledger source code is published on [GitHub](https://github.com/humanityledger/Humanity-Ledger) so that anyone can check what it does. It is **source available, not open source**. Copyright belongs to ${LEGAL_ENTITY.name}, and the licence in the repository's \`LICENSE\` file allows you to read the code but not to copy, redistribute or run it as a competing service. The names Humanity Ledger and Ledger Chat, and our logos, may not be used for another product. Libraries written by others keep their own licences.`,
+      text: `The Humanity Ledger source code is published on [GitHub](https://github.com/humanityledger/Humanity-Ledger) so that anyone can check what it does. It is **open source**. Copyright belongs to ${LEGAL_ENTITY.name} and the Humanity Ledger contributors, and the code is dual-licensed under the MIT License or the Apache License 2.0, at your option, as set out in the repository's \`LICENSE\` file. The licence does not cover the names Humanity Ledger and Ledger Chat or our logos, which may not be used for another product (see the repository's \`NOTICE\` file). Libraries written by others keep their own licences.`,
     },
     {
       t: "p",

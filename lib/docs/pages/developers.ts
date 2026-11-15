@@ -7,11 +7,11 @@ export const developers: DocPage = {
   title: "Developers",
   summary: "Everything you need to read, run and contribute to the Humanity Ledger code.",
   keywords: ["developer", "developers", "api", "sdk", "code", "github", "repository", "run locally", "contribute", "setup", "install", "stack", "env"],
-  updated: "2026-11-13",
+  updated: "2026-11-15",
   blocks: [
     {
       t: "p",
-      text: "The Humanity Ledger source code is public. If you want to know what the product does, the [repository](https://github.com/humanityledger/Humanity-Ledger) is a better answer than any page we write, including this one. It is source available rather than open source: the licence allows reading and reporting problems, not redistribution. Security reports are welcome under [Report a vulnerability](/docs/bug-bounty).",
+      text: "The Humanity Ledger source code is public. If you want to know what the product does, the [repository](https://github.com/humanityledger/Humanity-Ledger) is a better answer than any page we write, including this one. It is open source under MIT OR Apache-2.0, at your option, so you may also modify and redistribute it. Security reports are welcome under [Report a vulnerability](/docs/bug-bounty).",
     },
     {
       t: "cards",

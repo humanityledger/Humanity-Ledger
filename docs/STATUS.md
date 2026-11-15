@@ -1,6 +1,6 @@
 # Humanity Ledger — Protocol Status
-**Current status: live on Aztec Alpha (mainnet) with a cap per payment; no external audit.** The first private payment from Ledger Chat on Aztec Alpha, 14 November 2026: transfer `0x1eb2bb76…40a5` in L2 block 29012 (HLC `0x1f49571a…24e5` deployed in block 28992), confirmed by the mainnet preflight run 43583640304.
-**Last updated: 14 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
+**Current status: live on Aztec Alpha (mainnet) with a cap per payment; no external audit.** The first private payment from Ledger Chat on Aztec Alpha, 14 November 2026: transfer `0x1eb2bb76…40a5` in L2 block 29012 (HLC `0x1f49571a…24e5` deployed in block 28992), confirmed by the mainnet preflight run 43583640304. **15 November 2026:** our fee sponsor LedgerSponsor is deployed on Alpha (`0x268bb3e4…090aafa8`, block 30105), funded with 9 AZTEC of Fee Juice and verified by the read-only workflow "Aztec verify sponsor"; it has not yet paid a transaction and is not audited. The code is open source, MIT OR Apache-2.0.
+**Last updated: 15 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
 
 > Earlier versions of this file described "full production circuits", "audited timelocked infrastructure" and RFC 9420 conformance proven by our own tests. Those statements were not supported by the code and were withdrawn on 3 November 2026.
 

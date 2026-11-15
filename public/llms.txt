@@ -9,7 +9,7 @@ This file summarises the public documentation at https://ledgerchat.org/docs. Wh
 - Humanity Ledger builds sovereign identity and encrypted messaging protocols. Its flagship application is Ledger Chat.
 - It is not affiliated with Humanity Protocol, Ledger SAS, Aztec Labs or XMTP.
 - Contact: humanityledger@icloud.com
-- Source code: https://github.com/humanityledger/Humanity-Ledger (source available under a proprietary licence; not open source)
+- Source code: https://github.com/humanityledger/Humanity-Ledger (open source, MIT OR Apache-2.0 at your option)
 
 ## What works today
 

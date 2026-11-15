@@ -7,7 +7,7 @@ export const about: DocPage = {
   title: "About Humanity Ledger",
   summary: "Who we are, what we are building and how we work.",
   keywords: ["about", "company", "team", "protocol", "mission", "humanity ledger", "ledger chat"],
-  updated: "2026-11-13",
+  updated: "2026-11-15",
   blocks: [
     {
       t: "p",
@@ -41,7 +41,7 @@ export const about: DocPage = {
         { term: "We publish our findings", text: "Security problems we find are listed on the [audits page](/docs/audits), including the ones that are still open." },
         { term: "You hold the keys", text: "We never take custody of funds or of keys that can move them." },
         { term: "No advertising", text: "We do not sell data and we do not show ads." },
-        { term: "Source available", text: "The code is published on [GitHub](https://github.com/humanityledger/Humanity-Ledger), so anyone can check what it does. It is not open source: the licence lets you read it, not reuse it. See [Content and copyright](/docs/content-policy)." },
+        { term: "Open source", text: "The code is published on [GitHub](https://github.com/humanityledger/Humanity-Ledger) under MIT OR Apache-2.0, at your option, so anyone can check what it does, reuse it and build on it. The names Humanity Ledger and Ledger Chat and their logos are not part of that licence. See [Content and copyright](/docs/content-policy)." },
       ],
     },
     { t: "h2", text: "Leadership" },

@@ -125,13 +125,13 @@ export const metadata = {
   category: 'Technology',
 
   other: {
-    'copyright': 'Copyright 2024-2026 Humanity Ledger. All Rights Reserved.',
+    'copyright': 'Copyright 2024-2026 Stefan Antonio Cirisanu and the Humanity Ledger contributors. MIT OR Apache-2.0.',
     'author': 'Humanity Ledger',
     'owner': 'Humanity Ledger',
     'reply-to': 'humanityledger@icloud.com',
     'dc.creator': 'Humanity Ledger',
     'dc.publisher': 'Humanity Ledger',
-    'dc.rights': 'Copyright 2024-2026 Humanity Ledger. All Rights Reserved.',
+    'dc.rights': 'MIT OR Apache-2.0',
     'dc.language': 'en',
     'dc.subject': 'Encrypted messaging, wallet based identity, private payments',
   },
@@ -262,7 +262,7 @@ export default async function RootLayout({
 
   // Structured data for search engines. Every statement must also be true in
   // the documentation (CLAUDE.md §1): no company exists yet, the code is
-  // source available rather than open source, and there is no token.
+  // open source (MIT OR Apache-2.0), and there is no token.
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -313,8 +313,8 @@ export default async function RootLayout({
         "programmingLanguage": ["TypeScript", "Noir", "Solidity"],
         "author": { "@id": "https://ledgerchat.org/#organization" },
         "copyrightHolder": { "@id": "https://ledgerchat.org/#organization" },
-        "license": "https://ledgerchat.org/docs/content-policy",
-        "description": "Source available under a proprietary licence: published so it can be read and checked, not redistributed."
+        "license": ["https://opensource.org/licenses/MIT", "https://www.apache.org/licenses/LICENSE-2.0"],
+        "description": "Open source, dual-licensed MIT OR Apache-2.0 at your option."
       }
     ]
   };
