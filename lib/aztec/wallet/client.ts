@@ -50,6 +50,8 @@ import {
   nextSecretIndex,
   recoverClaims,
   saveClaims,
+  consumedMessageHash,
+  sameMessageHash,
   type BridgeStep,
   type FeeJuiceClaim,
   type FeePlan,
@@ -621,8 +623,13 @@ class PrivateWallet {
       { artifact, args: ctorArgs, postDeployCtor: (instance: any, w: any) => (Contract as any).at(instance.address, artifact, w) },
       { salt, universalDeploy: true },
     );
-    const { fee } = await this.resolveFee();
-    await this.sendAndWait(() => deployment.send({ from: ctx.me, fee, wait: sdk.NO_WAIT }), `sponsor-deploy-${address}`, 'deploy');
+    const { fee, consumes } = await this.resolveFee();
+    const receipt = await this.sendAndWait(() => deployment.send({ from: ctx.me, fee, wait: sdk.NO_WAIT }), `sponsor-deploy-${address}`, 'operator');
+    if (!receipt) {
+      try { localStorage.removeItem('hl:aztec-sponsor-deployed'); } catch { /* nothing kept */ }
+      throw new Error(this.snapshot.activity.find((a) => a.id === `sponsor-deploy-${address}`)?.error ?? 'The sponsor could not be deployed. Nothing was spent; try again.');
+    }
+    if (consumes) this.dropClaim(consumes);
     return address;
   }
 
@@ -717,24 +724,54 @@ class PrivateWallet {
     m.saveFundings([...m.loadFundings(), { sponsor, secret: secret.toString(), claimAmount: String(claim.claimAmount), messageHash: claim.messageHash, messageLeafIndex: String(claim.messageLeafIndex), l1TxHash: claim.l1TxHash }]);
   }
 
-  /** Claims every arrived deposit into the sponsor. Returns how many were claimed and how many still travel. */
-  async claimIntoSponsor(): Promise<{ claimed: number; waiting: number }> {
+  /**
+   * Claims every arrived deposit into the sponsor. A deposit counts as claimed only with a receipt
+   * (before 15 Nov 2026 a failed claim was marked claimed too; such entries, without `claimTx`, are
+   * tried again: if the node says the deposit was already claimed, it is marked so). If the fee tried
+   * to claim one of this account's own deposits that was already claimed, that deposit is forgotten
+   * (healConsumedClaim) and the claim is tried once more, paid from the balance.
+   */
+  async claimIntoSponsor(): Promise<{ claimed: number; waiting: number; failed: number; error?: string }> {
     const ctx = this.agreementContext();
     const m = await import('./ledger-sponsor');
     const list = m.loadFundings();
-    let claimed = 0, waiting = 0;
+    let claimed = 0, waiting = 0, failed = 0;
+    let error: string | undefined;
     for (const f of list) {
-      if (f.claimed) continue;
+      if (f.claimed && f.claimTx) continue;
       if (!(await this.sdk!.isL1ToL2MessageReady(this.node, this.sdk!.Fr.fromString(f.messageHash)))) { waiting++; continue; }
       const { contract } = await m.sponsorContract({ sdk: this.sdk, wallet: ctx.wallet, node: this.node }, f.sponsor);
-      const { fee } = await this.resolveFee();
-      const call = contract.methods.fund(BigInt(f.claimAmount), this.sdk!.Fr.fromString(f.secret), BigInt(f.messageLeafIndex));
-      await this.sendAndWait(() => call.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), `sponsor-fund-${f.messageHash}`, 'deploy');
-      f.claimed = true;
+      const id = `sponsor-fund-${f.messageHash}`;
+      let receipt: any = null;
+      for (let attempt = 0; attempt < 2 && !receipt; attempt++) {
+        const { fee, consumes } = await this.resolveFee();
+        const call = contract.methods.fund(BigInt(f.claimAmount), this.sdk!.Fr.fromString(f.secret), BigInt(f.messageLeafIndex));
+        receipt = await this.sendAndWait(() => call.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), id, 'operator');
+        if (receipt) {
+          if (consumes) this.dropClaim(consumes);
+          break;
+        }
+        const h = consumedMessageHash(this.lastSendError);
+        if (h === null) break;
+        if (sameMessageHash(f.messageHash, h)) break; // this deposit itself was claimed before
+        // Otherwise an own deposit the fee tried to claim was already claimed: healed, try once more.
+      }
+      const own = consumedMessageHash(this.lastSendError);
+      if (receipt) {
+        f.claimed = true;
+        f.claimTx = receipt.txHash?.toString?.() ?? String(receipt.txHash ?? 'settled');
+        claimed++;
+      } else if (own !== null && sameMessageHash(f.messageHash, own)) {
+        f.claimed = true;
+        f.claimTx = 'already-claimed';
+      } else {
+        f.claimed = false;
+        failed++;
+        error = this.snapshot.activity.find((a) => a.id === id)?.error ?? 'The claim did not go through. Nothing was lost; try again.';
+      }
       m.saveFundings(list);
-      claimed++;
     }
-    return { claimed, waiting };
+    return { claimed, waiting, failed, ...(error ? { error } : {}) };
   }
 
   /** Fee Juice the sponsor holds (base units). */
@@ -1287,8 +1324,28 @@ class PrivateWallet {
   }
 
   /** Proves and sends on this device, then waits for the network to include the transaction. */
+  /** The error of the last failed send (sendAndWait records it and returns null). */
+  private lastSendError: unknown = null;
+
+  /**
+   * A transaction failed because a Fee Juice deposit it tried to claim was already claimed on Aztec
+   * ("No non-nullified L1 to L2 message found for message hash 0x…"): that deposit is in the balance
+   * already, so it is forgotten here and the next transaction pays from the balance. Without this, a
+   * deposit claimed by a path that did not drop it (the sponsor tools, before 15 Nov 2026) made every
+   * later transaction fail the same way. Returns true when a deposit was dropped.
+   */
+  private healConsumedClaim(err: unknown): boolean {
+    const h = consumedMessageHash(err);
+    if (h === null || !this.me) return false;
+    const c = loadClaims(this.me.toString()).find((x) => sameMessageHash(x.messageHash, h));
+    if (!c) return false;
+    this.dropClaim(c);
+    return true;
+  }
+
   private async sendAndWait(sendFn: () => Promise<any>, id: string, kind: ActivityKind) {
     const me = this.me.toString();
+    this.lastSendError = null;
     this.inflight++;
     this.set({});
     let txHash: string | undefined;
@@ -1315,6 +1372,8 @@ class PrivateWallet {
         throw new Error(UNCONFIRMED_MESSAGE);
       }
       upsertActivity(me, { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
+      this.lastSendError = err;
+      this.healConsumedClaim(err);
       return null;
     } finally {
       this.inflight--;

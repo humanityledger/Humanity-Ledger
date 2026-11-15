@@ -527,3 +527,20 @@ export function l1ClientsFromViem(publicClient: any, walletClient: any): L1Clien
     estimateFeesPerGas: () => publicClient.estimateFeesPerGas(),
   };
 }
+
+/**
+ * The deposit an error says was already claimed on Aztec: "No non-nullified L1 to L2 message found
+ * for message hash 0x…" (the PXE, when a transaction claims a deposit whose message is already
+ * consumed). Null for any other error. Compared as numbers by the caller: hex spellings may differ
+ * in leading zeros.
+ */
+export function consumedMessageHash(err: unknown): bigint | null {
+  const text = String((err as any)?.message ?? err ?? '');
+  const m = /No non-nullified L1 to L2 message found for message hash (0x[0-9a-fA-F]{1,64})\b/.exec(text);
+  return m ? BigInt(m[1]) : null;
+}
+
+/** Same deposit, whatever the hex spelling. */
+export function sameMessageHash(a: string, b: bigint): boolean {
+  try { return BigInt(a) === b; } catch { return false; }
+}

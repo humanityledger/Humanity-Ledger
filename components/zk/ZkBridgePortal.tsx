@@ -391,6 +391,7 @@ function SponsorOperator({ publicClient, walletClient }: { publicClient: any; wa
           </div>
           <button type="button" disabled={busy} onClick={() => run('Claiming arrived deposits into the sponsor…', async () => {
             const r = await getPrivateWallet().claimIntoSponsor();
+            if (r.failed) return `${r.error ?? 'A claim did not go through.'} Nothing was lost: tap Claim into the sponsor again.`;
             return r.claimed ? `Claimed ${r.claimed} deposit${r.claimed > 1 ? 's' : ''}.${r.waiting ? ` ${r.waiting} still on the way.` : ''}` : r.waiting ? 'The deposit is still on its way. Try again in a few minutes.' : 'Nothing to claim.';
           })} className="h-11 w-full rounded-full border border-[#E4E7EC] text-[14px] font-semibold disabled:opacity-40">Claim into the sponsor</button>
         </>

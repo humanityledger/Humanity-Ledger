@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fix: a Fee Juice deposit claimed twice blocked every transaction (15 November 2026)
+
+- The sponsor tools (deploy, claim into the sponsor) paid their fee by claiming the operator's own arrived
+  deposit and never forgot it, so every later transaction failed with "No non-nullified L1 to L2 message
+  found". They now drop it, and any failed send that reports an already-claimed own deposit forgets it
+  (`consumedMessageHash`, `healConsumedClaim`); "Claim into the sponsor" retries once, paid from the balance.
+- "Claim into the sponsor" counted a failed claim as claimed; a deposit now counts only with a receipt, and
+  older entries are tried again. A failed sponsor deployment no longer reports "Deployed".
+- The activity list shows the operator's sponsor transactions as "Ledger sponsor", not "Private account created".
+
 ### LedgerSponsor on Aztec Alpha (15 November 2026)
 
 - Deployed at `0x268bb3e40fc6fdb39e482ef1214788b5cbedf5ddadb658367ef6df41090aafa8` (block 30105, fee 3.979 AZTEC),

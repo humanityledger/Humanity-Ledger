@@ -117,7 +117,8 @@ export async function sponsoredFee(ctx: Ctx): Promise<{ paymentMethod: any } | n
 
 // ── Operator tools ──────────────────────────────────────────────────────────
 
-export interface SponsorFunding { sponsor: string; secret: string; claimAmount: string; messageHash: string; messageLeafIndex: string; l1TxHash?: string; claimed?: boolean }
+/** A deposit to the sponsor. `claimTx`: the claim's transaction, or 'already-claimed'; without it, `claimed` is not trusted. */
+export interface SponsorFunding { sponsor: string; secret: string; claimAmount: string; messageHash: string; messageLeafIndex: string; l1TxHash?: string; claimed?: boolean; claimTx?: string }
 const FUNDING_KEY = 'hl:aztec-sponsor-funding';
 
 export function loadFundings(): SponsorFunding[] {

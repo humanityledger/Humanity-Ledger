@@ -732,6 +732,7 @@ const KIND_LABEL: Record<Activity['kind'], string> = {
   faucet: 'Test tokens',
   issue: 'Issued',
   deploy: 'Private account created',
+  operator: 'Ledger sponsor',
 };
 
 const STATUS_LABEL: Record<Activity['status'], string> = {
