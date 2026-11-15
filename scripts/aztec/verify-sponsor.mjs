@@ -149,6 +149,20 @@ async function gather(app, nodeUrl) {
     return typeof rec === 'string' ? rec : rec?.address ?? null;
   });
   if (isErr(f.record)) f.record = null;
+  // What to record in deployments/aztec-mainnet.json -> sponsoredFpc, with the Fee Juice balance slot as
+  // the SDK computes it (scripts/aztec/fee-juice-slot.mjs). Printed only; this script writes nothing.
+  if (configured && low(f.record) !== low(configured)) {
+    f.recordSuggestion = await safe(async () => {
+      const { captureFeeJuiceRead } = await import('./fee-juice-slot.mjs');
+      const r = await captureFeeJuiceRead(configured);
+      return {
+        address: low(configured),
+        classId: !isErr(f.classId) && f.classId?.actual ? low(f.classId.actual) : null,
+        feeJuiceContract: low(r.feeJuiceContract),
+        feeJuiceBalanceSlot: low(r.feeJuiceBalanceSlot),
+      };
+    });
+  }
   return f;
 }
 
@@ -156,8 +170,13 @@ async function main() {
   const app = arg('app', 'https://ledgerchat.org');
   const nodeUrl = arg('node', ALPHA.publicNodeRpc);
   console.log(`LedgerSponsor check: app ${app}, node ${nodeUrl}\n`);
-  const checks = evaluate(await gather(app, nodeUrl));
+  const facts = await gather(app, nodeUrl);
+  const checks = evaluate(facts);
   for (const c of checks) console.log(`${c.status.padEnd(4)}  ${c.id.padEnd(8)}  ${c.detail}`);
+  if (facts.recordSuggestion) {
+    console.log('\nTo record (add deployTx and deployBlock from the deployment):');
+    console.log(JSON.stringify(facts.recordSuggestion, null, 2));
+  }
   const failed = checks.filter((c) => c.status === 'FAIL').length;
   console.log(`\n${failed ? `${failed} FAIL` : 'No FAIL'}. Manual, after the first sponsored transaction: docs/SPONSOR.md, "Checks after deployment".`);
   process.exit(failed ? 1 : 0);
