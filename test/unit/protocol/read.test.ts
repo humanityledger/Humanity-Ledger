@@ -19,7 +19,11 @@ describe('readSnapshot / buildReport', () => {
     // deployments/aztec-mainnet.json: no escrow or stream, HLC recorded with its block.
     expect(s.record?.contracts).toEqual([]);
     expect(s.record?.tokens.map((t) => [t.symbol, t.decimals, t.deployBlock])).toEqual([['HLC', 6, 28992]]);
-    expect(s.record?.sponsoredFpc).toBeNull();
+    expect(s.record?.sponsoredFpc).toEqual({
+      address: '0x268bb3e40fc6fdb39e482ef1214788b5cbedf5ddadb658367ef6df41090aafa8',
+      feeJuiceContract: '0x0000000000000000000000000000000000000000000000000000000000000003',
+      feeJuiceBalanceSlot: '0x100b088e31e33dba6a8a8408d18100cf83dd3cdc5d9acdab9d1c50273f0c8005',
+    });
     expect(s.token?.totalSupply).toMatchObject({ error: expect.any(String) });
 
     const report = buildReport(s, new Date('2026-11-13T12:00:00Z'));

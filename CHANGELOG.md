@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### LedgerSponsor on Aztec Alpha (15 November 2026)
+
+- Deployed at `0x268bb3e40fc6fdb39e482ef1214788b5cbedf5ddadb658367ef6df41090aafa8` (block 30105, fee 3.979 AZTEC),
+  funded with 9 AZTEC of Fee Juice, recorded in `deployments/aztec-mainnet.json` → `sponsoredFpc`. The workflow
+  "Aztec verify sponsor" passes: network, class, server key and the 40 AZTEC cap. Not audited.
+- `scripts/aztec/verify-sponsor.mjs` prints the record to add, with the Fee Juice slot the SDK computes.
+- Docs: the protocol page no longer says Alpha has no sponsored fee payer.
+
 ### LedgerSponsor readiness (14 November 2026)
 
 - Fix: a refused sponsor request no longer uses up anything. Each limit was a separate rate-limit call

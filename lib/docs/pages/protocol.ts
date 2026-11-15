@@ -141,7 +141,7 @@ export const zeroKnowledge: DocPage = {
       t: "hint",
       tone: "warning",
       title: "Aztec Alpha: real network, no audit, small amounts",
-      text: "The private payments wallet on ledgerchat.org runs on Aztec Alpha (version 6.0.0, settled on Ethereum mainnet), which Aztec itself describes as an alpha where serious bugs are expected. The only token listed there is HLC, issued by Humanity Ledger. No contract of ours has had an independent audit. Fees are paid in Fee Juice, which you bridge from Ethereum yourself; there is no sponsored fee payer. Escrows and payment streams are refused on Alpha. Use amounts you can afford to lose.",
+      text: "The private payments wallet on ledgerchat.org runs on Aztec Alpha (version 6.0.0, settled on Ethereum mainnet), which Aztec itself describes as an alpha where serious bugs are expected. The only token listed there is HLC, issued by Humanity Ledger. No contract of ours has had an independent audit. Fees are paid in Fee Juice, which you bridge from Ethereum yourself. A signed-in account with no Fee Juice may have its first transactions paid by LedgerSponsor, our own sponsor contract, within a per-account and a daily limit; it pays only for vouchers our server signs. Escrows and payment streams are refused on Alpha. Use amounts you can afford to lose.",
     },
     {
       t: "p",
@@ -154,7 +154,7 @@ export const zeroKnowledge: DocPage = {
         { title: "Your wallet signs a statement", text: "The first time you open the private wallet, your Ethereum wallet asks you to sign a typed message that names Humanity Ledger and the Aztec network it is for (Alpha and the test network give different accounts). Signing is free and sends no transaction." },
         { title: "Your browser derives the keys", text: "The signature is turned into the secret of an Aztec account with HKDF-SHA256, inside your browser. The same wallet always produces the same account, so you can open it on any device, and nothing that can spend it is ever sent to us." },
         { title: "Your browser runs a private node", text: "A Private eXecution Environment (PXE) runs in your browser, stores your notes in its local database, decrypts them and produces the proofs for your transactions." },
-        { title: "The account is deployed", text: "Your Aztec account contract is deployed the first time it is needed. On Alpha that first transaction is paid in Fee Juice: the wallet waits until you have bridged AZTEC from Ethereum through Aztec's Fee Juice portal, then deploys and claims in one transaction. On the test network, Aztec's sponsored fee contract pays instead." },
+        { title: "The account is deployed", text: "Your Aztec account contract is deployed the first time it is needed. On Alpha that first transaction is paid in Fee Juice: if you have none, LedgerSponsor may pay it (a few transactions per account, up to a daily limit); otherwise the wallet waits until you have bridged AZTEC from Ethereum through Aztec's Fee Juice portal, then deploys and claims in one transaction. On the test network, Aztec's sponsored fee contract pays instead." },
       ],
     },
     { t: "h2", text: "The four actions" },
@@ -336,7 +336,7 @@ export const whitepaper: DocPage = {
     { t: "h3", text: "7.1 Fees", id: "fees" },
     {
       t: "p",
-      text: "Alpha has no sponsored fee contract, so every transaction, including the one that creates the account, pays in Fee Juice: AZTEC bridged one way from Ethereum through the enshrined FeeJuicePortal. A new account waits until a deposit arrives and deploys itself by claiming it in the same transaction. Claim secrets are derived from the wallet signature, so a deposit is recoverable from Ethereum on any device. Paying a fee from one's own balance makes the account the visible fee payer of its transactions.",
+      text: "Alpha has no public sponsored fee contract. Every transaction pays in Fee Juice, either the account's own or, for a signed-in account with none, LedgerSponsor's: our contract pays one capped transaction per voucher our server signs, a few per account and up to a daily limit, and it is the visible fee payer of those transactions. Otherwise an account pays with its own Fee Juice: AZTEC bridged one way from Ethereum through the enshrined FeeJuicePortal. A new account waits until a deposit arrives and deploys itself by claiming it in the same transaction. Claim secrets are derived from the wallet signature, so a deposit is recoverable from Ethereum on any device. Paying a fee from one's own balance makes the account the visible fee payer of its transactions.",
     },
     {
       t: "p",
