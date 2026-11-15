@@ -4,11 +4,11 @@ People who open Ledger Chat's private wallet on Aztec Alpha with no Fee Juice ca
 created and their first transactions paid by **LedgerSponsor** (`contracts/aztec/sponsor`), a few per
 account and up to a daily limit. Everyone else keeps paying with their own Fee Juice.
 
-## State (14 November 2026)
+## State (15 November 2026)
 
 | Part | State | Evidence |
 |---|---|---|
-| Contract `LedgerSponsor` | **Code ready, not deployed** on Alpha (`sponsoredFpc: null` in `deployments/aztec-mainnet.json`) | TXE tests, `contracts/aztec/sponsor/src/test.nr` (10), run by the "Aztec contracts" workflow |
+| Contract `LedgerSponsor` | **Real on Aztec Alpha:** deployed at `0x268bb3e4…090aafa8` (block 30105, 14 Nov 2026), funded with 9 AZTEC of Fee Juice, recorded in `deployments/aztec-mainnet.json` → `sponsoredFpc`; workflow "Aztec verify sponsor" passes (network, class, key and cap). No sponsored transaction yet | TXE tests, `contracts/aztec/sponsor/src/test.nr` (10), run by the "Aztec contracts" workflow |
 | Voucher signing (V2 digest) | **Real only in tests** | `test/unit/aztec/sponsor-voucher.test.ts` |
 | Per-wallet and daily limits | **Real only in tests** | `test/unit/aztec/sponsor-quota.test.ts` |
 | Wallet path "no Fee Juice → sponsor" | **Real only in tests** (source checks; the sponsor has never paid on Alpha) | `test/unit/aztec/ledger-sponsor.test.ts` |
