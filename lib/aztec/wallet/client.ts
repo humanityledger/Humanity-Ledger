@@ -743,7 +743,7 @@ class PrivateWallet {
       const { contract } = await m.sponsorContract({ sdk: this.sdk, wallet: ctx.wallet, node: this.node }, f.sponsor);
       const id = `sponsor-fund-${f.messageHash}`;
       let receipt: any = null;
-      for (let attempt = 0; attempt < 2 && !receipt; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         const { fee, consumes } = await this.resolveFee();
         const call = contract.methods.fund(BigInt(f.claimAmount), this.sdk!.Fr.fromString(f.secret), BigInt(f.messageLeafIndex));
         receipt = await this.sendAndWait(() => call.send({ from: ctx.me, fee, wait: this.sdk!.NO_WAIT }), id, 'operator');
