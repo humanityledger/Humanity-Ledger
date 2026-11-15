@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Ledger Chat motion: send, presence, ticks, expression panel (15 November 2026)
+
+- Send: the double jump is gone. A confirmed message kept its bubble only by id, which changes from
+  `optimistic-…` to the real id, so the bubble remounted and its entrance played again. Bubbles are now keyed
+  by a render key that survives confirmation (`clientKey`, `renderKey`, `adoptOptimistic`), the confirmed copy
+  keeps its place, and the entrance is one 180 ms CSS animation of transform and opacity, played once.
+  The second, smooth scroll of the wrapper on every change is gone; the list scrolls once, before paint.
+- Presence: green dot and "Online" / "typing…" cross-fade in a fixed-height header line; the typing bubble
+  under the list (which changed its height) is gone; typing timers no longer race, and a message from the
+  peer clears "typing…" at once.
+- Ticks: clock, one grey (sent), two grey (delivered), two green (read) in one fixed box that cross-fades;
+  status only moves forward, and receipts that beat the send confirmation are kept.
+- Emojis / Stickers / GIF: 8 px between tabs with a sliding indicator and arrow-key navigation; wider gaps
+  between emojis, stickers and GIFs.
+
 ### Fix: LedgerSponsor could not pay (15 November 2026)
 
 - `sponsor()` ends the setup phase but lacked `#[allow_phase_change]`; aztec-nr 6.0.0 then fails every real

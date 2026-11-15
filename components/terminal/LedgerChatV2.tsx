@@ -46,10 +46,10 @@ import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
 import '@/app/ledger-chat-settings.css';
 import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
+import { OnlineDot, PresenceLine } from '@/components/chat/PresenceLine';
 import { revealMessage } from '@/lib/chat/reveal-message';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
-import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { ThemePickerSheet, chatThemeStyle, canvasStyle, canvasTone, type AppearanceTab } from '@/components/chat/ThemePickerSheet';
 import { CHAT_THEMES, findChatTheme, isChatThemeId, type ChatTheme } from '@/lib/chat/themes';
 import { BUBBLE_STYLES, isBubbleStyleId } from '@/lib/chat/bubbleStyles';
@@ -334,7 +334,7 @@ import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls, CallClock } from '@/components/chat/call/CallScreens';
 import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, peerServerOptions } from '@/lib/calls/media';
-import { confirmOptimistic, createSendQueue, failOptimistic, insertOptimistic, newOptimisticId, optimisticMessage } from '@/lib/chat/optimistic-send';
+import { adoptOptimistic, confirmOptimistic, createSendQueue, failOptimistic, insertOptimistic, newOptimisticId, optimisticMessage, renderKey, strongerStatus } from '@/lib/chat/optimistic-send';
 import { callMetricsDetail, callMetricsLabel, finishCallMetrics, markFirstAudio, markSetup, routeFromStats, sampleHeap, startCallMetrics, type CallMetrics, type CallRoute } from '@/lib/calls/metrics';
 import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
 /** Opus tuned for speech on every offer and answer (lib/calls/media.ts). */
@@ -947,6 +947,36 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // ─── Hito 4: Search, Forward, GIF, Scheduled ──────────────────────────────
   const [searchQuery, setSearchQuery] = useState(''); // in-chat search
   const [typingPeers, setTypingPeers] = useState<Set<string>>(new Set()); // typing indicators
+  const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const clearPeerTyping = useCallback((sender: string) => {
+    if (!sender) return;
+    const t = typingTimersRef.current.get(sender);
+    if (t) clearTimeout(t);
+    typingTimersRef.current.delete(sender);
+    setTypingPeers(prev => {
+      if (!prev.has(sender)) return prev;
+      const next = new Set(prev);
+      next.delete(sender);
+      return next;
+    });
+  }, []);
+  useEffect(() => () => { typingTimersRef.current.forEach(clearTimeout); typingTimersRef.current.clear(); }, []);
+  /**
+   * Receipts that arrive before our own copy has its real id (fast networks: the peer's __DELIVERED__
+   * can beat the send confirmation). Kept by real id and applied when the message is confirmed.
+   */
+  const earlyReceiptsRef = useRef<Map<string, string>>(new Map());
+  const noteReceipt = useCallback((id: string, status: 'delivered' | 'read') => {
+    const m = earlyReceiptsRef.current;
+    m.set(id, strongerStatus(m.get(id), status) as string);
+    if (m.size > 200) m.delete(m.keys().next().value as string);
+  }, []);
+  const applyEarlyReceipt = useCallback(<T extends { id: string; status?: string }>(msg: T): T => {
+    const early = earlyReceiptsRef.current.get(msg.id);
+    if (!early) return msg;
+    earlyReceiptsRef.current.delete(msg.id);
+    return { ...msg, status: strongerStatus(msg.status, early) };
+  }, []);
 
   // ─── UI Maturity: Theme picker, pin, mute, per-conv wallpaper ────────────
   const [showThemePicker, setShowThemePicker] = useState(false);
@@ -1659,20 +1689,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     }
   }, [activePeer]);
 
-  // Auto-scroll to bottom on new messages — ONLY if user is already near the bottom.
-  // If the user has scrolled up to read history, do NOT hijack them back to the bottom.
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current.parentElement;
-      if (container) {
-        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-        // Only auto-scroll if within 150px of the bottom (user hasn't scrolled up)
-        if (distanceFromBottom < 150) {
-          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-        }
-      }
-    }
-  }, [messages]);
+  // Scrolling to new messages is done by the list itself (VirtualizedMessageList): a second,
+  // smooth scroll of this non-scrolling wrapper on every change of `messages` made the list shift
+  // after each send (part of the "double jump", 15 Nov 2026).
 
   // MASTER-FIX: Auto-scroll on resize (keyboard open/close) to maintain stability
   useEffect(() => {
@@ -4402,12 +4421,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             // Phase 2: Intercept Read Receipts
             if (typeof content === 'string' && content.startsWith('__READ__')) {
               const readId = content.replace('__READ__', '');
-              setMessages(prev => prev.map(m => m.id === readId ? { ...m, status: 'read' } : m));
+              noteReceipt(readId, 'read');
+              setMessages(prev => prev.map(m => m.id === readId ? { ...m, status: strongerStatus(m.status, 'read') } : m));
               continue;
             }
             if (typeof content === 'string' && content.startsWith('__DELIVERED__')) {
               const dId = content.replace('__DELIVERED__', '');
-              setMessages(prev => prev.map(m => (m.id === dId && m.status !== 'read') ? { ...m, status: 'delivered' } : m));
+              noteReceipt(dId, 'delivered');
+              setMessages(prev => prev.map(m => m.id === dId ? { ...m, status: strongerStatus(m.status, 'delivered') } : m));
               continue;
             }
             
@@ -4416,14 +4437,21 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               // Our own typing on another device is not "the peer is typing".
               if (!fromPeer) continue;
               const sender = (msg.senderAddress || 'peer').toLowerCase();
-              setTypingPeers(prev => new Set(prev).add(sender));
-              setTimeout(() => {
+              setTypingPeers(prev => (prev.has(sender) ? prev : new Set(prev).add(sender)));
+              // One timer per sender, restarted by each signal (they come every 3 s while typing):
+              // an older timer must not clear a newer signal, or "typing…" flickers off and on.
+              const timers = typingTimersRef.current;
+              const old = timers.get(sender);
+              if (old) clearTimeout(old);
+              timers.set(sender, setTimeout(() => {
+                timers.delete(sender);
                 setTypingPeers(prev => {
+                  if (!prev.has(sender)) return prev;
                   const next = new Set(prev);
                   next.delete(sender);
                   return next;
                 });
-              }, 4000);
+              }, 4500));
               continue;
             }
 
@@ -4741,7 +4769,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     const idx = prev.findIndex(m => m.id === knownOptId);
                     if (idx !== -1) {
                       const next = [...prev];
-                      next[idx] = mappedMsg; // replace placeholder with confirmed msg
+                      // Confirmed copy keeps the placeholder's render key and place: no remount, no second entrance.
+                      next[idx] = adoptOptimistic(prev[idx], applyEarlyReceipt(mappedMsg));
                       return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                     }
                   }
@@ -4752,7 +4781,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   );
                   if (optIdx !== -1) {
                     const next = [...prev];
-                    next[optIdx] = mappedMsg;
+                    next[optIdx] = adoptOptimistic(prev[optIdx], applyEarlyReceipt(mappedMsg));
                     return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
                   // Strategy 3: check if it's a transformed message (like __BURN__)
@@ -4764,7 +4793,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   );
                   if (burnIdx !== -1) {
                     const next = [...prev];
-                    next[burnIdx] = mappedMsg;
+                    next[burnIdx] = adoptOptimistic(prev[burnIdx], applyEarlyReceipt(mappedMsg));
                     return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
                   }
                   // Strategy 4: no optimistic found (e.g. second tab) — insert if not duplicate
@@ -4774,6 +4803,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
                 // ── PEER MESSAGE: straightforward insert ──────────────────────────
                 if (fromPeer && !content.startsWith('__')) {
+                  // The peer's message arrived: they stopped typing (no 4.5 s of stale "typing…").
+                  clearPeerTyping((msg.senderAddress || '').toLowerCase());
                   // We are focused on this chat, so send a read receipt!
                   if (!document.hidden) {
                     // Seen here, so seen everywhere: clear the badge on our other devices.
@@ -5273,6 +5304,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           
           // For each NEW confirmed message, find and remove its optimistic twin
           const optimisticToRemove = new Set<string>();
+          // confirmed id -> confirmed copy that keeps its optimistic twin's render key and place
+          const adopted = new Map<string, any>();
           for (const confirmed of newConfirmed) {
             // Check for identical content first, which covers the majority of cases.
             // Ignore time window completely if content matches perfectly.
@@ -5283,6 +5316,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             );
             if (exactTwin) {
               optimisticToRemove.add(exactTwin.id);
+              adopted.set(confirmed.id, adoptOptimistic(exactTwin, confirmed));
             } else {
               // Strategy 2: check if it's a transformed message (like __BURN__)
               const burnTwin = prev.find(
@@ -5292,13 +5326,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      m.content.startsWith('__BURN_') &&
                      m.content.endsWith('__::' + confirmed.content)
               );
-              if (burnTwin) optimisticToRemove.add(burnTwin.id);
+              if (burnTwin) {
+                optimisticToRemove.add(burnTwin.id);
+                adopted.set(confirmed.id, adoptOptimistic(burnTwin, confirmed));
+              }
             }
           }
           
           // Drop only the replaced optimistic twins, keep everything else
           const base = prev.filter(m => !optimisticToRemove.has(m.id));
-          const finalMessages = [...base, ...newConfirmed].sort((a, b) => a.sentAtNs - b.sentAtNs);
+          const finalMessages = [...base, ...newConfirmed.map(c => adopted.get(c.id) ?? c)].sort((a, b) => a.sentAtNs - b.sentAtNs);
           
           // Save all new confirmed messages to IndexedDB
           if (newConfirmed.length > 0) {
@@ -5693,7 +5730,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         confirmedMsgIds.current.add(realId);
         const sentAtMs = Date.now();
         // The stream echo may already have put the real message in: then our copy is dropped.
-        setMessages(prev => confirmOptimistic(prev, optimisticId, realId));
+        setMessages(prev => confirmOptimistic(prev, optimisticId, realId).map(m => (m.id === realId ? applyEarlyReceipt(m) : m)));
         // Persist the REAL message (never the optimistic id) so it survives reloads.
         import('@/lib/chat/indexeddb').then(({ chatDB }) => {
           chatDB.saveMessages([{
@@ -6725,9 +6762,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button type="button" onClick={openContactInfo} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={`Contact info for ${getDisplayName(activePeer!)}`}>
                   <div className="relative shrink-0">
                     <Avatar address={activePeer!} size={42} />
-                    {peerStatus.status === 'online' && (
-                      <span className="absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full border-2 border-white bg-[#12a150]" aria-hidden="true" />
-                    )}
+                    <OnlineDot online={peerStatus.status === 'online'} />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[16px] font-semibold tracking-[-0.01em] text-[#15171c] flex items-center gap-1.5 truncate">
@@ -6739,8 +6774,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         <Flame size={13} strokeWidth={2} className="text-[#c0362c] shrink-0" aria-label="Secret chat on" />
                       )}
                     </span>
-                    <span className={`text-[13px] font-medium truncate ${peerStatus.isTyping || peerStatus.status === 'online' ? 'text-[#12804a]' : 'text-[#5b606b] font-normal'}`}>
-                      {peerStatus.isTyping ? 'typing…' : peerStatus.status === 'online' ? 'Active now' : peerStatus.lastSeen ? (() => {
+                    <PresenceLine
+                      typing={peerStatus.isTyping || (!!activePeer && typingPeers.has(activePeer.toLowerCase()))}
+                      online={peerStatus.status === 'online'}
+                      idle={peerStatus.lastSeen ? (() => {
                         const d = new Date(peerStatus.lastSeen);
                         const now = new Date();
                         const yest = new Date(now); yest.setDate(yest.getDate() - 1);
@@ -6749,7 +6786,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                         if (d.toDateString() === yest.toDateString()) return `Last seen yesterday at ${t}`;
                         return `Last seen ${d.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
                       })() : /^0x[0-9a-f]{4}/i.test(getDisplayName(activePeer!)) ? 'Tap for contact info' : shortAddr(activePeer!)}
-                    </span>
+                    />
                   </div>
                 </button>
               </div>
@@ -6966,15 +7003,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     clientInboxId={client?.inboxId}
                     isLoadingMore={false}
                     onLoadMore={() => {}}
-                    renderMessage={(msg, isMe) => {
+                    renderMessage={(msg, isMe, enter) => {
                       const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
                       const dateStr = new Date(sentTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                       
                       return (
                         <MessageBubble
-                          key={msg.id}
+                          key={renderKey(msg)}
                           msg={msg}
                           isMe={isMe}
+                          enter={enter}
                           showDate={false} // Virtualized list needs grouped items or custom header for dates
                           dateStr={dateStr}
                           isSecretChat={isSecretChat}
@@ -7009,14 +7047,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   />
                 );
               })()}
-              {(peerStatus.isTyping || (activePeer && typingPeers.has(activePeer.toLowerCase()))) && (
-                <AnimatePresence>
-                  <TypingIndicator
-                    names={activePeer ? [getDisplayName(activePeer)] : []}
-                    accentColor={accentColor}
-                  />
-                </AnimatePresence>
-              )}
+              {/* "typing…" is shown in the header (PresenceLine): a bubble here changed the list's height. */}
               <div ref={messagesEndRef} />
             </div>
 

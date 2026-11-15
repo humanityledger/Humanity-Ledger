@@ -1,13 +1,15 @@
 'use client';
 import React, { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { REVEAL_MESSAGE_EVENT } from '@/lib/chat/reveal-message';
+import { renderKey } from '@/lib/chat/optimistic-send';
 
 interface VirtualizedMessageListProps {
   messages: any[];
   activePeer: string;
   myAddress: string;
   clientInboxId?: string;
-  renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
+  /** `enter`: play the entrance (a message that arrived or was sent while this chat is open, once). */
+  renderMessage: (msg: any, isMe: boolean, enter: boolean) => React.ReactNode;
   onLoadMore: () => void;
   isLoadingMore: boolean;
   isTyping?: boolean;
@@ -26,16 +28,30 @@ interface VirtualizedMessageListProps {
 export const MESSAGE_WINDOW = 60;
 export const MESSAGE_WINDOW_STEP = 40;
 
+/**
+ * Entrance animation, decided once per render key. A message animates when it is newer than the
+ * moment this conversation was opened (sent or received live; history loaded later does not), and
+ * only within ENTER_WINDOW_MS of that decision: a later remount (the window grows, the chat is
+ * reopened) never plays it again.
+ */
+const ENTER_WINDOW_MS = 600;
+const msgTimeMs = (m: any) => {
+  const t = Number(m?.sentAtNs ?? 0);
+  return t > 1e14 ? t / 1e6 : t;
+};
+
 const MemoizedMessageRow = React.memo(({
   msg,
   myAddressLower,
   clientInboxIdLower,
-  renderMessage
+  renderMessage,
+  enter,
 }: {
   msg: any;
   myAddressLower: string;
   clientInboxIdLower: string;
-  renderMessage: (msg: any, isMe: boolean) => React.ReactNode;
+  renderMessage: (msg: any, isMe: boolean, enter: boolean) => React.ReactNode;
+  enter: boolean;
 }) => {
   const senderLower = (msg.senderInboxId ?? '').toLowerCase();
   const isMe =
@@ -47,10 +63,11 @@ const MemoizedMessageRow = React.memo(({
 
   return (
     <div className="w-full pb-1">
-      {renderMessage(msg, isMe)}
+      {renderMessage(msg, isMe, enter)}
     </div>
   );
 }, (prev, next) =>
+  prev.enter === next.enter &&
   prev.msg.id === next.msg.id &&
   prev.msg.status === next.msg.status &&
   prev.msg.failed === next.msg.failed &&
@@ -80,11 +97,40 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   const myAddressLower = useMemo(() => myAddress.toLowerCase(), [myAddress]);
   const clientInboxIdLower = useMemo(() => (clientInboxId ?? '').toLowerCase(), [clientInboxId]);
 
-  // Another conversation: back to the newest window.
+  // Entrance decisions: render key -> time it was decided to animate (absent: never animates).
+  const openedAtRef = useRef(Date.now());
+  const enterRef = useRef<Map<string, number>>(new Map());
+  const decidedRef = useRef<Set<string>>(new Set());
+  const shouldEnter = (msg: any): boolean => {
+    const key = renderKey(msg);
+    if (!decidedRef.current.has(key)) {
+      decidedRef.current.add(key);
+      if (msgTimeMs(msg) >= openedAtRef.current - 1500) enterRef.current.set(key, Date.now());
+    }
+    const at = enterRef.current.get(key);
+    return at !== undefined && Date.now() - at < ENTER_WINDOW_MS;
+  };
+
+  // Another conversation: back to the newest window, nothing in it animates.
   useEffect(() => {
     setWindowSize(MESSAGE_WINDOW);
     isNearBottomRef.current = true;
+    openedAtRef.current = Date.now();
+    enterRef.current.clear();
+    decidedRef.current.clear();
   }, [activePeer]);
+
+  // The list's own height changes (keyboard opening, composer growing, panel above): a reader at the
+  // bottom stays at the bottom, without a scroll animation.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      if (isNearBottomRef.current) el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const hiddenCount = Math.max(0, messages.length - windowSize);
   const visible = useMemo(() => (hiddenCount > 0 ? messages.slice(hiddenCount) : messages), [messages, hiddenCount]);
@@ -146,7 +192,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
   // Rock-solid container-only scroll to bottom — never uses scrollIntoView
   // which can cause ancestor layout shifts or jumpy scrolling on webkit/blink.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!scrollRef.current) return;
     const container = scrollRef.current;
     const lastMsg = messages[messages.length - 1];
@@ -158,13 +204,13 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
     // Auto-scroll if user is already looking at the bottom, or if this user just sent a message
     if (isNearBottomRef.current || isMe) {
+      // One jump to the end, no smooth scroll: the new bubble itself rises into place (transform),
+      // so a scroll animation on top of it would be a second motion. Runs before paint (layout
+      // effect), so the new bubble is never drawn below the fold first. A second pass on the next
+      // frame covers a badge or image that changed the height meanwhile (no-op otherwise).
       container.scrollTop = container.scrollHeight;
-      // Secondary RAF pass to ensure layout after media/badge paint
-      const raf = requestAnimationFrame(() => {
-        if (container) {
-          container.scrollTop = container.scrollHeight;
-        }
-      });
+      isNearBottomRef.current = true;
+      const raf = requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
       return () => cancelAnimationFrame(raf);
     }
   }, [messages.length, activePeer, isTyping, isSending, myAddressLower, clientInboxIdLower]);
@@ -194,11 +240,13 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
       )}
       {visible.map((msg: any) => (
         <MemoizedMessageRow
-          key={msg.id}
+          // Stable from the optimistic insert to the confirmed copy (renderKey): never remounts on send.
+          key={renderKey(msg)}
           msg={msg}
           myAddressLower={myAddressLower}
           clientInboxIdLower={clientInboxIdLower}
           renderMessage={renderMessage}
+          enter={shouldEnter(msg)}
         />
       ))}
 

@@ -10,6 +10,9 @@ import {
   newOptimisticId,
   optimisticMessage,
   sendStatusLabel,
+  adoptOptimistic,
+  renderKey,
+  strongerStatus,
 } from '@/lib/chat/optimistic-send';
 
 const base = { senderInboxId: 'me', content: 'hi', conversationId: 'dm-0xabc' };
@@ -44,7 +47,8 @@ describe('optimistic send', () => {
     const prev = [{ id: 'optimistic-1', status: 'sending', content: 'hi' }];
     expect(confirmOptimistic(prev, 'optimistic-1', 'real')).toEqual([{ id: 'real', status: 'sent', content: 'hi' }]);
     const echoed = [{ id: 'optimistic-1', status: 'sending' }, { id: 'real', status: 'sent' }];
-    expect(confirmOptimistic(echoed, 'optimistic-1', 'real')).toEqual([{ id: 'real', status: 'sent' }]);
+    // The echoed real copy takes over the optimistic render key, so the bubble does not remount.
+    expect(confirmOptimistic(echoed, 'optimistic-1', 'real')).toEqual([{ id: 'real', status: 'sent', clientKey: 'optimistic-1' }]);
     // A receipt that already arrived is kept.
     expect(confirmOptimistic([{ id: 'optimistic-2', status: 'read' }], 'optimistic-2', 'r2')[0].status).toBe('read');
   });
@@ -113,3 +117,27 @@ describe('chat wiring', () => {
     expect(list).toMatch(/prev\.msg\.failed === next\.msg\.failed/);
   });
 });
+
+describe('one bubble from send to read (no remount, no re-sort, status only forward)', () => {
+  it('the render key survives the id swap, whichever path confirms the message', () => {
+    const opt = optimisticMessage({ id: 'optimistic-9-1', senderInboxId: 'me', content: 'hi', conversationId: 'dm-x', sentAtNs: 1_000 });
+    expect(renderKey(opt)).toBe('optimistic-9-1');
+    const viaSend = confirmOptimistic([opt], opt.id, 'real-9');
+    expect(viaSend[0].id).toBe('real-9');
+    expect(renderKey(viaSend[0])).toBe('optimistic-9-1');
+    const viaEcho = adoptOptimistic(opt, { ...opt, id: 'real-9', clientKey: undefined, sentAtNs: 999_000, status: 'sent' });
+    expect(renderKey(viaEcho)).toBe('optimistic-9-1');
+    // Keeps its local time, so ten rapid sends never reorder when their network times arrive.
+    expect(viaEcho.sentAtNs).toBe(1_000);
+  });
+
+  it('status never moves backwards, and a receipt that came first is kept on confirmation', () => {
+    expect(strongerStatus('read', 'delivered')).toBe('read');
+    expect(strongerStatus('sent', 'delivered')).toBe('delivered');
+    expect(strongerStatus(undefined, 'sent')).toBe('sent');
+    const opt = { id: 'optimistic-1', clientKey: 'optimistic-1', sentAtNs: 5, status: 'delivered' };
+    expect(adoptOptimistic(opt, { id: 'r', sentAtNs: 9, status: 'sent' }).status).toBe('delivered');
+    expect(adoptOptimistic({ ...opt, status: 'sending' }, { id: 'r', sentAtNs: 9, status: undefined as any }).status).toBe('sent');
+  });
+});
+

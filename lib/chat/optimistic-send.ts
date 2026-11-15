@@ -17,6 +17,11 @@ export type SendStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'scheduled'
 
 export interface OptimisticMessage {
   id: string;
+  /**
+   * Render key that never changes: the optimistic id, kept when the message takes its real id.
+   * The list keys bubbles by it, so confirming a message never remounts (and re-animates) it.
+   */
+  clientKey?: string;
   senderInboxId: string;
   content: string;
   burnAtNs?: number;
@@ -40,7 +45,7 @@ export function isOptimisticId(id: unknown): boolean {
 }
 
 export function optimisticMessage(input: Omit<OptimisticMessage, 'status' | 'sentAtNs'> & { sentAtNs?: number }): OptimisticMessage {
-  return { ...input, sentAtNs: input.sentAtNs ?? Date.now(), status: 'sending' };
+  return { ...input, clientKey: input.id, sentAtNs: input.sentAtNs ?? Date.now(), status: 'sending' };
 }
 
 /** Appends without re-sorting the whole list: a new message is almost always the newest. */
@@ -55,7 +60,12 @@ export function insertOptimistic<T extends { sentAtNs: number }>(prev: T[], msg:
  * If the stream already delivered the real message, the copy is dropped instead (no duplicate).
  */
 export function confirmOptimistic<T extends { id: string; status?: string }>(prev: T[], optimisticId: string, realId: string): T[] {
-  if (prev.some((m) => m.id === realId)) return prev.filter((m) => m.id !== optimisticId);
+  if (prev.some((m) => m.id === realId)) {
+    // The real copy is already listed: it takes over the optimistic one's render key and place.
+    const opt = prev.find((m) => m.id === optimisticId);
+    const rest = prev.filter((m) => m.id !== optimisticId);
+    return opt ? rest.map((m) => (m.id === realId ? (adoptOptimistic(opt as any, m as any) as T) : m)) : rest;
+  }
   return prev.map((m) => (m.id === optimisticId ? { ...m, id: realId, status: m.status && m.status !== 'sending' ? m.status : 'sent' } : m));
 }
 
@@ -94,4 +104,31 @@ export function createSendQueue() {
       return pending;
     },
   };
+}
+
+/** The key a message is rendered under: stable from the optimistic insert to the confirmed copy. */
+export function renderKey(m: { id: string; clientKey?: string }): string {
+  return m.clientKey ?? m.id;
+}
+
+const STATUS_RANK: Record<string, number> = { scheduled: 0, sending: 1, sent: 2, delivered: 3, read: 4 };
+
+/** Status only moves forward (sent → delivered → read): a late "delivered" never undoes "read". */
+export function strongerStatus(a: string | undefined, b: string | undefined): string | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return (STATUS_RANK[b] ?? -1) > (STATUS_RANK[a] ?? -1) ? b : a;
+}
+
+/**
+ * The confirmed copy of a message that was shown optimistically: keeps the optimistic render key and
+ * position (its local time), so the bubble neither remounts nor moves, and keeps the further status.
+ */
+export function adoptOptimistic<T extends { id: string; clientKey?: string; sentAtNs: number; status?: string }>(optimistic: T, confirmed: T): T {
+  return {
+    ...confirmed,
+    clientKey: optimistic.clientKey ?? optimistic.id,
+    ...(optimistic.sentAtNs !== undefined ? { sentAtNs: optimistic.sentAtNs } : {}),
+    status: strongerStatus(strongerStatus(optimistic.status === 'sending' ? undefined : optimistic.status, confirmed.status), 'sent'),
+  } as T;
 }
