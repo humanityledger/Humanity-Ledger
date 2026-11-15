@@ -8,7 +8,8 @@ const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 describe('Ledger sponsor (P1)', () => {
   it('the contract checks the signer, signature, expiry, one use and the fee cap before paying', () => {
     const c = read('contracts/aztec/sponsor/src/main.nr');
-    const order = ['voucher expired', 'unknown signer', 'bad signature', 'fee above cap', 'push_nullifier_unsafe', 'set_as_fee_payer', 'end_setup'].map((k) => c.indexOf(k));
+    // The calls themselves (comments may name them earlier: the #[allow_phase_change] note does).
+    const order = ['voucher expired', 'unknown signer', 'bad signature', 'fee above cap', 'self.context.push_nullifier_unsafe(', 'self.context.set_as_fee_payer()', 'self.context.end_setup()'].map((k) => c.indexOf(k));
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // Fees compared as Fields, never through a truncating u128 cast.
