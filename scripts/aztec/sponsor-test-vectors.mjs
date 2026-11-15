@@ -6,7 +6,7 @@
 // test the_binding_names_this_instance_and_network checks it), chain id and version are the TXE's.
 import crypto from 'node:crypto';
 const N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
-const [instance = '0x2c8dac6596b1ce2388c87d0a989c823d0a9ed527a9e18d6abdd5ee7daea4fab3', chain = '1', version = '1'] = process.argv.slice(2);
+const [instance = '0x11ff7071e585e2ac7ffab17511d9d8cb919c6975d059e98670e294572c6975b8', chain = '1', version = '1'] = process.argv.slice(2);
 // Fixed test key (test-only, never used anywhere real).
 const priv = Buffer.from('11'.repeat(32), 'hex');
 const ecdh = crypto.createECDH('secp256k1'); ecdh.setPrivateKey(priv);
