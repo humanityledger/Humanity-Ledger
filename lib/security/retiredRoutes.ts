@@ -33,6 +33,8 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/auth/qr-session',
   '/api/auth/qr-sync',
   '/api/auth/verify',
+  // Sponsored fees removed on 2026-11-15 (product decision): every account pays its own fees.
+  '/api/aztec/sponsor',
   '/api/aztec/fhe-router',
   '/api/aztec/restore-session',
   '/api/aztec/session',

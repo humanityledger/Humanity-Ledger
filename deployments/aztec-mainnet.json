@@ -6,18 +6,7 @@
     "l1ChainId": 1,
     "rollupVersion": 2070860440
   },
-  "sponsoredFpc": {
-    "$comment": "RETIRED 15 Nov 2026: this instance cannot pay. Its sponsor() lacks #[allow_phase_change], so every sponsored transaction fails with 'Phase change detected on function with phase check' (first account attempt, 15 Nov 2026). It holds 74 AZTEC of Fee Juice that cannot be withdrawn. Replace this record with the new instance once deployed. Original note: LedgerSponsor (contracts/aztec/sponsor, docs/SPONSOR.md): pays the fee of a transaction for a signed-in user without Fee Juice, once per server-signed voucher, max fee 40 AZTEC. Deployed from the Ledger Chat private wallet of 0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675 (operator tool), universal deployment, 14 Nov 2026. Workflow 'Aztec verify sponsor' on 15 Nov 2026: network, class, server key and cap all PASS. Funded with 9 AZTEC of Fee Juice (claimed 15 Nov 2026); Fee Juice in the sponsor cannot be withdrawn. Not audited.",
-    "contract": "LedgerSponsor",
-    "address": "0x268bb3e40fc6fdb39e482ef1214788b5cbedf5ddadb658367ef6df41090aafa8",
-    "classId": "0x0c1fc3f9c3d5f7fad2fcd8508122b711cfe48564253fc095271661a849e58102",
-    "deployTx": "0x0011f6280a12986235040a6f0b760fb834af833983060679169c95867337ee1a",
-    "deployBlock": 30105,
-    "deployFeeAztec": "3.979",
-    "maxFeeAztec": "40",
-    "feeJuiceContract": "0x0000000000000000000000000000000000000000000000000000000000000003",
-    "feeJuiceBalanceSlot": "0x100b088e31e33dba6a8a8408d18100cf83dd3cdc5d9acdab9d1c50273f0c8005"
-  },
+  "sponsoredFpc": null,
   "audit": null,
   "contracts": [],
   "$tokensComment": "Private tokens the wallet may list on Alpha (NEXT_PUBLIC_AZTEC_TOKENS must match these: scripts/aztec/check-alpha-config.mjs). key is the wallet's internal slot, never shown to users; symbol is what users see. deployBlock 0 (status pending-preflight) means not yet confirmed: the preflight (test/live/aztec-mainnet-preflight.live.test.ts) reads the block of deployTx from the node and prints it, together with the instance's class ID; both are then written here. Nothing is invented. HLC is issued by Humanity Ledger, is not backed by and has no relation to USDC.",

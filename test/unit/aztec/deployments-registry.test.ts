@@ -75,17 +75,13 @@ describe('deployments/aztec-mainnet.json', () => {
   const mainnet = JSON.parse(fs.readFileSync(path.join(root, 'deployments/aztec-mainnet.json'), 'utf8'));
   const entries = mainnet.contracts as Entry[];
 
-  it('names the pinned Alpha network, and LedgerSponsor as the only sponsored fee payer', async () => {
+  it('names the pinned Alpha network and no sponsored fee payer', async () => {
     const { AZTEC_NETWORKS } = await import('@/lib/aztec/sequencer/networks');
     expect(mainnet.network.l1ChainId).toBe(1);
     expect(mainnet.network.rollupVersion).toBe(AZTEC_NETWORKS.mainnet.rollupVersion);
     expect(mainnet.network.nodeUrl).toBe(AZTEC_NETWORKS.mainnet.publicNodeRpc);
-    // Not the testnet's canonical SponsoredFPC (pays for anyone): our voucher-gated LedgerSponsor.
-    const sp = mainnet.sponsoredFpc;
-    expect(sp.contract).toBe('LedgerSponsor');
-    for (const k of ['address', 'classId', 'deployTx', 'feeJuiceContract', 'feeJuiceBalanceSlot']) expect(sp[k], k).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(Number.isInteger(sp.deployBlock) && sp.deployBlock > 0).toBe(true);
-    expect(sp.maxFeeAztec).toBe('40');
+    // Product decision, 15 Nov 2026: Ledger Chat sponsors no fee on Alpha.
+    expect(mainnet.sponsoredFpc).toBeNull();
   });
 
   it('records every instance with its transaction and block, keyed when it holds tokens', () => {

@@ -22,9 +22,8 @@ function snapshot(over: Partial<Snapshot> = {}): Snapshot {
   return {
     nodeHost: 'aztec-mainnet.drpc.org',
     node: { ok: true, blockNumber: 30000, nodeVersion: '6.0.0', l1ChainId: 1, rollupVersion: 2070860440, drift: [] },
-    record: { contracts: [], tokens: [HLC], audit: false, sponsoredFpc: null },
+    record: { contracts: [], tokens: [HLC], audit: false },
     token: { totalSupply: 1_000_000_000_000_000n, admin: 0x01c7e18f1751ea94e3d63aad2d0b7221642ad299454f769103f0d32364ce549bn },
-    sponsor: { configuredAddress: null, requests24h: null },
     pins: { l1ChainId: 1, rollup: '0xE37A', feeJuicePortal: '0x5343', nodeVersion: '6.0.0', rollupVersion: 2070860440 },
     ...over,
   };
@@ -77,7 +76,6 @@ describe('buildMetrics', () => {
     expect(byId(ms, 'protocol-fees').detail).toMatch(/Phase 0 pending/);
     expect(byId(ms, 'shielded-volume')).toMatchObject({ status: 'not-measurable' });
     expect(byId(ms, 'shielded-volume').value).toBeUndefined();
-    expect(byId(ms, 'sponsor-pool')).toMatchObject({ status: 'not-deployed' });
     expect(byId(ms, 'audit')).toMatchObject({ status: 'not-deployed', value: 'None (Alpha)' });
     expect(byId(ms, 'contracts')).toMatchObject({ status: 'live', value: '1' });
   });
@@ -124,12 +122,10 @@ describe('buildMetrics', () => {
     expect(byId(ms, 'hlc-supply').status).toBe('not-deployed');
   });
 
-  it('a sponsor counter that cannot be read is not shown as 0', () => {
-    const ms = buildMetrics(snapshot({ sponsor: { configuredAddress: '0x' + '1'.repeat(64), requests24h: null } }));
-    expect(byId(ms, 'sponsor-requests')).toMatchObject({ status: 'unavailable' });
-    expect(byId(ms, 'sponsor-requests').value).toBeUndefined();
-    // Configured on the server but not recorded: still not deployed.
-    expect(byId(ms, 'sponsor-pool').status).toBe('not-deployed');
+  it('states that each account pays its own network fees, with no sponsorship metric', () => {
+    const ms = buildMetrics(snapshot());
+    expect(byId(ms, 'fee-payer')).toMatchObject({ group: 'onboarding', value: 'Paid by each account' });
+    expect(ms.some((m) => /sponsor/i.test(m.id))).toBe(false);
   });
 });
 

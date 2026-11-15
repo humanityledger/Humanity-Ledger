@@ -47,7 +47,7 @@ export const FEE_ROUTING = {
   method: 'Open-market purchase spread over a 7-day TWAP, executed by a public contract; purchased HLC is burned.',
 } as const;
 
-/** Staking gives utility, never a share of fees: lower agreement fees and onboarding sponsorship quota. */
+/** Staking gives utility, never a share of fees: lower agreement fees. */
 export const STAKING_LOCKS = [
   { id: 'flexible', label: 'Flexible', months: 0, weightBps: 10_000n },
   { id: '6m', label: '6 months', months: 6, weightBps: 18_000n },

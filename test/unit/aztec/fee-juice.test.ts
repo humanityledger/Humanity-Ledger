@@ -285,9 +285,9 @@ describe('gasLimitsFromSimulation (estimated gas, README question 6)', () => {
   });
 });
 
-describe('gasLimitsFromSimulation with a larger pad (sponsored transactions)', () => {
+describe('gasLimitsFromSimulation with a larger pad', () => {
   class Gas { constructor(public daGas: number, public l2Gas: number) {} }
-  it('doubles the simulated gas when asked, for the sponsor call that the simulation leaves out', async () => {
+  it('applies the pad it is given', async () => {
     const { gasLimitsFromSimulation } = await import('@/lib/aztec/fee-juice');
     const r = gasLimitsFromSimulation({ totalGas: new Gas(1000, 900_000), teardownGas: new Gas(0, 0) }, 2) as any;
     expect(r.gasLimits.l2Gas).toBe(1_850_000);

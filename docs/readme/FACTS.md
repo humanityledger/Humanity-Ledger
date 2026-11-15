@@ -76,5 +76,4 @@ Every hash and figure in [`README.md`](../../README.md), with the file and line 
 |---|---|---|
 | Fees and note/nullifier counts of the L2 transactions in README section 3 | Aztecscan tx-effects pages | 14 Nov 2026 |
 | Fee Juice left after account creation (18.2011 of 20 deposited) | Ledger Chat wallet screen | 14 Nov 2026 |
-| TXE counts: escrow 16, identity 20, streams 25, sponsor 10 | Log of GitHub Actions run 43646090307, workflow "Aztec contracts" | 14 Nov 2026 |
-| "Aztec verify sponsor" passes on Alpha | GitHub Actions run 43658893437 | 15 Nov 2026 |
+| TXE counts: escrow 16, identity 20, streams 25 | Log of GitHub Actions run 43646090307, workflow "Aztec contracts" | 14 Nov 2026 |

@@ -2,7 +2,7 @@
  * lib/protocol/read.ts — server only.
  *
  * Reads one snapshot for the protocol dashboard: the pinned Aztec Alpha node, the deployment
- * record, the recorded HLC token's public storage and the sponsor counter. Every read has a
+ * record and the recorded HLC token's public storage. Every read has a
  * timeout and fails closed: a failed read becomes an error in the snapshot, which the dashboard
  * shows as "Not read". Nothing falls back to a default figure.
  *
@@ -26,7 +26,6 @@ import {
   parseSafeInt,
   storageSlot,
   type ProtocolReportBody,
-  type RecordedSponsor,
   type RecordedToken,
   type Snapshot,
 } from './metrics';
@@ -95,25 +94,14 @@ function recordedTokens(raw: any): RecordedToken[] {
     }));
 }
 
-/** deployments/aztec-mainnet.json → sponsoredFpc: null, an address (legacy), or the full record. */
-export function recordedSponsor(v: unknown): RecordedSponsor | null {
-  if (typeof v === 'string') return HEX32.test(v) ? { address: v.toLowerCase(), feeJuiceContract: null, feeJuiceBalanceSlot: null } : null;
-  const o = v as { address?: unknown; feeJuiceContract?: unknown; feeJuiceBalanceSlot?: unknown } | null;
-  if (!o || typeof o !== 'object' || typeof o.address !== 'string' || !HEX32.test(o.address)) return null;
-  const hexOrNull = (x: unknown) => (typeof x === 'string' && HEX32.test(x) ? x.toLowerCase() : null);
-  return { address: o.address.toLowerCase(), feeJuiceContract: hexOrNull(o.feeJuiceContract), feeJuiceBalanceSlot: hexOrNull(o.feeJuiceBalanceSlot) };
-}
-
 function readRecord(): Snapshot['record'] {
   const raw: any = mainnetRecord;
   const authorized = authorizedMainnetRecord(raw, { l1ChainId: PINS.l1ChainId, rollupVersion: PINS.rollupVersion });
   if (!authorized) return undefined;
-  const sponsor = recordedSponsor(raw?.sponsoredFpc);
   return {
     contracts: (authorized.contracts as ReadonlyArray<{ name: string }>).map((c) => c.name),
     tokens: recordedTokens(raw),
     audit: authorized.audit !== null,
-    sponsoredFpc: sponsor,
   };
 }
 
@@ -147,22 +135,6 @@ async function readPublicField(url: string, block: number, contract: string, slo
   }
 }
 
-async function readSponsorRequests24h(): Promise<number | null> {
-  try {
-    const { getRedisClient } = await import('@/lib/redis');
-    const redis: any = await getRedisClient();
-    const since = Date.now() - 86_400_000;
-    const n = await Promise.race([
-      redis.zcount('aztec-sponsor-day:all', since, '+inf'),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3_000)),
-    ]);
-    const count = parseSafeInt(n);
-    return count === undefined ? null : count;
-  } catch {
-    return null;
-  }
-}
-
 export async function readSnapshot(): Promise<Snapshot> {
   const url = nodeUrl();
   let nodeHost = 'unknown';
@@ -173,10 +145,8 @@ export async function readSnapshot(): Promise<Snapshot> {
   }
 
   const record = readRecord();
-  const sponsorAddress = (process.env.NEXT_PUBLIC_AZTEC_SPONSOR || '').trim() || null;
 
-  const [nodeResult, requests24h] = await Promise.all([
-    (async (): Promise<Snapshot['node']> => {
+  const nodeResult = await (async (): Promise<Snapshot['node']> => {
       try {
         const [blockRaw, info]: [unknown, any] = await Promise.all([
           jsonRpc(url, 'node_getBlockNumber', []),
@@ -201,9 +171,7 @@ export async function readSnapshot(): Promise<Snapshot> {
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : 'read failed' };
       }
-    })(),
-    sponsorAddress ? readSponsorRequests24h() : Promise.resolve(null),
-  ]);
+    })();
 
   // Token storage only from a node that matches the pins, at the block just read.
   let token: Snapshot['token'];
@@ -231,29 +199,11 @@ export async function readSnapshot(): Promise<Snapshot> {
     }
   }
 
-  // Sponsor Fee Juice (P-12): only with the slot and contract recorded at deployment, from a node
-  // that matches the pins, at the block just read. No slot is computed on the server.
-  let sponsorBalance: Snapshot['sponsor']['balance'];
-  const sp = record?.sponsoredFpc;
-  if (sp) {
-    if (!sp.feeJuiceContract || !sp.feeJuiceBalanceSlot) {
-      sponsorBalance = { error: 'the Fee Juice balance slot is not recorded (scripts/aztec/fee-juice-slot.mjs)' };
-    } else if (!nodeResult.ok) {
-      sponsorBalance = { error: 'the node did not answer' };
-    } else if (nodeResult.drift.length) {
-      sponsorBalance = { error: 'the node differs from the pins' };
-    } else {
-      const v = await readPublicField(url, nodeResult.blockNumber, sp.feeJuiceContract, BigInt(sp.feeJuiceBalanceSlot));
-      sponsorBalance = typeof v === 'bigint' && v >= 2n ** 128n ? { error: 'value wider than u128' } : v;
-    }
-  }
-
   return {
     nodeHost,
     node: nodeResult,
     record,
     token,
-    sponsor: { balance: sponsorBalance, configuredAddress: sponsorAddress, requests24h },
     pins: {
       l1ChainId: PINS.l1ChainId,
       rollup: PINS.l1.rollup,
