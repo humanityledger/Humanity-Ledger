@@ -16,7 +16,7 @@
  *    derives a new epoch key per membership change. No member can decrypt
  *    messages from epochs they were not part of.
  *
- * MLS SECURITY GUARANTEE (XMTP v5.3.0):
+ * MLS SECURITY GUARANTEE (XMTP v5.2.0):
  * Each group has a cryptographic epoch. When a member is added or removed,
  * a new epoch key is derived. A removed member cannot decrypt future messages.
  * A new member cannot decrypt past messages. Forward secrecy is guaranteed.

@@ -1,6 +1,15 @@
 // circuits/streams/src/main.nr
 // Humanity Ledger Protocol — Continuous Payment Stream Withdrawal Circuit
 //
+// STATUS: DEPRECATED — historical reference only.
+// The long-term path is the aztec-nr PaymentStream contract (contracts/aztec/streams/).
+// This standalone Noir circuit has a critical known soundness issue ZK-01 (double claim):
+// `withdrawn_amount` is a free private input and the same accrual can be claimed multiple
+// times. See docs/AZTEC_FOUNDATION_DOSSIER.md § 4 and circuits/CONSTRAINT_COMPLETENESS.md.
+// ZK-02 is also critical (no payout address binding). The v2 version (circuits/streams_v2/)
+// fixes ZK-01 to ZK-05 but is also not used in production. See docs/zk/V2_CIRCUITS.md.
+// A reproduction test for ZK-01 is at test/circuits/streams_zk01_known_issue.test.ts.
+//
 // Invariants enforced:
 // 1. Stream commitment: commitment == H(sender_secret, recipient_pubkey, total_allocation, rate_per_second, start_time, salt)
 // 2. Temporal monotonicity: current_time >= start_time

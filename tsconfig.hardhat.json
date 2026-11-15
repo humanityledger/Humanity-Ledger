@@ -11,6 +11,7 @@
     "include": [
         "./scripts",
         "./test",
+        "./ignition",
         "./hardhat.config.ts"
     ],
     "files": [

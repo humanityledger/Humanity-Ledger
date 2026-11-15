@@ -155,10 +155,10 @@ model User {
   extendedSettings      Json?   @default("{}")
 
   //  Sonar Alerts 
-  emailAlerts         Boolean @default(false)
-  telegramAlerts      Boolean @default(false)
+  emailAlerts          Boolean @default(false)
+  telegramAlerts       Boolean @default(false)
   ledgerAlertThreshold Float   @default(1000000)
-  soundEffects        Boolean @default(true)
+  soundEffects         Boolean @default(true)
 
   //  Ledger Chat 
   chatName    String  @default("Ledger User")
@@ -262,22 +262,22 @@ model ApiKey {
 }
 
 model AuthUser {
-  id                  String    @id @default(uuid())
-  email String? @unique
-  name                String?
-  username            String?   @unique
-  passwordHash        String?
-  walletAddress       String?   @unique
-  verified            Boolean   @default(false)
-  verificationCode    String? // legacy inline code field (kept for compatibility)
-  codeExpiresAt       DateTime?
-  totpSecret          String?   @db.Text
-  backupCodes         String[]  @default([])
-  lastLoginAt         DateTime?
-  recoveryEmail       String?
+  id               String    @id @default(uuid())
+  email            String?   @unique
+  name             String?
+  username         String?   @unique
+  passwordHash     String?
+  walletAddress    String?   @unique
+  verified         Boolean   @default(false)
+  verificationCode String? // legacy inline code field (kept for compatibility)
+  codeExpiresAt    DateTime?
+  totpSecret       String?   @db.Text
+  backupCodes      String[]  @default([])
+  lastLoginAt      DateTime?
+  recoveryEmail    String?
   // encryptedPrivateKey String? (Removed for Non-Custodial Sovereign compliance)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Enclave PIN (Turing Shield Gate) — HMAC-SHA256 hash, never plaintext
   enclavePinHash String?
@@ -303,7 +303,7 @@ model AuthUser {
 
 model EmailSubscriber {
   id               String   @id @default(uuid())
-  email String? @unique
+  email            String?  @unique
   frequency        String   @default("weekly") // "daily", "weekly", "monthly"
   subscribed       Boolean  @default(true)
   unsubscribeToken String?  @unique
@@ -326,7 +326,7 @@ model WatchedWallet {
   txCount       Int      @default(0)
   riskScore     Float    @default(50)
   activityScore Float    @default(0)
-  isLedger       Boolean  @default(false)
+  isLedger      Boolean  @default(false)
   isSmart       Boolean  @default(false)
   alertsEnabled Boolean  @default(false)
   metadata      Json? // Stats breakdown cache
@@ -375,8 +375,8 @@ model ChatContact {
 // Instagram-style friend request system
 model ChatContactRequest {
   id          String   @id @default(uuid())
-  fromAddress String   // wallet address of requester
-  toAddress   String   // wallet address of recipient
+  fromAddress String // wallet address of requester
+  toAddress   String // wallet address of recipient
   status      String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -387,15 +387,16 @@ model ChatContactRequest {
 }
 
 model PendingChatMessage {
-  id          String   @id @default(uuid())
-  sender      String
-  recipient   String
-  content     String   @db.Text
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  sender    String
+  recipient String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
 
   @@index([recipient])
   @@index([sender])
 }
+
 model ExchangePosition {
   id            String   @id @default(uuid())
   userId        String
@@ -485,9 +486,9 @@ model SiweNonce {
 model CallRoom {
   id               String   @id @default(cuid())
   roomId           String   @unique // 8-char alphanumeric, user-visible
-  passwordHash     String   // SHA-256 of password, never stored plaintext
-  hostAddress      String   // Wallet address of room creator
-  moderatorAddress String   // Current moderator (starts as host, can be transferred)
+  passwordHash     String // SHA-256 of password, never stored plaintext
+  hostAddress      String // Wallet address of room creator
+  moderatorAddress String // Current moderator (starts as host, can be transferred)
   isVideo          Boolean  @default(true)
   maxParticipants  Int      @default(20)
   participants     String[] // Array of wallet addresses currently in room
@@ -508,19 +509,17 @@ model CallRoom {
 // 
 
 model CallRoomToken {
-  id          String   @id @default(cuid())
-  roomId      String
-  address     String
-  token       String   @unique // HMAC-signed, single-use
-  used        Boolean  @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  roomId    String
+  address   String
+  token     String   @unique // HMAC-signed, single-use
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   @@index([roomId, address])
   @@index([token])
 }
-
-
 
 // 
 // CANONICAL IDENTITY (P2 SIWE MIGRATION)
@@ -534,22 +533,22 @@ model HumanityIdentity {
   verificationStatus String    @default("UNVERIFIED") // UNVERIFIED, SIWE_VERIFIED, ZK_VERIFIED
   createdAt          DateTime  @default(now())
   lastVerifiedAt     DateTime?
-  
-  permissions        String[]  @default([]) // e.g. "registry:write", "admin:all"
-  
-  sessions           HumanitySession[]
+
+  permissions String[] @default([]) // e.g. "registry:write", "admin:all"
+
+  sessions HumanitySession[]
 }
 
 model HumanitySession {
-  sessionId            String   @id @default(uuid())
+  sessionId            String    @id @default(uuid())
   identityId           String
-  authenticationMethod String   // "SIWE", "LEGACY_ADAPTER"
-  createdAt            DateTime @default(now())
+  authenticationMethod String // "SIWE", "LEGACY_ADAPTER"
+  createdAt            DateTime  @default(now())
   expiresAt            DateTime
   revokedAt            DateTime?
-  lastSeenAt           DateTime @default(now())
-  securityContext      Json?    // { ip: "...", userAgent: "..." }
-  version              Int      @default(1)
+  lastSeenAt           DateTime  @default(now())
+  securityContext      Json? // { ip: "...", userAgent: "..." }
+  version              Int       @default(1)
 
   identity HumanityIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
 
@@ -1110,7 +1109,7 @@ model UserPrivacyProfile {
 model CosmicEntity {
   id                String   @id @default(uuid())
   seedHash          String   @unique // SHA-256 del evento ledger origen
-  ledgerEventId      String? // FK a GlobalLedgerEvent
+  ledgerEventId     String? // FK a GlobalLedgerEvent
   tier              String // NARWHAL | KRAKEN | LEVIATHAN | MEGALODON
   amountUSD         Float
   chain             String
@@ -1592,7 +1591,6 @@ model ModerationReport {
   status          String   @default("PENDING")
 }
 
-
 // 
 // LEDGER CHAT SETTINGS ENGINE - Abysmally complex backend integration
 // 
@@ -1605,33 +1603,34 @@ model UserSettings {
   @@index([walletAddress])
 }
 
-
-
-
 // ─── COMMUNITIES & STATUS UPDATES ──────────────────────────────────────────
 
 model StatusUpdate {
-  id          String   @id @default(cuid())
+  id           String   @id @default(cuid())
   ownerAddress String
-  text        String
-  emoji       String?
-  privacy     String   @default("contacts") // "everyone", "contacts", "except"
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime
+  text         String
+  emoji        String?
+  privacy      String   @default("contacts") // "everyone", "contacts", "except"
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
 
   @@index([ownerAddress])
   @@index([expiresAt])
 }
 
 model Community {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  isPrivate   Boolean  @default(false)
+  id           String   @id @default(cuid())
+  name         String
+  description  String
+  isPrivate    Boolean  @default(false)
   ownerAddress String
-  joinCode    String   @unique
-  createdAt   DateTime @default(now())
-  
+  joinCode     String   @unique
+  createdAt    DateTime @default(now())
+  // R-17 (MLS_MIGRATION.md): when true, all channels in this community use
+  // XMTP MLS groups (xmtpGroupId on each CommunityChannel). The post endpoint
+  // returns 410 for migrated communities; content is not stored on this server.
+  communityMls Boolean  @default(false)
+
   members     CommunityMember[]
   channels    CommunityChannel[]
   permissions CommunityPermission?
@@ -1663,7 +1662,7 @@ model CommunityApp {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  community Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  community Community           @relation(fields: [communityId], references: [id], onDelete: Cascade)
   entries   CommunityAppEntry[]
 
   @@index([communityId, status])
@@ -1679,7 +1678,7 @@ model CommunityAppEntry {
   scope     String
   key       String
   value     Json?
-  updatedBy String   // lowercase address of the last writer, set by the server
+  updatedBy String // lowercase address of the last writer, set by the server
   updatedAt DateTime @updatedAt
 
   app CommunityApp @relation(fields: [appId], references: [id], onDelete: Cascade)
@@ -1689,20 +1688,19 @@ model CommunityAppEntry {
 }
 
 model CommunityMember {
-  id           String    @id @default(cuid())
-  communityId  String
+  id            String   @id @default(cuid())
+  communityId   String
   walletAddress String
-  role         String    @default("MEMBER") // ADMIN, MEMBER
-  joinedAt     DateTime  @default(now())
+  role          String   @default("MEMBER") // ADMIN, MEMBER
+  joinedAt      DateTime @default(now())
 
-  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
   @@unique([communityId, walletAddress])
   @@index([walletAddress])
 }
 
 // Removed: CommunityMessage (Centralized Storage)
-
 
 model QDCreditLedger {
   id             String   @id @default(uuid())
@@ -1725,21 +1723,20 @@ model QDCreditLedger {
 // messages. In E2E groups, peers may be offline. This node stores the encrypted
 // ciphertext of the message, but NO PLAINTEXT is visible to the server.
 model CommunityPost {
-  id             String   @id @default(cuid())
-  communityId    String
-  channelId      String?
-  authorAddress  String
-  content        String   // READABLE BY THE SERVER today (not encrypted). Migration: docs/communities/MLS_MIGRATION.md
-  title          String?
-  contentHtml    String?  // READABLE BY THE SERVER today (not encrypted)
-  likes          Int      @default(0)
-  createdAt      DateTime @default(now())
-  
+  id            String   @id @default(cuid())
+  communityId   String
+  channelId     String?
+  authorAddress String
+  content       String // READABLE BY THE SERVER today (not encrypted). Migration: docs/communities/MLS_MIGRATION.md
+  title         String?
+  contentHtml   String? // READABLE BY THE SERVER today (not encrypted)
+  likes         Int      @default(0)
+  createdAt     DateTime @default(now())
+
   @@index([communityId])
   @@index([authorAddress])
   @@index([communityId, createdAt])
 }
-
 
 // Login Geo Events - GDPR compliant (no raw IP, only hashed + country)
 model LoginGeoEvent {
@@ -1767,7 +1764,6 @@ model LoginGeoEvent {
 // ─────────────────────────────────────────────────────────────────
 // COMMUNITIES (Feature #3 — Ledger Chat's core differentiator)
 
-
 model CommunityChannel {
   id          String   @id @default(cuid())
   communityId String
@@ -1775,33 +1771,39 @@ model CommunityChannel {
   description String?
   isPaid      Boolean  @default(false)
   price       Float?
-  currency    String?  // 'ETH', 'USDC'
+  currency    String? // 'ETH', 'USDC'
   position    Int      @default(0)
   createdAt   DateTime @default(now())
+  // R-17 (MLS_MIGRATION.md): XMTP MLS group ID for this channel.
+  // Null until the community enables the COMMUNITY_MLS flag and the channel
+  // owner creates the group via lib/xmtp/groups.ts createSecureGroup().
+  // Once set, posts are stored by XMTP and this server stores only metadata.
+  xmtpGroupId String?
 
-  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
   @@index([communityId])
+  @@index([xmtpGroupId])
 }
 
 model CommunityPermission {
-  id              String   @id @default(cuid())
-  communityId     String   @unique
-  sendMessages    Boolean  @default(true)
-  sendMedia       Boolean  @default(true)
-  sendStickers    Boolean  @default(true)
-  sendPolls       Boolean  @default(true)
-  embedLinks      Boolean  @default(true)
-  addUsers        Boolean  @default(false)
-  pinMessages     Boolean  @default(false)
-  changeInfo      Boolean  @default(false)
-  slowModeSeconds Int      @default(0)
-  antiSpam        Boolean  @default(false)
-  requireApproval Boolean  @default(false)
-  postApproval    Boolean  @default(false)
-  notifyNewMember Boolean  @default(true)
+  id              String  @id @default(cuid())
+  communityId     String  @unique
+  sendMessages    Boolean @default(true)
+  sendMedia       Boolean @default(true)
+  sendStickers    Boolean @default(true)
+  sendPolls       Boolean @default(true)
+  embedLinks      Boolean @default(true)
+  addUsers        Boolean @default(false)
+  pinMessages     Boolean @default(false)
+  changeInfo      Boolean @default(false)
+  slowModeSeconds Int     @default(0)
+  antiSpam        Boolean @default(false)
+  requireApproval Boolean @default(false)
+  postApproval    Boolean @default(false)
+  notifyNewMember Boolean @default(true)
 
-  community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 }
 
 model PushSubscription {
@@ -1816,14 +1818,13 @@ model PushSubscription {
   @@index([walletAddress])
 }
 
-
 model DirectMessage {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   sender      String
   recipient   String
-  content     String   @db.Text
-  delivered   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  content     String    @db.Text
+  delivered   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
   deliveredAt DateTime?
 
   @@index([recipient, delivered])
@@ -1831,7 +1832,6 @@ model DirectMessage {
   @@index([recipient, createdAt])
   @@index([sender, createdAt])
 }
-
 
 model Story {
   id            String   @id @default(cuid())
@@ -1844,6 +1844,3 @@ model Story {
   @@index([authorAddress])
   @@index([expiresAt])
 }
-
-
-

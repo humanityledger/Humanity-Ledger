@@ -1,6 +1,13 @@
 // circuits/escrow/src/main.nr
 // Humanity Ledger Protocol — Private Escrow Release Circuit
 //
+// STATUS: DEPRECATED — historical reference only.
+// The long-term path is the aztec-nr PrivateEscrow contract (contracts/aztec/escrow/).
+// This standalone Noir circuit has known soundness issues ZK-01 to ZK-07 documented
+// in docs/AZTEC_FOUNDATION_DOSSIER.md § 4 and in circuits/CONSTRAINT_COMPLETENESS.md.
+// No production path uses this circuit. The v2 version (circuits/escrow_v2/) fixes
+// ZK-01 to ZK-05 but is also not used in production. See docs/zk/V2_CIRCUITS.md.
+//
 // Invariants enforced:
 // 1. Escrow commitment binding: commitment == H(sender_secret, recipient_pubkey, amount, salt)
 // 2. Temporal validity: current_timestamp <= deadline

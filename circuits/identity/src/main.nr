@@ -1,6 +1,14 @@
 // circuits/identity/src/main.nr
 // Humanity Ledger Protocol — Anonymous Identity & Compliance Verification
 //
+// STATUS: DEPRECATED — historical reference only.
+// The long-term path is the aztec-nr IdentityCredential contract (contracts/aztec/identity/).
+// This standalone Noir circuit has known soundness issues ZK-04, ZK-05, ZK-06, ZK-07
+// documented in docs/AZTEC_FOUNDATION_DOSSIER.md § 4 and circuits/CONSTRAINT_COMPLETENESS.md.
+// Known issues: anonymity set of two (G3), no domain separation in Pedersen (ZK-04),
+// sanction list hardcoded at compile time (G2). The v2 version (circuits/identity_v2/)
+// fixes these but is also not used in production. See docs/zk/V2_CIRCUITS.md.
+//
 // Invariants enforced:
 // 1. Merkle Membership: identity_secret exists in published identity Merkle tree
 // 2. Compliance check: jurisdiction_code is not on sanction list (jurisdiction_code != SANCTIONED_CODE)
