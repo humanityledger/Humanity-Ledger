@@ -87,13 +87,13 @@ const RIGHT_ACTIONS: ActionDef[] = [
   },
 ];
 
-// Drag constraint constants
+// Drag constraint constants. A full swipe stops here. It never runs the action.
 const DRAG_LEFT_MAX = -175;
 const DRAG_RIGHT_MAX = 120;
 const LEFT_THRESHOLD = -55;
 const RIGHT_THRESHOLD = 45;
-const DEEP_SWIPE_LEFT = -140;
-const DEEP_SWIPE_RIGHT = 95;
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+const SETTLE = { duration: 0.32, ease: EASE };
 
 // ---------------------------------------------------------------------------
 // Component
@@ -114,8 +114,8 @@ export default function SwipeableConversationRow({
   const controls = useAnimation();
   const [revealSide, setRevealSide] = useState<RevealSide>("none");
   const [isDragging, setIsDragging] = useState(false);
-  const [isPastDeepThreshold, setIsPastDeepThreshold] = useState(false);
   const hasVibratedRef = useRef(false);
+  const suppressClickRef = useRef(false);
 
   // Map action id to callback
   const callbackMap: Record<string, (() => void) | undefined> = {
@@ -138,12 +138,8 @@ export default function SwipeableConversationRow({
       // kept for live activity (calls, recording), not for confirming a tap.
 
       // Snap row back to center with spring
-      controls.start({
-        x: 0,
-        transition: { type: "spring", stiffness: 420, damping: 32 },
-      });
+      controls.start({ x: 0, transition: SETTLE });
       setRevealSide("none");
-      setIsPastDeepThreshold(false);
     },
     [controls]
   );
@@ -154,36 +150,26 @@ export default function SwipeableConversationRow({
 
   const onDragStart = useCallback(() => {
     setIsDragging(true);
+    suppressClickRef.current = false;
   }, []);
 
   const onDrag = useCallback(
     (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       const x = info.offset.x;
+      if (Math.abs(x) > 8) suppressClickRef.current = true;
       const crossedNormal = x < LEFT_THRESHOLD || x > RIGHT_THRESHOLD;
-      const crossedDeep = x < DEEP_SWIPE_LEFT || x > DEEP_SWIPE_RIGHT;
-
-      if (crossedDeep !== isPastDeepThreshold) {
-        setIsPastDeepThreshold(crossedDeep);
-        if (crossedDeep && navigator.vibrate) {
-          navigator.vibrate(40);
-        }
-      }
 
       if (crossedNormal && !hasVibratedRef.current) {
-        navigator.vibrate?.(30);
+        navigator.vibrate?.(12);
         hasVibratedRef.current = true;
       }
-      if (!crossedNormal) {
-        hasVibratedRef.current = false;
-      }
+      if (!crossedNormal) hasVibratedRef.current = false;
 
-      if (x < LEFT_THRESHOLD) {
-        setRevealSide("left");
-      } else if (x > RIGHT_THRESHOLD) {
-        setRevealSide("right");
-      }
+      if (x < LEFT_THRESHOLD) setRevealSide("left");
+      else if (x > RIGHT_THRESHOLD) setRevealSide("right");
+      else setRevealSide("none");
     },
-    [isPastDeepThreshold]
+    []
   );
 
   const onDragEnd = useCallback(
@@ -192,72 +178,42 @@ export default function SwipeableConversationRow({
       const x = info.offset.x;
       hasVibratedRef.current = false;
 
-      // Deep full-swipe triggers primary action automatically (Telegram style)
-      if (x < DEEP_SWIPE_LEFT) {
-        handleAction("archive", "Archived", onArchive);
-        return;
-      }
-
-      if (x > DEEP_SWIPE_RIGHT) {
-        handleAction("pin", isPinned ? "Unpinned" : "Pinned", onPin);
-        return;
-      }
-
-      // Medium swipe reveals Dynamic Island options
+      // Stop on the revealed actions. The person taps one to run it.
       if (x < LEFT_THRESHOLD) {
         setRevealSide("left");
-        controls.start({
-          x: DRAG_LEFT_MAX,
-          transition: { type: "spring", stiffness: 400, damping: 28 },
-        });
+        controls.start({ x: DRAG_LEFT_MAX, transition: SETTLE });
         return;
       }
 
       if (x > RIGHT_THRESHOLD) {
         setRevealSide("right");
-        controls.start({
-          x: DRAG_RIGHT_MAX,
-          transition: { type: "spring", stiffness: 400, damping: 28 },
-        });
+        controls.start({ x: DRAG_RIGHT_MAX, transition: SETTLE });
         return;
       }
 
-      // Insufficient swipe — snap back
       setRevealSide("none");
-      setIsPastDeepThreshold(false);
-      controls.start({
-        x: 0,
-        transition: { type: "spring", stiffness: 420, damping: 32 },
-      });
+      controls.start({ x: 0, transition: SETTLE });
     },
-    [controls, handleAction, isPinned, onArchive, onPin]
+    [controls]
   );
 
   // -------------------------------------------------------------------------
   // Render Dynamic Island Action Pill
   // -------------------------------------------------------------------------
 
-  const renderIslandActions = (actions: ActionDef[]) => (
+  const renderIslandActions = (actions: ActionDef[], from: number) => (
     <motion.div
-      initial={{ opacity: 0, scale: 0.82, y: 0 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.82, y: 0 }}
-      transition={{ type: "spring", stiffness: 450, damping: 28 }}
+      initial={{ opacity: 0, x: from }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: from }}
+      transition={{ duration: 0.28, ease: EASE }}
       className="flex items-center gap-1.5 px-2 py-1.5 bg-[#121316]/95 backdrop-blur-2xl rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] ring-1 ring-white/10"
     >
-      {actions.map((action, idx) => (
+      {actions.map((action) => (
         <motion.button
           key={action.id}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 450,
-            damping: 26,
-            delay: idx * 0.03,
-          }}
+          whileTap={{ scale: 0.96 }}
+          transition={{ duration: 0.16, ease: EASE }}
           className="relative flex flex-col items-center justify-center w-11 h-11 rounded-full text-white shadow-md transition-all overflow-hidden group select-none"
           style={{
             background: action.gradient,
@@ -291,7 +247,7 @@ export default function SwipeableConversationRow({
       <AnimatePresence>
         {revealSide === "left" && (
           <div className="absolute inset-y-0 right-3 flex items-center justify-center z-0 pointer-events-auto">
-            {renderIslandActions(LEFT_ACTIONS)}
+            {renderIslandActions(LEFT_ACTIONS, 10)}
           </div>
         )}
       </AnimatePresence>
@@ -300,7 +256,7 @@ export default function SwipeableConversationRow({
       <AnimatePresence>
         {revealSide === "right" && (
           <div className="absolute inset-y-0 left-3 flex items-center justify-center z-0 pointer-events-auto">
-            {renderIslandActions(RIGHT_ACTIONS)}
+            {renderIslandActions(RIGHT_ACTIONS, -10)}
           </div>
         )}
       </AnimatePresence>
@@ -309,11 +265,18 @@ export default function SwipeableConversationRow({
       <motion.div
         drag="x"
         dragConstraints={{ left: DRAG_LEFT_MAX, right: DRAG_RIGHT_MAX }}
-        dragElastic={{ left: 0.2, right: 0.2 }}
+        dragElastic={0}
+        dragMomentum={false}
         animate={controls}
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
+        onClickCapture={(e) => {
+          if (!suppressClickRef.current) return;
+          suppressClickRef.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         className={`relative z-10 will-change-transform bg-white transition-shadow duration-200 ${
           isDragging || revealSide !== "none"
             ? "shadow-md rounded-2xl"

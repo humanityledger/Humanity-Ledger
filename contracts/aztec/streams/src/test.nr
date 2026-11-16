@@ -4,7 +4,7 @@
 // stream per salt; sender cancel (SEC-S12) splits accrued and unaccrued and
 // shares one state nullifier with withdrawals.
 
-use crate::PaymentStream;
+use crate::{quote_protocol_fee, PaymentStream};
 use aztec::{
     context::calls::{PrivateCall, UtilityCall},
     protocol::{abis::function_selector::FunctionSelector, address::AztecAddress, traits::ToField},
@@ -107,12 +107,17 @@ unconstrained fn partial_withdrawals_add_up_and_replace_the_note() {
     let start = open(s, 1, 11);
     s.env.mine_block_at(start + 30);
     withdraw(s, 1, 20);
-    assert(balance(s.env, s.token, s.recipient) == 20);
+    // Fee 1 on 20, so the recipient's note is 19. The stream lost the gross 20.
+    assert(balance(s.env, s.token, s.recipient) == 19);
 
     // The replacement note carries withdrawn = 20: only 10 more have accrued.
     withdraw(s, 1, 10);
-    assert(balance(s.env, s.token, s.recipient) == 30);
+    assert(balance(s.env, s.token, s.recipient) == 28);
     assert(balance(s.env, s.token, s.streams) == TOTAL - 30);
+    assert(
+        balance(s.env, s.token, s.sender) + balance(s.env, s.token, s.recipient) + balance(s.env, s.token, s.streams)
+            == MINTED - 2,
+    );
 }
 
 #[test(should_fail_with = "insufficient accrued balance")]
@@ -139,7 +144,8 @@ unconstrained fn accrual_is_capped_at_the_total_and_the_note_is_consumed() {
     let start = open(s, 1, 11);
     s.env.mine_block_at(start + 1000);
     withdraw(s, 1, TOTAL);
-    assert(balance(s.env, s.token, s.recipient) == TOTAL);
+    // Fee on 100 is 1. net + fee = the deposit.
+    assert(balance(s.env, s.token, s.recipient) == 99);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
@@ -161,7 +167,8 @@ unconstrained fn streams_are_isolated_by_salt() {
     withdraw(s, 1, TOTAL);
     // Stream 2 is untouched by draining stream 1.
     withdraw(s, 2, 50);
-    assert(balance(s.env, s.token, s.recipient) == TOTAL + 50);
+    // 99 from stream 1 and 49 from stream 2.
+    assert(balance(s.env, s.token, s.recipient) == 148);
 }
 
 #[test(should_fail_with = "no active stream note found")]
@@ -204,12 +211,37 @@ unconstrained fn a_huge_rate_does_not_lock_the_stream() {
     add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, big, 21));
     env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, big, big, start, 7, 21));
     env.mine_block_at(start + 10); // 10 * 2^127 > u128::MAX
+    // A slice under the cap. Fee on 200_000 at 50 bps is 1_000.
     env.call_private_opts(
         recipient,
         CallPrivateOptions::new().with_additional_scopes([streams]),
-        PaymentStream::at(streams).withdraw(7, big),
+        PaymentStream::at(streams).withdraw(7, 200000),
     );
-    assert(balance(env, token, recipient) == big);
+    assert(balance(env, token, recipient) == 199000);
+    assert(balance(env, token, streams) == big - 200000);
+}
+
+#[test(should_fail_with = "fee exceeds tx cap")]
+unconstrained fn a_withdrawal_of_the_whole_huge_stream_is_refused() {
+    let mut env = TestEnvironment::new();
+    let sender = env.create_contract_account();
+    let recipient = env.create_contract_account();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
+    let streams = env.deploy("PaymentStream").with_public_initializer(
+        sender,
+        PaymentStream::interface().constructor(token),
+    );
+    let big: u128 = 0x80000000000000000000000000000000;
+    mint(env, token, sender, big);
+    let start = env.last_block_timestamp();
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, big, 22));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, big, big, start, 8, 22));
+    env.mine_block_at(start + 10);
+    env.call_private_opts(
+        recipient,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).withdraw(8, big),
+    );
 }
 
 #[test(should_fail_with = "self-stream forbidden")]
@@ -239,19 +271,34 @@ unconstrained fn cancel_mid_stream_splits_accrued_and_the_rest() {
     s.env.mine_block_at(start + 40);
     cancel(s, s.sender, 1);
     let paid = balance(s.env, s.token, s.recipient);
-    assert((paid >= 40) & (paid <= 42));
-    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    // Accrued 40 to 42, fee 1, so the recipient receives 39 to 41.
+    assert((paid >= 39) & (paid <= 41));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid - 1);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
+unconstrained fn open_rate(s: Setup, salt: Field, nonce: Field, rate: u128) -> u64 {
+    let start = s.env.last_block_timestamp();
+    add_private_authwit_from_call(s.env, s.sender, s.streams, transfer_call(s.token, s.sender, s.streams, TOTAL, nonce));
+    s.env.call_private(
+        s.sender,
+        PaymentStream::at(s.streams).create_stream(s.recipient, TOTAL, rate, start, salt, nonce),
+    );
+    start
+}
+
+// Rate 10 so a 1 or 2 second drift accrues 10 or 20, which clears the 10% share.
+// A rate of 1 would refuse that dust (fee 1 on 1 or 2 units).
 #[test]
 unconstrained fn cancel_before_any_accrual_returns_everything() {
     let s = setup();
-    let _ = open(s, 1, 11);
+    let start = open_rate(s, 1, 11, 10);
+    s.env.mine_block_at(start);
     cancel(s, s.sender, 1);
     let paid = balance(s.env, s.token, s.recipient);
-    assert(paid <= 2);
-    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    assert((paid == 0) | (paid == 9) | (paid == 19));
+    let fee: u128 = if paid == 0 { 0 } else { 1 };
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid - fee);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
@@ -265,15 +312,17 @@ unconstrained fn cancel_after_a_withdrawal_pays_only_what_is_left() {
     // The sender cancels from the copy the withdrawal delivered (index 1).
     cancel(s, s.sender, 1);
     let paid = balance(s.env, s.token, s.recipient);
-    assert((paid >= 60) & (paid <= 63));
-    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    // Withdrawal fee 1 plus cancel fee 1. Recipient net is 58 to 61.
+    assert((paid >= 58) & (paid <= 61));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid - 2);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
 #[test(should_fail_with = "stream not found")]
 unconstrained fn a_second_cancel_fails() {
     let s = setup();
-    let _ = open(s, 1, 11);
+    let start = open_rate(s, 1, 11, 10);
+    s.env.mine_block_at(start);
     cancel(s, s.sender, 1);
     cancel(s, s.sender, 1);
 }
@@ -395,11 +444,12 @@ unconstrained fn distinct_salts_from_one_sender_still_work() {
     let start = open(s, 1, 11);
     let _ = open(s, 2, 12);
     assert(balance(s.env, s.token, s.streams) == 2 * TOTAL);
-    s.env.mine_block_at(start + 10);
-    withdraw(s, 1, 5);
+    // Long enough that stream 2, opened a moment later, has accrued at least 10.
+    s.env.mine_block_at(start + 20);
+    withdraw(s, 1, 10);
     cancel(s, s.sender, 2);
     // Stream 1 still holds what was not withdrawn; stream 2 is fully paid out.
-    assert(balance(s.env, s.token, s.streams) == TOTAL - 5);
+    assert(balance(s.env, s.token, s.streams) == TOTAL - 10);
 }
 
 // Before the fix this stream was created and its funds could never move: the
@@ -407,8 +457,113 @@ unconstrained fn distinct_salts_from_one_sender_still_work() {
 #[test(should_fail)]
 unconstrained fn a_salt_cannot_be_reused_after_cancel() {
     let s = setup();
-    let _ = open(s, 1, 11);
+    let start = open_rate(s, 1, 11, 10);
+    s.env.mine_block_at(start);
     cancel(s, s.sender, 1);
     let _ = open(s, 1, 12);
+}
+
+#[test]
+unconstrained fn section_1_vectors_and_stream_fee_quotes() {
+    let cap: u128 = 340282366920938463463374607431768211455;
+    let refused_1 = quote_protocol_fee(1, 30, 500, 500, cap);
+    assert(!refused_1.ok & (refused_1.reason == 1));
+    let refused_9999 = quote_protocol_fee(9999, 30, 500, 500, cap);
+    assert(!refused_9999.ok & (refused_9999.reason == 1));
+    let row_10000 = quote_protocol_fee(10000, 30, 500, 500, cap);
+    assert(row_10000.ok & (row_10000.fee == 500) & (row_10000.net == 9500));
+    let row_10001 = quote_protocol_fee(10001, 30, 500, 500, cap);
+    assert(row_10001.ok & (row_10001.fee == 500) & (row_10001.net == 9501));
+    let row_166667 = quote_protocol_fee(166667, 30, 500, 500, cap);
+    assert(row_166667.ok & (row_166667.fee == 501) & (row_166667.net == 166166));
+    let row_166668 = quote_protocol_fee(166668, 30, 500, 500, cap);
+    assert(row_166668.ok & (row_166668.fee == 501) & (row_166668.net == 166167));
+    let row_1000000 = quote_protocol_fee(1000000, 30, 500, 500, cap);
+    assert(row_1000000.ok & (row_1000000.fee == 3000) & (row_1000000.net == 997000));
+    let row_1234567 = quote_protocol_fee(1234567, 30, 500, 500, cap);
+    assert(row_1234567.ok & (row_1234567.fee == 3704) & (row_1234567.net == 1230863));
+    let row_1e11 = quote_protocol_fee(100000000000, 30, 500, 500, cap);
+    assert(row_1e11.ok & (row_1e11.fee == 300000000) & (row_1e11.net == 99700000000));
+    let huge: u128 = 340282366920938463463374607431768211455;
+    let row_huge = quote_protocol_fee(huge, 30, 500, 500, cap);
+    assert(row_huge.fee == 1020847100762815390390123822295304635);
+    assert(row_huge.net == 339261519820175648072984483609472906820);
+
+    // Stream minimum is 0. 10 pays 1. 9 is refused. 5 is refused.
+    let ten = quote_protocol_fee(10, 50, 0, 1000, 5000000);
+    assert(ten.ok & (ten.fee == 1) & (ten.net == 9));
+    let nine = quote_protocol_fee(9, 50, 0, 1000, 5000000);
+    assert(!nine.ok & (nine.reason == 1));
+    let five = quote_protocol_fee(5, 50, 0, 1000, 5000000);
+    assert(!five.ok & (five.reason == 1));
+}
+
+// Baseline, not a bypass: create_stream does not quote `total`. A stream of
+// 2_000_000_000 is created even though one withdrawal of that total would
+// exceed TX_CAP. Two slices of 1_000_000_000 each pay fee == TX_CAP (5_000_000)
+// and net 995_000_000. Conservation: recipient == total - 2 * fee.
+#[test]
+unconstrained fn a_large_stream_settles_in_slices_each_at_the_tx_cap() {
+    let mut env = TestEnvironment::new();
+    let sender = env.create_contract_account();
+    let recipient = env.create_contract_account();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
+    let streams = env.deploy("PaymentStream").with_public_initializer(
+        sender,
+        PaymentStream::interface().constructor(token),
+    );
+    let slice: u128 = 1000000000;
+    let total: u128 = slice * 2;
+    mint(env, token, sender, total);
+    let start = env.last_block_timestamp();
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, total, 61));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, total, total, start, 61, 61));
+    env.mine_block_at(start + 10);
+    env.call_private_opts(
+        recipient,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).withdraw(61, slice),
+    );
+    assert(balance(env, token, recipient) == 995000000);
+    assert(balance(env, token, streams) == total - slice);
+    env.call_private_opts(
+        recipient,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).withdraw(61, slice),
+    );
+    assert(balance(env, token, recipient) == 1990000000);
+    assert(balance(env, token, streams) == 0);
+    assert(balance(env, token, sender) == 0);
+    assert(balance(env, token, sender) + balance(env, token, recipient) + balance(env, token, streams) == total - 10000000);
+}
+
+// The same stream can pay a slice under the cap, then refuse one withdrawal
+// whose fee is 5_000_001.
+#[test(should_fail_with = "fee exceeds tx cap")]
+unconstrained fn a_slice_above_the_tx_cap_is_refused_after_a_smaller_slice() {
+    let mut env = TestEnvironment::new();
+    let sender = env.create_contract_account();
+    let recipient = env.create_contract_account();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
+    let streams = env.deploy("PaymentStream").with_public_initializer(
+        sender,
+        PaymentStream::interface().constructor(token),
+    );
+    let total: u128 = 2000000001;
+    mint(env, token, sender, total);
+    let start = env.last_block_timestamp();
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, total, 62));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, total, total, start, 62, 62));
+    env.mine_block_at(start + 10);
+    env.call_private_opts(
+        recipient,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).withdraw(62, 200000),
+    );
+    env.call_private_opts(
+        recipient,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).withdraw(62, 1000000001),
+    );
 }
 

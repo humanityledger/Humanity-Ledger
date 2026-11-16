@@ -36,6 +36,13 @@ async function main() {
   if (!NODE_URL) throw new Error('AZTEC_NODE_URL is required');
   if (!TOKEN) throw new Error('TOKEN (token contract address) is required');
   if (!(CONTRACT in KEYED_ARTIFACT_PATHS)) throw new Error('CONTRACT must be escrow or streams');
+  const source = fs.readFileSync(
+    CONTRACT === 'escrow' ? 'contracts/aztec/escrow/src/main.nr' : 'contracts/aztec/streams/src/main.nr',
+    'utf8',
+  );
+  if (source.includes('AztecAddress { inner: 0 }')) {
+    throw new Error('Deploy blocked: TREASURY is the zero placeholder. No 4-of-7 Aztec address has been provided.');
+  }
 
   const artifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS[CONTRACT], 'utf8')));
   const token = AztecAddress.fromStringUnsafe(TOKEN);

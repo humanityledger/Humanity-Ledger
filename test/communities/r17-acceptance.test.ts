@@ -3,7 +3,8 @@
  *
  * R-17 Acceptance Test Skeleton
  * ─────────────────────────────
- * Status: SKELETON — all tests are skipped until R-17 is implemented.
+ * Status: AC-01 and AC-02 call the real post route with a mocked database.
+ * AC-03 stays skipped (manual, two accounts). A full pg_dump is still manual.
  *
  * Purpose:
  *   This file documents HOW the R-17 acceptance criteria (docs/communities/R17_ACCEPTANCE.md)
@@ -23,47 +24,47 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+import { isPersistableXmtpGroupId } from '@/lib/xmtp/groupId';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock scaffolding (to be replaced with real implementations when R-17 ships)
-// ─────────────────────────────────────────────────────────────────────────────
+const { db, WALLET } = vi.hoisted(() => ({
+  WALLET: '0x1111111111111111111111111111111111111111',
+  db: {
+    communityPost: { findMany: vi.fn(), create: vi.fn() },
+    community: { findUnique: vi.fn(), update: vi.fn() },
+    communityMember: { findFirst: vi.fn(), create: vi.fn() },
+    communityChannel: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+  },
+}));
 
-/**
- * Simulates a minimal Prisma client interface for the acceptance tests.
- * When R-17 is implemented, replace this mock with the real Prisma client
- * from lib/db.ts (following the pattern in test/unit/ mocks).
- */
-const mockPrisma = {
-  communityPost: {
-    findMany: vi.fn(),
-    create: vi.fn(),
-  },
-  community: {
-    findUnique: vi.fn(),
-    update: vi.fn(),
-  },
-  communityChannel: {
-    findUnique: vi.fn(),
-    update: vi.fn(),
-  },
-};
+vi.mock('@/lib/security/requireWallet', () => ({
+  requireWallet: vi.fn(async () => ({ walletAddress: WALLET })),
+}));
+vi.mock('@/lib/prisma', () => ({ prisma: db }));
+vi.mock('@/lib/communities/in-memory-communities', () => ({
+  getInMemoryCommunityBySlugOrId: () => null,
+}));
 
-/**
- * Simulates the POST /api/chat/communities/[id]/posts route handler.
- * When R-17 is implemented, import the real handler and test it directly
- * (following the pattern in test/auth/siwe-routes.test.ts with real route handlers).
- */
-async function simulatePostRequest(communityId: string, content: string): Promise<{ status: number }> {
-  // This stub must be replaced with the real route handler call.
-  // The real implementation must return 410 when community.communityMls === true.
-  throw new Error('R-17 not implemented: replace this stub with the real route handler');
+import { POST } from '@/app/api/chat/communities/[id]/posts/route';
+
+const SECRET = 'This is a test post that must NOT appear in the database';
+
+function post(communityId: string, content: string) {
+  return POST(
+    new NextRequest(`http://localhost/api/chat/communities/${communityId}/posts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content, title: 't' }),
+    }),
+    { params: Promise.resolve({ id: communityId }) },
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-01: No post content in DB when communityMls = true
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe.skip('AC-01: no post content in DB when communityMls=true', () => {
+describe('AC-01: no post content in DB when communityMls=true', () => {
   /**
    * HOW THIS WILL BE VERIFIED (spec):
    *
@@ -83,31 +84,25 @@ describe.skip('AC-01: no post content in DB when communityMls=true', () => {
    */
 
   beforeEach(() => {
-    mockPrisma.community.findUnique.mockResolvedValue({
+    vi.clearAllMocks();
+    db.community.findUnique.mockResolvedValue({
       id: 'test-community-id',
       communityMls: true,
+      isPrivate: true,
+      ownerAddress: WALLET,
       channels: [{ id: 'test-channel-id', xmtpGroupId: 'xmtp-group-id-123' }],
     });
-    mockPrisma.communityPost.create.mockResolvedValue({});
-    mockPrisma.communityPost.findMany.mockResolvedValue([]);
+    db.communityPost.create.mockResolvedValue({});
+    db.communityPost.findMany.mockResolvedValue([]);
   });
 
   it('should not persist post content in CommunityPost when communityMls=true', async () => {
-    // WHEN R-17 IS IMPLEMENTED:
-    // 1. Call the real route handler (or service function) with a post.
-    // 2. Query the DB for the posted content.
-    // 3. Assert the content is not in the DB.
-
-    const postedContent = 'This is a test post that must NOT appear in the database';
-
-    // await simulatePostRequest('test-community-id', postedContent);
-
-    // const allPosts = await mockPrisma.communityPost.findMany({});
-    // const contentInDB = JSON.stringify(allPosts);
-    // expect(contentInDB).not.toContain(postedContent);
-
-    // Placeholder assertion — remove when real implementation exists
-    expect(true).toBe(true); // REMOVE THIS LINE when implementing
+    const res = await post('test-community-id', SECRET);
+    expect(res.status).toBe(410);
+    expect(db.communityPost.create).not.toHaveBeenCalled();
+    expect(JSON.stringify(db.communityPost.create.mock.calls)).not.toContain(SECRET);
+    const body = await res.json();
+    expect(JSON.stringify(body)).not.toContain(SECRET);
   });
 
   it('should not persist post content in any other table', async () => {
@@ -126,7 +121,12 @@ describe.skip('AC-01: no post content in DB when communityMls=true', () => {
     // `);
     // expect(result).toHaveLength(0);
 
-    expect(true).toBe(true); // REMOVE THIS LINE when implementing
+    const res = await post('test-community-id', SECRET);
+    expect(res.status).toBe(410);
+    expect(db.communityMember.create).not.toHaveBeenCalled();
+    expect(db.community.update).not.toHaveBeenCalled();
+    expect(db.communityChannel.update).not.toHaveBeenCalled();
+    expect(JSON.stringify(db.communityMember.create.mock.calls)).not.toContain(SECRET);
   });
 });
 
@@ -134,7 +134,7 @@ describe.skip('AC-01: no post content in DB when communityMls=true', () => {
 // AC-02: POST /posts returns 410 for MLS community
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe.skip('AC-02: POST /posts returns 410 for MLS community', () => {
+describe('AC-02: POST /posts returns 410 for MLS community', () => {
   /**
    * HOW THIS WILL BE VERIFIED (spec):
    *
@@ -148,32 +148,40 @@ describe.skip('AC-02: POST /posts returns 410 for MLS community', () => {
    * handlers and calls them directly with mocked DB and session.
    */
 
-  it('should return 410 when communityMls=true', async () => {
-    // WHEN R-17 IS IMPLEMENTED:
-    // Import the real route handler:
-    //   import { POST } from '@/app/api/chat/communities/[id]/posts/route';
-    //
-    // Mock the DB to return a community with communityMls=true:
-    //   mockPrisma.community.findUnique.mockResolvedValue({ communityMls: true, ... });
-    //
-    // Call the handler:
-    //   const response = await POST(mockRequest, { params: { id: 'test-community-id' } });
-    //
-    // Assert:
-    //   expect(response.status).toBe(410);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    // Placeholder — remove when real implementation exists
-    const mockStatus = 410; // This will be the real response.status
-    expect(mockStatus).toBe(410);
+  it('should return 410 when communityMls=true', async () => {
+    db.community.findUnique.mockResolvedValue({ id: 'test-community-id', communityMls: true, ownerAddress: WALLET });
+    const response = await post('test-community-id', SECRET);
+    expect(response.status).toBe(410);
+    expect((await response.json()).code).toBe('COMMUNITY_MLS');
+    expect(db.communityPost.create).not.toHaveBeenCalled();
   });
 
   it('should return 200 when communityMls=false (control case)', async () => {
-    // WHEN R-17 IS IMPLEMENTED:
-    // Same as above but with communityMls=false.
-    // The response should NOT be 410.
+    db.community.findUnique.mockResolvedValue({
+      id: 'test-community-id',
+      communityMls: false,
+      isPrivate: true,
+      ownerAddress: WALLET,
+    });
+    db.communityMember.findFirst.mockResolvedValue({ role: 'MEMBER', walletAddress: WALLET.toLowerCase() });
+    db.communityPost.create.mockResolvedValue({ id: 'p1', content: 'hello' });
+    const response = await post('test-community-id', 'hello');
+    expect(response.status).not.toBe(410);
+    expect(response.status).toBe(200);
+    expect(db.communityPost.create).toHaveBeenCalled();
+  });
+});
 
-    const mockStatus = 200; // This will be the real response.status
-    expect(mockStatus).not.toBe(410);
+describe('xmtpGroupId is accepted only as a group id token', () => {
+  it('rejects empty and unsafe values and accepts a token from createSecureGroup', () => {
+    expect(isPersistableXmtpGroupId('')).toBe(false);
+    expect(isPersistableXmtpGroupId('short')).toBe(false);
+    expect(isPersistableXmtpGroupId('has space!!')).toBe(false);
+    expect(isPersistableXmtpGroupId('xmtp-group-id-123')).toBe(true);
   });
 });
 
@@ -250,5 +258,64 @@ describe('Schema: communityMls and xmtpGroupId fields exist in Prisma schema', (
     const schema = readFileSync(resolve(process.cwd(), 'prisma/schema.prisma'), 'utf-8');
     expect(schema).toContain('xmtpGroupId');
     expect(schema).toContain('String?');
+  });
+});
+
+describe('guard: communityMls stays off until the R-17 checklist is met', () => {
+  const { readFileSync, readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+  const { join } = require('node:path') as typeof import('node:path');
+
+  // A Prisma `select: { communityMls: true }` reads the column. It is not a write.
+  // A line that also assigns the flag, including next to a select, is a write.
+  function turnsFlagOn(source: string): boolean {
+    return source.split('\n').some((line) => {
+      const withoutCompare = line
+        .replace(/communityMls\s*!==\s*true/g, '')
+        .replace(/communityMls\s*===\s*true/g, '')
+        .replace(/communityMls\s*!=\s*true/g, '')
+        .replace(/communityMls\s*==\s*true/g, '');
+      const assigns = /communityMls\s*=\s*true/.test(withoutCompare) || /communityMls\s*:\s*true/.test(withoutCompare);
+      if (!assigns) return false;
+      const selectRead = /select\s*:/.test(line) && !/\bdata\s*:/.test(line) && !/communityMls\s*=\s*true/.test(withoutCompare);
+      return !selectRead;
+    });
+  }
+
+  function filesUnder(dir: string, ext: RegExp, out: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules' || name === '.next') continue;
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) filesUnder(p, ext, out);
+      else if (ext.test(name)) out.push(p);
+    }
+    return out;
+  }
+
+  it('does not write communityMls true in application code, schema, or migrations', () => {
+    const hits: string[] = [];
+    for (const root of ['app', 'components', 'lib']) {
+      for (const file of filesUnder(join(process.cwd(), root), /\.(ts|tsx)$/)) {
+        if (turnsFlagOn(readFileSync(file, 'utf8'))) hits.push(file);
+      }
+    }
+    expect(hits).toEqual([]);
+
+    const panel = readFileSync(join(process.cwd(), 'components/chat/CommunitySettingsPanel.tsx'), 'utf8');
+    expect(panel).not.toContain('createSecureGroup(');
+    expect(turnsFlagOn(panel)).toBe(false);
+
+    const schema = readFileSync(join(process.cwd(), 'prisma/schema.prisma'), 'utf8');
+    expect(schema).toContain('communityMls Boolean  @default(false)');
+    expect(schema).not.toMatch(/communityMls Boolean\s+@default\(true\)/);
+
+    const sqlHits: string[] = [];
+    for (const file of filesUnder(join(process.cwd(), 'prisma/migrations'), /\.sql$/)) {
+      const sql = readFileSync(file, 'utf8');
+      const writesTrue = /communityMls[\s\S]{0,80}default\s+true/i.test(sql)
+        || /"communityMls"\s*=\s*true/i.test(sql)
+        || /communityMls\s*=\s*true/i.test(sql);
+      if (writesTrue) sqlHits.push(file);
+    }
+    expect(sqlHits).toEqual([]);
   });
 });

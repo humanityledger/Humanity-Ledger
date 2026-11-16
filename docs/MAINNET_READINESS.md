@@ -1,6 +1,16 @@
 # Ledger Chat on Aztec Alpha (mainnet): readiness
 
-**Date:** 5 November 2026, updated 10 and 11 November 2026. **Status (11 November):** one contract of ours is on Aztec Alpha, the operator's token HLC (below); no escrow or stream is. Production runs on Alpha since #41 (until then the Dockerfile declared no `ARG`, so every build used the test network defaults). The private wallet's storage bug (#43) and its dead ends are fixed in code. **14 November:** the first real end-to-end run is recorded (R1 below: first private payment from Ledger Chat, L2 block 29012). The wallet refuses a node that settles on Ethereum mainnet (`assertNetworkAllowed`) unless the build carries **both** `NEXT_PUBLIC_AZTEC_NETWORK=alpha` and `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true`.
+**Date:** 5 November 2026, updated 10, 11 and 14 November 2026. **16 November:** the paragraphs below still hold. This note only records the delta since 15 November.
+
+**Delta 16 November 2026.**
+
+- Fees: unchanged from the 15 November decision under "Network fees: no sponsorship". No fee contract. Phase 0 is `docs/protocol/FEE_CONTRACT_SPEC.md`. D-1 through D-5 are recommendations waiting on the operator. This file does not confirm them.
+- Q1–Q10 remain OPEN (`docs/AZTEC_DECISIONS.md`). Q7's question to Aztec (a future sponsored payer) is open. The product already refuses sponsorship with 410.
+- R-17: `communityMls` defaults to false. Post routes return 410 only when it is true, and then they do not write the post. `xmtpGroupId` is stored only for a flagged community, and only if the client sends a group id. Existing communities are unchanged. Communities are still server-readable. AC-03 is not done.
+- Mobile: external phone browsers get an explicit "Open in MetaMask" link (`https://link.metamask.io/dapp/ledgerchat.org`). WalletConnect on the same page remains. SIWE is the same request. See `docs/CONNECT.md`.
+- The dossier for Aztec Labs is `docs/AZTEC_FOUNDATION_DOSSIER.md` section 0 and Annex A. It is not sent until Stefan reviews it.
+
+**Status (11 November):** one contract of ours is on Aztec Alpha, the operator's token HLC (below); no escrow or stream is. Production runs on Alpha since #41 (until then the Dockerfile declared no `ARG`, so every build used the test network defaults). The private wallet's storage bug (#43) and its dead ends are fixed in code. **14 November:** the first real end-to-end run is recorded (R1 below: first private payment from Ledger Chat, L2 block 29012). The wallet refuses a node that settles on Ethereum mainnet (`assertNetworkAllowed`) unless the build carries **both** `NEXT_PUBLIC_AZTEC_NETWORK=alpha` and `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true`.
 
 ## State on 12 November 2026: what stands between Ledger Chat and an unqualified "live on mainnet"
 

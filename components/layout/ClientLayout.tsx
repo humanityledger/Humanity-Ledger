@@ -13,6 +13,7 @@ import { ThemeApplier } from '@/components/layout/ThemeApplier';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 
 import { ZoomWrapper } from './ZoomWrapper';
+import { StudioLockGuard } from '@/components/studio/StudioLockGuard';
 import { isPublicContentPage } from '@/lib/routing/publicPages';
 import dynamic from 'next/dynamic';
 
@@ -300,6 +301,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <ThemeApplier />
+      <StudioLockGuard />
       <TitaniumGate>
         <UniversalEliteWallpaper />
 

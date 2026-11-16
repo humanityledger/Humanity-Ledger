@@ -336,6 +336,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   let earlySession: string | null | undefined;
 
+  // Ledger Studio is closed. The page at /studio renders a lock and loads no model.
+  // Every studio API answers 410 before auth, rate limits or a provider call.
+  if (pathname === '/api/studio' || pathname.startsWith('/api/studio/')) {
+    return NextResponse.json(
+      { error: 'Ledger Studio is closed.', code: 'STUDIO_LOCKED' },
+      { status: 410 },
+    );
+  }
+
   // Only Ledger Chat ships. Retired page paths (the old app hub, terminal, portfolio, sign-in pages…)
   // never render: old links land on the chat, or on /connect for sign-in.
   if (!pathname.startsWith('/api/')) {

@@ -30,6 +30,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Community not found' }, { status: 404 });
     }
 
+    // Same gate as /api/chat/communities/[id]/posts. communityMls defaults to false.
+    if (community.communityMls === true) {
+      return NextResponse.json(
+        { error: 'This community keeps posts in an XMTP group. The server does not store them.', code: 'COMMUNITY_MLS' },
+        { status: 410 },
+      );
+    }
+
     const isOwner = community.ownerAddress?.toLowerCase() === authorAddress;
     let membership = await (prisma as any).communityMember.findFirst({
       where: { communityId, walletAddress: authorAddress },

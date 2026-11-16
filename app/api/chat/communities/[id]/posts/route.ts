@@ -74,6 +74,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
     if (!community) return NextResponse.json({ error: 'Community not found' }, { status: 404 });
 
+    // R-17: a community with communityMls stores posts in its XMTP group, not here.
+    // Default is false, so existing communities keep this route. Nothing is written on 410.
+    if (community.communityMls === true) {
+      return NextResponse.json(
+        { error: 'This community keeps posts in an XMTP group. The server does not store them.', code: 'COMMUNITY_MLS' },
+        { status: 410 },
+      );
+    }
+
     const isOwner = community.ownerAddress?.toLowerCase() === caller.toLowerCase();
     let membership = await (prisma as any).communityMember.findFirst({
       where: { communityId, walletAddress: caller.toLowerCase() },

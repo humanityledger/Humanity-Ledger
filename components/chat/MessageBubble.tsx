@@ -62,15 +62,14 @@ function CardLabel({ icon, children, aside }: { icon: React.ReactNode; children:
 }
 
 /**
- * Private payments, tips and streams on Aztec only run in demo mode today
- * (lib/zk: executeShieldedPayment refuses unless NEXT_PUBLIC_ZK_MODE=demo,
- * and streams are kept in this browser). No funds move, so the card says so.
+ * Legacy chat cards (__ZK_MONEY_PAYMENT__ / tip). They announce a payload.
+ * They are not an Aztec transfer and they do not move HLC or Fee Juice.
  */
 function DemoNote() {
   return (
     <p className="mt-3 flex items-start gap-2 text-[13px] leading-snug text-[#7a5a12] bg-[#fdf6e3] border border-[#f3e3b5] rounded-xl px-3 py-2">
       <Info size={14} strokeWidth={2} className="mt-[1px] shrink-0" aria-hidden="true" />
-      Demo only. No funds were moved.
+      This chat card does not move funds. A private HLC payment is the wallet transfer, not this message.
     </p>
   );
 }

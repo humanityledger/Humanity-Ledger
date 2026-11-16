@@ -35,7 +35,16 @@ describe('wallet apps from Safari and Chrome', () => {
     for (const f of ['components/connect/ConnectView.tsx', 'components/landing/ConnectPage.tsx']) {
       const src = read(f);
       expect(src).not.toMatch(/metamask\.app\.link\/dapp|metamask-browser|Open in MetaMask App/);
+      expect(src).not.toMatch(/location\.href\s*=\s*['"]https:\/\/link\.metamask\.io/);
     }
+  });
+
+  it('offers Open in MetaMask only as a tap on the official dapp link', () => {
+    const src = read('components/connect/ConnectView.tsx');
+    expect(read('lib/wallet/mobileWallet.ts')).toContain("export const METAMASK_DAPP_URL = 'https://link.metamask.io/dapp/ledgerchat.org'");
+    expect(src).toContain('safeWalletHref(METAMASK_DAPP_URL)');
+    expect(src).toContain('Open in MetaMask');
+    expect(src).toMatch(/externalMobile \? <MetaMaskDappLink/);
   });
 
   it('gives wallets no redirect URL that would open the site in a new tab', () => {

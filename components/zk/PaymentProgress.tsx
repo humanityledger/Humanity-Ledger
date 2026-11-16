@@ -17,7 +17,7 @@
  * only, and stops under prefers-reduced-motion.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
 import s from './PaymentProgress.module.css';
 
@@ -55,6 +55,15 @@ const SPAN: Record<Exclude<PaymentStage, 'failed'>, [number, number]> = {
 /** Typical seconds per stage, used only to pace the creep inside a stage. */
 const TYPICAL: Record<Exclude<PaymentStage, 'failed'>, number> = { preparing: 6, proving: 40, sending: 30, settled: 1 };
 
+/** Actionable copy when the node refused the payment for lack of Fee Juice. */
+export function feeJuiceGuidance(error?: string): string | null {
+  if (!error) return null;
+  if (/fee juice|insufficient fee|fee payer/i.test(error)) {
+    return 'This account needs more Fee Juice. Add it in the wallet — your Ethereum wallet bridges AZTEC — then try again. Nothing was sent.';
+  }
+  return null;
+}
+
 function short(addr: string) {
   return addr.length > 14 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr;
 }
@@ -68,6 +77,8 @@ export function PaymentProgress(p: PaymentProgressProps) {
   const [now, setNow] = useState(() => Date.now());
   const [stageStart, setStageStart] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
+  const liveStage = useRef<Exclude<PaymentStage, 'failed'>>('preparing');
+  if (p.stage !== 'failed') liveStage.current = p.stage;
 
   useEffect(() => setStageStart(Date.now()), [p.stage]);
   useEffect(() => {
@@ -77,7 +88,7 @@ export function PaymentProgress(p: PaymentProgressProps) {
   }, [p.stage]);
 
   const progress = useMemo(() => {
-    if (p.stage === 'failed') return 1;
+    if (p.stage === 'failed') return SPAN[liveStage.current][0];
     const [a, b] = SPAN[p.stage];
     if (a === b) return a;
     // Eases toward 90% of the stage's span; never reaches the next stage by time alone.
@@ -89,7 +100,8 @@ export function PaymentProgress(p: PaymentProgressProps) {
   const C = 2 * Math.PI * R;
   const done = p.stage === 'settled';
   const failed = p.stage === 'failed';
-  const activeIndex = failed ? -1 : STAGES.findIndex((x) => x.key === p.stage);
+  const activeIndex = STAGES.findIndex((x) => x.key === (failed ? liveStage.current : p.stage));
+  const feeHint = failed ? feeJuiceGuidance(p.error) : null;
 
   const copy = async () => {
     if (!p.txHash) return;
@@ -105,7 +117,7 @@ export function PaymentProgress(p: PaymentProgressProps) {
   const title = failed ? 'Payment not sent' : done ? 'Payment settled' : p.stage === 'sending' ? 'On its way' : 'Sending privately';
 
   return (
-    <div className={s.card} role="status" aria-live="polite">
+    <div className={`${s.card} ${failed ? s.cardFailed : ''}`} role="status" aria-live="polite">
       <div className={`${s.ringWrap} ${done ? s.done : ''} ${failed ? s.failed : ''}`}>
         <svg className={s.ring} viewBox="0 0 120 120" aria-hidden="true">
           <circle className={s.track} cx="60" cy="60" r={R} />
@@ -138,25 +150,38 @@ export function PaymentProgress(p: PaymentProgressProps) {
         {p.amount} <span>{p.symbol}</span>
       </p>
       <p className={s.sub}>
-        {failed ? (p.error || 'Nothing left your wallet.') : done ? `Included in L2 block ${p.blockNumber?.toLocaleString('en') ?? '…'}` : `${elapsedLabel(now - p.startedAt)} · keep this page open`}
+        {failed
+          ? (feeHint || p.error || 'Nothing left your wallet.')
+          : done
+            ? `Included in L2 block ${p.blockNumber?.toLocaleString('en') ?? '…'}`
+            : `${elapsedLabel(now - p.startedAt)} · keep this page open`}
       </p>
+      {failed && feeHint && p.error && <p className={s.rawError}>{p.error}</p>}
 
-      {!failed && (
-        <ol className={s.steps}>
-          {STAGES.map((st, i) => {
-            const state = done || i < activeIndex ? 'done' : i === activeIndex ? 'active' : 'todo';
-            return (
-              <li key={st.key} className={`${s.step} ${s[state]}`} aria-current={state === 'active' ? 'step' : undefined}>
-                <span className={s.dot} aria-hidden="true">{state === 'done' && <Check size={12} strokeWidth={3} />}</span>
-                <span className={s.stepText}>
-                  <span className={s.stepLabel}>{st.label}</span>
-                  <span className={s.stepNote}>{st.note}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
+      <ol className={s.steps}>
+        {STAGES.map((st, i) => {
+          const state = failed
+            ? i < activeIndex
+              ? 'done'
+              : i === activeIndex
+                ? 'bad'
+                : 'todo'
+            : done || i < activeIndex
+              ? 'done'
+              : i === activeIndex
+                ? 'active'
+                : 'todo';
+          return (
+            <li key={st.key} className={`${s.step} ${s[state]}`} aria-current={state === 'active' || state === 'bad' ? 'step' : undefined}>
+              <span className={s.dot} aria-hidden="true">{state === 'done' && <Check size={12} strokeWidth={3} />}</span>
+              <span className={s.stepText}>
+                <span className={s.stepLabel}>{st.label}</span>
+                <span className={s.stepNote}>{state === 'bad' ? 'Stopped here' : st.note}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
 
       <dl className={s.facts}>
         <div><dt>To</dt><dd className={s.mono}>{short(p.recipient)}</dd></div>

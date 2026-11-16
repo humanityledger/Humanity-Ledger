@@ -2,11 +2,28 @@
 
 **Documento:** `docs/communities/R17_ACCEPTANCE.md`
 **Fuente:** `docs/communities/MLS_MIGRATION.md` — criterios de aceptación convertidos en checklist verificable.
-**Estado:** pendiente — ningún criterio está cerrado. La implementación de R-17 no ha comenzado.
+**Estado:** parcial, 16 noviembre 2026. AC-01 y AC-02 tienen test de ruta con Prisma simulado: `communityMls = true` responde 410 y no llama a `communityPost.create`. No sustituyen un `pg_dump` real. AC-03 sigue manual y sin cablear. Las comunidades existentes siguen en `false`.
 **Creado:** 15 noviembre 2026
 
 > [!IMPORTANT]
 > `docs/TRACEABILITY_MATRIX.md` cambia `CLM-MSG-COMMUNITY` de ASPIRATIONAL a DELEGATED (XMTP) **únicamente** cuando los cuatro criterios de esta lista estén marcados como verificados con evidencia. No antes.
+
+## Lista de bloqueo antes de `communityMls = true` (16 noviembre 2026)
+
+Propuesta operativa. No activa el flag. Stefan tiene que autorizar una comunidad de prueba por su nombre. Hasta entonces toda comunidad permanece en `false`, incluidas las ya existentes.
+
+Todos los puntos siguientes tienen que cumplirse. Hoy solo se cumplen el default del esquema y el comportamiento 410 cuando el flag ya es true en un mock.
+
+1. `components/chat/CommunitySettingsPanel.tsx` tiene un cliente XMTP. Hoy no lo importa.
+2. Al crear un canal, ese panel llama a `createSecureGroup` (`lib/xmtp/groups.ts`) y el servidor guarda solo el `groupId` devuelto en `CommunityChannel.xmtpGroupId`. Hoy el panel no llama a esa función.
+3. AC-01: un volcado de la base de una comunidad con el flag en true no contiene el texto del post.
+4. AC-02: `POST /api/chat/communities/[id]/posts` responde 410. La ruta ya lo hace si el flag es true. Nada escribe el flag.
+5. La expulsión llama a `removeGroupMember`. AC-03 queda anotado con dos cuentas reales, en la tabla de evidencias de este archivo. El test sigue en `describe.skip`.
+6. Ninguna migración ni ningún `update` pone filas existentes en true. `prisma/schema.prisma` sigue en `@default(false)`. La migración `20261115230000_r17_mls_fields` sigue en `DEFAULT false`.
+7. Stefan nombra una sola comunidad de prueba. El resto no se migra en el mismo cambio.
+8. El mismo cambio que escriba `communityMls: true` actualiza la guarda de `test/communities/r17-acceptance.test.ts`. La guarda actual no tiene excepción: falla si `app/`, `components/` o `lib/` asignan el flag a true, aunque el panel mencione `createSecureGroup`.
+
+`CLM-MSG-COMMUNITY` no pasa a DELEGATED hasta AC-04.
 
 ---
 
@@ -45,6 +62,8 @@
 - [ ] **Evidencia:** registro manual en la sección "Evidencias de verificación manual" de este documento.
 
 **Estado:** ⬜ No verificado (requiere prueba manual con dos cuentas)
+
+**Qué falta para cablear AC-03 (16 noviembre 2026).** `removeGroupMember` existe en `lib/xmtp/groups.ts` y no lo llama ninguna ruta ni el panel de ajustes. `CommunitySettingsPanel` no tiene cliente XMTP. No hay expulsión que rote el epoch. El test `AC-03` sigue en `describe.skip`. No poner `communityMls = true` hasta que el panel cree el grupo con `createSecureGroup`, guarde `xmtpGroupId`, y la expulsión llame a `removeGroupMember`. Con el default `false`, las rutas de posts escriben el texto como antes.
 
 ---
 

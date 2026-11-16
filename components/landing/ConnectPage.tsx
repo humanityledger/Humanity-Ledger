@@ -57,7 +57,7 @@ import {
   type HeldWalletLink,
   type WalletOpenLink,
 } from "@/lib/auth/wc-sign-request";
-import { detectConnectedMobileWallet } from "@/lib/wallet/mobileWallet";
+import { detectConnectedMobileWallet, isExternalMobileBrowser } from "@/lib/wallet/mobileWallet";
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
 import { ONE_CLICK_AUTH } from "@/config/appkit";
@@ -157,6 +157,7 @@ function clearDisconnectGuard() {
 
 export default function ConnectPage() {
   const isMobile = useIsMobile();
+  const [externalMobile, setExternalMobile] = useState(false);
   const { isConnected, address, status: accountStatus, connector: activeConnector } = useAccount();
   const chainId = useChainId();
   const { connect, connectors, isPending, isError, error } = useConnect();
@@ -222,6 +223,7 @@ export default function ConnectPage() {
   /* ── First mount ──────────────────────────────────────────────────────── */
   useEffect(() => {
     setMounted(true);
+    setExternalMobile(isExternalMobileBrowser());
     purgeLegacyHandshakeSecrets(); // leftovers from older builds
     restoreHeldWalletLink(); // a sign-in interrupted by a reload had held back the wallet link (wc-sign-request.ts)
     try {
@@ -868,6 +870,7 @@ export default function ConnectPage() {
       <ConnectView
         stage={stage}
         isMobile={isMobile}
+        externalMobile={externalMobile}
         wallets={isMobile ? (inAppWalletOption() ? [inAppWalletOption()!] : MOBILE_WALLETS) : DESKTOP_WALLETS}
         pendingWallet={pendingWallet}
         signStep={signStep}

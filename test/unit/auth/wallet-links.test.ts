@@ -34,6 +34,7 @@ describe('wallet links', () => {
 
   it('re-checks hrefs before navigation: https on a wallet host only', () => {
     expect(safeWalletHref(walletConnectLink('trust', WC))).toMatch(/^https:\/\/link\.trustwallet\.com\/wc\?uri=/);
+    expect(safeWalletHref('https://link.metamask.io/dapp/ledgerchat.org')).toBe('https://link.metamask.io/dapp/ledgerchat.org');
     for (const bad of ['javascript:alert(1)', 'http://metamask.app.link/', 'https://metamask.app.link.evil.com/', 'https://user:pw@rainbow.me/', 'wc:' + TOPIC, 'metamask://wc', '', undefined, 'https://x/' + 'a'.repeat(3000)]) {
       expect(safeWalletHref(bad)).toBeNull();
     }

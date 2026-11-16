@@ -973,7 +973,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Network security" footer="IP masking routes WebRTC traffic through a relay to hide your real IP address.">
+              <Group title="Network security" footer="IP masking uses a TURN relay only when the server has one configured. If it does not, calls between different networks may fail. The switch does not create a relay by itself.">
                 <Row
                   icon={<Shield size={18} />}
                   label="WebRTC IP masking"
@@ -1072,7 +1072,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             <>
 
 
-              <Group title="Privacy" footer="IP masking routes all call traffic through a relay to hide your network identity.">
+              <Group title="Privacy" footer="IP masking uses a TURN relay when one is configured on the server. If none is set, calls between different networks may not connect. Voice and video stay encrypted with DTLS-SRTP either way.">
                 <Row
                   icon={<Shield size={18} />}
                   label="IP address masking"
@@ -1127,7 +1127,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         style={{ width: `${Math.min((parseFloat(mb) / 50) * 100, 100)}%` }}
                       />
                     </div>
-                    <p className="text-[12px] text-[#727a88] mt-2">About {count} Ledger Chat items</p>
+                    <p className="text-[12px] text-[#727a88] mt-2">About {count} Ledger Chat items in local storage. Private-wallet notes and keys are in this browser&apos;s origin storage, not in this number. Remove them from Payments.</p>
                   </div>
                 );
               })()}
@@ -1158,15 +1158,15 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <PrivateWalletStatus address={myAddress} />
 
               {/* Sovereign Aztec Identity */}
-              <Group title="Your zk handle" footer="Demo feature. The handle is stored on this device and is not yet registered on the Aztec network.">
+              <Group title="Your zk handle" footer="Stored only on this device. It is not registered on Aztec and it is not a payment address.">
                 <Row
                   icon={<Wallet size={18} />}
                   label="zk handle"
-                  sublabel="A readable alias for payments (demo)"
+                  sublabel="A local alias. Payments use your Aztec address, not this name."
                   value={currentZkTag}
                   onTap={() => {
                     navigator.clipboard.writeText(currentZkTag);
-                    toast.success('zk.money handle copied');
+                    toast.success('Handle copied. It is local to this device.');
                   }}
                 />
                 <div className="px-4 py-3 border-t border-black/[0.04]">
@@ -1216,7 +1216,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                             try { localStorage.setItem(`zkTag_${myAddress}`, fullTag); } catch {}
                             setCurrentZkTag(fullTag);
                             setEditingZkTag(false);
-                            toast.success(`Handle saved: ${fullTag}`);
+                            toast.success(`Saved on this device: ${fullTag}. Not registered on Aztec.`);
                           }}
                           className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#15171c] text-white hover:bg-black"
                         >
@@ -1239,7 +1239,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Default payment token">
+              <Group title="Public tip token" footer="These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use HLC. The network fee is Fee Juice from your own account, not USDC.">
                 <div className="px-4 pb-4">
                   {/* The tokens the payment sheet can actually send; it opens on this one. */}
                   {['ETH', 'USDC', 'USDT'].map((token) => (
@@ -1260,7 +1260,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
               <Group title="Transaction history">
-                <Row icon={<Clock size={18} />} label="View full history" onTap={() => window.open('/payments/history', '_blank')} />
+                <Row icon={<Clock size={18} />} label="Private payment history" sublabel="On this device, in the private wallet. There is no separate server history." onTap={() => toast.info('Open the private wallet in a chat. Settled payments are listed there, on this device only.')} />
                 <Row icon={<Download size={18} />} label="Export CSV" onTap={() => {
                   try {
                     const rows = [['Date', 'Type', 'Amount', 'Peer', 'Status']];
@@ -1373,7 +1373,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     ['Calls', 'Voice and video use WebRTC with DTLS SRTP. With IP masking on, media is relayed through a TURN server but stays encrypted.'],
                     ['Communities', 'Community posts are stored on our server and are not end to end encrypted.'],
                     ['Your account', 'Your wallet is your account. To use another device, sign in with the same wallet there.'],
-                    ['Payments', 'Shielded payments are a demo and do not move real funds.'],
+                    ['Payments', 'Private payments run on Aztec Alpha in HLC, with a cap per payment and no external audit. The amount and the parties stay private. The fee is paid publicly in Fee Juice by your account. Nothing is sponsored.'],
                   ].map(([t, d]) => (
                     <div key={t} className="py-3 border-t border-black/[0.05] first:border-0">
                       <p className="text-[14px] font-semibold text-[#15171c]">{t}</p>

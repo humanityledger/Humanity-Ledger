@@ -180,6 +180,13 @@ async function main() {
 
   /** Keyed universal deployment; publishes the class first if the node does not have it. */
   async function deployKeyed(c: 'escrow' | 'streams', label: string) {
+    const source = fs.readFileSync(
+      c === 'escrow' ? 'contracts/aztec/escrow/src/main.nr' : 'contracts/aztec/streams/src/main.nr',
+      'utf8',
+    );
+    if (source.includes('AztecAddress { inner: 0 }')) {
+      throw new Error('Deploy blocked: TREASURY is the zero placeholder. No 4-of-7 Aztec address has been provided.');
+    }
     const artifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS[c], 'utf8')));
     const secretKey = Fr.random();
     const salt = Fr.random();

@@ -4,7 +4,7 @@
  * test runs never touch the network; the workflow
  * .github/workflows/aztec-deployments.yml runs it daily and on changes.
  *
- * For every recorded contract it asks the node for the instance and checks:
+ * For every recorded contract that has an instance it asks the node and checks:
  *   - the instance exists at the recorded address;
  *   - its current class ID is the recorded one (which the offline test
  *     test/unit/aztec/deployments-registry.test.ts ties to the artifact);
@@ -33,16 +33,18 @@ describe.skipIf(!LIVE)(`Aztec testnet deployments (${NODE_URL})`, () => {
     expect(Number(info.rollupVersion)).toBe(registry.network.rollupVersion);
   }, 60_000);
 
-  for (const e of registry.contracts as Array<{ name: string; address: string; classId: string; keyed: boolean }>) {
-    it(`${e.name} at ${e.address.slice(0, 10)}…`, async () => {
+  for (const e of registry.contracts as Array<{ name: string; address: string | null; classId: string; keyed: boolean; status?: string }>) {
+    if (e.status === 'not-deployed' || typeof e.address !== 'string') continue;
+    const address = e.address;
+    it(`${e.name} at ${address.slice(0, 10)}…`, async () => {
       const { createAztecNodeClient } = await import('@aztec-labs/aztec.js/node');
       const { AztecAddress } = await import('@aztec-labs/aztec.js/addresses');
       const { Fr } = await import('@aztec-labs/aztec.js/fields');
       const { PublicKeys } = await import('@aztec-labs/stdlib/keys');
       const node = createAztecNodeClient(NODE_URL, { maxBatchSize: 3 });
 
-      const instance = await node.getContract(AztecAddress.fromStringUnsafe(e.address));
-      expect(instance, `${e.name}: no instance at ${e.address}`).toBeTruthy();
+      const instance = await node.getContract(AztecAddress.fromStringUnsafe(address));
+      expect(instance, `${e.name}: no instance at ${address}`).toBeTruthy();
       const classId = instance!.currentContractClassId.toString();
       // A contract deployed without keys carries PublicKeys.default(), not zeros.
       const keyed = !instance!.publicKeys.equals(PublicKeys.default());

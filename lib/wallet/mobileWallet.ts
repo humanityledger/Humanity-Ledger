@@ -20,6 +20,24 @@ export function isMobileDevice(): boolean {
 }
 
 /**
+ * Official MetaMask link that opens ledgerchat.org inside the MetaMask app.
+ * Used only as a tap on an external phone browser. It is not assigned to location.
+ */
+export const METAMASK_DAPP_URL = 'https://link.metamask.io/dapp/ledgerchat.org';
+
+/**
+ * Safari, Chrome, or another phone browser that is not a wallet's own browser.
+ * A wallet browser injects window.ethereum; signing stays on this page there.
+ */
+export function isExternalMobileBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  if ((window as { ethereum?: unknown }).ethereum) return false;
+  const ua = navigator.userAgent || '';
+  const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  return iPadOS || /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua);
+}
+
+/**
  * Inspects localStorage to retrieve the active WalletConnect v2 session peer metadata.
  */
 function getWalletConnectPeerInfo(): { name?: string; native?: string; universal?: string } | null {

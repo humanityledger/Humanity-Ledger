@@ -37,11 +37,13 @@ import { computeKeyedInstance, type KeyedContract, type loadKeyedArtifact } from
 import { postThenFund } from './agreement-order';
 import {
   verifyAgreementInvite,
+  currentClassIds,
   type EscrowInvite,
   type StreamInvite,
   type VerifyOptions,
   type AgreementInvite,
 } from './agreement-invite';
+import { baselineFee, BASELINE_ESCROW_SCHEDULE, TREASURY_ADDRESS_SET } from '../protocol/fees';
 
 type Artifact = ReturnType<typeof loadKeyedArtifact>;
 type AnyWallet = any;
@@ -84,6 +86,32 @@ function enforcePolicy(policy: AgreementPolicy | undefined, classId: string, tok
   if (!r.ok) throw new Error(`agreement refused by policy: ${r.reasons.join('; ')}`);
 }
 
+const CLASS_REFUSED = 'This artifact is not the current agreement class.';
+const FEE_REFUSED = 'This amount is refused. The contract would not accept the fee.';
+const TREASURY_REFUSED = 'No treasury address is set. This agreement cannot be deployed.';
+
+/**
+ * Gate for openEscrow and openStream, before any transaction is sent.
+ * The class must be a current entry of deployments/aztec-testnet.json, so a
+ * direct call cannot deploy the pre-fee artifact. An escrow amount the
+ * contract would refuse is refused here with the same baselineFee arithmetic.
+ * A stream total is not quoted against TX_CAP: create_stream allows it, and
+ * each withdrawal pays its own fee. Nothing is deployed while TREASURY is unset.
+ */
+export async function assertCanOpen(kind: KeyedContract, amount: bigint, classId: string): Promise<void> {
+  const mod = (await import('../../deployments/aztec-testnet.json')) as { default?: unknown };
+  const record = (mod.default ?? mod) as Parameters<typeof currentClassIds>[0];
+  const allowed = currentClassIds(record)[kind];
+  if (!allowed.some((id) => id.toLowerCase() === classId.toLowerCase())) {
+    throw new Error(CLASS_REFUSED);
+  }
+  if (kind === 'escrow') {
+    const quoted = baselineFee(amount, BASELINE_ESCROW_SCHEDULE);
+    if (!quoted.ok) throw new Error(FEE_REFUSED);
+  }
+  if (!TREASURY_ADDRESS_SET) throw new Error(TREASURY_REFUSED);
+}
+
 export interface Opened<I extends AgreementInvite> {
   invite: I;
   /** The invitation as sent over XMTP. Contains secrets: never log it. */
@@ -102,12 +130,14 @@ const blockOf = (sent: any): number | undefined => {
 };
 
 /** Keyed universal deployment of a fresh instance, registered with its secret in the sender's wallet. */
-async function deployKeyed(c: OpenCommon, amount: bigint) {
+async function deployKeyed(c: OpenCommon, amount: bigint, kind: KeyedContract) {
   const secretKey = randomField();
   const salt = randomField();
   const expected = await computeKeyedInstance(c.artifact, { secretKey, salt, token: c.token });
-  // Before anything is sent: on mainnet the policy can refuse the class, the token or the amount.
-  enforcePolicy(c.policy, expected.instance.currentContractClassId.toString(), c.token.toString(), amount);
+  const classId = expected.instance.currentContractClassId.toString();
+  // Before anything is sent: current class, fee the contract would accept, treasury set.
+  await assertCanOpen(kind, amount, classId);
+  enforcePolicy(c.policy, classId, c.token.toString(), amount);
   const deployment = DeployMethod.create(
     c.sender.wallet,
     { artifact: c.artifact, args: [c.token], postDeployCtor: (instance: any, w: any) => Contract.at(instance.address, c.artifact, w) },
@@ -134,7 +164,7 @@ async function authwit(c: OpenCommon, caller: AztecAddress, amount: bigint) {
 
 /** Opens an escrow: its own keyed PrivateEscrow instance, funded with `amount`. */
 export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: number }): Promise<Opened<EscrowInvite>> {
-  const d = await deployKeyed(c, c.amount);
+  const d = await deployKeyed(c, c.amount, 'escrow');
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
   const claimSecret = randomField();
   const escrowId = randomField();
@@ -165,11 +195,15 @@ export async function openEscrow(c: OpenCommon & { amount: bigint; deadline: num
   return { invite, raw, contract, txHashes: { deploy: d.deployTx, fund: sent?.receipt?.txHash?.toString() ?? sent?.txHash?.toString() }, blocks: { deploy: d.deployBlock, fund: blockOf(sent) } };
 }
 
-/** Opens a payment stream: its own keyed PaymentStream instance, funded with `total`. */
+/**
+ * Opens a payment stream: its own keyed PaymentStream instance, funded with `total`.
+ * `total` is not refused when its one-shot fee exceeds TX_CAP. The contract creates
+ * that stream and the recipient withdraws it in slices, each slice paying its own fee.
+ */
 export async function openStream(
   c: OpenCommon & { total: bigint; rate: bigint; start: number | (() => number) },
 ): Promise<Opened<StreamInvite>> {
-  const d = await deployKeyed(c, c.total);
+  const d = await deployKeyed(c, c.total, 'streams');
   const contract = Contract.at(d.address, c.artifact, c.sender.wallet) as AnyInteraction;
   const streamSalt = randomField();
   // Resolved after the deploy, right before posting: the deploy's proving time does not add to the upfront accrual.

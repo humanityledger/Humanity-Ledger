@@ -23,12 +23,12 @@ const registry = JSON.parse(fs.readFileSync(path.join(root, 'deployments/aztec-t
 
 interface Entry {
   name: string;
-  address: string;
+  address: string | null;
   classId: string;
   artifact: string;
   holdsPrivateBalance: boolean;
   keyed: boolean;
-  status: 'active' | 'reference' | 'do-not-use' | 'settled';
+  status: 'active' | 'reference' | 'do-not-use' | 'settled' | 'not-deployed';
   tracksCurrentArtifact: boolean;
 }
 
@@ -46,8 +46,13 @@ describe('deployments/aztec-testnet.json', () => {
     const names = entries.map((e) => e.name);
     expect(new Set(names).size).toBe(names.length);
     for (const e of entries) {
-      expect(e.address).toMatch(/^0x[0-9a-f]{64}$/);
       expect(e.classId).toMatch(/^0x[0-9a-f]{64}$/);
+      if (e.status === 'not-deployed') {
+        expect(e.address, e.name).toBeNull();
+        expect(e.tracksCurrentArtifact, e.name).toBe(true);
+      } else {
+        expect(e.address, e.name).toMatch(/^0x[0-9a-f]{64}$/);
+      }
     }
   });
 

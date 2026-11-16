@@ -21,7 +21,7 @@ const HOME: Readonly<Record<WalletBrand, string>> = Object.freeze({
   okx: 'https://www.okx.com/web3',
 });
 
-const HOSTS = new Set(['metamask.app.link', 'rnbwapp.com', 'rainbow.me', 'go.cb-w.com', 'link.trustwallet.com', 'www.okx.com']);
+const HOSTS = new Set(['metamask.app.link', 'link.metamask.io', 'rnbwapp.com', 'rainbow.me', 'go.cb-w.com', 'link.trustwallet.com', 'www.okx.com']);
 
 /** WalletConnect v2 pairing URI: wc:<64-hex topic>@2?<query>, no whitespace, bounded. */
 const WC_V2 = /^wc:[0-9a-f]{64}@2\?[A-Za-z0-9._~%=&+,\[\]-]{1,1024}$/;

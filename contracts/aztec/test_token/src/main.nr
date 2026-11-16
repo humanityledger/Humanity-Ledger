@@ -34,7 +34,16 @@ pub contract TestToken {
     #[external("private")]
     fn transfer_in_private(from: AztecAddress, to: AztecAddress, amount: u128, authwit_nonce: Field) {
         self.storage.balances.at(from).sub(amount).deliver(MessageDelivery::onchain_constrained());
-        self.storage.balances.at(to).add(amount).deliver(MessageDelivery::onchain_constrained());
+        let credited = self.storage.balances.at(to).add(amount);
+        // Address 0 is the unset treasury. It has no keys, so a constrained
+        // note message cannot be tagged and a production token reverts.
+        // This harness still creates the note, without that message, so the
+        // fee tests can run before a treasury address exists.
+        if to.inner == 0 {
+            let _ = credited.get_note();
+        } else {
+            credited.deliver(MessageDelivery::onchain_constrained());
+        }
     }
 
     #[external("utility")]

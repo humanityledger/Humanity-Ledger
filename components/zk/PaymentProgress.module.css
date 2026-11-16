@@ -5,6 +5,9 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 24px 20px 20px;
   border-radius: 24px;
   background: #ffffff;
@@ -12,6 +15,7 @@
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 24px 48px -28px rgba(16, 24, 40, 0.35);
   color: #15171c;
   text-align: center;
+  box-sizing: border-box;
 }
 
 /* ---------- Ring ---------- */
@@ -102,11 +106,12 @@
 
 /* ---------- Text ---------- */
 
-.title { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #727a88; }
-.amount { margin: 2px 0 0; font-size: 36px; font-weight: 680; letter-spacing: -0.035em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.title { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #727a88; max-width: 100%; }
+.amount { margin: 2px 0 0; max-width: 100%; font-size: clamp(28px, 8vw, 36px); font-weight: 680; letter-spacing: -0.035em; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .amount span { font-size: 18px; font-weight: 600; color: #727a88; letter-spacing: 0; }
-.sub { margin: 0 0 8px; font-size: 13.5px; color: #475061; overflow-wrap: anywhere; }
-.failed ~ .sub { color: #b42318; }
+.sub { margin: 0 0 8px; max-width: 100%; font-size: 13.5px; line-height: 1.45; color: #475061; overflow-wrap: anywhere; }
+.cardFailed .sub { color: #b42318; }
+.rawError { margin: -4px 0 8px; max-width: 100%; font-size: 12px; line-height: 1.4; color: #7a2d24; overflow-wrap: anywhere; }
 
 /* ---------- Steps ---------- */
 
@@ -140,15 +145,19 @@
 .step.active { background: #ffffff; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06); }
 .step.active .dot { border-color: rgba(19, 168, 122, 0.25); border-top-color: #13a87a; animation: orbit 0.9s linear infinite; }
 .step.todo { opacity: 0.45; }
+.step.bad { background: #fdf3f2; }
+.step.bad .dot { background: #e5484d; border-color: #e5484d; }
+.step.bad .stepNote { color: #b42318; }
 
 /* ---------- Facts ---------- */
 
-.facts { width: 100%; margin: 10px 0 0; display: grid; gap: 0; text-align: left; }
-.facts > div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 10px 2px; border-top: 1px solid rgba(16, 24, 40, 0.06); }
-.facts dt { font-size: 12.5px; color: #727a88; }
-.facts dd { margin: 0; font-size: 13px; color: #15171c; overflow-wrap: anywhere; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
-.hashRow { display: flex; align-items: center; gap: 6px; }
+.facts { width: 100%; margin: 10px 0 0; display: grid; gap: 0; text-align: left; min-width: 0; }
+.facts > div { display: grid; grid-template-columns: minmax(5.5rem, 7.25rem) minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 2px; border-top: 1px solid rgba(16, 24, 40, 0.06); }
+.facts dt { font-size: 12.5px; line-height: 1.35; color: #727a88; }
+.facts dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.4; color: #15171c; overflow-wrap: anywhere; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; overflow-wrap: anywhere; }
+.hashRow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hashRow .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .iconBtn { width: 28px; height: 28px; border-radius: 8px; display: inline-grid; place-items: center; color: #475061; background: transparent; border: 0; cursor: pointer; }
 .iconBtn:hover { background: #f2f4f7; color: #15171c; }
 

@@ -303,6 +303,20 @@
   background: var(--line);
 }
 
+.metamaskCta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.metamaskHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--hl-ink-3);
+}
+
 .legal {
   text-wrap: pretty;
   margin: 26px 0 0;

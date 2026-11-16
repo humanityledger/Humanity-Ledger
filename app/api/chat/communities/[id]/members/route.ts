@@ -72,9 +72,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     try {
-      await (prisma as any).communityPost.create({
-        data: { communityId, authorAddress: 'system', content: `__SYSTEM__${target} was added to the group` },
-      });
+      const row = await (prisma as any).community.findUnique({ where: { id: communityId }, select: { communityMls: true } });
+      if (row?.communityMls !== true) {
+        await (prisma as any).communityPost.create({
+          data: { communityId, authorAddress: 'system', content: `__SYSTEM__${target} was added to the group` },
+        });
+      }
     } catch (e) {
       console.error('[communities members POST] welcome post', e);
     }

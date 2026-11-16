@@ -2,16 +2,20 @@
 
 **Documento:** `docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md`
 **SPEC de referencia:** `docs/protocol/FEE_CONTRACT_SPEC.md` (única fuente de verdad)
-**Estado:** PRE-IMPLEMENTACIÓN — En espera de aprobación D1–D7
+**Estado:** Baseline authorized — source written under these parameters — not compiled, not deployed
 **Creado:** 15 noviembre 2026 · 23:10 CET
 **Agente:** Antigravity
 **Autorizado por:** Stefan Antonio Cirisanu (elección A — solo entregables pre-decisión)
 
 > [!IMPORTANT]
-> Este log es un documento preparatorio. **No existe ningún código de contrato implementado.**
-> El SPEC prohíbe explícitamente escribir código hasta que D1–D7 estén aprobados por Stefan.
-> Cita literal del SPEC § 2: *"None of D1–D7 is decided. Stefan must approve each before implementation begins."*
-> Cita literal del encabezado del SPEC: *"No code may be written until the design decisions below are approved by Stefan."*
+> Este log conserva el boceto viejo. **La baseline ya está en el fuente de `PrivateEscrow` y `PaymentStream`.**
+> Las citas siguientes son el texto viejo del boceto, no el contrato. No hay class id nuevo, no hay deploy, no hay dirección de `TREASURY`, no hay auditoría externa.
+> Cita literal del boceto: *"None of D1–D7 is decided. Stefan must approve each before implementation begins."*
+> Cita literal del encabezado viejo: *"No code may be written until the design decisions below are approved by Stefan."*
+
+> **Corrección 16 noviembre 2026.** Los bloques citados en la sección 1 no están en el texto actual de `FEE_CONTRACT_SPEC.md`. Eran un boceto (`HLFeeRouter`, parámetros públicos, `trigger_buyback`, fee dentro de `deposit`). La spec vigente es las secciones 1 a 6 y 8. El boceto no es la baseline.
+
+> **Baseline authorized — 16 November 2026.** Stefan autorizó las secciones 6 y 8 tal como están escritas, sin cambiar los valores. El fuente de los dos contratos cobra con esos números en la liquidación. No hay class id nuevo: `aztec compile` no se ejecutó. No hay dirección de `TREASURY` (el constante es cero). No hay auditoría externa. Los placeholders de la sección 3 de este log se conservan y no se compilan: los números autorizados están en la sección 8 del SPEC (`FEE_BPS` 50, `MIN_FEE` 1000 solo en escrow, `MAX_FEE_SHARE_BPS` 1000, stream `minFee` 0, `TX_CAP` 5_000_000 como rechazo, `DAILY_CAP` rechazado). El esqueleto documental sigue en `docs/protocol/fee-router-skeleton/` y no es el contrato.
 
 ---
 
@@ -85,23 +89,25 @@
 
 ## 2. Estado de las decisiones D1–D7
 
-Todas las decisiones siguen en estado **[PENDING]**. La implementación de cualquier código de contrato, lógica de fee, integración en escrow/streams o módulo cliente está **bloqueada** hasta que Stefan registre cada decisión en `docs/protocol/FEE_CONTRACT_SPEC.md § 8`.
+La sección 8 del SPEC es la baseline autorizada. Los valores de la columna derecha no cambian. El contrato de producción no está escrito en esta sesión.
 
-| Decisión | Estado | Impacto en implementación |
+| Decisión | Estado | Parámetro autorizado (sin cambio de valor) |
 |---|---|---|
-| D1 — Fee token | **[PENDING]** | Determina qué token es la nota de fee. Sin esto, `compute_fee` no puede ser correcta. |
-| D2 — Buyback mechanism | **[PENDING]** | Determina si `trigger_buyback` llama a un contrato on-chain o dispara acción multisig. Sin esto, FA-09 y FA-10 no pueden activarse. |
-| D3 — TWAP oracle | **[PENDING]** | Depende de D2. Si D2 = on-chain, es necesario. |
-| D4 — Burn mechanism | **[PENDING]** | Determina si `HLFeeRouter` necesita rol de burn en el contrato HLC. |
-| D5 — Cap granularity | **[PENDING]** | Determina si `compute_fee` aplica solo `tx_cap` o también `daily_cap`. Afecta FA-04 directamente. |
-| D6 — Pause authority | **[PENDING]** | Determina la interfaz de `pause`/`unpause` y el timelock. Afecta FA-05/FA-06/FA-07. |
-| D7 — Fee extraction point | **[PENDING]** | Determina si la fee se cobra en `deposit` o en `claim`/`withdraw`. Afecta toda la integración con escrow y streams. |
+| D1 — Fee token | authorized by Stefan as baseline — 16 November 2026 | El token privado del acuerdo. No Fee Juice. No hay token de fee aparte |
+| D2 — Buyback | authorized by Stefan as baseline — 16 November 2026 | No dentro de la llamada privada. Sin nullifier de burn. Porcentaje en circuito: 0 |
+| D3 — Oráculo | authorized by Stefan as baseline — 16 November 2026 | Ninguno. Unidades nativas del token |
+| D4 — Burn vs treasury | authorized by Stefan as baseline — 16 November 2026 | 100% a treasury, 0% quemado en la llamada. Sin dirección de treasury inventada |
+| D5 — Caps | authorized by Stefan as baseline — 16 November 2026 | `FEE_BPS` 50, `MIN_FEE` 1000 en escrow, `TX_CAP` 5_000_000 como rechazo, `DAILY_CAP` rechazado |
+| D6 — Pausa | authorized by Stefan as baseline — 16 November 2026 | Sin pausa en el contrato Aztec. `Ownable2Step` solo si más adelante existe un contrato L1 |
+| D7 — Dónde se cobra | authorized by Stefan as baseline — 16 November 2026 | En la liquidación (claim / withdraw), no en el depósito. Reembolso sin fee |
 
 ---
 
 ## 3. Placeholders que se usarán en la implementación futura
 
-Cuando Stefan apruebe las decisiones, los siguientes placeholders deben reemplazarse con valores reales. **Están marcados de forma imposible de ignorar** para prevenir despliegues accidentales.
+Los bloques de esta sección se conservan tal cual. Son el boceto anterior. No son los números autorizados. Los números autorizados están en la sección 8 del SPEC. `TREASURY` sigue sin dirección: el cero de este bloque no es una dirección y no se despliega.
+
+Cuando exista la cuenta del multisig, ese placeholder de dirección se sustituye por ella. Hasta entonces el contrato no se despliega. **Están marcados de forma imposible de ignorar** para prevenir despliegues accidentales.
 
 ### Constantes Noir (futuro `contracts/aztec/fee_router/src/main.nr`)
 

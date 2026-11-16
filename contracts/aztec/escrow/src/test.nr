@@ -6,7 +6,7 @@
 // The token is the test-only contracts/aztec/test_token, called through raw
 // selectors so this crate does not depend on it.
 
-use crate::PrivateEscrow;
+use crate::{quote_protocol_fee, PrivateEscrow};
 use aztec::{
     context::calls::{PrivateCall, UtilityCall},
     protocol::{
@@ -21,8 +21,11 @@ use aztec::{
 
 global DOM_SEP__CLAIM_SECRET: u32 = 718293041;
 global CLAIM_SECRET: Field = 0xc1a1;
-global AMOUNT: u128 = 100;
-global MINTED: u128 = 1000;
+// 20_000 clears MIN_FEE 1000 at a 10% share: fee 1000, net 19_000.
+global AMOUNT: u128 = 20000;
+global FEE: u128 = 1000;
+global NET: u128 = 19000;
+global MINTED: u128 = 100000;
 global LOCK: u64 = 600;
 
 struct Setup {
@@ -119,8 +122,10 @@ unconstrained fn deposit_then_claim_moves_the_funds() {
     assert(balance(s.env, s.token, s.escrow) == AMOUNT);
 
     claim(s, 1, CLAIM_SECRET);
-    assert(balance(s.env, s.token, s.recipient) == AMOUNT);
+    assert(balance(s.env, s.token, s.recipient) == NET);
     assert(balance(s.env, s.token, s.escrow) == 0);
+    // net + fee = deposit. The fee note is at the zero placeholder, which has no test key.
+    assert(balance(s.env, s.token, s.sender) + balance(s.env, s.token, s.recipient) == MINTED - FEE);
 }
 
 #[test]
@@ -130,6 +135,7 @@ unconstrained fn refund_after_the_deadline_returns_the_funds() {
     s.env.mine_block_at(deadline + 1);
     refund(s, 1);
     assert(balance(s.env, s.token, s.sender) == MINTED);
+    assert(balance(s.env, s.token, s.recipient) == 0);
     assert(balance(s.env, s.token, s.escrow) == 0);
 }
 
@@ -184,7 +190,7 @@ unconstrained fn concurrent_escrows_are_isolated() {
     // Claiming escrow 1 leaves escrow 2 intact (the first version popped
     // every note of the recipient and destroyed the others).
     claim(s, 1, CLAIM_SECRET);
-    assert(balance(s.env, s.token, s.recipient) == AMOUNT);
+    assert(balance(s.env, s.token, s.recipient) == NET);
     assert(balance(s.env, s.token, s.escrow) == AMOUNT);
 
     // Escrow 2 can still be refunded after its deadline.
@@ -283,7 +289,7 @@ unconstrained fn distinct_escrow_ids_from_one_sender_still_work() {
     claim(s, 1, CLAIM_SECRET);
     s.env.mine_block_at(deadline + 1);
     refund(s, 2);
-    assert(balance(s.env, s.token, s.recipient) == AMOUNT);
+    assert(balance(s.env, s.token, s.recipient) == NET);
     assert(balance(s.env, s.token, s.sender) == MINTED - AMOUNT);
     assert(balance(s.env, s.token, s.escrow) == 0);
 }
@@ -296,5 +302,70 @@ unconstrained fn the_same_escrow_id_cannot_be_reused_after_settlement() {
     let _ = deposit(s, 1, 11);
     claim(s, 1, CLAIM_SECRET);
     let _ = deposit(s, 1, 12);
+}
+
+unconstrained fn deposit_amount(s: Setup, amount: u128, escrow_id: Field, nonce: Field) {
+    let deadline = s.env.last_block_timestamp() + LOCK;
+    add_private_authwit_from_call(s.env, s.sender, s.escrow, transfer_call(s.token, s.sender, s.escrow, amount, nonce));
+    s.env.call_private(
+        s.sender,
+        PrivateEscrow::at(s.escrow).deposit(s.recipient, amount, deadline, 5, escrow_id, nonce),
+    );
+}
+
+#[test(should_fail_with = "fee exceeds share")]
+unconstrained fn deposit_refused_when_fee_exceeds_share() {
+    let s = setup();
+    deposit_amount(s, 9999, 1, 11);
+}
+
+#[test(should_fail_with = "fee exceeds tx cap")]
+unconstrained fn deposit_refused_when_fee_exceeds_tx_cap() {
+    let s = setup();
+    let amount: u128 = 1000000001;
+    mint(s.env, s.token, s.sender, amount);
+    deposit_amount(s, amount, 1, 11);
+}
+
+// Section 1 vectors. Schedule is the fixture (30 / 500 / 500), not the D5 globals.
+// tx cap is u128::MAX so the fixture rows are not refused by the baseline cap.
+#[test]
+unconstrained fn section_1_vectors_and_baseline_quotes() {
+    let cap: u128 = 340282366920938463463374607431768211455;
+    let refused_1 = quote_protocol_fee(1, 30, 500, 500, cap);
+    assert(!refused_1.ok & (refused_1.reason == 1));
+    let refused_9999 = quote_protocol_fee(9999, 30, 500, 500, cap);
+    assert(!refused_9999.ok & (refused_9999.reason == 1));
+
+    let row_10000 = quote_protocol_fee(10000, 30, 500, 500, cap);
+    assert(row_10000.ok & (row_10000.fee == 500) & (row_10000.net == 9500));
+    let row_10001 = quote_protocol_fee(10001, 30, 500, 500, cap);
+    assert(row_10001.ok & (row_10001.fee == 500) & (row_10001.net == 9501));
+    let row_166667 = quote_protocol_fee(166667, 30, 500, 500, cap);
+    assert(row_166667.ok & (row_166667.fee == 501) & (row_166667.net == 166166));
+    let row_166668 = quote_protocol_fee(166668, 30, 500, 500, cap);
+    assert(row_166668.ok & (row_166668.fee == 501) & (row_166668.net == 166167));
+    let row_1000000 = quote_protocol_fee(1000000, 30, 500, 500, cap);
+    assert(row_1000000.ok & (row_1000000.fee == 3000) & (row_1000000.net == 997000));
+    let row_1234567 = quote_protocol_fee(1234567, 30, 500, 500, cap);
+    assert(row_1234567.ok & (row_1234567.fee == 3704) & (row_1234567.net == 1230863));
+    let row_1e11 = quote_protocol_fee(100000000000, 30, 500, 500, cap);
+    assert(row_1e11.ok & (row_1e11.fee == 300000000) & (row_1e11.net == 99700000000));
+    let huge: u128 = 340282366920938463463374607431768211455;
+    let row_huge = quote_protocol_fee(huge, 30, 500, 500, cap);
+    assert(row_huge.ok);
+    assert(row_huge.fee == 1020847100762815390390123822295304635);
+    assert(row_huge.net == 339261519820175648072984483609472906820);
+    assert(row_huge.fee + row_huge.net == huge);
+
+    // D5 globals, escrow minimum 1000, cap 5_000_000.
+    let edge = quote_protocol_fee(10000, 50, 1000, 1000, 5000000);
+    assert(edge.ok & (edge.fee == 1000) & (edge.net == 9000));
+    let under = quote_protocol_fee(9999, 50, 1000, 1000, 5000000);
+    assert(!under.ok & (under.reason == 1));
+    let at_cap = quote_protocol_fee(1000000000, 50, 1000, 1000, 5000000);
+    assert(at_cap.ok & (at_cap.fee == 5000000) & (at_cap.net == 995000000));
+    let over_cap = quote_protocol_fee(1000000001, 50, 1000, 1000, 5000000);
+    assert(!over_cap.ok & (over_cap.reason == 2));
 }
 

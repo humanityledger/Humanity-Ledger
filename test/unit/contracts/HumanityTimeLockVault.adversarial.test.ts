@@ -47,8 +47,9 @@ describe("HumanityTimeLockVault — Tests Adversariales (Fase 3)", function () {
   let mockERC20: any;
   let mockFeeToken: any;
 
-  // Timeout de Mocha generoso para tests que despliegan múltiples contratos
-  this.timeout(60_000);
+  // Mocha sets this.timeout. Vitest calls this function with this === undefined.
+  const mochaCtx = this;
+  if (mochaCtx != null && typeof mochaCtx.timeout === "function") mochaCtx.timeout(60_000);
 
   beforeEach(async function () {
     [alice, bob, stranger] = await ethers.getSigners();

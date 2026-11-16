@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isPersistableXmtpGroupId } from '@/lib/xmtp/groupId';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { randomBytes } from 'crypto';
@@ -226,7 +227,20 @@ export async function PATCH(req: NextRequest) {
       }
 
       if (action === 'CREATE_CHANNEL') {
-        const { name, description, isPaid, price, currency } = body;
+        const { name, description, isPaid, price, currency, xmtpGroupId } = body;
+        const community = await (prisma as any).community.findUnique({
+          where: { id: communityId },
+          select: { communityMls: true },
+        });
+        // Only a community already flagged communityMls may store a group id.
+        // The id is the one createSecureGroup returned. Existing communities stay without one.
+        const mls = community?.communityMls === true;
+        if (mls && !isPersistableXmtpGroupId(xmtpGroupId)) {
+          return NextResponse.json(
+            { error: 'Create the XMTP group in the client first and send its group id.', code: 'XMTP_GROUP_REQUIRED' },
+            { status: 400 },
+          );
+        }
         const count = await (prisma as any).communityChannel.count({ where: { communityId } });
         const channel = await (prisma as any).communityChannel.create({
           data: {
@@ -236,7 +250,8 @@ export async function PATCH(req: NextRequest) {
             isPaid: Boolean(isPaid),
             price: price ? parseFloat(price) : null,
             currency: currency || null,
-            position: count
+            position: count,
+            ...(mls ? { xmtpGroupId } : {}),
           }
         });
         return NextResponse.json({ ok: true, channel });

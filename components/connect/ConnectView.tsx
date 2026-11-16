@@ -20,7 +20,7 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
 import { safeNativeWalletLink, safeWalletHref } from "@/lib/auth/wallet-links";
-import { openMobileWalletApp, detectConnectedMobileWallet } from "@/lib/wallet/mobileWallet";
+import { openMobileWalletApp, detectConnectedMobileWallet, METAMASK_DAPP_URL } from "@/lib/wallet/mobileWallet";
 
 /**
  * ConnectView — the presentational half of /connect.
@@ -64,6 +64,11 @@ export interface ConnectViewProps {
   onOtherWallets: () => void;
   /** False on a phone, where the one wallet button already opens the full wallet list. */
   showOtherWallets?: boolean;
+  /**
+   * Phone browser that is not a wallet browser (Safari, Chrome). Shows the MetaMask dapp link.
+   * The link is a tap. Nothing navigates there by itself.
+   */
+  externalMobile?: boolean;
   onPhone: () => void;
   onBack: () => void;
   onRetry: () => void;
@@ -151,11 +156,29 @@ function Option({
 
 /* ── Stages ─────────────────────────────────────────────────────────────── */
 
+function MetaMaskDappLink() {
+  const href = safeWalletHref(METAMASK_DAPP_URL);
+  if (!href) return null;
+  return (
+    <div className={s.metamaskCta}>
+      <a href={href} className={`${s.btn} ${s.btnPrimary}`}>
+        Open in MetaMask
+      </a>
+      <p className={s.metamaskHint}>
+        If MetaMask opens from Safari or Chrome and the signature does not finish, use this link.
+        It opens Ledger Chat inside MetaMask so you can sign there. It does not complete a signature that already failed in this browser. WalletConnect on this page stays available.
+      </p>
+    </div>
+  );
+}
+
 function Choose(p: ConnectViewProps) {
   return (
     <>
       <h1 className={s.title}>Sign in to Ledger Chat</h1>
       <p className={s.subtitle}>Connect the wallet you want to use as your account.</p>
+
+      {p.isMobile && p.externalMobile ? <MetaMaskDappLink /> : null}
 
       <div className={s.options}>
         {p.wallets.map((w) => (
@@ -389,6 +412,7 @@ function Failed(p: ConnectViewProps) {
         <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={p.onRetry}>
           Try again
         </button>
+        {p.isMobile && p.externalMobile ? <MetaMaskDappLink /> : null}
         <button type="button" className={`${s.btn} ${s.btnSecondary}`} onClick={p.onDisconnect}>
           Use a different wallet
         </button>

@@ -12,7 +12,7 @@
  * chat to post in this DM only.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { singleFlight } from '@/lib/aztec/single-flight';
 import { X, KeyRound, Lock, Waves } from 'lucide-react';
 import { announcementFor, localStoragePeerBindingStore, peerAztecAddress, verifiedAnnouncementFor } from '@/lib/aztec/peer-binding';
@@ -25,6 +25,12 @@ import { STREAM_START_SLACK, streamTerms } from '@/lib/aztec/stream-terms';
 import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
 import { useValueMode } from '@/lib/aztec/useValueMode';
 import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
+import {
+  BASELINE_ESCROW_SCHEDULE,
+  BASELINE_STREAM_SCHEDULE,
+  TREASURY_ADDRESS_SET,
+  baselineFee,
+} from '@/lib/protocol/fees';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -111,11 +117,33 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
     }
   };
 
+  const quote = useMemo(() => {
+    const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.address === token);
+    if (!t || !amount.trim()) return null;
+    try {
+      const units = parseUnits(amount, t.decimals);
+      const schedule = kind === 'escrow' ? BASELINE_ESCROW_SCHEDULE : BASELINE_STREAM_SCHEDULE;
+      return { symbol: t.symbol, decimals: t.decimals, q: baselineFee(units, schedule) };
+    } catch {
+      return null;
+    }
+  }, [amount, token, kind]);
+
   const once = useRef(singleFlight()).current; // 4.19: a double tap never funds two agreements
   const open = () => once(async () => {
     setError(null);
     setStartedAt(Date.now());
     if (!peer) return;
+    if (!TREASURY_ADDRESS_SET) {
+      setError('No treasury address is set. This agreement cannot be deployed.');
+      setStartedAt(0);
+      return;
+    }
+    if (kind === 'escrow' && quote && !quote.q.ok) {
+      setError('This amount is refused. The contract would not accept the fee.');
+      setStartedAt(0);
+      return;
+    }
     setStep('Preparing');
     try {
       const { openChatAgreement } = await import('@/lib/aztec/chat-agreements');
@@ -240,13 +268,34 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                     return null;
                   }
                 })()}
+                {quote?.q.ok && (
+                  <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">
+                    Protocol fee on settlement: {formatUnits(quote.q.fee, quote.decimals)} {quote.symbol}. Recipient: {formatUnits(quote.q.net, quote.decimals)} {quote.symbol}.
+                    {kind === 'escrow'
+                      ? ' Nothing is charged on deposit. A refund pays the full amount and no fee.'
+                      : ' This is the fee if the whole amount is withdrawn once. Each withdrawal is charged on its own, with no minimum. The unaccrued part of a cancel is not charged.'}
+                  </p>
+                )}
+                {quote && !quote.q.ok && (
+                  <p role="status" className="text-[12.5px] text-[#7a2e12] leading-snug">
+                    {quote.q.reason === 'fee-exceeds-tx-cap'
+                      ? 'Refused: the fee would be above 5 HLC. The contract does not reduce it.'
+                      : 'Refused: the fee would take more than 10% of this amount.'}
+                    {kind === 'stream' ? ' A smaller withdrawal can still settle. Creating the stream is not charged.' : ''}
+                  </p>
+                )}
+                {!TREASURY_ADDRESS_SET && (
+                  <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">
+                    No treasury address is set. The agreement cannot be deployed until the 4-of-7 address exists.
+                  </p>
+                )}
                 <p className="text-[12.5px] text-[#727a88] leading-snug">
                   The amount comes from your private balance. Proving runs on this device and can take a few minutes.
                 </p>
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
                 {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || (ALPHA && !acked(ack))} onClick={open}>
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !TREASURY_ADDRESS_SET || (kind === 'escrow' && !!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
                 </button>
               </div>

@@ -3,9 +3,10 @@
  *
  *   fee = max(minFee, ceil(amount × feeBps / 10,000))
  *
- * State: real only in tests. No contract charges a fee today; this module is the reference the fee
- * contract must match (docs/protocol/FEE_CONTRACT_SPEC.md). Every function is pure and works in
- * bigint base units of the token (HLC: 6 decimals).
+ * State: the same arithmetic is in PrivateEscrow and PaymentStream (settlement only).
+ * The committed artifact is still the pre-fee class until `aztec compile` records a new
+ * class id. Nothing is deployed. TREASURY has no address. There is no external audit.
+ * Every function is pure and works in bigint base units of the token (HLC: 6 decimals).
  *
  * Two properties carried over to the contract:
  *  - Ceiling division: splitting a payment into parts never pays less in total.
@@ -71,15 +72,50 @@ export function protocolFee(amount: bigint, s: FeeSchedule): FeeQuote {
  * than the allowed share. Shown to the person before they enter an amount.
  */
 export function minimumAmount(s: FeeSchedule): bigint | null {
-  if (!validSchedule(s) || s.maxFeeShareBps === 0n) return null;
+  if (!validSchedule(s) || s.maxFeeShareBps === 0n || s.feeBps > s.maxFeeShareBps) return null;
   // Smallest amount with minFee × BPS <= amount × share, then checked against the proportional part.
+  // Ceiling division can refuse several units above that bound (a stream with no minimum still
+  // refuses 1–9 at 50 bps and a 10% share).
   let amount = (s.minFee * BPS + s.maxFeeShareBps - 1n) / s.maxFeeShareBps;
   if (amount < 1n) amount = 1n;
-  for (let i = 0; i < 4; i++) {
+  const limit = amount + BPS;
+  for (; amount <= limit; amount += 1n) {
     const q = protocolFee(amount, s);
     if (q.ok) return amount;
-    amount += 1n;
   }
-  // The proportional fee alone exceeds the share (feeBps > maxFeeShareBps): no amount qualifies.
-  return s.feeBps > s.maxFeeShareBps ? null : amount;
+  return null;
+}
+
+/** Authorized baseline, 16 November 2026. Section 8 of FEE_CONTRACT_SPEC.md. Not a deployed class. */
+export const BASELINE_FEE_BPS = 50n;
+export const BASELINE_ESCROW_MIN_FEE = 1_000n;
+export const BASELINE_STREAM_MIN_FEE = 0n;
+export const BASELINE_MAX_FEE_SHARE_BPS = 1_000n;
+export const BASELINE_TX_CAP = 5_000_000n;
+
+/** False until Stefan supplies the 4-of-7 Aztec address. The contract constant is zero. */
+export const TREASURY_ADDRESS_SET = false;
+
+export const BASELINE_ESCROW_SCHEDULE: FeeSchedule = {
+  feeBps: BASELINE_FEE_BPS,
+  minFee: BASELINE_ESCROW_MIN_FEE,
+  maxFeeShareBps: BASELINE_MAX_FEE_SHARE_BPS,
+};
+
+export const BASELINE_STREAM_SCHEDULE: FeeSchedule = {
+  feeBps: BASELINE_FEE_BPS,
+  minFee: BASELINE_STREAM_MIN_FEE,
+  maxFeeShareBps: BASELINE_MAX_FEE_SHARE_BPS,
+};
+
+export type BaselineQuote =
+  | { ok: true; fee: bigint; net: bigint }
+  | { ok: false; reason: 'invalid-amount' | 'invalid-schedule' | 'fee-exceeds-share' | 'fee-exceeds-tx-cap' };
+
+/** protocolFee, then the baseline cap. A fee above the cap is refused, not reduced. */
+export function baselineFee(amount: bigint, s: FeeSchedule): BaselineQuote {
+  const q = protocolFee(amount, s);
+  if (!q.ok) return q;
+  if (q.fee > BASELINE_TX_CAP) return { ok: false, reason: 'fee-exceeds-tx-cap' };
+  return q;
 }

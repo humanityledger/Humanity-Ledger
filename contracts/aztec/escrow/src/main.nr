@@ -38,8 +38,63 @@
 // Custody: this contract holds private token balances, so it is deployed with
 // its own keys, one instance per agreement, and the parties hold the secret
 // (lib/aztec/keyed-deploy.ts, lib/aztec/agreements.ts).
+//
+// Fee (authorized baseline, 16 November 2026): charged on claim only, in the
+// agreement token. Deposit checks that the fee would be accepted and moves the
+// full amount. Refund moves the full amount and pays no fee. The fee note goes
+// to TREASURY, which is the zero placeholder until a real 4-of-7 address exists.
+// Noir 1.0.0-rc.3 has no test-only attribute (cfg is not in scope), so the
+// constructor cannot assert the placeholder only outside tests. The zero check
+// is in the client and the deploy scripts, not in this circuit.
+// No owner, no pause, no oracle, no daily cap, no buyback, no burn.
 
 use aztec::macros::aztec;
+
+global BPS: u128 = 10000;
+
+/// Outcome of the section 1 formula. `reason` 0 = ok, 1 = share (or fee above the amount), 2 = tx cap.
+pub struct FeeOutcome {
+    pub ok: bool,
+    pub fee: u128,
+    pub net: u128,
+    pub reason: u32,
+}
+
+/// u128-safe fee. Does not form amount × fee_bps. Share is compared without a wide product.
+pub fn quote_protocol_fee(
+    amount: u128,
+    fee_bps: u128,
+    min_fee: u128,
+    max_fee_share_bps: u128,
+    tx_cap: u128,
+) -> FeeOutcome {
+    if (fee_bps > BPS) | (max_fee_share_bps > BPS) {
+        FeeOutcome { ok: false, fee: 0, net: 0, reason: 1 }
+    } else {
+        let q = amount / BPS;
+        let r = amount % BPS;
+        let proportional = q * fee_bps + (r * fee_bps + BPS - 1) / BPS;
+        let fee = if proportional > min_fee { proportional } else { min_fee };
+        if fee > amount {
+            FeeOutcome { ok: false, fee: 0, net: 0, reason: 1 }
+        } else {
+            let q_share = q * max_fee_share_bps;
+            let share_ok = if fee <= q_share {
+                true
+            } else {
+                let t = fee - q_share;
+                if t > max_fee_share_bps { false } else { t * BPS <= r * max_fee_share_bps }
+            };
+            if !share_ok {
+                FeeOutcome { ok: false, fee: 0, net: 0, reason: 1 }
+            } else if fee > tx_cap {
+                FeeOutcome { ok: false, fee: 0, net: 0, reason: 2 }
+            } else {
+                FeeOutcome { ok: true, fee, net: amount - fee, reason: 0 }
+            }
+        }
+    }
+}
 
 mod test;
 
@@ -75,6 +130,13 @@ pub contract PrivateEscrow {
     global MAX_TX_LIFETIME: u64 = 3600;
     global TRANSFER_IN_PRIVATE_SELECTOR: FunctionSelector =
         FunctionSelector::from_signature("transfer_in_private((Field),(Field),u128,Field)");
+    // Authorized baseline, 16 November 2026. Bytecode, not public storage.
+    global FEE_BPS: u128 = 50;
+    global MIN_FEE: u128 = 1000;
+    global MAX_FEE_SHARE_BPS: u128 = 1000;
+    global TX_CAP: u128 = 5000000;
+    // Zero placeholder. Not a treasury account. Deploy stays blocked while this is zero.
+    global TREASURY: AztecAddress = AztecAddress { inner: 0 };
 
     #[derive(Deserialize, Eq, Packable, Serialize)]
     #[note]
@@ -123,6 +185,12 @@ pub contract PrivateEscrow {
         let anchor_ts = self.context.get_anchor_block_header().timestamp() as u64;
         assert(sender != recipient, "PrivateEscrow: self-deposit forbidden");
         assert(amount > 0, "PrivateEscrow: zero amount");
+        // No fee is transferred. An amount the claim could not settle is refused.
+        let quoted = crate::quote_protocol_fee(amount, FEE_BPS, MIN_FEE, MAX_FEE_SHARE_BPS, TX_CAP);
+        if !quoted.ok {
+            assert(quoted.reason != 2, "PrivateEscrow: fee exceeds tx cap");
+            assert(false, "PrivateEscrow: fee exceeds share");
+        }
         assert(deadline > anchor_ts, "PrivateEscrow: deadline in the past");
         assert(escrow_id != 0, "PrivateEscrow: zero escrow id");
 
@@ -185,14 +253,29 @@ pub contract PrivateEscrow {
         );
 
         let token_addr = self.storage.token.read();
-        let _ = self.context.call_private_function(
-            token_addr,
-            TRANSFER_IN_PRIVATE_SELECTOR,
-            [self.context.this_address().to_field(), claimer.to_field(), note.amount as Field, 0],
-        );
+        let quoted = crate::quote_protocol_fee(note.amount, FEE_BPS, MIN_FEE, MAX_FEE_SHARE_BPS, TX_CAP);
+        if !quoted.ok {
+            assert(quoted.reason != 2, "PrivateEscrow: fee exceeds tx cap");
+            assert(false, "PrivateEscrow: fee exceeds share");
+        }
+        // Authwit nonce 0: this contract spends its own notes.
+        if quoted.net > 0 {
+            let _ = self.context.call_private_function(
+                token_addr,
+                TRANSFER_IN_PRIVATE_SELECTOR,
+                [self.context.this_address().to_field(), claimer.to_field(), quoted.net as Field, 0],
+            );
+        }
+        if quoted.fee > 0 {
+            let _ = self.context.call_private_function(
+                token_addr,
+                TRANSFER_IN_PRIVATE_SELECTOR,
+                [self.context.this_address().to_field(), TREASURY.to_field(), quoted.fee as Field, 0],
+            );
+        }
     }
 
-    /// The sender takes the funds back after the deadline.
+    /// The sender takes the full amount back after the deadline. No fee.
     #[external("private")]
     fn refund(escrow_id: Field) {
         let sender = self.msg_sender();

@@ -22,6 +22,8 @@ Each question has four fields:
 
 No code may be changed in response to an Aztec reply without first updating this document and referencing it in the PR description.
 
+The last section of this file records a recommended posture for each question, dated 16 November 2026. Every status stays **OPEN**. A recommended posture is not an Aztec reply and is not a confirmation by Stefan.
+
 ---
 
 ## Q1 — Shared settlement nullifier (escrow claim / refund)
@@ -213,7 +215,7 @@ All ten questions from `docs/AZTEC_FOUNDATION_DOSSIER.md` § 5 and the protocol 
 3. If the reply requires a code change, open a task in the appropriate tracking document and reference this entry.
 4. Update `docs/STATUS.md` to reflect the resolution.
 
-No architectural claim about the Aztec integration may be made in public materials until the relevant questions here are RESOLVED or the interim position is explicitly stated as the definitive position.
+No architectural claim about the Aztec integration may be made in public materials until the relevant questions here are RESOLVED or Stefan states the interim position as the definitive one. The recommended postures below are not that statement.
 
 
 ---
@@ -236,3 +238,24 @@ Este apartado recoge las decisiones de diseño que el protocolo ha tomado unilat
 | **Q10:** Dependencia del mecanismo estándar de sync del PXE para note discovery | No se añade tagging extra sin saber si Aztec ya lo garantiza; el UI muestra "Sync wallet" si el balance parece desfasado | Si Aztec documenta escenarios de nota irrecuperable, implementar tagging XMTP como mecanismo de entrega alternativo |
 
 **Principio rector de esta sección:** ninguna de estas decisiones introduce un nuevo patrón criptográfico. Todas se apoyan en mecanismos ya presentes en el código de producción actual (`contracts/aztec/`, `lib/aztec/`) o en ejemplos de `noir-contracts` v6. Esta tabla se actualiza cada vez que llega respuesta de Aztec Labs para alguna de las preguntas Q1–Q10.
+
+---
+
+## Recommended postures — 16 November 2026
+
+Proposal for Stefan to keep or replace. **Status of Q1–Q10 remains OPEN.** There is no Aztec reply. Nothing here is a resolution, and nothing here authorises a change under `contracts/aztec/` or `lib/aztec/`.
+
+| ID | Recommended posture | Why this one |
+|---|---|---|
+| Q1 | Keep the shared settlement nullifier for claim and refund, and keep the deposit nullifier | One nullifier in Aztec’s tree makes the two endings mutually exclusive without public state. `delayed_public_mutable` would publish the check |
+| Q2 | Keep keyed deployment from the conversation secret. The parties hold it. Trust on first use stays a separate, open check (G7) | A protocol-held factory or a custodial account would put the private balance’s keys outside the two parties |
+| Q3 | Keep the raw `transfer_in_private` selector | The Token crate duplicates the `aztec` crate on this toolchain and does not compile. A typed interface waits until Aztec ships one that does. Do not fork the token |
+| Q4 | Keep the per-state nullifier shared by withdraw and cancel, and the sender’s copy of the next state | `delayed_public_mutable` for the cancel time would show when a cancel is prepared |
+| Q5 | Keep the 600-second expiry measured from the cancel’s anchor block | It bounds over-accrual at `rate × 600` without a time oracle. A tighter Aztec inclusion rule, if one is published, changes the constant only |
+| Q6 | Keep 25% padding (`gasLimitsFromSimulation` factor 1.25) and the margin the wallet already shows before the action | The figure is a heuristic. It is not a second, hidden fee. A published Aztec estimator would replace it in the wallet only |
+| Q7 | Alpha stays Fee Juice paid by the account. Do not restore sponsorship. `/api/aztec/sponsor` stays 410 | That is the product decision of 15 November 2026 and the network as it is. An Aztec-operated sponsored payer, if it appears, is a new decision |
+| Q8 | The fee payer and the fee amount stay public, and the UI keeps saying so. Do not add a private fee-paying contract | Hiding the fee payer needs a mechanism Aztec has not shipped on Alpha. A private FPC we operated would be a new custodian |
+| Q9 | Keep the signed announcement and the first pin. The send stays off until that card says verified. The pin is not a proof of the nullifier secret key | Aztec has not specified a lighter proof of nullifier-key control. Inventing one would be a new cryptographic pattern |
+| Q10 | Standard PXE sync only. Do not put a note hint in the XMTP message. If the sender is settled and the recipient still has no note after a full sync, record that once and do not send the payment again | A hint in the message store would copy payment metadata into a second system. The miss is the open discovery case, not a second transfer |
+
+These ten lines are the interim positions already in this file, stated as the posture to hold until Aztec Labs answers. They introduce no new cryptographic pattern.

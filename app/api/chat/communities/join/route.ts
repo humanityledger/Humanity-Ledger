@@ -131,17 +131,19 @@ export async function POST(req: NextRequest) {
       throw e;
     }
 
-    // Create system welcome event
-    try {
-      await (prisma as any).communityPost.create({
-        data: {
-          communityId: community.id,
-          authorAddress: 'system',
-          content: `__SYSTEM__${caller} joined the group${isCryptographicInvite && assignedRole !== 'MEMBER' ? ` as ${assignedRole}` : ''}`
-        }
-      });
-    } catch (e) {
-      console.error('Failed to post welcome message:', e);
+    // Create system welcome event. An MLS community does not store that text here.
+    if (community.communityMls !== true) {
+      try {
+        await (prisma as any).communityPost.create({
+          data: {
+            communityId: community.id,
+            authorAddress: 'system',
+            content: `__SYSTEM__${caller} joined the group${isCryptographicInvite && assignedRole !== 'MEMBER' ? ` as ${assignedRole}` : ''}`
+          }
+        });
+      } catch (e) {
+        console.error('Failed to post welcome message:', e);
+      }
     }
 
     return NextResponse.json({ ok: true, status: 'JOINED', role: assignedRole, community });

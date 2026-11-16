@@ -1,6 +1,8 @@
 # Humanity Ledger — Protocol Status
 **Current status: live on Aztec Alpha (mainnet) with a cap per payment; no external audit.** The first private payment from Ledger Chat on Aztec Alpha, 14 November 2026: transfer `0x1eb2bb76…40a5` in L2 block 29012 (HLC `0x1f49571a…24e5` deployed in block 28992), confirmed by the mainnet preflight run 43583640304. Network fees: each account pays its own (Fee Juice it bridges, or a contact pays through a fee link); Ledger Chat sponsors no fee, by product decision of 15 November 2026. The code is open source, MIT OR Apache-2.0.
-**Last updated: 15 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
+**Last updated: 16 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
+
+**Delta 16 November 2026.** The fee sentence above is unchanged: no sponsorship, no fee contract (Phase 0 only; D-1–D-5 in `docs/protocol/FEE_CONTRACT_SPEC.md` are not confirmed). Questions Q1–Q10 in `docs/AZTEC_DECISIONS.md` stay OPEN. `communityMls` still defaults to false. A community with that flag set gets 410 from the post routes and no new post row; every existing community is unchanged and still server-readable. The package for Aztec Labs is `docs/AZTEC_FOUNDATION_DOSSIER.md` (section 0). On Safari and Chrome, `/connect` can offer a tap to `https://link.metamask.io/dapp/ledgerchat.org` (`docs/CONNECT.md`). That does not change SIWE or Aztec proving.
 
 > Earlier versions of this file described "full production circuits", "audited timelocked infrastructure" and RFC 9420 conformance proven by our own tests. Those statements were not supported by the code and were withdrawn on 3 November 2026.
 
@@ -12,7 +14,7 @@
 |---|---|---|---|
 | Private payments (Aztec wallet) | Real on Aztec Alpha (first private payment 14 Nov 2026, L2 block 29012) and on testnet | `lib/aztec/wallet/`, `npm run test:aztec:e2e` | Needs the testnet token and faucet configuration (task R-15) |
 | Direct messages | Real, provided by XMTP v3 (MLS) | XMTP browser SDK 5.2.0 | We do not implement MLS ourselves |
-| Community posts | Readable by our server | Disclosed in the product | Migration plan: `docs/communities/MLS_MIGRATION.md` (task R-17) |
+| Community posts | Readable by our server while `communityMls` is false (the default). A community with the flag set is refused with 410 and the post is not stored | `prisma/schema.prisma`; post routes; `test/communities/r17-acceptance.test.ts` | Old rows are not deleted. The client does not yet create the XMTP group from community settings. AC-03 is open. Plan: `docs/communities/MLS_MIGRATION.md` |
 | Standalone circuits v1 (`circuits/escrow`, `identity`, `streams`) | Real in tests only; VKs pinned | `scripts/zk/check-artifacts.mjs`, `test/zk/`, `test/circuits/` | Known soundness issues ZK-01 to ZK-07 |
 | Standalone circuits v2 (`circuits/*_v2`) | Experimental; compiled and tested in CI (`Noir circuits` workflow); VK hashes pinned in `scripts/zk/v2-vks.mjs` | `docs/zk/V2_CIRCUITS.md` | No deployed verifier stores their state yet |
 | aztec-nr contracts (`contracts/aztec/`) | Compile with Aztec 6.0.0 and pass 55 TXE tests in CI (escrow 13, identity 20, streams 22); escrow, stream (with sender cancel) and identity claims ran end to end on testnet | `docs/zk/AZTEC_CONTRACTS_REVIEW.md`, workflows "Aztec contracts", "Aztec escrow e2e (testnet)", "Aztec testnet deployments" | The first keyless instances are do-not-use |
@@ -21,7 +23,7 @@
 | Browser prover (`lib/zk/browser-prover.ts`, Web Worker) | Real in tests only; no Node built-ins; pinned VK | `test/zk/browser-prover.test.ts` | Not wired into any screen |
 | Sign-in (SIWE at `/connect`) | Real: sealed single-use nonce, any EVM chain, www/apex domain, ERC-1271/6492 wallets | `test/auth/siwe-routes.test.ts` (real route handlers and signatures) | Needs `NEXT_PUBLIC_APP_URL` or `NEXT_PUBLIC_DOMAIN` set in production |
 | Aztec Alpha (mainnet) | HLC deployed (L2 block 28992); first private payment from Ledger Chat in L2 block 29012; weekly preflight checks node, L1 chain 1 and our records | Workflow "Aztec mainnet preflight" (run 43583640304); `deployments/aztec-mainnet.json` (`firstPrivatePayment`) | Not audited; cap per payment; no fee contract yet (launch condition 1) |
-| L1 contracts | Local tests; not audited, not deployed to mainnet | `npm run test:contracts` | `ZKIdentityRegistry.verifyCredential` reverts until a verifier exists |
+| L1 contracts | Local tests; not audited, not deployed to mainnet. TimeLockVault adversarial file: 9/9 on 15 November 2026, recorded in `docs/UPGRADE_LOG.md` (session 4). That run is not an external audit | `npm run test:contracts` | `ZKIdentityRegistry.verifyCredential` reverts until a verifier exists |
 | Community apps sandbox | Real (CSP `sandbox allow-scripts`, no network) | `test/eaf_isolation.adversarial.test.ts` | An app can navigate its own frame |
 
 ---
@@ -58,7 +60,7 @@
 
 ## Not claimed
 
-External audit, formal verification, quantum resistance, traffic-analysis protection, mainnet readiness.
+External audit, formal verification, quantum resistance, traffic-analysis protection, and an unqualified “ready for mainnet”. Capped payments on Aztec Alpha are a separate, narrower claim (the header of this file and `docs/AZTEC_FOUNDATION_DOSSIER.md` section 0).
 
 ---
 

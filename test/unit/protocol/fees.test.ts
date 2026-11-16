@@ -1,9 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { BPS, U128_MAX, ceilBps, minimumAmount, protocolFee, validSchedule, type FeeSchedule } from '@/lib/protocol/fees';
+import {
+  BASELINE_ESCROW_SCHEDULE,
+  BASELINE_STREAM_SCHEDULE,
+  BASELINE_TX_CAP,
+  BPS,
+  TREASURY_ADDRESS_SET,
+  U128_MAX,
+  baselineFee,
+  ceilBps,
+  minimumAmount,
+  protocolFee,
+  validSchedule,
+  type FeeSchedule,
+} from '@/lib/protocol/fees';
 import { agreementFee } from '@/lib/protocol/tokenomics';
 
-// Example schedules for tests only. The live values are a decision still open
-// (docs/protocol/FEE_CONTRACT_SPEC.md, "Decisions before deployment").
+// Section 1 fixture. Not the authorized baseline.
 const S: FeeSchedule = { feeBps: 30n, minFee: 500n, maxFeeShareBps: 500n };
 const NO_MIN: FeeSchedule = { feeBps: 30n, minFee: 0n, maxFeeShareBps: BPS };
 
@@ -107,7 +119,50 @@ describe('minimumAmount', () => {
   });
 });
 
-describe('D-2 placeholder schedule (pending operator confirmation)', () => {
+describe('section 1 test vectors', () => {
+  const rows: Array<[bigint, bigint, bigint] | [bigint, 'refused']> = [
+    [1n, 'refused'],
+    [9_999n, 'refused'],
+    [10_000n, 500n, 9_500n],
+    [10_001n, 500n, 9_501n],
+    [166_667n, 501n, 166_166n],
+    [166_668n, 501n, 166_167n],
+    [1_000_000n, 3_000n, 997_000n],
+    [1_234_567n, 3_704n, 1_230_863n],
+    [100_000_000_000n, 300_000_000n, 99_700_000_000n],
+    [U128_MAX, 1_020_847_100_762_815_390_390_123_822_295_304_635n, 339_261_519_820_175_648_072_984_483_609_472_906_820n],
+  ];
+  it('reproduces every row, and the u128-safe share check matches the direct comparison', () => {
+    const shareOk = (amount: bigint, fee: bigint, share: bigint) => {
+      if (fee > amount) return false;
+      const q = amount / BPS;
+      const r = amount % BPS;
+      const qShare = q * share;
+      if (fee <= qShare) return true;
+      const t = fee - qShare;
+      if (t > share) return false;
+      return t * BPS <= r * share;
+    };
+    for (const row of rows) {
+      const q = protocolFee(row[0], S);
+      if (row[1] === 'refused') {
+        expect(q).toEqual({ ok: false, reason: 'fee-exceeds-share' });
+      } else if (q.ok) {
+        expect(q.fee).toBe(row[1]);
+        expect(q.net).toBe(row[2]);
+        expect(shareOk(row[0], q.fee, S.maxFeeShareBps)).toBe(q.fee * BPS <= row[0] * S.maxFeeShareBps);
+      } else {
+        throw new Error(`expected a fee for ${row[0]}`);
+      }
+    }
+    for (const a of amounts(400)) {
+      const q = protocolFee(a, S);
+      if (q.ok) expect(shareOk(a, q.fee, S.maxFeeShareBps)).toBe(true);
+    }
+  });
+});
+
+describe('D-2 placeholder schedule (printed minFee 1, not the compile minimum)', () => {
   const P: FeeSchedule = { feeBps: 50n, minFee: 1n, maxFeeShareBps: 1_000n };
   it('matches the vectors in FEE_CONTRACT_SPEC.md section 6', () => {
     expect(minimumAmount(P)).toBe(10n);
@@ -115,5 +170,29 @@ describe('D-2 placeholder schedule (pending operator confirmation)', () => {
     expect(protocolFee(10n, P)).toEqual({ ok: true, fee: 1n, net: 9n });
     expect(protocolFee(1_000_000n, P)).toEqual({ ok: true, fee: 5_000n, net: 995_000n });
     expect(protocolFee(10n ** 18n, P)).toEqual({ ok: true, fee: 5n * 10n ** 15n, net: 995n * 10n ** 15n });
+  });
+});
+
+describe('authorized baseline (16 November 2026)', () => {
+  it('charges the escrow minimum on settlement amounts and refuses the share and the cap', () => {
+    expect(TREASURY_ADDRESS_SET).toBe(false);
+    expect(minimumAmount(BASELINE_ESCROW_SCHEDULE)).toBe(10_000n);
+    expect(baselineFee(10_000n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: true, fee: 1_000n, net: 9_000n });
+    expect(baselineFee(9_999n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-share' });
+    expect(baselineFee(20_000n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: true, fee: 1_000n, net: 19_000n });
+    expect(baselineFee(1_000_000_000n, BASELINE_ESCROW_SCHEDULE)).toEqual({
+      ok: true,
+      fee: BASELINE_TX_CAP,
+      net: 995_000_000n,
+    });
+    expect(baselineFee(1_000_000_001n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-tx-cap' });
+  });
+  it('uses a zero minimum on streams and still refuses a fee above 10% or the cap', () => {
+    expect(minimumAmount(BASELINE_STREAM_SCHEDULE)).toBe(10n);
+    expect(baselineFee(10n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: true, fee: 1n, net: 9n });
+    expect(baselineFee(9n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-share' });
+    expect(baselineFee(5n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-share' });
+    expect(baselineFee(100n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: true, fee: 1n, net: 99n });
+    expect(baselineFee(200_000n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: true, fee: 1_000n, net: 199_000n });
   });
 });

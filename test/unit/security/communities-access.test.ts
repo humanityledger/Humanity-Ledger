@@ -33,6 +33,37 @@ describe('communities access control', () => {
     db.communityMember.findUnique.mockResolvedValue({ role: 'ADMIN' });
   });
 
+  it('a community that is not on MLS ignores a group id', async () => {
+    db.community.findUnique.mockResolvedValue({ communityMls: false });
+    db.communityChannel.count.mockResolvedValue(0);
+    db.communityChannel.create.mockResolvedValue({ id: 'ch' });
+    const res = await patch({
+      communityId: 'mine',
+      action: 'CREATE_CHANNEL',
+      name: 'general',
+      xmtpGroupId: '0123456789abcdef',
+    });
+    expect(res.status).toBe(200);
+    expect(db.communityChannel.create.mock.calls[0][0].data.xmtpGroupId).toBeUndefined();
+  });
+
+  it('an MLS community stores only a group id the client created', async () => {
+    db.community.findUnique.mockResolvedValue({ communityMls: true });
+    db.communityChannel.count.mockResolvedValue(0);
+    db.communityChannel.create.mockResolvedValue({ id: 'ch' });
+    const missing = await patch({ communityId: 'mine', action: 'CREATE_CHANNEL', name: 'general' });
+    expect(missing.status).toBe(400);
+    expect(db.communityChannel.create).not.toHaveBeenCalled();
+    const ok = await patch({
+      communityId: 'mine',
+      action: 'CREATE_CHANNEL',
+      name: 'general',
+      xmtpGroupId: '0123456789abcdef',
+    });
+    expect(ok.status).toBe(200);
+    expect(db.communityChannel.create.mock.calls[0][0].data.xmtpGroupId).toBe('0123456789abcdef');
+  });
+
   it('an admin cannot edit a channel that belongs to another community', async () => {
     db.communityChannel.findFirst.mockResolvedValue(null);
     const res = await patch({ communityId: 'mine', action: 'UPDATE_CHANNEL', channelId: 'foreign', name: 'x' });

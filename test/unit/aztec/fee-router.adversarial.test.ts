@@ -4,8 +4,10 @@
  *
  * Tests adversariales para HLFeeRouter (Fee Contract).
  *
- * ESTADO: Todos los tests están en it.skip porque el contrato NO existe todavía.
- * Las decisiones de diseño D1–D7 están pendientes de aprobación de Stefan.
+ * ESTADO: Todos los tests siguen en it.skip. Describen el boceto HLFeeRouter
+ * (fee en el depósito, buyback, pausa, tope diario), no la baseline del 16 de
+ * noviembre de 2026. No quitar el skip hasta reescribirlos contra esa baseline.
+ * No son una auditoría. La baseline está en PrivateEscrow y PaymentStream.
  *
  * SPEC de referencia: docs/protocol/FEE_CONTRACT_SPEC.md § 10
  * Cita literal del SPEC:
@@ -20,13 +22,15 @@
  * No importa ni referencia ningún archivo de contracts/aztec/.
  * El propósito es documentar la especificación ejecutable como exige el SPEC § 10.
  *
- * Cuando el contrato exista (post D1–D7 aprobados + implementación), eliminar los
- * it.skip y sustituir los TODO por la lógica TXE real.
+ * No activar estos casos. Hay que reescribirlos contra la baseline real
+ * (liquidación, sin buyback, sin pausa, sin tope diario) antes de quitar el skip.
  */
 
 describe("HLFeeRouter — Tests Adversariales (Fee Contract Fase 0)", function () {
 
-  this.timeout(120_000);
+  // Mocha sets this.timeout. Vitest calls this function with this === undefined.
+  const mochaCtx = this;
+  if (mochaCtx != null && typeof mochaCtx.timeout === "function") mochaCtx.timeout(120_000);
 
   // ---------------------------------------------------------------------------
   // Nota sobre setup:

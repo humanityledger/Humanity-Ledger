@@ -80,9 +80,66 @@
 //            be locked forever once the first moves. UNCOMPILED in the
 //            session that wrote it: requires `aztec compile` and the TXE
 //            tests in CI; it changes the class ID.
+//
+//   Fee (authorized baseline, 16 November 2026): each withdrawal, and the
+//   accrued part of a cancel, pays the fee in the stream token. min fee is 0.
+//   The sender's unaccrued remainder pays no fee. create_stream does not
+//   quote `total` against TX_CAP. A large stream is created and withdrawn in
+//   slices. Each slice is quoted on its own amount and pays its own fee.
+//   A slice over the cap is refused. That is the baseline, not a bypass.
+//   TREASURY is the zero placeholder. Noir 1.0.0-rc.3 has no test-only attribute,
+//   so the constructor does not assert that placeholder. The zero check is
+//   in the client and the deploy scripts. No owner, no pause, no oracle,
+//   no daily cap, no buyback, no burn.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
+
+global BPS: u128 = 10000;
+
+/// Outcome of the section 1 formula. `reason` 0 = ok, 1 = share (or fee above the amount), 2 = tx cap.
+pub struct FeeOutcome {
+    pub ok: bool,
+    pub fee: u128,
+    pub net: u128,
+    pub reason: u32,
+}
+
+/// u128-safe fee. Does not form amount × fee_bps. Share is compared without a wide product.
+pub fn quote_protocol_fee(
+    amount: u128,
+    fee_bps: u128,
+    min_fee: u128,
+    max_fee_share_bps: u128,
+    tx_cap: u128,
+) -> FeeOutcome {
+    if (fee_bps > BPS) | (max_fee_share_bps > BPS) {
+        FeeOutcome { ok: false, fee: 0, net: 0, reason: 1 }
+    } else {
+        let q = amount / BPS;
+        let r = amount % BPS;
+        let proportional = q * fee_bps + (r * fee_bps + BPS - 1) / BPS;
+        let fee = if proportional > min_fee { proportional } else { min_fee };
+        if fee > amount {
+            FeeOutcome { ok: false, fee: 0, net: 0, reason: 1 }
+        } else {
+            let q_share = q * max_fee_share_bps;
+            let share_ok = if fee <= q_share {
+                true
+            } else {
+                let t = fee - q_share;
+                if t > max_fee_share_bps { false } else { t * BPS <= r * max_fee_share_bps }
+            };
+            if !share_ok {
+                FeeOutcome { ok: false, fee: 0, net: 0, reason: 1 }
+            } else if fee > tx_cap {
+                FeeOutcome { ok: false, fee: 0, net: 0, reason: 2 }
+            } else {
+                FeeOutcome { ok: true, fee, net: amount - fee, reason: 0 }
+            }
+        }
+    }
+}
 
 mod test;
 
@@ -113,6 +170,13 @@ pub contract PaymentStream {
 
     global TRANSFER_IN_PRIVATE_SELECTOR: FunctionSelector =
         FunctionSelector::from_signature("transfer_in_private((Field),(Field),u128,Field)");
+    // Authorized baseline, 16 November 2026. Bytecode, not public storage.
+    global FEE_BPS: u128 = 50;
+    global STREAM_MIN_FEE: u128 = 0;
+    global MAX_FEE_SHARE_BPS: u128 = 1000;
+    global TX_CAP: u128 = 5000000;
+    // Zero placeholder. Not a treasury account. Deploy stays blocked while this is zero.
+    global TREASURY: AztecAddress = AztecAddress { inner: 0 };
 
     // Separator of the per-state nullifier shared by withdraw and cancel
     // (SEC-S12). Distinct from every separator in contracts/aztec.
@@ -283,13 +347,27 @@ pub contract PaymentStream {
                 .deliver(MessageDelivery::onchain_constrained());
         }
 
-        // Release accrued tokens to recipient
+        // Fee on this withdrawal only. Checked after the accrual assert. Nonce 0.
         let token_addr = self.storage.token.read();
-        let _ = self.context.call_private_function(
-            token_addr,
-            TRANSFER_IN_PRIVATE_SELECTOR,
-            [self.context.this_address().to_field(), recipient.to_field(), amount as Field, 0],
-        );
+        let quoted = crate::quote_protocol_fee(amount, FEE_BPS, STREAM_MIN_FEE, MAX_FEE_SHARE_BPS, TX_CAP);
+        if !quoted.ok {
+            assert(quoted.reason != 2, "PaymentStream: fee exceeds tx cap");
+            assert(false, "PaymentStream: fee exceeds share");
+        }
+        if quoted.net > 0 {
+            let _ = self.context.call_private_function(
+                token_addr,
+                TRANSFER_IN_PRIVATE_SELECTOR,
+                [self.context.this_address().to_field(), recipient.to_field(), quoted.net as Field, 0],
+            );
+        }
+        if quoted.fee > 0 {
+            let _ = self.context.call_private_function(
+                token_addr,
+                TRANSFER_IN_PRIVATE_SELECTOR,
+                [self.context.this_address().to_field(), TREASURY.to_field(), quoted.fee as Field, 0],
+            );
+        }
     }
 
     // ─── Utility ─────────────────────────────────────────────────────────────
@@ -343,12 +421,27 @@ pub contract PaymentStream {
         let to_sender = note.total - accrued;
 
         let token_addr = self.storage.token.read();
+        // Fee only on the accrued part. The sender's remainder is not charged.
         if to_recipient > 0 {
-            let _ = self.context.call_private_function(
-                token_addr,
-                TRANSFER_IN_PRIVATE_SELECTOR,
-                [self.context.this_address().to_field(), note.recipient.to_field(), to_recipient as Field, 0],
-            );
+            let quoted = crate::quote_protocol_fee(to_recipient, FEE_BPS, STREAM_MIN_FEE, MAX_FEE_SHARE_BPS, TX_CAP);
+            if !quoted.ok {
+                assert(quoted.reason != 2, "PaymentStream: fee exceeds tx cap");
+                assert(false, "PaymentStream: fee exceeds share");
+            }
+            if quoted.net > 0 {
+                let _ = self.context.call_private_function(
+                    token_addr,
+                    TRANSFER_IN_PRIVATE_SELECTOR,
+                    [self.context.this_address().to_field(), note.recipient.to_field(), quoted.net as Field, 0],
+                );
+            }
+            if quoted.fee > 0 {
+                let _ = self.context.call_private_function(
+                    token_addr,
+                    TRANSFER_IN_PRIVATE_SELECTOR,
+                    [self.context.this_address().to_field(), TREASURY.to_field(), quoted.fee as Field, 0],
+                );
+            }
         }
         if to_sender > 0 {
             let _ = self.context.call_private_function(

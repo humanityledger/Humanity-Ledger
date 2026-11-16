@@ -13,9 +13,16 @@ earlier by email keep working until they expire.
 
 ## Wallet apps from Safari and Chrome
 
-The visitor stays in their own browser. The wallet app opens through WalletConnect (Reown AppKit),
-approves, and the visitor comes back to the same tab. Nothing in /connect sends anyone to a wallet's
-in-app browser (where their session would belong to a different browser).
+The default path stays in the visitor's own browser. The wallet app opens through WalletConnect (Reown AppKit),
+approves, and the visitor comes back to the same tab. Nothing in /connect navigates by itself into a wallet's
+in-app browser.
+
+On Safari or Chrome (no injected wallet), /connect also shows **Open in MetaMask**. It is a link the person taps:
+`https://link.metamask.io/dapp/ledgerchat.org`. The page does not assign that URL. It opens Ledger Chat inside
+the MetaMask app, where `window.ethereum` is present and the same SIWE request can finish without a
+WalletConnect round trip. If that signature fails, the failure screen shows the same link and says to sign
+inside MetaMask, or to try again with WalletConnect in this browser. A wallet's own browser does not show the
+link. Account derivation after SIWE is unchanged: the session is the address that signed.
 
 - **iPhone (Safari)**: iOS 17 and later do not let a wallet switch back to the browser by itself.
   After approving, the visitor taps "‹ Safari" at the top left; /connect notices it is visible again

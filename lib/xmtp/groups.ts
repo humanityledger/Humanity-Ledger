@@ -25,6 +25,8 @@
 import type { Client } from '@xmtp/browser-sdk';
 import { hasSyncGroupName } from '@/lib/sync/xmtpSyncChannel';
 
+export { isPersistableXmtpGroupId } from './groupId';
+
 // ── Input sanitization ─────────────────────────────────────────────────────
 
 /**

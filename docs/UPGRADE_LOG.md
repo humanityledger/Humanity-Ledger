@@ -474,3 +474,257 @@ Archivos verificados (LastWriteTime anterior a 23:22:00):
 ### Declaración de alineación
 
 **Ningún contrato aztec-nr, ninguna función de producción, ningún secreto, ningún archivo protegido ni ninguna lógica de R-17 o Fee Contract fue activada o modificada. La migración de schema es estrictamente aditiva y segura para Railway. Path A permanece 100 % intacto.**
+
+---
+
+## Sesión 7 — 16 noviembre 2026 (dossier Alpha, CTA MetaMask, puerta R-17)
+
+**Agente:** Grok 4.7. Paquete para revisión humana antes de cualquier envío a Aztec Labs.
+
+### Qué se añadió
+
+| Archivo | Cambio |
+|---|---|
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | Sección 0, 16 noviembre 2026: Alpha, primer pago, fees sin sponsorship, Q1–Q10 OPEN, fee contract en Fase 0, gaps, enlace al repo y a LinkedIn. Las secciones del 4 noviembre se conservan |
+| `docs/STATUS.md`, `docs/MAINNET_READINESS.md`, `docs/CONNECT.md`, `docs/communities/R17_ACCEPTANCE.md` | Delta del 16 noviembre. Sin claims nuevos de auditoría ni de mainnet sin límite |
+| `lib/wallet/mobileWallet.ts`, `components/connect/ConnectView.tsx`, `components/landing/ConnectPage.tsx`, `lib/auth/wallet-links.ts` | Detección de navegador móvil externo y enlace pulsable `https://link.metamask.io/dapp/ledgerchat.org`. La firma SIWE no cambia |
+| `app/api/chat/communities/[id]/posts/route.ts`, `app/api/chat/communities/posts/route.ts` | 410 sin escribir el post cuando `communityMls === true` |
+| `app/api/chat/communities/route.ts`, `lib/xmtp/groupId.ts` | `xmtpGroupId` solo si la comunidad ya tiene la bandera y el id pasa `isPersistableXmtpGroupId` (reexportado desde `lib/xmtp/groups.ts`) |
+| `app/api/chat/communities/join/route.ts`, `app/api/chat/communities/[id]/members/route.ts` | No escriben el texto de sistema del post cuando la bandera está activa. La membresía sí se guarda |
+| Tests de aceptación AC-01 y AC-02 | Dejan de estar en `describe.skip` y llaman al handler real con Prisma simulado |
+
+### Qué no se decidió
+
+- D-1–D-5 siguen sin confirmación del operador. D-6 y D-7 no están en la spec; no se inventaron.
+- Q1–Q10 siguen OPEN.
+- Ninguna comunidad pasa a `communityMls = true`.
+- El panel de ajustes no llama a `createSecureGroup`: no tiene el cliente XMTP. Duda para Stefan.
+
+### Archivos protegidos
+
+No se modificaron `contracts/aztec/`, `lib/aztec/`, `components/terminal/LedgerChatV2.tsx`, `package.json` ni lockfiles.
+
+### Alineación
+
+Cambios aditivos. Notas, nullifiers, PXE y contratos aztec-nr intactos. Path A intacto.
+
+---
+
+## Sesión 8 — 16 noviembre 2026 (swipe, Studio cerrado, progreso de pago, ajustes)
+
+### Qué se cambió
+
+| Área | Cambio |
+|---|---|
+| Swipe | `SwipeableConversationRow`: el deslizamiento se detiene en las acciones. Archive, Pin y Read solo corren al pulsarlas. La cápsula entra con una curva de 0,28 s, sin muelle. |
+| Studio | `/studio` no carga Ledger Studio. `/api/studio/*` responde 410 en el middleware. Un guardia en la captura del documento bloquea click, puntero y teclado en los accesos residuales y muestra un candado rojo. El botón de la estrella vive en `LedgerChatV2.tsx`, que no se editó: el click no llega a abrir el estudio. |
+| Pago | `PaymentProgress`: el fallo no llena el anillo al 100 %. El paso en el que se paró queda marcado. Si el error es de Fee Juice, el texto dice cómo añadirla. La ficha no corta la dirección ni el hash. |
+| Ajustes | El handle zk se describe como local. El token por defecto de propina pública se separa de HLC y Fee Juice. El historial ya no abre `/payments/history` (esa ruta no existe). Llamadas: el relay TURN no se afirma si no está configurado. Almacenamiento: el contador no incluye las notas del PXE. Privacidad: los pagos en Alpha no se describen como demo. |
+
+### Qué no se tocó
+
+- `contracts/aztec/`, `lib/aztec/`, `LedgerChatV2.tsx`, `package.json` y lockfiles.
+- Memoria WASM del prover de pagos. El pico de ~1,8 GB está en `lib/aztec/wallet/device.ts` (comentario de R-16) y en el PXE. Cambiar workers, OPFS o buffers ahí es editar `lib/aztec/`. No hay medición en un dispositivo en esta sesión. No se hizo el cambio.
+- D-1–D-5 sin confirmar. D-6 y D-7 no están en la spec. Q1–Q10 siguen OPEN.
+- El panel de comunidad sigue sin cliente XMTP. `communityMls` permanece en false.
+
+### Duda para Stefan
+
+El candado sobre la estrella depende de un listener global porque `LedgerChatV2.tsx` es inmutable. Si ese listener se retira, la estrella volvería a navegar a `/studio`, que seguiría mostrando el candado y no el estudio.
+
+---
+
+## Sesión 9 — 16 noviembre 2026 (cierre del paquete para Aztec Labs)
+
+Solo documentación. Punto 1 del orden de madurez. Los puntos 2 a 5 no se abren en esta sesión.
+
+| Archivo | Cambio |
+|---|---|
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | Anexo A: cómo leer el dossier, alineación con STATUS / MAINNET_READINESS / CONNECT, matriz cambio → archivo → test. Sin respuestas a Q1–Q10 y sin confirmar D-1–D-5. R8 sigue abierto |
+| `docs/STATUS.md` | “Not claimed” aclara que lo no reclamado es una declaración de mainnet sin límites, no los pagos con tope en Alpha |
+| `docs/MAINNET_READINESS.md` | El puntero al dossier incluye el Anexo A |
+
+Archivos protegidos no modificados: `contracts/aztec/`, `lib/aztec/`, `components/terminal/LedgerChatV2.tsx`, `package.json` y lockfiles. Path A intacto. `communityMls` no se activa. No hay Fee Contract.
+
+---
+
+## Sesión 10 — 16 noviembre 2026 (procedimiento R8, sin ejecución)
+
+Solo documentación. Anexo B de `docs/AZTEC_FOUNDATION_DOSSIER.md`: procedimiento para un pago privado de 0.01 HLC en Aztec Alpha entre dos cuentas que no son la del operador. No se ejecutó. No hay hash ni bloque de R8. La fila de gaps del dossier apunta al anexo y sigue abierta.
+
+No se modificó código de firma, PXE ni contratos. Puntos 3, 4 y 5 no abiertos. `communityMls` no activado. Fee Contract no implementado. Archivos protegidos sin diff.
+
+---
+
+## Sesión 11 — 16 noviembre 2026 (resultados de tests, sin cambios de producto)
+
+Solo se ejecutaron suites ya existentes y se escribió el Anexo C del dossier. Ningún archivo de lógica.
+
+| Suite | Resultado |
+|---|---|
+| `npx vitest run --reporter=dot` | Exit 1. 177 files passed, 2 failed, 3 skipped. Tests: 2095 passed, 47 skipped, 1 todo. Failures: `fee-router.adversarial.test.ts` and `HumanityTimeLockVault.adversarial.test.ts` call `this.timeout` and do not load under Vitest |
+| `npx hardhat test test/unit/contracts/HumanityTimeLockVault.adversarial.test.ts --network hardhat` | Exit 0. 9 passing |
+| `npm run test:contracts` | Exit 0. 59 passing |
+
+No ejecutado: `nargo` ausente; `aztec test` no lanzado (escribiría dentro de `contracts/aztec/`); `test:aztec:e2e` (red); `test:5h`; R8; auditoría externa. `communityMls` sigue `@default(false)`. No hay código nuevo de Fee Contract. D-1–D-5 sin confirmar. Q1–Q10 OPEN.
+
+Archivos protegidos sin diff de esta sesión: `contracts/aztec/`, `lib/aztec/`, `components/terminal/LedgerChatV2.tsx`, `package.json` y lockfiles.
+
+---
+
+## Sesión 12 — 16 noviembre 2026 (completitud dentro de los bloqueos)
+
+### Integrado
+
+| Cambio | Dónde |
+|---|---|
+| `this.timeout` solo si Mocha pasa un contexto | `test/unit/aztec/fee-router.adversarial.test.ts`, `test/unit/contracts/HumanityTimeLockVault.adversarial.test.ts` |
+| Sección de completitud y perímetro de seguridad | `docs/AZTEC_FOUNDATION_DOSSIER.md` |
+| Guarda: no activar `communityMls` sin `createSecureGroup` en ajustes | `test/communities/r17-acceptance.test.ts` |
+| Qué falta para AC-03 | `docs/communities/R17_ACCEPTANCE.md` |
+| Textos: tarjeta legacy no mueve fondos; TURN no se afirma; el enlace MetaMask no promete cerrar una firma ya fallida | `MessageBubble.tsx`, `LedgerSettingsFull.tsx`, `ConnectView.tsx` |
+
+### Re-ejecución
+
+`npx vitest run` de esos tres archivos. Exit 0. Tests: 17 passed, 14 skipped. Los 9 del vault pasan bajo Vitest. Los 12 del fee router siguen en skip (el contrato no existe). AC-03 sigue en skip. La guarda R-17 pasa.
+
+### Sigue bloqueado
+
+D-1–D-5 sin confirmar. D-6 y D-7 no definidos. Fee Contract no implementado. Q1–Q10 OPEN. R8 no ejecutado. `communityMls` no activado. AC-03 no cableado. Auditoría externa inexistente. RAM del PXE no medida (`lib/aztec/` no tocado).
+
+Archivos protegidos sin diff.
+
+---
+
+## Sesión 13 — 16 noviembre 2026 (propuestas D1–D7 y Q1–Q10, sin código de contrato)
+
+Solo propuestas, pendientes de Stefan. No se escribió Noir ni Solidity. No se ejecutó ningún pago en Alpha. `communityMls` no se activó. No hay auditoría externa. R8 no tiene hash.
+
+### Propuestas (ninguna confirmada)
+
+| ID | Propuesta | Por qué |
+|---|---|---|
+| D1 | Fee de protocolo en el token privado del acuerdo. No en Fee Juice | En Alpha el Fee Juice es público. Un segundo token exigiría un precio |
+| D2 | Sin buyback ni burn dentro de la llamada. Porcentaje en circuito: 0 | Un nullifier no compra HLC. La política del 13 de noviembre sigue fuera de esta clase y no está implementada |
+| D3 | Sin oráculo. Unidades nativas | Un precio en una función privada es un dato público y se puede mover entre la prueba y la inclusión |
+| D4 | 100% a treasury, 0% quemado en la llamada | Una segunda nota a una dirección de burn no es un buyback. No hay dirección de treasury |
+| D5 | `FEE_BPS` 50, `MIN_FEE` 1000 en escrow, streams con `minFee` 0, `TX_CAP` 5_000_000 como rechazo, `DAILY_CAP` rechazado | 50 bps alinea el tope de fee con el cap de 1000 HLC ya registrado. Un clamp o un contador diario publican o rebajan el fee |
+| D6 | Sin pausa en el contrato Aztec. `Ownable2Step` solo en un futuro contrato L1 | Un flag de pausa en Aztec sería estado público de admin. No se escribió Solidity |
+| D7 | Cobro en la liquidación, no en el depósito. Reembolso sin fee | Es la misma recomendación que D-1 de la sección 6, y sigue sin confirmar |
+| Q1–Q10 | Posturas recomendadas en `docs/AZTEC_DECISIONS.md`. Estado OPEN | Mantienen notas y nullifiers de Aztec. No hay respuesta de Aztec Labs |
+
+La sección 6 del SPEC (D-1–D-5) no queda confirmada. Los identificadores D1–D7 de la sección 8 no son los de la sección 6.
+
+### Otros cambios
+
+| Archivo | Cambio |
+|---|---|
+| `docs/protocol/FEE_CONTRACT_SPEC.md` | Sección 8, propuestas |
+| `docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md` | El boceto citado deja de presentarse como el texto vigente. Sigue sin aprobar código |
+| `docs/AZTEC_DECISIONS.md` | Posturas recomendadas. OPEN |
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | Completitud, perímetro, checklist R-17, tabla vacía de R8, resultados de esta re-ejecución |
+| `docs/communities/R17_ACCEPTANCE.md` | Lista de bloqueo antes de activar el flag |
+| `test/communities/r17-acceptance.test.ts` | La guarda falla si `app/`, `components/` o `lib/` escriben `communityMls` true. Sin excepción |
+
+### Tests de esta sesión
+
+| Suite | Resultado |
+|---|---|
+| Vitest de los tres archivos | Exit 0. 17 passed, 14 skipped. Vault 9. Fee router 12 skipped. AC-03 skipped. Guarda R-17 passed |
+| Hardhat adversarial | Exit 0. 9 passing |
+| `npm run test:contracts` | Exit 0. 59 passing |
+
+Archivos protegidos no modificados en esta sesión: `contracts/aztec/`, `lib/aztec/`, `components/terminal/LedgerChatV2.tsx`, `package.json` y lockfiles.
+
+---
+
+## Sesión 14 — 16 noviembre 2026 (baseline de fees autorizada, sin contrato)
+
+Stefan autorizó las secciones 6 y 8 de `docs/protocol/FEE_CONTRACT_SPEC.md` como baseline, sin cambiar los valores. El contrato de producción no se escribió. No hay dirección de treasury. No hay auditoría externa. Q1–Q10 siguen OPEN. R8 no se ejecutó. `communityMls` sigue en false. El texto R2 sigue pendiente de counsel. `lib/aztec/` no se editó.
+
+| Archivo | Cambio |
+|---|---|
+| `docs/protocol/FEE_CONTRACT_SPEC.md` | Cada fila de las secciones 6 y 8: authorized by Stefan as baseline — 16 November 2026. Valores intactos |
+| `docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md` | Estado: Baseline authorized — implementation may begin under these parameters. Placeholders del boceto conservados y no compilables como baseline |
+| `docs/protocol/fee-router-skeleton/README.md` | Esqueleto documental. No es un contrato |
+| `docs/protocol/fee-router-skeleton/CONSTANTS.md` | Constantes D5 en comentarios |
+| `docs/protocol/fee-router-skeleton/SIGNATURES.md` | Firmas, fórmula u128-safe y cobro en liquidación, en comentarios |
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | La baseline está autorizada. El contrato no está implementado. Q1–Q10 OPEN. R8 sin ejecutar |
+
+### Tests
+
+| Suite | Resultado |
+|---|---|
+| Vitest de los tres archivos | Exit 0. 17 passed, 14 skipped |
+| Hardhat adversarial | Exit 0. 9 passing |
+| `npm run test:contracts` | Exit 0. 59 passing |
+
+Archivos protegidos no modificados en esta sesión: `contracts/aztec/`, `lib/aztec/`, `components/terminal/LedgerChatV2.tsx`, `package.json` y lockfiles. No hay archivo Noir ni Solidity nuevo.
+
+---
+
+## Sesión 15 — 16 noviembre 2026 (fee en el fuente, sin class id y sin deploy)
+
+El fuente de `PrivateEscrow` y `PaymentStream` cobra el fee de la baseline en la liquidación. `FEE_BPS` 50, `MIN_FEE` 1000 solo en escrow, stream `minFee` 0, `MAX_FEE_SHARE_BPS` 1000, `TX_CAP` 5_000_000 como rechazo. No hay `DAILY_CAP`, pausa, oráculo, buyback ni burn. `TREASURY` es `AztecAddress { inner: 0 }`. No es una dirección. El constructor de producción, con `cfg(test)` apagado, no inicializa mientras ese constante siga en cero. Eso no se compiló: el binario `aztec` de esta máquina no arranca (`aztec.sh` ausente, `~/.aztec/bin` vacío, `nargo` ausente). No hay class id nuevo. Los ids ya registrados siguen siendo los del artefacto anterior. `deployments/aztec-mainnet.json` no cambia. No se ejecutó nada en Alpha. Q1–Q10 siguen OPEN. R8 no se ejecutó. `communityMls` sigue en false. El texto R2 no se tocó. `lib/aztec/` no se editó, así que `openEscrow` sigue desplegando el artefacto viejo si alguien lo llama directo. El compositor y los scripts de deploy se niegan. Los tests del fee router siguen en `it.skip` (boceto viejo). No hay auditoría externa. La condición de lanzamiento 1 sigue sin cumplirse.
+
+| Archivo | Cambio |
+|---|---|
+| `contracts/aztec/escrow/src/main.nr` | Quote u128-safe, assert en deposit, net + fee en claim, refund completo |
+| `contracts/aztec/escrow/src/test.nr` | Importes que caben en la baseline, vectores de la sección 1, rechazos |
+| `contracts/aztec/streams/src/main.nr` | Fee en withdraw y en la parte devengada del cancel |
+| `contracts/aztec/streams/src/test.nr` | Saldos netos, retiro enorme en tramos, vectores |
+| `lib/protocol/fees.ts` | `baselineFee` y el tope. `TREASURY_ADDRESS_SET` es false |
+| `components/chat/AgreementComposer.tsx` | Muestra el fee y no despliega |
+| `scripts/aztec/deploy-keyed.ts`, `scripts/aztec/e2e-escrow-testnet.mts` | Rechazan el deploy mientras el constante sea cero |
+| `deployments/aztec-pending-recompile.json` | El fuente queda por delante del artefacto. Sin class id inventado |
+
+`lib/aztec/`, `components/terminal/LedgerChatV2.tsx`, `package.json` y los lockfiles no se modificaron.
+
+---
+
+## Sesión 16 — 16 noviembre 2026 (TXE pasado, class ids registrados, sin deploy)
+
+`aztec test` se ejecutó dentro de cada crate con Aztec 6.0.0. Compilación omitida (“No source changes detected”). PrivateEscrow: 19 tests passed, salida 0. PaymentStream: 29 tests passed, salida 0. El log de TXE imprimió errores `world-state:ipc-database` de `batchInsert` (nullifier ya presente) y ningún test falló.
+
+Class ids registrados en `deployments/aztec-testnet.json`, estado `not-deployed`, `address` null, `tracksCurrentArtifact` true:
+
+- PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`
+- PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`
+
+Las instancias de testnet ya desplegadas conservan sus class ids anteriores y quedan con `tracksCurrentArtifact` false. No se inventó ninguna dirección. `TREASURY` sigue en `AztecAddress { inner: 0 }`. No hay auditoría externa. La condición de lanzamiento 1 sigue sin cumplirse. No se ejecutó nada en Alpha. `deployments/aztec-mainnet.json` no cambia. Q1–Q10 siguen OPEN. R8 no se ejecutó. `communityMls` sigue en false.
+
+| Archivo | Cambio |
+|---|---|
+| `deployments/aztec-testnet.json` | Dos entradas `not-deployed` con los class ids nuevos. Las tres entradas pre-fee dejan de marcar el artefacto vigente |
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | TXE 19 y 29, class ids, TREASURY sin dirección, sin auditoría externa |
+| `docs/UPGRADE_LOG.md` | Esta entrada |
+
+---
+
+## Sesión 17 — 16 noviembre 2026 (readiness de Alpha, recomendaciones sin aceptar)
+
+Queda escrito el readiness del Fee Contract. El fuente está implementado. TXE: PrivateEscrow 19 passed, PaymentStream 29 passed. Class ids registrados con `tracksCurrentArtifact: true` y sin dirección de instancia: PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`, PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`. `TREASURY` sigue en `AztecAddress { inner: 0 }`. No hay auditoría externa. La condición de lanzamiento 1 no está cumplida. No es desplegable en Alpha hasta que existan dirección de treasury y auditoría externa. No se registró ninguna dirección. No se ejecutó nada en Alpha. `communityMls` sigue en false. Los contratos no se modificaron.
+
+Recomendaciones escritas en `docs/AZTEC_FOUNDATION_DOSSIER.md`, sección “Fee Contract — Alpha readiness (16 November 2026)”. Ninguna está aceptada. Las cinco quedan pendientes de aceptación de Stefan Antonio Cirisanu:
+
+1. TREASURY: cuenta Aztec del multisig 4-of-7 (condición de lanzamiento 3). No desplegar antes. No usar el cero.
+2. Auditoría externa: cumplir la condición de lanzamiento 1 antes de cualquier deploy en Alpha.
+3. Q1–Q10: dejarlas OPEN hasta respuesta de Aztec Labs o decisión explícita de Stefan.
+4. R8: Anexo B con dos cuentas distintas, cuando Stefan lo autorice, antes de dar el flujo por validado en Alpha.
+5. `communityMls`: mantenerla en false hasta cliente XMTP en ajustes y `docs/communities/R17_ACCEPTANCE.md`.
+
+| Archivo | Cambio |
+|---|---|
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | Sección de readiness y recomendaciones pendientes |
+| `docs/UPGRADE_LOG.md` | Esta entrada |
+
+---
+
+## Sesión 18 — 16 noviembre 2026 (paquete de decisión, sin decisión tomada)
+
+El paquete “Decision package for Stefan Antonio Cirisanu — 16 November 2026” está escrito en `docs/AZTEC_FOUNDATION_DOSSIER.md`. Stefan Antonio Cirisanu no ha confirmado ni rechazado ningún punto. `TREASURY` sigue en `AztecAddress { inner: 0 }`. No hay auditoría externa. No se ejecutó R8 ni ninguna transacción. `communityMls` sigue en false. No se modificó ningún contrato.
+
+| Archivo | Cambio |
+|---|---|
+| `docs/AZTEC_FOUNDATION_DOSSIER.md` | Paquete de decisión, seis puntos sin aceptar |
+| `docs/UPGRADE_LOG.md` | Esta entrada |

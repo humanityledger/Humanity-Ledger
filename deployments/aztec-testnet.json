@@ -138,9 +138,9 @@
       "holdsPrivateBalance": true,
       "keyed": true,
       "status": "reference",
-      "tracksCurrentArtifact": true,
+      "tracksCurrentArtifact": false,
       "deployedOn": "2026-11-05",
-      "note": "Class with escrow_view (AZ-21). Run 42030688268: keyed deploy that published the class (block 19563, tx 0x1bb4b2696fa3cbbcd6ffea65d35b88c653307d262aeb6765fb8c5318ec8620c2); escrow 1 deposit (19564), escrow_view read by both parties, claim (19568), the sender's view then reports it settled; escrow 2 deposit (19566), claim after the deadline refused, refund (19577). Both escrows settled; nothing left in the instance."
+      "note": "Class with escrow_view (AZ-21). Run 42030688268: keyed deploy that published the class (block 19563, tx 0x1bb4b2696fa3cbbcd6ffea65d35b88c653307d262aeb6765fb8c5318ec8620c2); escrow 1 deposit (19564), escrow_view read by both parties, claim (19568), the sender's view then reports it settled; escrow 2 deposit (19566), claim after the deadline refused, refund (19577). Both escrows settled; nothing left in the instance. Pre-fee class. It no longer tracks the current artifact (16 November 2026)."
     },
     {
       "name": "PaymentStream v4 (keyed, end-to-end run)",
@@ -150,9 +150,9 @@
       "holdsPrivateBalance": true,
       "keyed": true,
       "status": "reference",
-      "tracksCurrentArtifact": true,
+      "tracksCurrentArtifact": false,
       "deployedOn": "2026-11-05",
-      "note": "Class with stream_view (SEC-S13). Run 42030688268: keyed deploy that published the class (block 19570, tx 0x274acaf9bc287080495267f0352b9a56dfe01737a79dc42a8ad7736e88f9a0c9); stream 1 (19571) and stream 2 (19573); withdraw 5 (19575), after which stream_view gave the sender the live state at index 1, not its stale copy; cancel (19580), after which the recipient's view shows the stream not live. Stream 2 (5 test tokens) remains in the instance."
+      "note": "Class with stream_view (SEC-S13). Run 42030688268: keyed deploy that published the class (block 19570, tx 0x274acaf9bc287080495267f0352b9a56dfe01737a79dc42a8ad7736e88f9a0c9); stream 1 (19571) and stream 2 (19573); withdraw 5 (19575), after which stream_view gave the sender the live state at index 1, not its stale copy; cancel (19580), after which the recipient's view shows the stream not live. Stream 2 (5 test tokens) remains in the instance. Pre-fee class. It no longer tracks the current artifact (16 November 2026)."
     },
     {
       "name": "PrivateEscrow v3, agreement opened with openEscrow (end-to-end run)",
@@ -162,9 +162,31 @@
       "holdsPrivateBalance": true,
       "keyed": true,
       "status": "settled",
-      "tracksCurrentArtifact": true,
+      "tracksCurrentArtifact": false,
       "deployedOn": "2026-11-05",
-      "note": "Run 42030688268: deployed by openEscrow (block 19594, tx 0x13b184c657e37f667bf18d84d7e89762e463c650e45dde1051a84bbd12280c8a), deposit of 3 (19595); acceptInvite refused a tampered invitation and registered the genuine one; confirmAgreement found every field equal to the stored note and an overstated amount was caught; the recipient claimed (19597)."
+      "note": "Run 42030688268: deployed by openEscrow (block 19594, tx 0x13b184c657e37f667bf18d84d7e89762e463c650e45dde1051a84bbd12280c8a), deposit of 3 (19595); acceptInvite refused a tampered invitation and registered the genuine one; confirmAgreement found every field equal to the stored note and an overstated amount was caught; the recipient claimed (19597). Pre-fee class. It no longer tracks the current artifact (16 November 2026)."
+    },
+    {
+      "name": "PrivateEscrow fee baseline (not deployed)",
+      "address": null,
+      "classId": "0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee",
+      "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "not-deployed",
+      "tracksCurrentArtifact": true,
+      "note": "Class of the fee-baseline artifact compiled with Aztec 6.0.0. No instance and no address. TXE in contracts/aztec/escrow on 16 November 2026: 19 tests passed. TREASURY in the source is AztecAddress { inner: 0 }. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet."
+    },
+    {
+      "name": "PaymentStream fee baseline (not deployed)",
+      "address": null,
+      "classId": "0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3",
+      "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "not-deployed",
+      "tracksCurrentArtifact": true,
+      "note": "Class of the fee-baseline artifact compiled with Aztec 6.0.0. No instance and no address. TXE in contracts/aztec/streams on 16 November 2026: 29 tests passed. TREASURY in the source is AztecAddress { inner: 0 }. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet."
     }
   ],
   "e2eRuns": [
