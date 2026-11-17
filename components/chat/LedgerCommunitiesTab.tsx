@@ -1,6 +1,8 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
-import { countLabel } from '@/lib/ui/format';
+import { communityInviteUrl, countLabel } from '@/lib/ui/format';
+import { Copy, Link2, MessageSquare, Settings2 } from 'lucide-react';
+import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from './ui/ContextMenu';
 import { toast } from 'sonner';
 import { SectionLabel, EmptyState, PrimaryButton, SecondaryButton, SearchField, Sheet, tintFor } from './ui/kit';
 
@@ -18,6 +20,8 @@ interface Community {
 interface LedgerCommunitiesTabProps {
   myAddress: string;
   onOpenCommunity: (id: string) => void;
+  /** Opens the community straight on Manage (right click > Manage). */
+  onManageCommunity?: (id: string) => void;
 }
 
 function CommunityMark({ c, size = 44 }: { c: Community; size?: number }) {
@@ -33,11 +37,33 @@ function CommunityMark({ c, size = 44 }: { c: Community; size?: number }) {
   );
 }
 
-function CommunityRow({ c, onOpen }: { c: Community; onOpen: () => void }) {
+async function copyText(text: string, done: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(done);
+  } catch {
+    toast.error('Could not copy on this device.');
+  }
+}
+
+/** Right click (long press on a phone) on a community: open it, manage it, copy its invite link or name. */
+function rowMenu(c: Community, onOpen: () => void, onManage?: () => void): MenuItem[] {
+  const items: MenuItem[] = [{ label: 'Open', icon: <MessageSquare size={16} strokeWidth={1.9} />, onSelect: onOpen }];
+  if (onManage) items.push({ label: 'Manage', icon: <Settings2 size={16} strokeWidth={1.9} />, onSelect: onManage });
+  const link = communityInviteUrl(c.joinCode);
+  if (link) items.push({ label: 'Copy invite link', icon: <Link2 size={16} strokeWidth={1.9} />, onSelect: () => copyText(link, 'Invite link copied.') });
+  items.push({ label: 'Copy name', icon: <Copy size={16} strokeWidth={1.9} />, onSelect: () => copyText(c.name, 'Name copied.') });
+  return items;
+}
+
+function CommunityRow({ c, onOpen, onManage }: { c: Community; onOpen: () => void; onManage?: () => void }) {
   const members = c.membersCount || 1;
+  const [menu, setMenu] = useState<MenuAt | null>(null);
+  const { handlers, consumeLongPress } = useContextMenuTrigger(setMenu);
   return (
     <li>
-      <button type="button" onClick={onOpen} aria-label={`Open ${c.name}`} className="w-full min-h-[72px] flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/20 transition-colors text-left">
+      {menu && <ContextMenu at={menu} items={rowMenu(c, onOpen, onManage)} label={`${c.name} actions`} onClose={() => setMenu(null)} />}
+      <button type="button" {...handlers} style={{ WebkitTouchCallout: 'none' }} onClick={() => { if (!consumeLongPress()) onOpen(); }} aria-label={`Open ${c.name}`} className="w-full min-h-[72px] flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/20 transition-colors text-left">
         <CommunityMark c={c} size={48} />
         <span className="flex-1 min-w-0">
           <span className="block text-[18px] font-semibold text-[#15171c] truncate">{c.name}</span>
@@ -54,7 +80,7 @@ function CommunityRow({ c, onOpen }: { c: Community; onOpen: () => void }) {
   );
 }
 
-export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, onOpenCommunity }) => {
+export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, onOpenCommunity, onManageCommunity }) => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [view, setView] = useState<'mine' | 'discover'>('mine');
   const [showCreate, setShowCreate] = useState(false);
@@ -194,7 +220,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           />
         ) : (
           <ul className="px-2 py-2">
-            {communities.map(c => <CommunityRow key={c.id} c={c} onOpen={() => onOpenCommunity(c.id)} />)}
+            {communities.map(c => <CommunityRow key={c.id} c={c} onOpen={() => onOpenCommunity(c.id)} onManage={onManageCommunity ? () => onManageCommunity(c.id) : undefined} />)}
           </ul>
         )
       ) : (

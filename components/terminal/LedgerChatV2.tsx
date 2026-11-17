@@ -635,7 +635,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Opening a community shows the reading and writing screen; members, channels, apps,
   // settings, analytics, governance and the treasury are behind its "Manage" button.
   const [communityManage, setCommunityManage] = useState(false);
-  useEffect(() => { setCommunityManage(false); }, [activeCommunity]);
+  // Another community opens on its posts, unless it was opened with right click > Manage.
+  const manageOnOpen = useRef<string | null>(null);
+  useEffect(() => {
+    setCommunityManage(activeCommunity !== null && manageOnOpen.current === activeCommunity);
+    manageOnOpen.current = null;
+  }, [activeCommunity]);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const push = usePushNotifications(address || undefined);
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
@@ -6608,6 +6613,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               onOpenCommunity={(id) => {
                 setActivePeer(null);
                 setActiveCommunity(id);
+                setCommunityManage(false);
+                setShowList(false);
+              }}
+              onManageCommunity={(id) => {
+                manageOnOpen.current = id;
+                setActivePeer(null);
+                setActiveCommunity(id);
+                setCommunityManage(true);
                 setShowList(false);
               }}
             />
@@ -6872,6 +6885,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   setShowList(true);
                 }}
                 onManage={() => setCommunityManage(true)}
+                onMessage={(addr) => {
+                  setActiveCommunity(null);
+                  setCommunityManage(false);
+                  setSidebarTab('chats');
+                  setActivePeer(addr);
+                  setShowList(false);
+                }}
               />
             )
           ) : (

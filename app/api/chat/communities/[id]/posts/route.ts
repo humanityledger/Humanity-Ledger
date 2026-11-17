@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { getInMemoryCommunityBySlugOrId } from '@/lib/communities/in-memory-communities';
+import { memberNames } from '@/lib/communities/member-names';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +58,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       orderBy: pinnedOnly ? { pinnedAt: 'desc' } : { createdAt: 'desc' },
       take: 100,
     }).catch(() => []);
-    return NextResponse.json({ posts });
+    // Each post carries its author's Ledger Chat name, so members can tell who wrote what.
+    const names = await memberNames(posts.map((p: any) => p.authorAddress));
+    return NextResponse.json({
+      posts: posts.map((p: any) => ({ ...p, authorName: names.get(String(p.authorAddress || '').toLowerCase()) ?? null })),
+    });
   } catch (e: any) {
     console.error('[community/[id]/posts GET]', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
