@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { useSystemSessionLock } from '@/hooks/useSystemSessionLock';
-import { useWalletStore } from '@/lib/store/wallet-store';
 import { TitaniumGate } from '@/components/layout/TitaniumGate';
 import { ThemeApplier } from '@/components/layout/ThemeApplier';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
@@ -115,21 +114,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       window.removeEventListener('online', handleOnline);
     };
   }, []);
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Both endpoints need a signed-in session. Signed-out visitors (most of
-      // the landing page's traffic) only produced a pair of 401s per page.
-      // `wallet-auth` / `system_handshake` are the readable hints set at sign-in.
-      const signedIn = /(?:^|;\s*)(?:wallet-auth|system_handshake)=/.test(document.cookie);
-      if (!signedIn) return;
-      // Session log (existing)
-      fetch('/api/session-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: `NAVIGATED_TO: ${pathname || '/'}` })
-      }).catch(() => {});
-    }
-  }, [pathname]);
+  // No navigation or click logging leaves the device (internal audit IA-02). /api/session-logs
+  // answers 410 and stores nothing, but the click log sent the first 40 characters of every
+  // clicked button, which in the chat list include the decrypted last-message preview.
 
   //  Layout mode 
   // DASHBOARD   fixed inset-0 overflow-hidden   (LedgerProShell owns scroll)
@@ -183,45 +170,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // [AUDIO REMOVED] Global click audio feedback has been permanently disabled.
   // No sounds play on user interaction anywhere in the system.
 
-  //  System Interaction Telemetry (independent of sound settings) 
-  // CRITICAL FIX: Previously gated behind soundEffects=true, so if users had
-  // sound disabled, ZERO interactions were ever logged to Session Logs.
-  // Now fires unconditionally for all authenticated sessions.
-  React.useEffect(() => {
-    if (typeof document === 'undefined') return;
-
-    const handleInteractionLog = (e: MouseEvent) => {
-        // Only log telemetry if the user is authenticated (connected)
-        // Check both local wagmi store AND secure QR session cookies
-        const hasLocalWallet = !!useWalletStore.getState().address;
-        const hasSessionCookie = document.cookie.includes('system_handshake=');
-        const isConnected = hasLocalWallet || hasSessionCookie;
-        if (!isConnected) return;
-
-        // Try to get the active wallet address to attach to the log
-        let activeUserId = useWalletStore.getState().address;
-        if (!activeUserId) {
-            const match = document.cookie.match(/system_handshake=(0x[0-9a-fA-F]{40,})/i);
-            if (match && match[1]) activeUserId = match[1];
-        }
-        activeUserId = activeUserId || null;
-
-        const target = e.target as HTMLElement;
-        const clickable = target.closest('button, a, input[type="submit"], [role="button"], .cursor-pointer');
-        if (clickable) {
-            const actionText = (clickable.textContent || clickable.tagName || 'ELEMENT')
-                .substring(0, 40).trim().replace(/\n/g, ' ');
-            fetch('/api/session-logs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: `INTERACTION: CLICKED ${actionText}`, userId: activeUserId }),
-            }).catch(() => {});
-        }
-    };
-
-    document.addEventListener('mousedown', handleInteractionLog, { passive: true });
-    return () => document.removeEventListener('mousedown', handleInteractionLog);
-  }, []);
 
   //  Battery-aware CSS class for noise animation 
   // Sets body.perf-high when device is plugged in  enables noise-shift CSS

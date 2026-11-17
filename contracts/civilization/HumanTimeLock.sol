@@ -29,7 +29,10 @@ contract HumanTimeLock is ReentrancyGuard {
 
         LockInfo storage userLock = locks[msg.sender];
         userLock.amount += msg.value;
-        userLock.unlockTime = block.timestamp + _duration;
+        // A new lock can extend the unlock time, never shorten it (internal audit IA-05): before,
+        // adding 1 wei with a 1-second duration unlocked every earlier deposit at once.
+        uint256 unlockAt = block.timestamp + _duration;
+        if (unlockAt > userLock.unlockTime) userLock.unlockTime = unlockAt;
 
         emit Locked(msg.sender, msg.value, userLock.unlockTime);
     }
