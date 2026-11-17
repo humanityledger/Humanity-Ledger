@@ -1732,10 +1732,15 @@ model CommunityPost {
   contentHtml   String? // READABLE BY THE SERVER today (not encrypted)
   likes         Int      @default(0)
   createdAt     DateTime @default(now())
+  // Set only when a person chooses Pin (PATCH /api/chat/communities, PIN_MESSAGE). Sending never sets it.
+  // Unpin clears both; the post itself stays.
+  pinnedAt      DateTime?
+  pinnedBy      String?
 
   @@index([communityId])
   @@index([authorAddress])
   @@index([communityId, createdAt])
+  @@index([communityId, pinnedAt])
 }
 
 // Login Geo Events - GDPR compliant (no raw IP, only hashed + country)

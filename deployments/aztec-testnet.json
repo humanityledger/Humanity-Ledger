@@ -169,24 +169,24 @@
     {
       "name": "PrivateEscrow fee baseline (not deployed)",
       "address": null,
-      "classId": "0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee",
+      "classId": "0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6",
       "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
       "holdsPrivateBalance": true,
       "keyed": false,
       "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class of the fee-baseline artifact compiled with Aztec 6.0.0. No instance and no address. TXE in contracts/aztec/escrow on 16 November 2026: 19 tests passed. TREASURY in the source is AztecAddress { inner: 0 }. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet."
+      "note": "Class computed from the committed artifact after Aztec 6.0.0 CI recompiled the designated-treasury source. No instance and no address. TXE on that source: 19 passed (main run 44055243245). Treasury is 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed and is not the 4-of-7. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet. The previous class 0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee was the zero-treasury compile."
     },
     {
       "name": "PaymentStream fee baseline (not deployed)",
       "address": null,
-      "classId": "0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3",
+      "classId": "0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b",
       "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
       "holdsPrivateBalance": true,
       "keyed": false,
       "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class of the fee-baseline artifact compiled with Aztec 6.0.0. No instance and no address. TXE in contracts/aztec/streams on 16 November 2026: 29 tests passed. TREASURY in the source is AztecAddress { inner: 0 }. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet."
+      "note": "Class computed from the committed artifact after Aztec 6.0.0 CI recompiled the designated-treasury source. No instance and no address. TXE on that source: 29 passed (main run 44055243245). Treasury is 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed and is not the 4-of-7. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet. The previous class 0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3 was the zero-treasury compile."
     }
   ],
   "e2eRuns": [

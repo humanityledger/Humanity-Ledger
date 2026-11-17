@@ -20,10 +20,42 @@ export function isMobileDevice(): boolean {
 }
 
 /**
- * Official MetaMask link that opens ledgerchat.org inside the MetaMask app.
- * Used only as a tap on an external phone browser. It is not assigned to location.
+ * Official MetaMask universal link for ledgerchat.org (docs.metamask.io, "Use deeplinks").
+ * On a phone that has MetaMask it should open the app, but iOS Safari often does not hand a
+ * universal link to the app (MetaMask issue #3965: it opens the store or the web page). It is
+ * kept as the install link: on a phone without MetaMask it leads to the download page.
  */
 export const METAMASK_DAPP_URL = 'https://link.metamask.io/dapp/ledgerchat.org';
+
+/**
+ * iPhone and iPad (Safari, Chrome): MetaMask's own scheme. A tap asks "Open in MetaMask?"
+ * and opens the installed app with ledgerchat.org in its browser, where the signature is
+ * made and accepted by this site. MetaMask Mobile handles `metamask://dapp/<host>` itself.
+ */
+export const METAMASK_IOS_APP_URL = 'metamask://dapp/ledgerchat.org';
+
+/**
+ * Android (Chrome and other Chromium browsers): an intent for the MetaMask package. Chrome
+ * opens the installed app; without it, Chrome follows browser_fallback_url to the install page.
+ */
+export const METAMASK_ANDROID_APP_URL =
+  'intent://dapp/ledgerchat.org#Intent;scheme=metamask;package=io.metamask;S.browser_fallback_url=https%3A%2F%2Flink.metamask.io%2Fdapp%2Fledgerchat.org;end';
+
+export type PhonePlatform = 'ios' | 'android' | 'other';
+
+export function phonePlatform(ua: string, maxTouchPoints = 0): PhonePlatform {
+  if (/android/i.test(ua)) return 'android';
+  if (/iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && maxTouchPoints > 1)) return 'ios';
+  return 'other';
+}
+
+/**
+ * The href of "Open in MetaMask" for this phone. Always one of the three constants above,
+ * rendered as an <a href>, so it is followed only on the person's tap (a user gesture).
+ */
+export function metamaskOpenHref(platform: PhonePlatform): string {
+  return platform === 'ios' ? METAMASK_IOS_APP_URL : platform === 'android' ? METAMASK_ANDROID_APP_URL : METAMASK_DAPP_URL;
+}
 
 /**
  * Safari, Chrome, or another phone browser that is not a wallet's own browser.

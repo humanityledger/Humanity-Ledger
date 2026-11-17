@@ -151,6 +151,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
+const PERMISSION_FLAGS = new Set([
+  'sendMessages', 'sendMedia', 'sendStickers', 'sendPolls', 'embedLinks', 'addUsers', 'pinMessages',
+  'changeInfo', 'antiSpam', 'requireApproval', 'postApproval', 'notifyNewMember',
+]);
+/** Slow mode choices offered in Manage: off, 10 s, 30 s, 1 min, 5 min, 1 h. */
+const SLOW_MODE_SECONDS = [0, 10, 30, 60, 300, 3600];
+
 export async function PATCH(req: NextRequest) {
   try {
     const auth = await requireWallet(req);
@@ -193,6 +200,40 @@ export async function PATCH(req: NextRequest) {
       if (action === 'UPDATE_PRIVACY') {
         memComm.isPrivate = Boolean(isPrivate);
         return NextResponse.json({ ok: true, isPrivate: memComm.isPrivate });
+      }
+    }
+
+    // Pin and Unpin: an admin, the owner, or any member when the community lets members pin.
+    if (action === 'PIN_MESSAGE' || action === 'UNPIN_MESSAGE') {
+      const messageId = body?.messageId;
+      if (typeof messageId !== 'string' || messageId.length === 0 || messageId.length > 64) {
+        return NextResponse.json({ error: 'Invalid post' }, { status: 400 });
+      }
+      if (memComm) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+      try {
+        const me = caller.toLowerCase();
+        const [community, member, perms, post] = await Promise.all([
+          (prisma as any).community.findUnique({ where: { id: communityId }, select: { ownerAddress: true } }),
+          (prisma as any).communityMember.findUnique({ where: { communityId_walletAddress: { communityId, walletAddress: me } } }),
+          (prisma as any).communityPermission.findUnique({ where: { communityId }, select: { pinMessages: true } }),
+          (prisma as any).communityPost.findFirst({ where: { id: messageId, communityId }, select: { id: true } }),
+        ]);
+        if (!community) return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+        const isOwner = community.ownerAddress?.toLowerCase() === me;
+        const allowed = isOwner || member?.role === 'ADMIN' || (Boolean(member) && perms?.pinMessages === true);
+        if (!allowed) return NextResponse.json({ error: 'Only admins can pin in this community' }, { status: 403 });
+        if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+        const pin = action === 'PIN_MESSAGE';
+        const updated = await (prisma as any).communityPost.update({
+          where: { id: messageId },
+          // Unpin only clears the pin. The post is not deleted.
+          data: pin ? { pinnedAt: new Date(), pinnedBy: me } : { pinnedAt: null, pinnedBy: null },
+          select: { id: true, pinnedAt: true },
+        });
+        return NextResponse.json({ ok: true, post: updated });
+      } catch (e: any) {
+        console.error('[chat/communities PATCH pin]', e?.code || e?.message);
+        return NextResponse.json({ error: 'Could not change the pin. Try again.' }, { status: 503 });
       }
     }
 
@@ -285,12 +326,13 @@ export async function PATCH(req: NextRequest) {
       }
 
       if (action === 'UPDATE_PERMISSIONS') {
-        const flags: Record<string, boolean> = {};
+        // Only the columns of CommunityPermission. An unknown key used to reach Prisma and fail the
+        // whole save; slow mode is a number and was dropped, so it never saved.
+        const flags: Record<string, boolean | number> = {};
         if (body.permissions && typeof body.permissions === 'object') {
           for (const [k, v] of Object.entries(body.permissions as Record<string, unknown>)) {
-            if (typeof v === 'boolean' && !['id', 'communityId'].includes(k) && /^[A-Za-z]{1,40}$/.test(k)) {
-              flags[k] = v;
-            }
+            if (typeof v === 'boolean' && PERMISSION_FLAGS.has(k)) flags[k] = v;
+            if (k === 'slowModeSeconds' && typeof v === 'number' && SLOW_MODE_SECONDS.includes(v)) flags[k] = v;
           }
         }
         const updated = await (prisma as any).communityPermission.upsert({

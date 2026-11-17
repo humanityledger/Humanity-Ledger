@@ -16,6 +16,7 @@ on:
       - 'contracts/aztec/*/target/**'
       - 'test/live/aztec-deployments.live.test.ts'
       - 'test/unit/aztec/deployments-registry.test.ts'
+      - 'scripts/aztec/print-class-ids.mjs'
       - '.github/workflows/aztec-deployments.yml'
 
 permissions:
@@ -32,6 +33,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --include=dev --ignore-scripts
+      - name: Class id of each committed artifact (offline, read-only)
+        run: node scripts/aztec/print-class-ids.mjs
       - name: Record matches the committed artifacts (offline)
         run: npx vitest run test/unit/aztec/deployments-registry.test.ts
       - name: Record matches the live node

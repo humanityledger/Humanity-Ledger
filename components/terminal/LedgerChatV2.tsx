@@ -76,7 +76,7 @@ const ScheduleMeetingSheet = dynamic(() => import('@/components/chat/ScheduleMee
 const InChatSearch = dynamic(() => import('@/components/chat/InChatSearch').then(m => m.InChatSearch), { ssr: false });
 const LedgerCallsTab = dynamic(() => import('@/components/chat/LedgerCallsTab').then(m => m.LedgerCallsTab), { ssr: false });
 const LedgerCommunitiesTab = dynamic(() => import('@/components/chat/LedgerCommunitiesTab').then(m => m.LedgerCommunitiesTab), { ssr: false });
-const CommunityView = dynamic(() => import('@/components/chat/CommunityView').then(m => m.CommunityView), { ssr: false });
+const CommunityManage = dynamic(() => import('@/components/communities/CommunityManage').then(m => m.CommunityManage), { ssr: false });
 const CommunityReader = dynamic(() => import('@/components/communities/CommunityReader').then(m => m.CommunityReader), { ssr: false });
 const ExpressionPicker = dynamic(() => import('@/components/chat/ExpressionPicker').then(m => m.ExpressionPicker), { ssr: false });
 const ZkMoneyModal = dynamic(() => import('@/components/chat/ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
@@ -6754,10 +6754,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         {sidebarTab === 'communities' ? (
           activeCommunity ? (
             communityManage ? (
-              <CommunityView
+              <CommunityManage
                 communityId={activeCommunity}
                 myAddress={address || ''}
+                nameFor={(addr) => resolveContactName(address || '', addr) || undefined}
                 onBack={() => setCommunityManage(false)}
+                onGone={() => {
+                  setActiveCommunity(null);
+                  setShowList(true);
+                }}
               />
             ) : (
               <CommunityReader

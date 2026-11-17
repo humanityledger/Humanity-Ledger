@@ -20,7 +20,7 @@ import { HLLogo } from "@/components/shared/HLLogo";
 import { LivePhone } from "@/components/landing/v2/PhoneShowcase";
 import s from "./ConnectView.module.css";
 import { safeNativeWalletLink, safeWalletHref } from "@/lib/auth/wallet-links";
-import { openMobileWalletApp, detectConnectedMobileWallet, METAMASK_DAPP_URL } from "@/lib/wallet/mobileWallet";
+import { openMobileWalletApp, detectConnectedMobileWallet, METAMASK_DAPP_URL, metamaskOpenHref, phonePlatform, type PhonePlatform } from "@/lib/wallet/mobileWallet";
 
 /**
  * ConnectView — the presentational half of /connect.
@@ -156,17 +156,27 @@ function Option({
 
 /* ── Stages ─────────────────────────────────────────────────────────────── */
 
-function MetaMaskDappLink() {
-  const href = safeWalletHref(METAMASK_DAPP_URL);
-  if (!href) return null;
+export function MetaMaskDappLink() {
+  // A plain link, followed only on a tap. Platform from the user agent at render time.
+  const [platform, setPlatform] = React.useState<PhonePlatform>("other");
+  React.useEffect(() => {
+    if (typeof navigator !== "undefined") setPlatform(phonePlatform(navigator.userAgent || "", navigator.maxTouchPoints || 0));
+  }, []);
+  const href = metamaskOpenHref(platform);
+  const install = safeWalletHref(METAMASK_DAPP_URL);
   return (
     <div className={s.metamaskCta}>
-      <a href={href} className={`${s.btn} ${s.btnPrimary}`}>
+      <a href={href} className={`${s.btn} ${s.btnPrimary}`} data-testid="open-in-metamask">
         Open in MetaMask
       </a>
       <p className={s.metamaskHint}>
-        If MetaMask opens from Safari or Chrome and the signature does not finish, use this link.
-        It opens Ledger Chat inside MetaMask so you can sign there. It does not complete a signature that already failed in this browser. WalletConnect on this page stays available.
+        This opens the MetaMask app with Ledger Chat inside it. Sign the Humanity Ledger message there for ledgerchat.org.
+        {platform === "ios" ? " If your iPhone asks “Open in MetaMask?”, tap Open." : ""}
+        {install ? (
+          <>
+            {" "}No MetaMask on this phone? <a href={install} className={s.inlineLink}>Get MetaMask</a>.
+          </>
+        ) : null}
       </p>
     </div>
   );
@@ -342,6 +352,7 @@ function Signing(p: ConnectViewProps) {
           ? "Sending the request to your wallet. This takes a second."
           : "Your wallet will ask you to sign a message. Signing is free and does not send a transaction."}
       </p>
+      <p className={s.subtitle}>If your wallet says “simulation failed”, that is expected: this is a signature, not a transaction.</p>
 
       <ol className={s.steps} aria-label="Progress">
         {STEP_LABELS.map((label, i) => {
