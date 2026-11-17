@@ -135,7 +135,8 @@ export function PadlockLoader({
   const walletName = walletInfo.name && !/^wallet( app)?$/i.test(walletInfo.name) ? walletInfo.name : 'your wallet';
 
   const lower = initError.toLowerCase();
-  const isLimitError = lower.includes('limit') || lower.includes('10/10');
+  // Also the device's database key being unusable (lib/xmtp/client.ts): the same remedy.
+  const isLimitError = lower.includes('limit') || lower.includes('10/10') || lower.includes('clear this device');
   const isWalletError = isWalletInitError(initError);
 
   const state: 'idle' | 'working' | 'error' = initError ? 'error' : isInitializing ? 'working' : 'idle';

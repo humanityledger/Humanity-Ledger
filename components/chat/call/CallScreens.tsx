@@ -62,18 +62,78 @@ export function CallAvatar({
   );
 }
 
-function Top({ label, isVideo }: { label: string; isVideo: boolean }) {
+/** The hue of a person's tint, for the soft halo behind their picture. */
+function hueOf(address?: string | null) {
+  const hex = (address || '').replace(/^0x/i, '').slice(0, 6);
+  return hex ? parseInt(hex, 16) % 360 : 250;
+}
+
+/** Seconds since the screen opened, ticking on its own (the chat around it does not re-render). */
+function Elapsed() {
+  const [startedAt] = React.useState(() => Date.now());
+  return <CallClock startedAt={startedAt} />;
+}
+
+function Top({ label, isVideo, dark }: { label: string; isVideo: boolean; dark?: boolean }) {
   const Icon = isVideo ? Video : Phone;
   return (
-    <div className={s.top}>
+    <div className={`${s.top} ${dark ? s.topDark : ''}`}>
+      <span className={s.brand}>
+        <span className={s.brandMark} aria-hidden="true" />
+        Ledger Chat
+      </span>
       <span className={s.kind}>
-        <Icon size={16} strokeWidth={2} aria-hidden="true" />
+        <Icon size={14} strokeWidth={2.1} aria-hidden="true" />
         {label}
       </span>
-      <span className={s.secure}>
-        <Lock size={12} strokeWidth={2.25} aria-hidden="true" />
-        Encrypted end to end
-      </span>
+    </div>
+  );
+}
+
+function Secure({ dark }: { dark?: boolean }) {
+  return (
+    <p className={`${s.secure} ${dark ? s.secureDark : ''}`}>
+      <Lock size={12} strokeWidth={2.25} aria-hidden="true" />
+      Encrypted end to end, device to device
+    </p>
+  );
+}
+
+function Who({
+  peerName,
+  peerAddress,
+  photo,
+  status,
+  live,
+  dark,
+}: {
+  peerName: string;
+  peerAddress?: string | null;
+  photo?: string | null;
+  status: React.ReactNode;
+  live?: boolean;
+  dark?: boolean;
+}) {
+  return (
+    <div className={s.centre}>
+      <div className={s.avatarWrap} style={{ ['--hue' as any]: hueOf(peerAddress) }}>
+        <span className={s.halo} aria-hidden="true" />
+        <span className={s.ring} aria-hidden="true" />
+        <span className={s.ring} aria-hidden="true" />
+        <span className={s.ring} aria-hidden="true" />
+        <CallAvatar name={peerName} address={peerAddress} photo={photo} />
+      </div>
+      <div className={s.identity}>
+        <p className={`${s.name} ${dark ? s.nameDark : ''}`} title={peerName}>{peerName}</p>
+        {peerAddress && peerName !== peerAddress && (
+          <p className={`${s.address} ${dark ? s.addressDark : ''}`}>{shorten(peerAddress)}</p>
+        )}
+        <p className={`${s.status} ${dark ? s.statusDark : ''}`} role="status" aria-live="polite">
+          <span className={`${s.dot} ${live ? s.dotLive : s.dotWait}`} aria-hidden="true" />
+          {/* One text run: the gap of the row is only between the dot and the words. */}
+          <span>{status}</span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -95,42 +155,71 @@ export function IncomingCallScreen({
   onAnswer: () => void;
   onMessage?: () => void;
 }) {
+  // One tap per call: a second tap on Answer (or Decline right after it) does nothing.
+  const [busy, setBusy] = React.useState(false);
+  const once = (fn: () => void) => () => {
+    if (busy) return;
+    setBusy(true);
+    fn();
+  };
+  // Keyboard: Escape declines (desktop).
+  const answerRef = React.useRef<HTMLButtonElement>(null);
+  // Keyboard users land on Answer (Enter answers); on touch screens nothing is focused, so no ring.
+  React.useEffect(() => {
+    if (window.matchMedia?.('(pointer: fine)').matches) answerRef.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
+  }, []);
   return (
-    <div className={s.screen} role="dialog" aria-modal="true" aria-label={`Incoming call from ${peerName}`}>
-      <Top label={isVideo ? 'Incoming video call' : 'Incoming voice call'} isVideo={isVideo} />
+    <div
+      className={s.backdrop}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Incoming ${isVideo ? 'video' : 'voice'} call from ${peerName}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') { e.preventDefault(); once(onDecline)(); }
+      }}
+    >
+      <div className={s.screen} data-kind="incoming">
+        <Top label={isVideo ? 'Video call' : 'Voice call'} isVideo={isVideo} />
 
-      <div className={s.centre}>
-        <div className={s.avatarWrap}>
-          <span className={s.ring} />
-          <span className={s.ring} />
-          <CallAvatar name={peerName} address={peerAddress} photo={photo} />
-        </div>
-        <div>
-          <p className={s.name}>{peerName}</p>
-          {peerAddress && peerName !== peerAddress && <p className={s.address}>{shorten(peerAddress)}</p>}
-        </div>
-      </div>
+        <Who
+          peerName={peerName}
+          peerAddress={peerAddress}
+          photo={photo}
+          status={<>{isVideo ? 'Incoming video call' : 'Incoming voice call'}<span className={s.ellipsis} aria-hidden="true" /></>}
+        />
 
-      <div className={s.actions}>
-        <div className={s.action}>
-          <button type="button" className={`${s.round} ${s.decline}`} onClick={onDecline} aria-label="Decline">
-            <PhoneOff size={28} strokeWidth={2} />
-          </button>
-          Decline
-        </div>
-        {onMessage && (
-          <div className={s.action}>
-            <button type="button" className={`${s.round} ${s.secondary}`} onClick={onMessage} aria-label="Decline and reply">
-              <MessageSquare size={22} strokeWidth={1.9} />
-            </button>
-            Reply
+        <div className={s.bottom}>
+          <div className={s.actions}>
+            <div className={s.action}>
+              <button type="button" className={`${s.round} ${s.decline}`} onClick={once(onDecline)} disabled={busy} aria-label="Decline">
+                <PhoneOff size={27} strokeWidth={2} aria-hidden="true" />
+              </button>
+              <span>Decline</span>
+            </div>
+            {onMessage && (
+              <div className={s.action}>
+                <button type="button" className={`${s.round} ${s.secondary}`} onClick={once(onMessage)} disabled={busy} aria-label="Decline and reply with a message">
+                  <MessageSquare size={21} strokeWidth={1.9} aria-hidden="true" />
+                </button>
+                <span>Message</span>
+              </div>
+            )}
+            <div className={s.action}>
+              <button
+                ref={answerRef}
+                type="button"
+                className={`${s.round} ${s.accept}`}
+                onClick={once(onAnswer)}
+                disabled={busy}
+                aria-label={isVideo ? 'Answer with video' : 'Answer'}
+              >
+                <span className={s.acceptPulse} aria-hidden="true" />
+                {isVideo ? <Video size={27} strokeWidth={2} aria-hidden="true" /> : <Phone size={27} strokeWidth={2} aria-hidden="true" />}
+              </button>
+              <span>{busy ? 'Connecting' : 'Answer'}</span>
+            </div>
           </div>
-        )}
-        <div className={s.action}>
-          <button type="button" className={`${s.round} ${s.accept}`} onClick={onAnswer} aria-label="Answer">
-            {isVideo ? <Video size={28} strokeWidth={2} /> : <Phone size={28} strokeWidth={2} />}
-          </button>
-          Answer
+          <Secure />
         </div>
       </div>
     </div>
@@ -153,42 +242,58 @@ export function OutgoingCallScreen({
   preview?: MediaStream | null;
   onCancel: () => void;
 }) {
+  // A video call shows our own camera full screen while it rings, under a dark veil; a voice call
+  // keeps the light screen.
+  const camera = isVideo && !!preview && preview.getVideoTracks().some((t) => t.readyState === 'live');
+  const [cancelled, setCancelled] = React.useState(false);
   return (
-    <div className={s.screen} role="dialog" aria-modal="true" aria-label={`Calling ${peerName}`}>
-      <Top label={isVideo ? 'Video call' : 'Voice call'} isVideo={isVideo} />
-      {isVideo && preview && preview.getVideoTracks().length > 0 && (
-        <video
-          ref={(el) => { if (el && el.srcObject !== preview) el.srcObject = preview; }}
-          autoPlay
-          playsInline
-          muted
-          aria-label="Your camera"
-          style={{ position: 'absolute', top: 84, right: 16, width: 112, height: 160, objectFit: 'cover', borderRadius: 16, transform: 'scaleX(-1)', background: '#15171c', boxShadow: '0 18px 40px -12px rgba(16,24,40,0.45)', zIndex: 2 }}
+    <div
+      className={`${s.backdrop} ${camera ? s.backdropDark : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Calling ${peerName}`}
+      onKeyDown={(e) => { if (e.key === 'Escape' && !cancelled) { e.preventDefault(); setCancelled(true); onCancel(); } }}
+    >
+      <div className={`${s.screen} ${camera ? s.screenCamera : ''}`} data-kind="outgoing">
+        {camera && (
+          <>
+            <video
+              className={s.preview}
+              ref={(el) => { if (el && el.srcObject !== preview) el.srcObject = preview!; }}
+              autoPlay
+              playsInline
+              muted
+              aria-label="Your camera"
+            />
+            <span className={s.veil} aria-hidden="true" />
+          </>
+        )}
+        <Top label={isVideo ? 'Video call' : 'Voice call'} isVideo={isVideo} dark={camera} />
+
+        <Who
+          peerName={peerName}
+          peerAddress={peerAddress}
+          photo={photo}
+          dark={camera}
+          status={<>Calling<span className={s.ellipsis} aria-hidden="true" /><span className={s.sep} aria-hidden="true">·</span><span className={s.mono}><Elapsed /></span></>}
         />
-      )}
 
-      <div className={s.centre}>
-        <div className={s.avatarWrap}>
-          <span className={s.ring} />
-          <span className={s.ring} />
-          <CallAvatar name={peerName} address={peerAddress} photo={photo} />
-        </div>
-        <div>
-          <p className={s.name}>{peerName}</p>
-          {peerAddress && peerName !== peerAddress && <p className={s.address}>{shorten(peerAddress)}</p>}
-          <p className={s.status} role="status">
-            <span className={s.dot} aria-hidden="true" />
-            Calling
-          </p>
-        </div>
-      </div>
-
-      <div className={s.actions}>
-        <div className={s.action}>
-          <button type="button" className={`${s.round} ${s.decline}`} onClick={onCancel} aria-label="Cancel call">
-            <PhoneOff size={28} strokeWidth={2} />
-          </button>
-          Cancel
+        <div className={s.bottom}>
+          <div className={s.actions}>
+            <div className={`${s.action} ${camera ? s.actionDark : ''}`}>
+              <button
+                type="button"
+                className={`${s.round} ${s.decline}`}
+                onClick={() => { if (cancelled) return; setCancelled(true); onCancel(); }}
+                disabled={cancelled}
+                aria-label="Cancel call"
+              >
+                <PhoneOff size={27} strokeWidth={2} aria-hidden="true" />
+              </button>
+              <span>Cancel</span>
+            </div>
+          </div>
+          <Secure dark={camera} />
         </div>
       </div>
     </div>
@@ -281,18 +386,27 @@ export function AudioCallStage({
   useVoicePulse(levelStream, connected, pulse);
   return (
     <div className={`${s.stage} ${connected ? s.still : ''}`}>
-      <div className={s.avatarWrap}>
-        <span className={s.ring} />
-        <span className={s.ring} />
+      <div className={s.avatarWrap} style={{ ['--hue' as any]: hueOf(peerAddress) }}>
+        <span className={s.halo} aria-hidden="true" />
+        <span className={s.ring} aria-hidden="true" />
+        <span className={s.ring} aria-hidden="true" />
+        <span className={s.ring} aria-hidden="true" />
         <div ref={pulse} style={{ transition: 'transform 90ms linear', willChange: 'transform' }}>
           <CallAvatar name={peerName} address={peerAddress} photo={photo} />
         </div>
       </div>
-      <div>
-        <p className={s.name}>{peerName}</p>
-        <p className={`${s.status} ${poorConnection || reconnecting ? s.statusWarn : ''}`} role="status">
-          <span className={`${s.dot} ${connected ? (poorConnection || reconnecting ? s.dotWarn : s.dotLive) : ''}`} aria-hidden="true" />
-          {!connected ? 'Connecting' : reconnecting ? 'Reconnecting…' : poorConnection ? 'Weak connection' : durationLabel ?? <CallClock startedAt={startedAt} />}
+      <div className={s.identity}>
+        <p className={s.name} title={peerName}>{peerName}</p>
+        {peerAddress && peerName !== peerAddress && <p className={s.address}>{shorten(peerAddress)}</p>}
+        <p className={`${s.status} ${poorConnection || reconnecting ? s.statusWarn : ''}`} role="status" aria-live="polite">
+          <span className={`${s.dot} ${connected ? (poorConnection || reconnecting ? s.dotWarn : s.dotLive) : s.dotWait}`} aria-hidden="true" />
+          <span>{!connected
+            ? <>Connecting<span className={s.ellipsis} aria-hidden="true" /></>
+            : reconnecting
+              ? <>Reconnecting<span className={s.ellipsis} aria-hidden="true" /></>
+              : poorConnection
+                ? 'Weak connection'
+                : <span className={s.mono}>{durationLabel ?? <CallClock startedAt={startedAt} />}</span>}</span>
         </p>
       </div>
     </div>

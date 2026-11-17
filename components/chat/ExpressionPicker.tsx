@@ -41,19 +41,124 @@ export function ExpressionPicker({
   onSend: (content: string) => void;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<ExpressionTab>(initialTab);
+  const [tab, setTabState] = useState<ExpressionTab>(initialTab);
+  // Panes stay mounted once opened: going back to Emojis keeps its scroll and does not load the
+  // picker again (it used to remount, with a spinner, on every switch).
+  const [mounted, setMounted] = useState<Set<ExpressionTab>>(() => new Set([initialTab]));
   const ref = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const index = TABS.findIndex(([id]) => id === tab);
+  // The finger's offset while a swipe is under way (px), or null.
+  const [drag, setDrag] = useState<number | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  const setTab = useCallback((next: ExpressionTab) => {
+    setTabState(next);
+    setMounted((m) => (m.has(next) ? m : new Set(m).add(next)));
+  }, []);
+
+  // A toggle in the composer for another tab, while the panel is open, goes to it.
+  useEffect(() => { setTab(initialTab); }, [initialTab, setTab]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRef.current(); };
     const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (ref.current && !ref.current.contains(t) && !t.closest('[data-expression-toggle]')) onClose();
+      if (ref.current && !ref.current.contains(t) && !t.closest('[data-expression-toggle]')) closeRef.current();
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', onDown);
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown); };
-  }, [onClose]);
+  }, []);
+
+  // ── Swipe between tabs ────────────────────────────────────────────────────
+  // A horizontal swipe with a finger (or pen) moves the panes with it; letting go past a fifth
+  // of the width, or with a quick flick, lands on the next tab. Vertical scrolling stays native
+  // (touch-action: pan-y). A trackpad's sideways two-finger swipe does the same on a computer.
+  const g = useRef<{ id: number; x: number; y: number; t: number; on: boolean; dead: boolean; dx: number } | null>(null);
+  const suppressClick = useRef(false);
+  const widthOf = () => viewport.current?.clientWidth || 1;
+  const settle = (dx: number, dt: number) => {
+    const w = widthOf();
+    const fast = Math.abs(dx) / Math.max(dt, 1) > 0.45 && Math.abs(dx) > 30;
+    let next = index;
+    if (dx < 0 && (dx < -w * 0.2 || fast)) next = Math.min(TABS.length - 1, index + 1);
+    if (dx > 0 && (dx > w * 0.2 || fast)) next = Math.max(0, index - 1);
+    setDrag(null);
+    if (next !== index) setTab(TABS[next][0]);
+  };
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse') return;
+    const t = e.target as HTMLElement;
+    // Rows that scroll sideways themselves (sticker packs), and text fields, keep their gesture.
+    if (t.closest('[data-no-swipe], input, textarea')) return;
+    g.current = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false, dead: false, dx: 0 };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const s0 = g.current;
+    if (!s0 || s0.id !== e.pointerId || s0.dead) return;
+    const dx = e.clientX - s0.x;
+    const dy = e.clientY - s0.y;
+    s0.dx = dx;
+    if (!s0.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { s0.dead = true; return; } // a scroll
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+      s0.on = true;
+      try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      // The neighbours are ready before they slide in.
+      setMounted((m) => {
+        const n = new Set(m);
+        if (TABS[index - 1]) n.add(TABS[index - 1][0]);
+        if (TABS[index + 1]) n.add(TABS[index + 1][0]);
+        return n;
+      });
+    }
+    // At the first and last tab the panes resist, like a rubber band.
+    const atEdge = (dx > 0 && index === 0) || (dx < 0 && index === TABS.length - 1);
+    setDrag(atEdge ? dx / 3 : dx);
+  };
+  const onPointerEnd = (e: React.PointerEvent) => {
+    const s0 = g.current;
+    g.current = null;
+    if (!s0 || s0.id !== e.pointerId || !s0.on) return;
+    suppressClick.current = true;
+    setTimeout(() => { suppressClick.current = false; }, 50);
+    // The last move decides, not the release point: some browsers report 0,0 on release, and a
+    // cancelled gesture (the browser took it over) springs back where it was.
+    if (e.type === 'pointercancel') { setDrag(null); return; }
+    settle(s0.dx, performance.now() - s0.t);
+  };
+  // A trackpad's sideways swipe: one tab per gesture. A native, non-passive listener, so the
+  // gesture is kept from the browser (Chrome and Safari read it as "back" / "forward" otherwise).
+  const wheel = useRef({ sum: 0, at: 0, lock: 0 });
+  const indexRef = useRef(index);
+  indexRef.current = index;
+  useEffect(() => {
+    const el = viewport.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 1.5) return; // vertical scrolling: the browser's
+      e.preventDefault();
+      const now = performance.now();
+      const w = wheel.current;
+      if (now < w.lock) return;
+      if (now - w.at > 250) w.sum = 0;
+      w.at = now;
+      w.sum += e.deltaX;
+      if (Math.abs(w.sum) > 70) {
+        const i = indexRef.current;
+        const next = Math.max(0, Math.min(TABS.length - 1, i + (w.sum > 0 ? 1 : -1)));
+        w.sum = 0;
+        w.lock = now + 450; // one tab per swipe, whatever the trackpad's momentum
+        if (next !== i) setTab(TABS[next][0]);
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [setTab]);
+
+  const progress = drag === null ? index : index - drag / widthOf();
 
   return (
     <div
@@ -62,8 +167,8 @@ export function ExpressionPicker({
       aria-label="Emojis, stickers and GIFs"
       className="absolute bottom-[68px] left-2 z-50 w-[min(392px,calc(100vw-16px))] h-[min(480px,62vh)] flex flex-col bg-white rounded-[28px] border border-[#e4e7ec] shadow-[0_28px_60px_-18px_rgba(16,24,40,0.30)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
     >
-      <div className="px-3.5 pt-3.5 pb-3">
-        {/* Segmented tabs: 8 px between tabs, one white indicator that slides (transform only). */}
+      <div className="px-3.5 pt-3.5 pb-3 shrink-0">
+        {/* Segmented tabs: 8 px between tabs, one white indicator that follows the finger. */}
         <div
           className="relative grid grid-cols-3 gap-2 p-1.5 rounded-full bg-[#f2f4f7]"
           role="tablist"
@@ -71,24 +176,25 @@ export function ExpressionPicker({
           onKeyDown={(e) => {
             if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
             e.preventDefault();
-            const i = TABS.findIndex(([id]) => id === tab);
-            const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length][0];
+            const next = TABS[(index + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length][0];
             setTab(next);
             (e.currentTarget.querySelector(`[data-tab="${next}"]`) as HTMLElement | null)?.focus();
           }}
         >
           <span
             aria-hidden="true"
-            className="absolute top-1.5 bottom-1.5 left-1.5 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)] transition-transform duration-200 ease-[cubic-bezier(0.22,0.8,0.24,1)] motion-reduce:transition-none"
-            style={{ width: 'calc((100% - 28px) / 3)', transform: `translateX(calc(${TABS.findIndex(([id]) => id === tab)} * (100% + 8px)))` }}
+            className={`absolute top-1.5 bottom-1.5 left-1.5 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)] motion-reduce:transition-none ${drag === null ? 'transition-transform duration-[260ms] ease-[cubic-bezier(0.22,0.8,0.24,1)]' : ''}`}
+            style={{ width: 'calc((100% - 28px) / 3)', transform: `translateX(calc(${Math.max(0, Math.min(TABS.length - 1, progress))} * (100% + 8px)))` }}
           />
           {TABS.map(([id, label]) => (
             <button
               key={id}
+              id={`expr-tab-${id}`}
               data-tab={id}
               type="button"
               role="tab"
               aria-selected={tab === id}
+              aria-controls={`expr-pane-${id}`}
               tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
               className={`relative z-[1] h-10 rounded-full text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${tab === id ? 'text-[#15171c]' : 'text-[#475061] hover:text-[#15171c]'}`}
@@ -98,10 +204,45 @@ export function ExpressionPicker({
           ))}
         </div>
       </div>
-      <div className="flex-1 min-h-0 flex flex-col">
-        {tab === 'emoji' && <EmojiTab onEmoji={onEmoji} />}
-        {tab === 'sticker' && <StickerTab onSend={(c) => { onSend(c); onClose(); }} />}
-        {tab === 'gif' && <GifTab onSend={(c) => { onSend(c); onClose(); }} />}
+      <div
+        ref={viewport}
+        // Every scroller inside (the emoji list, the sticker grid, the GIF wall) says pan-y too: a
+        // browser takes the gesture away (pointercancel) when the element touched allows a sideways pan.
+        className="relative flex-1 min-h-0 overflow-hidden [&_*]:[touch-action:pan-y]"
+        // pan-y: vertical scrolling stays the browser's; the sideways gesture is ours, and never
+        // reaches the page (Chrome reads a sideways overscroll as "go back").
+        style={{ touchAction: 'pan-y', overscrollBehaviorX: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onClickCapture={(e) => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); } }}
+        // Focus moving into a pane must never scroll the sliding track sideways.
+        onScroll={(e) => { if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0; }}
+      >
+        <div
+          className={`absolute inset-0 flex will-change-transform motion-reduce:transition-none ${drag === null ? 'transition-transform duration-[320ms] ease-[cubic-bezier(0.22,0.8,0.24,1)]' : ''}`}
+          style={{ transform: `translate3d(calc(${-index * 100}% + ${drag ?? 0}px), 0, 0)` }}
+        >
+          {TABS.map(([id]) => {
+            const active = id === tab;
+            return (
+              <div
+                key={id}
+                id={`expr-pane-${id}`}
+                role="tabpanel"
+                aria-labelledby={`expr-tab-${id}`}
+                aria-hidden={!active}
+                inert={!active || undefined}
+                className="relative w-full h-full shrink-0 flex flex-col min-h-0"
+              >
+                {mounted.has(id) && id === 'emoji' && <EmojiTab onEmoji={onEmoji} />}
+                {mounted.has(id) && id === 'sticker' && <StickerTab onSend={(c) => { onSend(c); onClose(); }} />}
+                {mounted.has(id) && id === 'gif' && <GifTab onSend={(c) => { onSend(c); onClose(); }} />}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -119,6 +260,8 @@ function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
         width="100%"
         height="100%"
         lazyLoadEmojis
+        // No keyboard popping up over the panel on a phone the moment it opens.
+        autoFocusSearch={false}
         searchPlaceholder="Search emojis"
         previewConfig={{ showPreview: false }}
         skinTonesDisabled={false}
@@ -165,7 +308,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
   };
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex gap-2.5 px-3.5 pb-3 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Sticker packs">
+      <div data-no-swipe className="flex gap-2.5 px-3.5 pb-3 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ touchAction: 'pan-x' }} role="tablist" aria-label="Sticker packs">
         {STICKER_PACKS.map(p => {
           const on = p.id === pack.id;
           return (
@@ -176,14 +319,23 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
               aria-selected={on}
               title={p.name}
               onClick={() => choose(p.id)}
-              className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${on ? 'bg-[#f2f4f7] shadow-[inset_0_0_0_2px_#15171c]' : 'hover:bg-[#f2f4f7]'}`}
+              // The chosen pack is scrolled into its own row only (scrollIntoView would also move the
+              // sliding panes around it).
+              ref={on ? (el) => {
+                const row = el?.parentElement;
+                if (!el || !row) return;
+                const l = el.offsetLeft - 14, r = el.offsetLeft + el.offsetWidth + 14;
+                if (l < row.scrollLeft) row.scrollLeft = l;
+                else if (r > row.scrollLeft + row.clientWidth) row.scrollLeft = r - row.clientWidth;
+              } : undefined}
+              className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-[background-color,box-shadow] duration-150 ${on ? 'bg-[#f2f4f7] shadow-[inset_0_0_0_2px_#15171c]' : 'hover:bg-[#f2f4f7]'}`}
             >
               <img src={stickerFile(p.id, p.cover)} alt={p.name} className="w-9 h-9 object-contain" draggable={false} />
             </button>
           );
         })}
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 pb-3.5">
+      <div key={pack.id} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3.5 pb-3.5">
         <div className="px-1 pt-0.5 pb-3">
           <p className="text-[13.5px] font-semibold text-[#15171c] flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pack.accent }} aria-hidden="true" />
@@ -254,7 +406,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
 
   return (
     <>
-      <div className="px-3.5 pb-3">
+      <div className="px-3.5 pb-3 shrink-0">
         <div className="relative">
           <Search size={16} strokeWidth={1.9} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a9b4]" aria-hidden="true" />
           <input
@@ -267,14 +419,19 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
         </div>
       </div>
       <div
-        className="relative flex-1 min-h-0 overflow-y-auto px-3.5 pb-10"
+        className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-3.5 pb-10"
         onScroll={(e) => {
           const el = e.currentTarget;
-          if (state === 'ready' && el.scrollTop + el.clientHeight > el.scrollHeight - 200) { setState('loading'); load(q, next); }
+          if ((state === 'ready' || (state === 'error' && items.length > 0)) && el.scrollTop + el.clientHeight > el.scrollHeight - 200) { setState('loading'); load(q, next); }
         }}
       >
         {state === 'off' && <p className="text-center text-[13.5px] text-[#727a88] py-10 px-6">GIFs are not switched on for this server yet.</p>}
-        {state === 'error' && <p className="text-center text-[13.5px] text-[#727a88] py-10">GIFs could not be loaded. Try again.</p>}
+        {state === 'error' && items.length === 0 && (
+          <div className="flex flex-col items-center gap-3 py-10">
+            <p className="text-center text-[13.5px] text-[#727a88]">GIFs could not be loaded.</p>
+            <button type="button" onClick={() => load(q, 0)} className="h-9 px-4 rounded-full border border-[#e4e7ec] text-[13.5px] font-medium text-[#15171c] hover:bg-[#f7f8fa]">Try again</button>
+          </div>
+        )}
         {state === 'empty' && <p className="text-center text-[13.5px] text-[#727a88] py-10">No GIFs for “{q}”.</p>}
         {items.length > 0 && (
           <div className="grid grid-cols-2 gap-2.5 items-start">
@@ -286,7 +443,8 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
                     type="button"
                     onClick={() => onSend(`[GIF]${g.url}`)}
                     aria-label={g.title ? `Send GIF: ${g.title}` : 'Send GIF'}
-                    className="block w-full rounded-2xl overflow-hidden bg-[#eff1f4] active:scale-[0.98] transition-transform"
+                    title={g.title || undefined}
+                    className="block w-full rounded-2xl overflow-hidden bg-[#eff1f4] active:scale-[0.98] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
                     style={{ aspectRatio: `${g.width} / ${g.height}` }}
                   >
                     <img src={g.preview} alt="" loading="lazy" className="w-full h-full object-cover" draggable={false} />

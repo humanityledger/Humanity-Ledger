@@ -17,8 +17,8 @@ describe('video calls', () => {
     expect(src).not.toMatch(/ref=\{el => \{ if \(el && el\.srcObject !== remoteStream\) el\.srcObject = remoteStream; \}\}/);
   });
 
-  it('offers screen sharing everywhere and says when a phone browser cannot', () => {
-    expect(src).toMatch(/onScreenShare=\{toggleScreenShare\}/);
+  it('offers screen sharing where the browser can capture the screen, and says so where it cannot', () => {
+    expect(src).toMatch(/onScreenShare=\{canShareScreen && !isMobile \? toggleScreenShare : undefined\}/);
     expect(src).toMatch(/This browser cannot share your screen/);
   });
 });

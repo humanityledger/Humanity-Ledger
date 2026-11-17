@@ -144,6 +144,11 @@ Do each on two devices signed in as different accounts, with the browser console
 11. **Cancel while ringing.** Caller cancels: the callee's phone stops ringing at once.
 12. **Devices released.** After a call the camera light is off and the browser shows no microphone
     in use.
+13. **Ring anywhere.** The callee has another chat open, or the chat list, or Communities: the call
+    rings with the caller's name; Answer opens the caller's chat. Decline and hang-up reach the caller.
+14. **Hang up in any state.** Hang up while the other side is still "Connecting" or "Reconnecting":
+    both screens close within a second (direct PeerJS signal, then XMTP for a device that was offline).
+15. **Clock skew.** Set the caller's clock two minutes ahead: the call still rings.
 
 ## Known limits
 
@@ -152,4 +157,8 @@ Do each on two devices signed in as different accounts, with the browser console
   (the media stays encrypted, but to the wrong endpoint). Binding the DTLS fingerprint to the XMTP
   identity would close this; it is not done yet.
 - Group calls are separate (community calls) and not covered here.
-- Most mobile browsers cannot share their screen.
+- Phone and tablet browsers (iOS, most Android) have no screen capture for web pages: the share
+  button is shown only where `getDisplayMedia` exists on a computer. On a Mac the browser itself needs
+  Screen Recording permission in System Settings; the error says so.
+- The caller's address in the PeerJS metadata is a display hint until the XMTP offer (signed by the
+  caller's XMTP identity) arrives; it is accepted only when it matches the PeerJS id the call came from.

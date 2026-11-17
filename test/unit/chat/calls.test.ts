@@ -181,7 +181,7 @@ describe('call resume: network changes and voice → video', () => {
     // Hanging up forgets the connection before closing it, so its close is not read as a loss.
     expect(chat).toMatch(/activeConnectionRef\.current = null;\s*callStateRef\.current = 'idle';\s*stopReconnectRef\.current\(\);/);
     // The deadline ends the call on both sides.
-    expect(chat).toMatch(/toast\.error\('The call lost its connection\.'\);\s*executeSendRef\.current\?\.\('__CALL_HANGUP__', \{ to: callPeerAddrRef\.current \|\| undefined \}\)/);
+    expect(chat).toMatch(/toast\.error\('The call lost its connection\.'\);\s*sendDirectHangupRef\.current\(\); executeSendRef\.current\?\.\('__CALL_HANGUP__', \{ to: callPeerAddrRef\.current \|\| undefined \}\)/);
   });
 
   it('the signalling socket dropping during a call never destroys the peer (it would end the call)', () => {
@@ -255,8 +255,8 @@ describe('call screen and chat', () => {
   });
 
   it('accepts a shared screen only from the person in the call, and stops it with the call', () => {
-    expect(chat).toMatch(/connection\.metadata\?\.kind === 'screen'[\s\S]{0,200}\(callStateRef\.current === 'active' \|\| callStateRef\.current === 'connecting'\) && current && connection\.peer === current\.peer/);
-    expect(chat).toMatch(/livePeer\.call\(main\.peer, stream, \{ metadata: \{ kind: 'screen' \}/);
+    expect(chat).toMatch(/connection\.metadata\?\.kind === 'screen'[\s\S]{0,200}const fromCall = !!current && \(connection\.peer === current\.peer \|\| connection\.peer === callRemoteIdRef\.current\);\s*if \(\(callStateRef\.current === 'active' \|\| callStateRef\.current === 'connecting'\) && fromCall\)/);
+    expect(chat).toMatch(/livePeer\.call\(activeConnectionRef\.current\?\.peer \|\| main\.peer, stream, \{ metadata: \{ kind: 'screen' \}/);
     expect(chat).toMatch(/const performEndCall = useCallback\(\(\) => \{\s*stopRingtone\(\);\s*stopScreenShareRef\.current\(\);/);
     expect(screens).toMatch(/\{onScreenShare && \(/); // voice calls too
   });
@@ -315,7 +315,9 @@ describe('call visibility and measurements', () => {
   });
 
   it('own camera is mirrored while ringing too', () => {
-    expect(read('components/chat/call/CallScreens.tsx')).toMatch(/preview\.getVideoTracks\(\)\.length > 0[\s\S]{0,400}transform: 'scaleX\(-1\)'/);
+    // A video call shows our own camera full screen while it rings, mirrored by the .preview class.
+    expect(read('components/chat/call/CallScreens.tsx')).toMatch(/preview\.getVideoTracks\(\)\.some\(\(t\) => t\.readyState === 'live'\)[\s\S]{0,900}className=\{s\.preview\}/);
+    expect(read('components/chat/call/CallScreens.module.css')).toMatch(/\.preview \{[^}]*transform: scaleX\(-1\);/);
   });
 
   it('measures setup time, first audio, route and memory, on this device only', () => {
