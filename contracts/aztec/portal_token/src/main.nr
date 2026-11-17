@@ -28,6 +28,7 @@
 // No admin, no owner, no pause, no upgrade. The portal address and decimals are set at deployment.
 
 use aztec::macros::aztec;
+use aztec::protocol::hash::sha256_to_field;
 
 mod test;
 
@@ -43,7 +44,7 @@ pub fn mint_to_private_content(amount: u128) -> Field {
     for i in 0..32 {
         data[4 + i] = amount_bytes[i];
     }
-    aztec::protocol::hash::sha256_to_field(data)
+    sha256_to_field(data)
 }
 
 /// sha256ToField(abi.encodeWithSignature("withdraw(address,uint256,address)", recipient, amount, caller)).
@@ -62,7 +63,7 @@ pub fn withdraw_content(recipient: Field, amount: u128, caller_on_l1: Field) -> 
         data[36 + i] = amount_bytes[i];
         data[68 + i] = caller_bytes[i];
     }
-    aztec::protocol::hash::sha256_to_field(data)
+    sha256_to_field(data)
 }
 
 #[aztec]

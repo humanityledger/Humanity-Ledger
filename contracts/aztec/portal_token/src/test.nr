@@ -8,7 +8,7 @@ use aztec::{
     protocol::{
         abis::function_selector::FunctionSelector,
         address::{AztecAddress, EthAddress},
-        traits::{FromField, ToField},
+        traits::ToField,
     },
     test::helpers::test_environment::{ExecuteUtilityOptions, TestEnvironment},
 };
