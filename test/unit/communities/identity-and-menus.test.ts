@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 
-const findMany = vi.fn();
+const { findMany } = vi.hoisted(() => ({ findMany: vi.fn() }));
 vi.mock('@/lib/prisma', () => ({ prisma: { user: { findMany } } }));
 
 import { cleanName, memberNames } from '@/lib/communities/member-names';
