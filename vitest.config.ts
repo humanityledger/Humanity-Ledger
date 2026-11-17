@@ -36,6 +36,9 @@ export default defineConfig({
       'test/contracts_invariants.test.ts',
       'test/ZKIdentityRegistry.test.ts',
       'test/ZKVerificationKeyRegistry.test.ts',
+      // Hardhat (mocha + chai) suites: they run in `npm run test:contracts`, against compiled artifacts.
+      'test/portal/**',
+      'test/unit/contracts/HumanityTimeLockVault.adversarial.test.ts',
       'test/SystemDeadmanSwitch.test.js',
       'test/qd-stress.test.ts',
       'test/qd-economy.security.test.ts',

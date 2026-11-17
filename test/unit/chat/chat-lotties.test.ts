@@ -45,7 +45,7 @@ describe('chat animations', () => {
     expect(chat).toContain('<SendConfirmationBurst burst={sendAnimKey}');
     const lottie = read('components/chat/ChatLottie.tsx');
     expect(lottie).toMatch(/loop=\{false\} onComplete=\{\(\) => setShown\(0\)\}/);
-    expect(lottie).toMatch(/if \(burst > 0 && !reduced\) setShown\(burst\)/);
+    expect(lottie).toMatch(/if \(!\(burst > 0\) \|\| reduced\) return;\s*setShown\(burst\);/);
   });
 
   it('the welcome animation is on the Ledger Chat home and the empty list', () => {
