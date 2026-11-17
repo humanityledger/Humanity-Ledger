@@ -7141,14 +7141,15 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     );
                   }
                   return (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6" data-testid="new-conversation">
-                      <div className="bg-white rounded-2xl px-6 pt-4 pb-7 max-w-[300px] text-center border border-[#e4e7ec]">
+                    // Keyed by the person, so it plays its entrance again for each empty chat and after Clear chat.
+                    <div key={`new-${activePeer}`} className="flex-1 flex flex-col items-center justify-center p-6" data-testid="new-conversation">
+                      <div className="hl-empty-enter bg-white rounded-[24px] px-7 pt-6 pb-7 max-w-[320px] text-center border border-[#e4e7ec] shadow-[0_12px_32px_-18px_rgba(16,24,40,0.25)]">
                         {/* Only while this conversation has no message: the first one replaces this card with the thread. */}
-                        <div className="flex justify-center -mb-1">
+                        <div className="hl-empty-enter-art flex justify-center mb-3">
                           <NewConversationLottie />
                         </div>
-                        <p className="text-[16px] font-semibold text-[#15171c] mb-1.5">Say hello</p>
-                        <p className="text-[14px] text-[#727a88] leading-relaxed">Send the first message. It is encrypted on this device and only you and {getDisplayName(activePeer!)} can read it.</p>
+                        <p className="hl-empty-enter-text text-[17px] font-semibold tracking-[-0.01em] text-[#15171c] mb-1.5">Say hello</p>
+                        <p className="hl-empty-enter-text text-[14px] text-[#5b606b] leading-relaxed" style={{ animationDelay: '160ms' }}>Send the first message. It is encrypted on this device and only you and {getDisplayName(activePeer!)} can read it.</p>
                       </div>
                     </div>
                   );

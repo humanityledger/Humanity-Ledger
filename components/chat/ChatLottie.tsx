@@ -100,9 +100,12 @@ export function ChatLottie({ src, width, height, loop = true, label, className, 
   );
 }
 
-/** The empty conversation: shown only while the conversation has no message. */
+/**
+ * The empty conversation (two chat bubbles taking turns, 2.6 s loop): shown while the
+ * conversation has no message, including right after Clear chat. The file is 350 x 230.
+ */
 export function NewConversationLottie() {
-  return <ChatLottie src={LOTTIE.NEW_CONVERSATION} width={168} height={168} label="A new conversation" />;
+  return <ChatLottie src={LOTTIE.NEW_CONVERSATION} width={210} height={138} label="A new conversation" />;
 }
 
 /** The other person is writing. Sized to sit inside a message bubble. */
