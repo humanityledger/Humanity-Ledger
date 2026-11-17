@@ -1,4 +1,6 @@
 # Humanity Ledger — Incident Response Playbook
+
+> **Internal audit, 18 November 2026 (IA-10).** Partly design. There is no "Revoke this device" action in settings, no deployed VK registry and no admin multisig; steps that rely on them cannot be run today. The Aztec section (what Aztec can and cannot do) stands. See `docs/audit/INTERNAL_AUDIT_2026-11-18.md`.
 **Version 1.0 — 2026-10-31**  
 **Classification**: NORMATIVE  
 **Authority**: `docs/PROTOCOL_SPEC.md` §6 (Threat Model P1–P6)

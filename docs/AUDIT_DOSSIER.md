@@ -22,6 +22,8 @@ The Humanity Ledger protocol couples client-side zero-knowledge state transition
 
 ## 2. Residual Risk Register (Normative Section 5)
 
+> **Correction, internal audit of 18 November 2026 (IA-11).** Three rows below no longer hold. RISK-05 and RISK-08: `npm audit` reports 43 high-severity vulnerabilities on `main` (CI job "npm audit — Block on any vulnerability"); supply-chain risk is open, not closed. RISK-04: test suites reduce, they do not close, the risk of client bugs; it stays open until an external review. RISK-06: the VKs are now compiled and pinned in CI (`docs/STATUS.md`). The rows are kept as written on 31 October 2026. See `docs/audit/INTERNAL_AUDIT_2026-11-18.md`.
+
 | Risk Identifier | Stated Threat | Severity | Treatment Status | Mitigation / Acceptance Rationale |
 |---|---|---|---|---|
 | **RISK-01** | **Proof generation failure on constrained devices** (RAM/CPU exhaustion during client-side UltraHonk synthesis on low-end mobile devices). | **Medium** | **CLOSED (Fail-Closed)** | Prover worker implements strict fail-closed boundary: if synthesis fails, zero witness or private state is leaked. User interface receives an explicit retry error and offers fallback to desktop or local node. |

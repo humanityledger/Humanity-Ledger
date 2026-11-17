@@ -1,4 +1,6 @@
 # Humanity Ledger — Observability Metrics
+
+> **Internal audit, 18 November 2026 (IA-10).** Design, not implemented. None of the `hl_*` metrics below is emitted by the code, and `/api/metrics/proof` does not exist. See `docs/audit/INTERNAL_AUDIT_2026-11-18.md`.
 **Version 1.0 — 2026-10-31**  
 **Authority**: Directive Section 4.3
 
