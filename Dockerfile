@@ -120,6 +120,14 @@ ARG NEXT_PUBLIC_AZTEC_VALUE_MODE
 ARG NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH
 ARG NEXT_PUBLIC_AZTEC_SPONSORED_FPC
 ARG NEXT_PUBLIC_AZTEC_FAUCET
+# Portal and receiver addresses (docs/PORTAL.md). Empty: the wallet says the portal is not deployed.
+ARG NEXT_PUBLIC_HL_PORTAL
+ARG NEXT_PUBLIC_HL_RECEIVER_FACTORY
+ARG NEXT_PUBLIC_HL_RECEIVER_IMPLEMENTATION
+ARG NEXT_PUBLIC_HL_PORTAL_L1_CHAIN_ID
+ARG NEXT_PUBLIC_HL_PORTAL_ASSETS
+ARG NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT
+ARG NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK
 # WalletConnect (Reown) project for the sign-in on phones. Without this ARG the Railway variable never
 # reached `next build` and the bundle used the fallback id in next.config.js. Its Reown project must list
 # ledgerchat.org (and www.ledgerchat.org if served) in the domain allowlist, or the relay refuses every

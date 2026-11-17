@@ -35,6 +35,7 @@ import {
   ArrowDownLeft, ArrowUpRight, Droplets, Fuel, Lock, Plus, RefreshCw, ShieldCheck, LockOpen, X,
 } from 'lucide-react';
 import { PasskeyCard, PasskeyOpen } from './wallet/PasskeyCard';
+import { ReceiversCard } from './wallet/ReceiversCard';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
 import {
@@ -340,6 +341,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   </Section>
 
                   <PasskeyCard address={address} onEnroll={enrollPasskey} disabled={state.busy} />
+
+                  <ReceiversCard address={address} ready={ready} />
 
                   <WhatIsSeen />
 

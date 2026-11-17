@@ -225,7 +225,7 @@ describe('G7 address proofs', () => {
     await forged.set(SIGNER, ADDR);
     await forged.set(`verified:${SIGNER}`, ADDR);
     expect((await peerBindingStatus(forged, SIGNER)).verified).toBe(true);
-    expect(await verifiedPeerBinding(forged, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: false });
+    expect(await verifiedPeerBinding(forged, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: false, reason: 'the address has no proof of control' });
 
     const tampered = memoryPeerBindingStore();
     const p = await proofFor();
@@ -241,6 +241,6 @@ describe('G7 address proofs', () => {
     expect((await verifiedPeerBinding(store, SIGNER, ME_INBOX, fakeCrypto)).verified).toBe(false);
     const v1 = memoryPeerBindingStore();
     await recordPeerAnnouncement(v1, { senderInboxId: SIGNER, peerInboxId: SIGNER, body: announcementFor(ADDR) });
-    expect(await verifiedPeerBinding(v1, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: false });
+    expect(await verifiedPeerBinding(v1, SIGNER, ME_INBOX, fakeCrypto)).toEqual({ address: ADDR, verified: false, reason: 'the address has no proof of control' });
   });
 });
