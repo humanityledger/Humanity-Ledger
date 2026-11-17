@@ -108,7 +108,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
     setPayee(null);
     let live = true;
     import('@/lib/aztec/peer-binding')
-      .then(async (pb) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), dmPeerInboxId, selfInboxId, await pb.sdkBindingCrypto()))
+      .then(async (pb) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), dmPeerInboxId, selfInboxId, await pb.sdkBindingCrypto(), getPrivateWallet().bindingContext()))
       .then((b) => live && setPayee(b))
       .catch(() => live && setPayee({ verified: false }));
     return () => {

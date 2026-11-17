@@ -1849,3 +1849,18 @@ model Story {
   @@index([authorAddress])
   @@index([expiresAt])
 }
+
+/// Passkey records of the private wallet (lib/aztec/wallet/passkey.ts). `record` is the JSON of a
+/// PasskeyRecord: credential id, PRF salt, IV and the AES-GCM ciphertext of the account root. The
+/// server cannot open it: the key is the passkey's PRF output, which only the authenticator yields.
+model AztecPasskeyRecord {
+  id            String   @id @default(uuid())
+  walletAddress String
+  network       String
+  credentialId  String   @unique
+  record        String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletAddress, network])
+}

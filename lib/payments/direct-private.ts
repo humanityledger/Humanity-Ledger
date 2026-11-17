@@ -65,7 +65,8 @@ async function defaultDeps(): Promise<DirectPaymentDeps> {
   const [{ getPrivateWallet }, pb] = await Promise.all([import('../aztec/wallet/client'), import('../aztec/peer-binding')]);
   return {
     nodeInfo: () => getPrivateWallet().agreementContext().node.getNodeInfo(),
-    binding: async (peer, self) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), peer, self, await pb.sdkBindingCrypto()),
+    // On Alpha the proof must name the wallet's network (peer-binding.ts scheme v2).
+    binding: async (peer, self) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), peer, self, await pb.sdkBindingCrypto(), getPrivateWallet().bindingContext()),
     send: (t, a, to) => getPrivateWallet().send(t, a, to),
   };
 }

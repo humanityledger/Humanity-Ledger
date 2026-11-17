@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import {
   ArrowDownLeft, ArrowUpRight, Droplets, Fuel, Lock, Plus, RefreshCw, ShieldCheck, LockOpen, X,
 } from 'lucide-react';
+import { PasskeyCard, PasskeyOpen } from './wallet/PasskeyCard';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
 import {
@@ -109,7 +110,7 @@ function planLabel(plan: string): string {
 /* -------------------------------------------------------------------------- */
 
 export function ZkWalletPanel({ address, onClose, className, initialSheet = null, onPaymentSent }: ZkWalletPanelProps) {
-  const { state, wallet, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(address);
+  const { state, wallet, open, openWithPasskey, enrollPasskey, walletConnected, sameAccount, linkedComputer } = useAztecWallet(address);
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [sheetBack, setSheetBack] = useState<(() => void) | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -271,6 +272,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   </div>
                 </WalletCreation>
               ) : !ready ? (
+                <>
                 <WalletCreation
                   phase={state.phase}
                   step={state.step}
@@ -289,6 +291,10 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                     );
                   }}
                 />
+                {(state.phase === 'idle' || state.phase === 'error') && (
+                  <PasskeyOpen address={address} onOpen={openWithPasskey} disabled={!isWalletConfigured()} />
+                )}
+                </>
               ) : view === 'activity' ? (
                 <>
                   <ActivityList
@@ -332,6 +338,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                     <KV k="Proofs" v="Made on this device" />
                     {linkedComputer && <KV k="Signing" v="Approved on your phone" />}
                   </Section>
+
+                  <PasskeyCard address={address} onEnroll={enrollPasskey} disabled={state.busy} />
 
                   <WhatIsSeen />
 
