@@ -167,7 +167,19 @@
       "note": "Run 42030688268: deployed by openEscrow (block 19594, tx 0x13b184c657e37f667bf18d84d7e89762e463c650e45dde1051a84bbd12280c8a), deposit of 3 (19595); acceptInvite refused a tampered invitation and registered the genuine one; confirmAgreement found every field equal to the stored note and an overstated amount was caught; the recipient claimed (19597). Pre-fee class. It no longer tracks the current artifact (16 November 2026)."
     },
     {
-      "name": "PrivateEscrow fee baseline (not deployed)",
+      "name": "PrivateEscrow fee baseline, zero treasury (superseded, never deployed)",
+      "address": null,
+      "classId": "0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee",
+      "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "not-deployed",
+      "tracksCurrentArtifact": false,
+      "note": "Superseded on 17 November 2026. This class was compiled when TREASURY in the source was AztecAddress { inner: 0 }; the client refuses it. Never deployed, no address. Kept as history; it is not a current class.",
+      "supersededBy": "0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6"
+    },
+    {
+      "name": "PrivateEscrow with the designated treasury (not deployed)",
       "address": null,
       "classId": "0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6",
       "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
@@ -175,10 +187,23 @@
       "keyed": false,
       "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class computed from the committed artifact after Aztec 6.0.0 CI recompiled the designated-treasury source. No instance and no address. TXE on that source: 19 passed (main run 44055243245). Treasury is 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed and is not the 4-of-7. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet. The previous class 0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee was the zero-treasury compile."
+      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 from the current source (TREASURY = 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed, the designated treasury, not the 4-of-7). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44063139479. TXE in contracts/aztec/escrow on 17 November 2026 (run 44061471400): 19 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
+      "artifactSha256": "6fb5e48c8d0ded456aa34ffdc3986c2aa7f1b4fb6eafbe28666c0ee2a90d3270"
     },
     {
-      "name": "PaymentStream fee baseline (not deployed)",
+      "name": "PaymentStream fee baseline, zero treasury (superseded, never deployed)",
+      "address": null,
+      "classId": "0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3",
+      "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "not-deployed",
+      "tracksCurrentArtifact": false,
+      "note": "Superseded on 17 November 2026. This class was compiled when TREASURY in the source was AztecAddress { inner: 0 }; the client refuses it. Never deployed, no address. Kept as history; it is not a current class.",
+      "supersededBy": "0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b"
+    },
+    {
+      "name": "PaymentStream with the designated treasury (not deployed)",
       "address": null,
       "classId": "0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b",
       "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
@@ -186,7 +211,8 @@
       "keyed": false,
       "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class computed from the committed artifact after Aztec 6.0.0 CI recompiled the designated-treasury source. No instance and no address. TXE on that source: 29 passed (main run 44055243245). Treasury is 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed and is not the 4-of-7. Nothing was sent on Alpha. There is no external audit. Launch condition 1 is unmet. The previous class 0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3 was the zero-treasury compile."
+      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 from the current source (TREASURY = 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed, the designated treasury, not the 4-of-7). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44063139479. TXE in contracts/aztec/streams on 17 November 2026 (run 44061471400): 29 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
+      "artifactSha256": "2739e96dd8e8f8002742e30484c4e453e75c57f1263f81075af2d1710c907e54"
     }
   ],
   "e2eRuns": [

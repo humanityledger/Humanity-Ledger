@@ -30,6 +30,9 @@ interface Entry {
   keyed: boolean;
   status: 'active' | 'reference' | 'do-not-use' | 'settled' | 'not-deployed';
   tracksCurrentArtifact: boolean;
+  /** For a class that was never deployed and is no longer current: the class that replaced it. */
+  supersededBy?: string;
+  artifactSha256?: string;
 }
 
 async function classIdOf(artifactPath: string): Promise<string> {
@@ -49,7 +52,12 @@ describe('deployments/aztec-testnet.json', () => {
       expect(e.classId).toMatch(/^0x[0-9a-f]{64}$/);
       if (e.status === 'not-deployed') {
         expect(e.address, e.name).toBeNull();
-        expect(e.tracksCurrentArtifact, e.name).toBe(true);
+        // A class never deployed either tracks the current artifact, or names the current class that replaced it.
+        if (!e.tracksCurrentArtifact) {
+          expect(e.supersededBy, e.name).toMatch(/^0x[0-9a-f]{64}$/);
+          const next = entries.find((x) => x.classId === e.supersededBy);
+          expect(next?.tracksCurrentArtifact, `${e.name}: supersededBy names a current class`).toBe(true);
+        }
       } else {
         expect(e.address, e.name).toMatch(/^0x[0-9a-f]{64}$/);
       }
@@ -70,8 +78,20 @@ describe('deployments/aztec-testnet.json', () => {
   for (const e of entries.filter((x) => x.tracksCurrentArtifact)) {
     it(`${e.name}: the recorded class ID is the one computed from the committed artifact`, async () => {
       expect(await classIdOf(e.artifact)).toBe(e.classId);
+      if (e.artifactSha256) {
+        const { createHash } = await import('node:crypto');
+        expect(createHash('sha256').update(fs.readFileSync(path.join(root, e.artifact))).digest('hex')).toBe(e.artifactSha256);
+      }
     });
   }
+
+  it('the escrow and stream classes with a zero treasury are history, never current', () => {
+    for (const old of ['0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee', '0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3']) {
+      const e = entries.find((x) => x.classId === old);
+      expect(e?.tracksCurrentArtifact, old).toBe(false);
+      expect(e?.address, old).toBeNull();
+    }
+  });
 });
 
 // deployments/aztec-mainnet.json: the same rules, plus the network values

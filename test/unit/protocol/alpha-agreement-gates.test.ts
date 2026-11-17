@@ -1,9 +1,9 @@
 /**
  * The Alpha client cannot deploy the fee classes: there is no external audit.
- * The designated treasury is in the source, the client and nowhere else; the
- * committed artifacts still carry the zero placeholder until the "Aztec
- * contracts" workflow recompiles and TXE passes, so nothing deploys meanwhile.
- * Source checks only: no network, no transaction.
+ * The designated treasury is in the source, the client and nowhere else. On
+ * 17 November 2026 the "Aztec contracts" workflow recompiled escrow and streams
+ * from that source (run 44061471400, TXE green) and committed the artifacts, so
+ * the pending-recompile hold is empty. Source checks only: no network, no transaction.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -34,9 +34,18 @@ describe('designated treasury', () => {
     }
   });
 
-  it('both sources are pinned as pending recompile, with the sha256 of the file on disk', () => {
-    expect(pending.map((p) => p.contract).sort()).toEqual(['PaymentStream', 'PrivateEscrow']);
-    for (const p of pending) expect(p.sha256).toBe(createHash('sha256').update(read(p.source)).digest('hex'));
+  it('nothing is held for recompile, and the committed artifacts carry the designated treasury, not zero', () => {
+    expect(pending).toEqual([]);
+    const artifacts = ['contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json', 'contracts/aztec/streams/target/payment_stream-PaymentStream.json'];
+    for (const a of artifacts) {
+      const raw = read(a);
+      expect(raw, a).toContain(DESIGNATED.slice(2));
+      expect(raw, a).not.toContain('global TREASURY: AztecAddress = AztecAddress { inner: 0 }');
+      // The artifact was built from the source on disk.
+      const files = Object.values(JSON.parse(raw).file_map ?? {}) as Array<{ path: string; source: string }>;
+      const main = files.find((f) => f.path.endsWith('src/main.nr'));
+      expect(main && createHash('sha256').update(main.source).digest('hex'), a).toBe(createHash('sha256').update(read(a.replace(/target\/.*$/, 'src/main.nr'))).digest('hex'));
+    }
   });
 });
 
