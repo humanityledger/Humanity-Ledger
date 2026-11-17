@@ -14,11 +14,14 @@ on:
     branches: [main, 'claude/**']
     paths:
       - 'contracts/aztec/**'
+      # Adding or lifting a pending-recompile hold changes which artifacts this job commits.
+      - 'deployments/aztec-pending-recompile.json'
       - '.github/workflows/aztec-contracts.yml'
   pull_request:
     branches: [main]
     paths:
       - 'contracts/aztec/**'
+      - 'deployments/aztec-pending-recompile.json'
 
 permissions:
   contents: write
