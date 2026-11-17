@@ -1,6 +1,8 @@
 // TXE tests for PortalToken (run with `aztec test` inside contracts/aztec/portal_token).
 // A deposit message is seeded as the portal would send it (sender = the portal's L1 address,
 // content = mint_to_private(amount)); the claim must use the right secret, amount and index, once.
+// A claim with a wrong secret, amount or portal names a message hash that is not in the tree: the
+// node refuses it when the PXE asks for its membership witness, before the circuit's own assert.
 
 use crate::{content::{mint_to_private_content, withdraw_content}, PortalToken};
 use aztec::{
@@ -83,21 +85,21 @@ unconstrained fn a_message_is_claimed_once() {
     s.env.call_private(s.alice, PortalToken::at(s.token).claim_private(s.alice, AMOUNT, SECRET, index));
 }
 
-#[test(should_fail_with = "Message not in state")]
+#[test(should_fail_with = "No L1 to L2 message found")]
 unconstrained fn a_wrong_secret_claims_nothing() {
     let s = setup();
     let index = seed_deposit(s, AMOUNT, SECRET);
     s.env.call_private(s.alice, PortalToken::at(s.token).claim_private(s.alice, AMOUNT, SECRET + 1, index));
 }
 
-#[test(should_fail_with = "Message not in state")]
+#[test(should_fail_with = "No L1 to L2 message found")]
 unconstrained fn a_wrong_amount_claims_nothing() {
     let s = setup();
     let index = seed_deposit(s, AMOUNT, SECRET);
     s.env.call_private(s.alice, PortalToken::at(s.token).claim_private(s.alice, AMOUNT + 1, SECRET, index));
 }
 
-#[test(should_fail_with = "Message not in state")]
+#[test(should_fail_with = "No L1 to L2 message found")]
 unconstrained fn a_message_from_another_portal_claims_nothing() {
     let s = setup();
     let index = s.env.send_l1_to_l2_message(mint_to_private_content(AMOUNT), SECRET, EthAddress::from_field(0x2222), s.token);
