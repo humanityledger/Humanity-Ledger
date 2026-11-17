@@ -86,6 +86,6 @@ The caps, the 2-day timelock on relaxations and the bounded withdrawal pause are
    - claim after the delay;
    - transfer;
    - withdrawal with a real Outbox proof.
-3. An admin multisig and a guardian designated by Stefan.
+3. An admin multisig and a guardian, designated by the project owner.
 4. The Outbox proof call wired in the wallet (§3).
 5. Private fees (Module 3) before receiver addresses are presented as unlinkable on Alpha.
