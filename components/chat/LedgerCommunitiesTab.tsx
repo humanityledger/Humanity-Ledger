@@ -98,10 +98,13 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         body: JSON.stringify({ name: newName.trim(), description: newDesc.trim(), isPrivate }),
       });
       if (res.ok) {
+        const d = await res.json().catch(() => ({}));
+        const id: string | undefined = d?.community?.id;
         await fetchMine();
         if (!isPrivate) fetchPublic();
         setNewName(''); setNewDesc(''); setIsPrivate(true); setShowCreate(false);
-        toast.success('Community created');
+        // Start one: name, private or not, then it opens.
+        if (id) onOpenCommunity(id);
       } else {
         const d = await res.json().catch(() => ({}));
         toast.error(d.error || 'Could not create the community');
@@ -127,9 +130,13 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         body: JSON.stringify({ joinCode: code }),
       });
       if (res.ok) {
+        const d = await res.json().catch(() => ({}));
+        const id: string | undefined = d?.community?.id;
         await fetchMine();
         setJoinLink(''); setShowJoin(false);
-        toast.success('You joined the community');
+        // Joining opens the community you joined.
+        if (id) onOpenCommunity(id);
+        else toast.success('You joined the community');
       } else {
         const d = await res.json().catch(() => ({}));
         toast.error(d.error || 'That invite did not work');
@@ -143,7 +150,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
 
   const q = search.trim().toLowerCase();
   const visiblePublic = publicOnes.filter(c => !q || c.name.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q));
-  const field = 'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#d9dde3] text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
+  const field = 'w-full min-h-[52px] px-4 py-3 rounded-2xl bg-white border-2 border-[#9aa1ac] text-[18px] text-[#15171c] placeholder:text-[#4a505c] outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col bg-white">
@@ -211,27 +218,23 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         open={showCreate}
         onClose={() => setShowCreate(false)}
         title="New community"
-        subtitle="You can change all of this later"
+        subtitle="A name, and who can join. Everything else is in Manage."
         footer={
           <div className="flex justify-end gap-2">
-            <SecondaryButton onClick={() => setShowCreate(false)}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={create} disabled={!newName.trim() || creating}>{creating ? 'Creating' : 'Create'}</PrimaryButton>
+            <SecondaryButton onClick={() => setShowCreate(false)} className="min-h-[48px] text-[18px] px-5">Cancel</SecondaryButton>
+            <PrimaryButton onClick={create} disabled={!newName.trim() || creating} className="min-h-[48px] text-[18px] px-5">{creating ? "Starting" : "Start it"}</PrimaryButton>
           </div>
         }
       >
         <div className="px-5 pb-4 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium text-[#4a505c]">Name</span>
+            <span className="text-[18px] font-semibold text-[#15171c]">Name</span>
             <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') create(); }} placeholder="Design team" maxLength={64} autoFocus className={field} />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium text-[#4a505c]">Description <span className="text-[#a3a9b4] font-normal">(optional)</span></span>
-            <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What is this community for?" maxLength={256} rows={3} className={`${field} resize-none`} />
-          </label>
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-[13px] font-medium text-[#4a505c] mb-1.5">Who can join</legend>
+            <legend className="text-[18px] font-semibold text-[#15171c] mb-1.5">Is it private?</legend>
             {([
-              [true, 'Private', 'Only people with an invite link'],
+              [true, 'Private', 'Only people with an invite can join'],
               [false, 'Public', 'Anyone can find it and join'],
             ] as const).map(([priv, title, text]) => (
               <button
@@ -240,13 +243,13 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
                 role="radio"
                 aria-checked={isPrivate === priv}
                 onClick={() => setIsPrivate(priv)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${isPrivate === priv ? 'border-[#15171c] bg-white' : 'border-[#e4e7ec] hover:bg-[#f7f8fa]'}`}
+                className={`min-h-[56px] flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-colors ${isPrivate === priv ? 'border-[#15171c] bg-white' : 'border-[#d4d8de] hover:bg-[#f7f8fa]'}`}
               >
                 <span className="flex-1">
-                  <span className="block text-[15px] font-medium text-[#15171c]">{title}</span>
-                  <span className="block text-[13px] text-[#727a88]">{text}</span>
+                  <span className="block text-[18px] font-semibold text-[#15171c]">{title}</span>
+                  <span className="block text-[16px] text-[#3d424b]">{text}</span>
                 </span>
-                <span className={`text-[12.5px] font-semibold ${isPrivate === priv ? 'text-[#15171c]' : 'text-[#a3a9b4]'}`}>{isPrivate === priv ? 'Selected' : 'Choose'}</span>
+                <span className={`text-[16px] font-semibold ${isPrivate === priv ? 'text-[#15171c]' : 'text-[#3d424b]'}`}>{isPrivate === priv ? 'Selected' : 'Choose'}</span>
               </button>
             ))}
           </fieldset>
@@ -261,8 +264,8 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         subtitle="Paste the invite link or code you were sent"
         footer={
           <div className="flex justify-end gap-2">
-            <SecondaryButton onClick={() => setShowJoin(false)}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={join} disabled={!joinLink.trim() || joining}>{joining ? 'Joining' : 'Join'}</PrimaryButton>
+            <SecondaryButton onClick={() => setShowJoin(false)} className="min-h-[48px] text-[18px] px-5">Cancel</SecondaryButton>
+            <PrimaryButton onClick={join} disabled={!joinLink.trim() || joining} className="min-h-[48px] text-[18px] px-5">{joining ? "Joining" : "Join"}</PrimaryButton>
           </div>
         }
       >

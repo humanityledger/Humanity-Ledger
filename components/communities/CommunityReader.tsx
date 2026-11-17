@@ -4,9 +4,10 @@
  * components/communities/CommunityReader.tsx
  *
  * The screen a person sees when they open one community: read the posts and
- * write one. One job. Everything else (members, channels, apps, settings,
- * analytics, governance, treasury, leaving) is behind one control, "Manage",
- * which opens the full community screen (components/chat/CommunityView.tsx).
+ * write one. One job, and Send is its only action. Everything else (pinned
+ * posts, members, channels, invite, settings, apps, analytics, governance,
+ * leaving) is behind one control, "Manage" (components/communities/CommunityManage.tsx),
+ * a list of rows in this same style. A post sent here is stored unpinned.
  *
  * Server behaviour is unchanged: posts are read from and written to
  * /api/chat/communities/:id/posts. `communityMls` is false, so the server can
@@ -265,12 +266,8 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             className="w-full rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] leading-relaxed resize-none placeholder:text-[#4a505c] bg-white"
             style={{ color: INK }}
           />
+          {/* Send is the only action here. */}
           <div className="flex justify-end gap-2 mt-2">
-            {draft.length > 0 && (
-              <button type="button" onClick={() => { setDraft(''); field.current?.focus(); }} className={`${btn} border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`} style={{ color: INK }}>
-                Cancel
-              </button>
-            )}
             <button type="submit" disabled={!draft.trim()} className={`${btn} px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
               Send
             </button>

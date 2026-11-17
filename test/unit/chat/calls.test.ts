@@ -269,7 +269,7 @@ describe('call screen and chat', () => {
   });
 
   it('loads on-demand panels lazily, and never the emoji picker with the chat', () => {
-    for (const name of ['QrScanner', 'LedgerSettingsFull', 'CommunityView', 'ExpressionPicker', 'LedgerCallsTab']) {
+    for (const name of ['QrScanner', 'LedgerSettingsFull', 'CommunityManage', 'ExpressionPicker', 'LedgerCallsTab']) {
       expect(chat).toMatch(new RegExp(`const ${name} = dynamic\\(`));
       expect(chat).not.toMatch(new RegExp(`import \\{ ${name}\\b`));
     }

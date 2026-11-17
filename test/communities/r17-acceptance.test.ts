@@ -300,7 +300,8 @@ describe('guard: communityMls stays off until the R-17 checklist is met', () => 
     }
     expect(hits).toEqual([]);
 
-    const panel = readFileSync(join(process.cwd(), 'components/chat/CommunitySettingsPanel.tsx'), 'utf8');
+    // Channels are added from Manage (the old settings panel is deleted). It has no XMTP client.
+    const panel = readFileSync(join(process.cwd(), 'components/communities/CommunityManage.tsx'), 'utf8');
     expect(panel).not.toContain('createSecureGroup(');
     expect(turnsFlagOn(panel)).toBe(false);
 
