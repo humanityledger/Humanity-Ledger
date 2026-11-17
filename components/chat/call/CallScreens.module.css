@@ -1,15 +1,19 @@
-/* Call screens for Ledger Chat. Light, quiet, and readable at a glance:
-   who is calling, whether it is voice or video, and the two buttons that
-   matter. Colours come from app/ledger-tokens.css. */
+/* Call screens for Ledger Chat. Ink on white, quiet and exact: who is calling,
+   whether it is voice or video, and the two buttons that matter. On a phone the
+   screen fills the display; on a wide screen it is a card over the dimmed chat.
+   Colours come from app/ledger-tokens.css and the Ledger Chat palette. */
 
-.screen,
-.screen *,
-.screen *::before,
-.screen *::after {
+.backdrop,
+.backdrop *,
+.backdrop *::before,
+.backdrop *::after,
+.stage,
+.stage * {
   box-sizing: border-box;
 }
 
-.screen :where(h1, h2, h3, p) {
+.backdrop :where(h1, h2, h3, p),
+.stage :where(p) {
   font-family: inherit;
   font-weight: inherit;
   line-height: inherit;
@@ -17,25 +21,88 @@
   margin: 0;
 }
 
-.screen.screen button {
+.backdrop.backdrop button {
   min-height: auto;
 }
 
-.screen {
+.backdrop {
   position: fixed;
   inset: 0;
   z-index: 200000;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  color: #15171c;
+  font-family: var(--hl-font);
+  -webkit-font-smoothing: antialiased;
+  touch-action: none;
+  overscroll-behavior: contain;
+  animation: appear var(--hl-dur-slow) var(--hl-ease);
+}
+
+.backdropDark {
+  background: #0f1115;
+}
+
+.screen {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: max(48px, env(safe-area-inset-top, 0px)) 24px max(44px, env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(180deg, #f7f8fa 0%, #eceef2 100%);
-  color: var(--hl-ink);
-  font-family: var(--hl-font);
-  -webkit-font-smoothing: antialiased;
-  touch-action: none;
-  animation: appear var(--hl-dur-slow) var(--hl-ease);
+  padding: max(28px, calc(env(safe-area-inset-top, 0px) + 16px)) 24px max(28px, calc(env(safe-area-inset-bottom, 0px) + 18px));
+  overflow: hidden;
+  background:
+    radial-gradient(120% 60% at 50% 0%, #f7f8fa 0%, rgba(247, 248, 250, 0) 70%),
+    #ffffff;
+}
+
+/* A faint dotted field, so the white has depth without colour. */
+.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(rgba(21, 23, 28, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  -webkit-mask-image: radial-gradient(70% 55% at 50% 42%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(70% 55% at 50% 42%, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.screenCamera {
+  background: #0f1115;
+}
+
+.screenCamera::before {
+  display: none;
+}
+
+/* Wide screens: a card over the chat, which stays visible, dimmed and blurred. */
+@media (min-width: 768px) and (min-height: 560px) {
+  .backdrop {
+    background: rgba(21, 23, 28, 0.34);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  }
+  .backdropDark {
+    background: rgba(15, 17, 21, 0.62);
+  }
+  .screen {
+    width: 400px;
+    height: min(640px, calc(100vh - 64px));
+    padding: 26px 28px 26px;
+    border-radius: 28px;
+    border: 1px solid #e4e7ec;
+    box-shadow: 0 40px 80px -24px rgba(16, 24, 40, 0.38), 0 2px 6px rgba(16, 24, 40, 0.06);
+    animation: rise var(--hl-dur-slow) var(--hl-ease);
+  }
+  .screenCamera {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 @keyframes appear {
@@ -44,31 +111,91 @@
   }
 }
 
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+/* Own camera while a video call rings */
+
+.preview {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  background: #0f1115;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(15, 17, 21, 0.55) 0%, rgba(15, 17, 21, 0.2) 40%, rgba(15, 17, 21, 0.72) 100%);
+  pointer-events: none;
+}
+
 /* Top */
 
 .top {
+  width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  text-align: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: #15171c;
+}
+
+.brandMark {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: #15171c;
+  box-shadow: inset 0 0 0 4px #15171c, inset 0 0 0 6px #ffffff;
 }
 
 .kind {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid #e4e7ec;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
   font-weight: 500;
-  color: var(--hl-ink-2);
+  color: #475061;
 }
 
-.secure {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--hl-ink-3);
+.topDark .brand {
+  color: #ffffff;
+}
+
+.topDark .brandMark {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 4px #ffffff, inset 0 0 0 6px #15171c;
+}
+
+.topDark .kind {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(15, 17, 21, 0.4);
+  color: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* Centre */
@@ -77,34 +204,61 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 26px;
   text-align: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .avatarWrap {
+  --hue: 250;
   position: relative;
   display: grid;
   place-items: center;
-  width: 220px;
-  height: 220px;
+  width: 232px;
+  height: 232px;
+}
+
+.halo {
+  position: absolute;
+  inset: 22px;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, hsl(var(--hue) 70% 88% / 0.9), hsl(var(--hue) 70% 92% / 0) 100%);
+  filter: blur(6px);
+  animation: breathe 3.2s ease-in-out infinite;
 }
 
 .ring {
   position: absolute;
+  width: 136px;
+  height: 136px;
   border-radius: 999px;
-  border: 1px solid rgba(21, 23, 28, 0.08);
-  animation: ripple 2.6s cubic-bezier(0.2, 0, 0, 1) infinite;
+  border: 1px solid rgba(21, 23, 28, 0.1);
+  animation: ripple 3s cubic-bezier(0.2, 0, 0, 1) infinite;
 }
 
-.ring:nth-child(1) {
-  width: 132px;
-  height: 132px;
+.ring:nth-of-type(2) {
+  animation-delay: 1s;
 }
 
-.ring:nth-child(2) {
-  width: 132px;
-  height: 132px;
-  animation-delay: 0.9s;
+.ring:nth-of-type(3) {
+  animation-delay: 2s;
+}
+
+.screenCamera .ring {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.screenCamera .halo {
+  opacity: 0.35;
 }
 
 @keyframes ripple {
@@ -113,8 +267,20 @@
     opacity: 1;
   }
   to {
-    transform: scale(1.65);
+    transform: scale(1.7);
     opacity: 0;
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
   }
 }
 
@@ -123,18 +289,23 @@
   opacity: 0;
 }
 
+.still .halo {
+  animation: none;
+}
+
 .avatar {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 128px;
+  height: 128px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   overflow: hidden;
-  font-size: 40px;
+  font-size: 42px;
   font-weight: 600;
-  letter-spacing: -0.01em;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 32px -12px rgba(16, 24, 40, 0.25);
+  letter-spacing: -0.02em;
+  border: 4px solid #ffffff;
+  box-shadow: 0 0 0 1px #e4e7ec, 0 18px 40px -14px rgba(16, 24, 40, 0.32);
   transition: transform 80ms linear;
 }
 
@@ -146,57 +317,133 @@
 }
 
 .name {
-  font-size: 28px;
-  line-height: 1.2;
+  font-size: 30px;
+  line-height: 1.15;
   font-weight: 650;
-  letter-spacing: -0.02em;
-  max-width: 88vw;
+  letter-spacing: -0.025em;
+  color: #15171c;
+  max-width: min(88vw, 340px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.nameDark {
+  color: #ffffff;
+}
+
 .address {
-  margin-top: 4px;
-  font-size: 14px;
-  color: var(--hl-ink-3);
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f7f8fa;
+  border: 1px solid #e4e7ec;
+  font-family: var(--hl-font-mono);
+  font-size: 12px;
+  color: #475061;
   font-variant-numeric: tabular-nums;
 }
 
+.addressDark {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.82);
+}
+
 .status {
-  margin-top: 10px;
+  margin-top: 14px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 15px;
-  color: var(--hl-ink-2);
+  color: #475061;
   font-variant-numeric: tabular-nums;
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--hl-ink-4);
-}
-
-.dotLive {
-  background: #1f9d55;
-}
-
-.dotWarn {
-  background: #d4a017;
+.statusDark {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .statusWarn {
   color: var(--hl-warning);
 }
 
-/* Actions */
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.sep {
+  color: #a3a9b4;
+  margin: 0 6px 0 2px;
+}
+
+/* Three dots that fill in turn: "Calling…" that is visibly alive. */
+.ellipsis {
+  display: inline-block;
+  width: 1em;
+  text-align: left;
+}
+
+.ellipsis::after {
+  content: '';
+  animation: dots 1.4s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #a3a9b4;
+  flex: none;
+}
+
+.dotWait {
+  background: #5200ff;
+  box-shadow: 0 0 0 0 rgba(82, 0, 255, 0.45);
+  animation: beacon 1.6s ease-out infinite;
+}
+
+.dotLive {
+  background: #10b981;
+}
+
+.dotWarn {
+  background: #d4a017;
+}
+
+@keyframes beacon {
+  0% {
+    box-shadow: 0 0 0 0 rgba(82, 0, 255, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(82, 0, 255, 0);
+  }
+}
+
+/* Bottom */
+
+.bottom {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
 
 .actions {
   width: 100%;
-  max-width: 360px;
+  max-width: 340px;
   display: flex;
   align-items: flex-start;
   justify-content: space-around;
@@ -207,48 +454,121 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  min-width: 76px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--hl-ink-2);
+  color: #475061;
+}
+
+.actionDark {
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .round {
-  width: 68px;
-  height: 68px;
+  position: relative;
+  width: 72px;
+  height: 72px;
   border-radius: 999px;
   border: 0;
   display: grid;
   place-items: center;
   cursor: pointer;
   color: #fff;
-  transition: transform var(--hl-dur-fast) var(--hl-ease), filter var(--hl-dur-fast) var(--hl-ease);
-  box-shadow: 0 10px 24px -10px rgba(16, 24, 40, 0.35);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--hl-dur-fast) var(--hl-ease), filter var(--hl-dur-fast) var(--hl-ease), opacity var(--hl-dur-fast) var(--hl-ease);
 }
 
 .round:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
 }
 
 .round:active {
-  transform: scale(0.94);
+  transform: scale(0.93);
+}
+
+.round:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.round:focus-visible {
+  outline: 2px solid #5200ff;
+  outline-offset: 4px;
 }
 
 .decline {
-  background: #e5484d;
+  background: #ff3b30;
+  box-shadow: 0 14px 28px -12px rgba(255, 59, 48, 0.65);
 }
 
 .accept {
-  background: #1f9d55;
+  background: #10b981;
+  box-shadow: 0 14px 28px -12px rgba(16, 185, 129, 0.7);
+}
+
+.accept svg {
+  position: relative;
+  animation: nudge 1.6s var(--hl-ease) infinite;
+}
+
+.acceptPulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(16, 185, 129, 0.55);
+  animation: answer 1.6s cubic-bezier(0.2, 0, 0, 1) infinite;
+  pointer-events: none;
+}
+
+.accept:disabled svg,
+.accept:disabled .acceptPulse {
+  animation: none;
+}
+
+@keyframes answer {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+@keyframes nudge {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  70% { transform: rotate(-12deg); }
+  80% { transform: rotate(10deg); }
+  90% { transform: rotate(-6deg); }
 }
 
 .secondary {
   width: 56px;
   height: 56px;
-  margin-top: 6px;
-  background: #fff;
-  color: var(--hl-ink);
-  border: 1px solid var(--hl-border);
-  box-shadow: var(--hl-shadow-xs);
+  margin-top: 8px;
+  background: #ffffff;
+  color: #15171c;
+  border: 1px solid #e4e7ec;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+}
+
+.secondary:hover {
+  background: #f7f8fa;
+  filter: none;
+}
+
+.secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #727a88;
+  text-align: center;
+}
+
+.secureDark {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Controls during a call */
@@ -327,7 +647,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  background: #e5484d;
+  background: #ff3b30;
   color: #fff;
   margin-left: 4px;
   transition: filter var(--hl-dur-fast) var(--hl-ease), transform var(--hl-dur-fast) var(--hl-ease);
@@ -341,6 +661,41 @@
   transform: scale(0.94);
 }
 
+
+/* The background of an audio call in progress. Sits inside the call
+   overlay, under its top bar and controls. */
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  text-align: center;
+  background:
+    radial-gradient(120% 60% at 50% 0%, #f7f8fa 0%, rgba(247, 248, 250, 0) 70%),
+    #ffffff;
+  color: #15171c;
+  font-family: var(--hl-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(21, 23, 28, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  -webkit-mask-image: radial-gradient(70% 55% at 50% 45%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(70% 55% at 50% 45%, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.stage > * {
+  position: relative;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -352,30 +707,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .backdrop,
   .screen,
-  .ring {
+  .ring,
+  .halo,
+  .acceptPulse,
+  .accept svg,
+  .dotWait,
+  .ellipsis::after {
     animation: none;
   }
-}
-
-/* The background of an audio call in progress. Sits inside the call
-   overlay, under its top bar and controls. */
-.stage {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-  text-align: center;
-  background: linear-gradient(180deg, #f7f8fa 0%, #eceef2 100%);
-  color: var(--hl-ink);
-  font-family: var(--hl-font);
-  -webkit-font-smoothing: antialiased;
-}
-
-.stage :where(p) {
-  margin: 0;
-  font-family: inherit;
 }

@@ -102,16 +102,34 @@ export function PeerTypingLottie({ size = 'bubble' }: { size?: 'bubble' | 'inlin
  * Plays the send confirmation once for each change of `burst` (> 0), then removes itself.
  * Not shown with reduce motion. It never takes clicks.
  */
-export function SendConfirmationBurst({ burst, className }: { burst: number; className?: string }) {
+/**
+ * The send confirmation: a paper plane that turns into a tick, played once in the send button's own
+ * place, cropped to its shape, so it never spills over the messages or past the chat's edge.
+ * The file is 4:3 with the round badge filling its height; it is drawn a little larger than the slot
+ * and centred, so the badge fills the slot exactly. Its visible part lasts 0.7 s (frames 0 to 21 of
+ * a 12 s file), so it is taken away after 0.8 s instead of waiting for the file to end.
+ */
+export function SendConfirmationBurst({ burst, size = 40, className }: { burst: number; size?: number; className?: string }) {
   const reduced = usePrefersReducedMotion();
   const [shown, setShown] = useState(0);
   useEffect(() => {
-    if (burst > 0 && !reduced) setShown(burst);
+    if (!(burst > 0) || reduced) return;
+    setShown(burst);
+    const t = setTimeout(() => setShown((s) => (s === burst ? 0 : s)), 800);
+    return () => clearTimeout(t);
   }, [burst, reduced]);
   if (!shown || shown !== burst) return null;
+  const h = Math.round(size * 1.04);
+  const w = Math.round((h * 4) / 3);
   return (
-    <div className={`pointer-events-none ${className ?? ''}`} aria-hidden="true">
-      <ChatLottie key={shown} src={LOTTIE.SEND_CONFIRMATION} width={72} height={72} loop={false} onComplete={() => setShown(0)} />
+    <div
+      className={`pointer-events-none overflow-hidden bg-[#f6f6f6] ${className ?? ''}`}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      <div style={{ position: 'absolute', left: '50%', top: '50%', width: w, height: h, transform: 'translate(-50%, -50%)' }}>
+        <ChatLottie key={shown} src={LOTTIE.SEND_CONFIRMATION} width={w} height={h} loop={false} onComplete={() => setShown(0)} />
+      </div>
     </div>
   );
 }

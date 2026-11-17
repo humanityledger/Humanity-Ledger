@@ -28,7 +28,8 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 }
 
 import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
-import { resolveDbKey } from './db-key';
+import { resolveDbKey, browserKeyStore, checkName, wrappedKeyName, legacyKeyName, XmtpDbKeyError } from './db-key';
+import { loadDeviceDbKey, saveDeviceDbKey, randomDbKey } from './device-key-vault';
 
 //  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
@@ -248,22 +249,57 @@ export async function getXMTPClient(
     signMessage: async (m) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
   });
 
-  //  Local database key (F-01): derived from a wallet signature, never stored in plaintext.
-  // One signature per page load; the key stays in memory for this tab (dbKeyCache).
+  //  Local database key (F-01): never stored in plaintext (lib/xmtp/device-key-vault.ts).
+  // One signature to sign in: the key is kept on this device wrapped by a non-extractable
+  // browser key, so neither a new account nor a returning visit asks for a second signature.
+  // A database locked by the earlier per-load signature (lib/xmtp/db-key.ts) asks for it one
+  // last time, then moves to the vault.
   let dbEncryptionKey = dbKeyCache.get(address);
   if (!dbEncryptionKey) {
-    hooks?.onDbKeyRequest?.();
-    const resolved = await resolveDbKey(address, async (m) => {
-      signing++;
-      try {
-        return await wagmiSigner.signMessage(m);
-      } finally {
-        signing--;
+    const vaultMarker = `ledger_xmtp_db_vault_${address}`;
+    let fromVault: Uint8Array | null = null;
+    try {
+      fromVault = await loadDeviceDbKey(address);
+    } catch {
+      throw new XmtpDbKeyError('CORRUPT', 'The message database key on this device could not be unlocked, so the database was not opened. Clear this device and retry: your messages come back from the network.');
+    }
+    if (fromVault) {
+      dbEncryptionKey = fromVault;
+    } else {
+      const signatureLocked = !!(browserKeyStore.get(checkName(address)) || browserKeyStore.get(wrappedKeyName(address)) || browserKeyStore.get(legacyKeyName(address)));
+      if (!signatureLocked && browserKeyStore.get(vaultMarker)) {
+        // The vault had this account's key and is gone (site data partly cleared): a new key would
+        // not open the existing database. Stop and say so.
+        throw new XmtpDbKeyError('CORRUPT', 'The message database key on this device was removed by the browser, so the database was not opened. Clear this device and retry: your messages come back from the network.');
       }
-    });
-    dbEncryptionKey = resolved.key;
+      if (!signatureLocked) {
+        // No database for this account on this device yet: a random key, no signature.
+        const fresh = randomDbKey();
+        if (await saveDeviceDbKey(address, fresh)) {
+          browserKeyStore.set(vaultMarker, '1');
+          dbEncryptionKey = fresh;
+        } else {
+          fresh.fill(0);
+        }
+      }
+      if (!dbEncryptionKey) {
+        // A database locked by the signature, or a browser with no vault: the signature, as before.
+        hooks?.onDbKeyRequest?.();
+        const resolved = await resolveDbKey(address, async (m) => {
+          signing++;
+          try {
+            return await wagmiSigner.signMessage(m);
+          } finally {
+            signing--;
+          }
+        });
+        dbEncryptionKey = resolved.key;
+        if (resolved.migrated) hooks?.onLegacyKeyMigrated?.();
+        // Kept on this device from now on: this was the last time it is asked here.
+        if (await saveDeviceDbKey(address, dbEncryptionKey)) browserKeyStore.set(vaultMarker, '1');
+      }
+    }
     dbKeyCache.set(address, dbEncryptionKey);
-    if (resolved.migrated) hooks?.onLegacyKeyMigrated?.();
   }
 
   let client: Client;

@@ -500,7 +500,7 @@ const nextConfig = {
                     { key: 'Strict-Transport-Security',           value: 'max-age=63072000; includeSubDomains; preload' },
                     { key: 'X-Permitted-Cross-Domain-Policies',   value: 'none' },
                     { key: 'Referrer-Policy',                     value: 'strict-origin-when-cross-origin' },
-                    { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' },
+                    { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), display-capture=(self), autoplay=(self), geolocation=(), interest-cohort=()' },
                     { key: 'X-DNS-Prefetch-Control',              value: 'off' },
                     // [SECURITY] CSP Report-Only: collects violation reports without blocking.
                     // Enforced CSP is set per-request by middleware.ts (nonce-based).
