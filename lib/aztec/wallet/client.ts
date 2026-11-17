@@ -222,6 +222,9 @@ class PrivateWallet {
   private salt: any = null;
   /** "aztec:<l1ChainId>:<rollupVersion>" of the node, for G7 proofs (peer-binding.ts scheme v2). */
   private networkTag: string | undefined;
+  /** Portal master secret P (lib/portal/receivers.ts), derived from the signature at connect. */
+  private portalMaster: string | null = null;
+  private portalArtifactCache: any = null;
   private claimPoll: ReturnType<typeof setInterval> | null = null;
   private tokens = new Map<TokenKey, any>();
   private faucetAddress: any = null;
@@ -443,6 +446,8 @@ class PrivateWallet {
       }
 
       const keys = await deriveAccountKeys(signature, Fr.MODULUS, Fq.MODULUS);
+      // Receiver addresses (lib/portal/receivers.ts): one master secret, kept in memory like the keys.
+      this.portalMaster = await (await import('../../portal/receivers')).derivePortalMaster(signature);
       const manager = await this.wallet.createSchnorrAccount(
         new Fr(keys.secret),
         new Fr(keys.salt),
@@ -875,6 +880,115 @@ class PrivateWallet {
    */
   bindingContext(): BindingNetworkContext {
     return valueBindingContext(this.networkTag, AZTEC_WALLET_CONFIG.network);
+  }
+
+  /* ---------------------------------------------------------------- portal */
+
+  /**
+   * Receiver addresses 0..count-1 (lib/portal/receivers.ts). Only public parts are returned; the
+   * secrets stay inside the wallet. `address` is null when this build has no portal.
+   */
+  async portalReceivers(count: number): Promise<Array<{ index: number; secretHash: string; rescueSigner: string; address: string | null }>> {
+    const material = await this.portalMaterial(count);
+    const [{ PORTAL_CONFIG }, { predictReceiver }, { keccak256 }] = await Promise.all([
+      import('../../portal/config'),
+      import('../../portal/receivers'),
+      import('viem'),
+    ]);
+    return material.map((m) => ({
+      index: m.index,
+      secretHash: m.secretHash,
+      rescueSigner: m.rescueSigner,
+      address: PORTAL_CONFIG
+        ? predictReceiver(PORTAL_CONFIG.factory, PORTAL_CONFIG.implementation, m.secretHash, m.rescueSigner, { keccak256: (b) => keccak256(b) })
+        : null,
+    }));
+  }
+
+  private async portalMaterial(count: number) {
+    if (this.snapshot.phase !== 'ready' || !this.portalMaster || !this.sdk) throw new Error('Open your private wallet first.');
+    const [{ deriveReceiver, MAX_RECEIVERS }, { privateKeyToAddress }, { keccak256 }] = await Promise.all([
+      import('../../portal/receivers'),
+      import('viem/accounts'),
+      import('viem'),
+    ]);
+    const n = Math.max(1, Math.min(MAX_RECEIVERS, Math.floor(count)));
+    const sdk = this.sdk;
+    const crypto = {
+      secretHash: async (secret: bigint) => (await sdk.computeSecretHash(new sdk.Fr(secret))).toString(),
+      addressOf: (k: bigint) => privateKeyToAddress(`0x${k.toString(16).padStart(64, '0')}` as `0x${string}`),
+      keccak256: (b: Uint8Array) => keccak256(b),
+    };
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(await deriveReceiver(this.portalMaster, i, crypto));
+    return out;
+  }
+
+  /** The compiled PortalToken artifact, served by the app (NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT). */
+  private async portalArtifact() {
+    if (this.portalArtifactCache) return this.portalArtifactCache;
+    const { PORTAL_CONFIG } = await import('../../portal/config');
+    if (!PORTAL_CONFIG) throw new Error('The portal is not deployed for this network.');
+    const res = await fetch(PORTAL_CONFIG.artifactUrl, { cache: 'force-cache' });
+    if (!res.ok) throw new Error('The portal contract description could not be loaded.');
+    const { loadContractArtifact } = await import('@aztec-labs/aztec.js/abi');
+    this.portalArtifactCache = loadContractArtifact(await res.json());
+    return this.portalArtifactCache;
+  }
+
+  /** Proves and sends one call to a PortalToken instance on this device, fee paid as for any transaction. */
+  private async runPortal(l2Address: string, build: (contract: any) => any): Promise<{ txHash: string }> {
+    await assertNewValueAllowed();
+    if (this.snapshot.phase !== 'ready' || !this.sdk || !this.wallet) throw new Error('Open your private wallet first.');
+    const sdk = this.sdk;
+    const artifact = await this.portalArtifact();
+    const { Contract } = await import('@aztec-labs/aztec.js/contracts');
+    const addr = sdk.AztecAddress.fromStringUnsafe(l2Address);
+    const instance = await this.node.getContract(addr);
+    if (!instance) throw new Error('The portal token is not deployed on this network.');
+    await this.wallet.registerContract(instance, artifact);
+    const contract = (Contract as any).at(addr, artifact, this.wallet);
+    const { fee, consumes } = await this.resolveFee({ estimated: true });
+    const interaction = build(contract);
+    const gasSettings = await this.estimatedGasSettings(interaction, this.me, fee);
+    this.inflight++;
+    this.set({});
+    try {
+      const sent = await interaction.send({ from: this.me, fee: gasSettings ? { ...(fee ?? {}), gasSettings } : fee, wait: sdk.NO_WAIT });
+      await sdk.waitForTx(this.node, sent.txHash, { timeout: 600, interval: 2 });
+      if (consumes) this.dropClaim(consumes);
+      return { txHash: sent.txHash.toString() };
+    } finally {
+      this.inflight--;
+      this.set({});
+    }
+  }
+
+  /**
+   * Claims one portal deposit made to one of this account's receivers into its private balance.
+   * The message nullifier makes a second claim of the same deposit fail.
+   */
+  async claimPortalDeposit(d: { l2Token: string; amount: bigint; index: bigint; secretHash: string }, receiverCount: number) {
+    const material = await this.portalMaterial(receiverCount);
+    const r = material.find((m) => m.secretHash.toLowerCase() === d.secretHash.toLowerCase());
+    if (!r) throw new Error('This deposit was not made to one of your receiver addresses.');
+    const sdk = this.sdk!;
+    return this.runPortal(d.l2Token, (c) => c.methods.claim_private(this.me, d.amount, new sdk.Fr(r.secret), new sdk.Fr(d.index)));
+  }
+
+  /**
+   * Starts a withdrawal to Ethereum: burns the private balance and sends the L2->L1 message. That
+   * message (recipient, amount) is PUBLIC and attached to this transaction; with the fee paid from
+   * this account it links the account to the recipient (docs/PORTAL.md §3, until private fees).
+   */
+  async portalWithdraw(l2Token: string, recipient: string, amount: bigint, callerOnL1?: string) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(recipient)) throw new Error('Enter an Ethereum address.');
+    if (amount <= 0n) throw new Error('Enter an amount.');
+    const sdk = this.sdk!;
+    const caller = callerOnL1 && /^0x[0-9a-fA-F]{40}$/.test(callerOnL1) ? callerOnL1 : '0x' + '0'.repeat(40);
+    // EthAddress is the Noir struct { inner: Field }; the ABI encoder takes it as such.
+    const eth = (a: string) => ({ inner: new sdk.Fr(BigInt(a)) });
+    return this.runPortal(l2Token, (c) => c.methods.withdraw_private(this.me, eth(recipient), amount, eth(caller), new sdk.Fr(0)));
   }
 
   /* -------------------------------------------------------------- passkeys */
@@ -1315,6 +1429,7 @@ class PrivateWallet {
     this.faucetAddress = null;
     this.evmAddress = null;
     this.networkTag = undefined;
+    this.portalMaster = null;
     this.set({ phase: 'idle', aztecAddress: undefined, balances: [], activity: [], step: undefined, error: undefined, feeJuice: undefined });
   }
 }

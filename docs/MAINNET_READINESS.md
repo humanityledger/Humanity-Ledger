@@ -100,6 +100,17 @@ Technical reference only, **not used**: two LedgerSponsor instances were deploye
 (`0x268bb3e4…090aafa8`, block 30105, holding 74 AZTEC of Fee Juice that cannot be withdrawn; and
 `0x231080b2…0d14b95b`, unfunded). Nothing in Ledger Chat calls either.
 
+### Module 2: own portal and receiver addresses (17 November 2026, code only)
+
+The dollar portal of proposal P2 now exists as code: `HLPortal` (DAI, USDC, USDT, WETH/ETH), `HLReceiver` / `HLReceiverFactory`, and the Aztec `PortalToken` (`docs/PORTAL.md`, `docs/RECEIVER_ADDRESSES.md`). Nothing is deployed.
+
+Before Alpha, all of these are needed:
+- an external audit;
+- a test-network two-account run;
+- an admin multisig and a guardian;
+- the Outbox proof wired in the wallet;
+- private fees (Module 3), so a claim is not tied to the account by its fee payer.
+
 ### Proposal P2: a dollar portal (needs approval before any code)
 
 An L1 portal for one dollar token (DAI or USDC) and a matching L2 token minted only by Inbox messages from that portal, per-deposit and daily caps, withdrawals through the Outbox. This is a bridge holding user funds: it is not deployed without an external audit.
