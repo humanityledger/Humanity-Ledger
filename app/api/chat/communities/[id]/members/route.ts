@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
+import { memberNames } from '@/lib/communities/member-names';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       orderBy: { joinedAt: 'asc' },
       take: 1000,
     });
-    return NextResponse.json({ members });
+    const names = await memberNames(members.map((m: any) => m.walletAddress));
+    return NextResponse.json({
+      members: members.map((m: any) => ({ ...m, name: names.get(String(m.walletAddress || '').toLowerCase()) ?? null })),
+    });
   } catch (e: any) {
     console.error('[communities members GET]', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

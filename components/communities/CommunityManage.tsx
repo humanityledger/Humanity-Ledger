@@ -28,7 +28,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { communityInviteUrl } from '@/lib/ui/format';
-import { postText, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
+import { authorLabel, postText, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
 
 const CommunityApps = React.lazy(() => import('@/components/chat/community-apps/CommunityApps').then((m) => ({ default: m.CommunityApps })));
 const CommunityAnalytics = React.lazy(() => import('@/components/chat/CommunityAnalytics'));
@@ -397,7 +397,10 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
     setBusy(null);
   };
 
-  const who = (p: ReaderPost) => ((p.authorAddress || '').toLowerCase() === me ? 'You' : nameFor?.(p.authorAddress || '') || 'A member');
+  const who = (p: ReaderPost) => {
+    const l = authorLabel(p, me, nameFor);
+    return l.wallet ? `${l.name} · ${l.wallet}` : l.name;
+  };
 
   return (
     <>
@@ -505,13 +508,13 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
             const a = String(m.walletAddress || '').toLowerCase();
             const isMe = a === me;
             const isTheOwner = a === owner;
-            const label = isMe ? 'You' : nameFor?.(a) || short(a);
+            const label = isMe ? 'You' : nameFor?.(a) || (typeof m.name === 'string' && m.name) || short(a);
             const roleText = isTheOwner ? 'Owner' : m.role === 'ADMIN' ? 'Admin' : m.role === 'MODERATOR' ? 'Moderator' : 'Member';
             return (
               <li key={a} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-[18px] font-semibold truncate" style={{ color: INK }}>{label}</p>
-                  <p className="text-[16px]" style={{ color: INK_SOFT }}>{roleText}</p>
+                  <p className="text-[16px]" style={{ color: INK_SOFT }}>{roleText}{label !== short(a) ? <span className="tabular-nums"> · {short(a)}</span> : null}</p>
                 </div>
                 {isAdmin && !isTheOwner && !isMe && (
                   <div className="flex flex-wrap gap-2">
