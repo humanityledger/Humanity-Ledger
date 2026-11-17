@@ -1950,3 +1950,21 @@ html.watermark-active body::after {
     --hl-zoom: 0.67;
   }
 }
+
+/* Send confirmation (components/chat/ChatLottie.tsx): the button colour holds while the tick plays,
+   then fades to what the slot shows after the send (the microphone on phones). */
+@keyframes hl-send-burst-out {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.hl-send-burst {
+  animation: hl-send-burst-out 0.9s linear both;
+}
+
+/* Keyboard open on iPhone/iPad (components/layout/KeyboardViewport.tsx): the chat fills exactly
+   the visible part of the screen, so the message field sits right above the keyboard. */
+html.hl-kb-open [data-chat-root] {
+  top: var(--hl-vv-top, 0px) !important;
+  bottom: auto !important;
+  height: var(--hl-vv-h, 100%) !important;
+}

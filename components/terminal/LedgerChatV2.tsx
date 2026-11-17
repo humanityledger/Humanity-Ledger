@@ -97,7 +97,7 @@ import { getSelfLink, remoteSign, RemoteSignError } from '@/lib/link/channel';
 import type { ExpressionTab } from '@/components/chat/ExpressionPicker';
 import { LinkedDeviceApprover } from '@/components/link/LinkedDeviceApprover';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
-import { NewConversationLottie, SendConfirmationBurst, WelcomeLottie } from '@/components/chat/ChatLottie';
+import { NewConversationLottie, SendConfirmationBurst, WelcomeLottie, preloadSendConfirmation } from '@/components/chat/ChatLottie';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
@@ -357,7 +357,7 @@ function attachVideo(el: HTMLVideoElement | null, stream: MediaStream | null) {
   if (stream && el.paused) el.play().catch(() => {});
 }
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
-import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus, CircleDot } from 'lucide-react';
+import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus, CircleDot, CheckCheck, PinOff } from 'lucide-react';
 import { MEETING_JOIN_EVENT, MEETINGS_EVENT, loadMeetings, meetingPreview, parseMeeting, rememberMeeting, upcomingMeetings, type StoredMeeting } from '@/lib/chat/meeting';
 import { SCHEDULED_EVENT, addScheduled, describeSendTime, dueScheduled, loadScheduled, markAttempt, removeScheduled, scheduleTimeError, scheduledForPeer, type ScheduledMessage } from '@/lib/chat/scheduled';
 import { shortAddress as formatAddress } from '@/lib/ui/format';
@@ -829,6 +829,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // (The composer used to lock while a message was on its way, with a 30 s watchdog. Each
   // message now carries its own status instead: lib/chat/optimistic-send.ts.)
   const [sendAnimKey, setSendAnimKey] = useState(0);
+  // The first send plays its confirmation at once: the files and the player are fetched now.
+  useEffect(() => { preloadSendConfirmation(); }, []);
   // ── [FASE 16: Rate Limiting Anti-Spam] ───────────────────────────────
   // Prevents spam abuse: max 5 messages per 10 seconds (App Store Guideline 1.2)
   const rateLimitRef = useRef<{ timestamps: number[] }>({ timestamps: [] });
@@ -6417,7 +6419,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </nav>
 
       {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
-      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden lg:flex' : 'flex') : (showList ? 'flex' : 'hidden lg:flex')} w-full lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden lg:flex' : 'flex') : (showList ? 'flex' : 'hidden lg:flex')} w-full md:w-auto md:flex-1 md:min-w-0 lg:flex-none lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
 
         {/* ── Sidebar Header ── */}
         <div className="px-4 py-3 md:px-5 md:pt-5 md:pb-3 border-b md:border-b-0 border-[#e4e7ec] bg-white flex flex-col gap-3 md:gap-4" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
@@ -7594,7 +7596,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     {(() => {
                       // The same breakpoint as the button (md): 40 px round below it, 48 px rounded square above.
                       const wide = typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches;
-                      return <SendConfirmationBurst burst={sendAnimKey} size={wide ? 48 : 40} className={`absolute right-0 z-10 ${wide ? 'bottom-0 rounded-2xl' : 'bottom-[2px] rounded-full'}`} />;
+                      return <SendConfirmationBurst burst={sendAnimKey} size={wide ? 48 : 40} wide={wide} className={`absolute right-0 z-10 ${wide ? 'bottom-0' : 'bottom-[2px]'}`} />;
                     })()}
                     {inputText.trim() ? (
                       <LottieSendButton
@@ -8555,11 +8557,25 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              aria-label="Conversation actions"
              className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[190px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
              style={{
-               top: Math.max(8, Math.min(sidebarMenu.y, window.innerHeight - 120)),
+               top: Math.max(8, Math.min(sidebarMenu.y, window.innerHeight - 300)),
                left: Math.max(8, Math.min(sidebarMenu.x, window.innerWidth - 206)),
              }}
              onClick={e => e.stopPropagation()}
            >
+             {/* The same actions as sliding the row on a phone, for a mouse. */}
+             <button role="menuitem" type="button" onClick={() => { const p = sidebarMenu.peer; setSidebarMenu(null); togglePin(p); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left">
+               {pinnedPeers.has(sidebarMenu.peer.toLowerCase())
+                 ? <><PinOff size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Unpin</>
+                 : <><Pin size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Pin</>}
+             </button>
+             <button role="menuitem" type="button" onClick={() => { const p = sidebarMenu.peer; setSidebarMenu(null); markConversationAsRead(p); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left">
+               <CheckCheck size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Mark as read
+             </button>
+             <button role="menuitem" type="button" onClick={() => { const p = sidebarMenu.peer; setSidebarMenu(null); toggleMute(p); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left">
+               {mutedPeers.has(sidebarMenu.peer.toLowerCase())
+                 ? <><Bell size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Unmute</>
+                 : <><BellOff size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Mute</>}
+             </button>
              <button role="menuitem" type="button" onClick={() => toggleArchive(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left">
                {archivedPeers.has(sidebarMenu.peer.toLowerCase())
                  ? <><ArchiveRestore size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Move to inbox</>

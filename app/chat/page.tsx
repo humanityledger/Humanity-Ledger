@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
+import { KeyboardViewport } from '@/components/layout/KeyboardViewport';
 
 function ChatLoading() {
   return (
@@ -35,6 +36,7 @@ const LedgerChat = dynamic(
 export default function ChatPage() {
   return (
     <TuringShieldGate>
+      <KeyboardViewport />
       <ChatEngineProvider>
         {/* On desktop Ledger Chat floats as a rounded card on a plain, light background, with the
             Aztec wordmark set small at the top of the page. On phones the chat fills the screen. */}
@@ -52,7 +54,7 @@ export default function ChatPage() {
           >
             <img src="/brand/aztec/aztec-wordmark-ink.svg" alt="Built on Aztec" width={62} height={14} draggable={false} style={{ display: 'block', height: 14, width: 'auto' }} />
           </a>
-          <div data-glyph-anchor className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0 max-w-[1360px] max-h-[calc(100vh-140px)] mx-auto my-auto shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22)]">
+          <div data-glyph-anchor className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0 max-w-[1360px] md:max-h-[calc(100vh-140px)] mx-auto md:my-auto md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22)]">
             <LedgerChat forceAutoInit={true} />
           </div>
         </div>

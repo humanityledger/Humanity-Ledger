@@ -305,7 +305,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <TitaniumGate>
         <UniversalEliteWallpaper />
 
-          <div className={rootClass}>
+          <div className={rootClass} data-chat-root={isChat ? '' : undefined}>
             <div className={innerClass}>
 
               <ZoomWrapper>
