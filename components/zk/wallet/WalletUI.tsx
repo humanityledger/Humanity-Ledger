@@ -327,7 +327,7 @@ export function Segmented<T extends string>({
               if (e.key === 'ArrowRight') move(i + 1);
               if (e.key === 'ArrowLeft') move(i - 1);
             }}
-            className={`flex-1 min-h-[40px] px-3 rounded-xl text-[14px] font-semibold tracking-[-0.005em] flex items-center justify-center gap-1.5 transition-[background-color,color,box-shadow] duration-150 ${FOCUS} ${
+            className={`flex-1 min-w-0 min-h-[40px] px-1.5 sm:px-3 rounded-xl text-[13.5px] sm:text-[14px] font-semibold whitespace-nowrap tracking-[-0.005em] flex items-center justify-center gap-1.5 transition-[background-color,color,box-shadow] duration-150 ${FOCUS} ${
               on ? 'bg-white text-[#15171c] shadow-[0_1px_2px_rgba(16,24,40,0.08),0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-[#5b606b] hover:text-[#15171c]'
             }`}
           >

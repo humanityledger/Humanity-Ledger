@@ -936,18 +936,35 @@ class PrivateWallet {
     return this.portalArtifactCache;
   }
 
-  /** Proves and sends one call to a PortalToken instance on this device, fee paid as for any transaction. */
+  /**
+   * Proves and sends one call to a PortalToken instance on this device, fee paid as for any transaction.
+   *
+   * Claims and withdrawals are exits: they move the person's own money and stay available in
+   * exits-only mode (lib/aztec/value-mode.ts), so an incident pause can never trap funds.
+   *
+   * Before anything is proved, the instance must be one of this build's configured PortalTokens and
+   * must name this build's portal as its L1 counterpart (portal_address, read on this device). A
+   * PortalToken wired to any other L1 contract would burn a withdrawal into a message nobody honest
+   * can execute, so it is refused here rather than discovered on Ethereum.
+   */
   private async runPortal(l2Address: string, build: (contract: any) => any): Promise<{ txHash: string }> {
-    await assertNewValueAllowed();
     if (this.snapshot.phase !== 'ready' || !this.sdk || !this.wallet) throw new Error('Open your private wallet first.');
     const sdk = this.sdk;
+    const { PORTAL_CONFIG } = await import('../../portal/config');
+    if (!PORTAL_CONFIG) throw new Error('The portal is not deployed for this network.');
+    if (!PORTAL_CONFIG.assets.some((a) => a.l2 === l2Address.toLowerCase())) throw new Error('This token is not one of the portal tokens of this build.');
     const artifact = await this.portalArtifact();
     const { Contract } = await import('@aztec-labs/aztec.js/contracts');
     const addr = sdk.AztecAddress.fromStringUnsafe(l2Address);
     const instance = await this.node.getContract(addr);
     if (!instance) throw new Error('The portal token is not deployed on this network.');
+    // registerContract refuses an artifact whose class id is not the instance's.
     await this.wallet.registerContract(instance, artifact);
     const contract = (Contract as any).at(addr, artifact, this.wallet);
+    const linked = await contract.methods.portal_address().simulate({ from: this.me });
+    const raw = linked?.inner ?? linked;
+    const linkedHex = '0x' + BigInt(typeof raw === 'object' && raw !== null && 'toString' in raw ? raw.toString() : raw).toString(16).padStart(40, '0');
+    if (linkedHex.toLowerCase() !== PORTAL_CONFIG.portal) throw new Error('This portal token is not linked to this build\'s portal. Nothing was sent.');
     const { fee, consumes } = await this.resolveFee({ estimated: true });
     const interaction = build(contract);
     const gasSettings = await this.estimatedGasSettings(interaction, this.me, fee);
@@ -1011,7 +1028,7 @@ class PrivateWallet {
     }
     const network = AZTEC_WALLET_CONFIG.network as 'testnet' | 'mainnet';
     const existing = await store.allRecords(this.evmAddress, network);
-    const record = await pk.enrolPasskey({ evm: this.evmAddress, network, rootHex: root, label, existing, rpId: location.hostname, api });
+    const record = await pk.enrolPasskey({ evm: this.evmAddress, network, rootHex: root, label, existing, rpId: pk.passkeyRpId(location.hostname), api });
     return store.saveRecord(record);
   }
 
@@ -1026,7 +1043,9 @@ class PrivateWallet {
     if (!api) throw new pk.PasskeyError('UNSUPPORTED', 'This browser cannot use passkeys.');
     const network = AZTEC_WALLET_CONFIG.network as 'testnet' | 'mainnet';
     const records = await store.allRecords(evm, network);
-    const { rootHex } = await pk.unlockWithPasskey({ evm, network, records, rpId: location.hostname, api });
+    const { rootHex } = await pk.unlockWithPasskey({ evm, network, records, rpId: pk.passkeyRpId(location.hostname), api });
+    // The root must be this account's own signature before any key is derived from it.
+    await pk.assertRootOwner(rootHex, evm, walletTypedData());
     let used = false;
     return this.connect(evm, async () => {
       // One use: the root is handed to the derivation once, never kept.

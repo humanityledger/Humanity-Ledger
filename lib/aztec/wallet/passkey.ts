@@ -76,6 +76,18 @@ export interface WebAuthnApi {
   get(options: CredentialRequestOptions): Promise<Credential | null>;
 }
 
+/**
+ * The relying party a passkey is bound to. On ledgerchat.org and any of its subdomains it is the
+ * registrable domain, so a passkey enrolled on www.ledgerchat.org also opens the wallet on
+ * ledgerchat.org (and no other site can ever ask for it: browsers only allow an rpId that is the
+ * page's own domain or a parent of it). Anywhere else (a self-hosted copy, localhost) it is the
+ * page's host.
+ */
+export function passkeyRpId(hostname: string): string {
+  const h = hostname.toLowerCase();
+  return h === 'ledgerchat.org' || h.endsWith('.ledgerchat.org') ? 'ledgerchat.org' : h;
+}
+
 export function browserWebAuthn(): WebAuthnApi | null {
   if (typeof navigator === 'undefined' || !navigator.credentials || typeof PublicKeyCredential === 'undefined') return null;
   return { create: (o) => navigator.credentials.create(o), get: (o) => navigator.credentials.get(o) };
@@ -311,6 +323,44 @@ export async function unlockWithPasskey(i: {
   const rootHex = await unwrapRoot(prf, record);
   prf.fill(0);
   return { record, rootHex };
+}
+
+/**
+ * Checks that an unwrapped root is what the account's Ethereum wallet signs: an ECDSA signature
+ * (65 bytes) over the network's typed data must recover to `evm`. A root that recovers to anyone
+ * else is refused, so no record (corrupted, planted or from an old bug) can open an account other
+ * than the one the person chose. A longer root is a smart-account signature (EIP-1271/6492), which
+ * cannot be checked offline; it is accepted as before and the derived address is what the wallet
+ * shows.
+ */
+export async function assertRootOwner(
+  rootHex: string,
+  evm: string,
+  typedData: { domain: object; types: object; primaryType: string; message: object },
+): Promise<void> {
+  const clean = rootHex.startsWith('0x') ? rootHex.slice(2) : rootHex;
+  if (clean.length !== 130) return;
+  let who: string;
+  try {
+    const { recoverTypedDataAddress } = await import('viem');
+    who = await recoverTypedDataAddress({ ...(typedData as any), signature: ('0x' + clean) as `0x${string}` });
+  } catch {
+    throw new PasskeyError('MISMATCH', 'This passkey record does not open your account.');
+  }
+  if (who.toLowerCase() !== evm.toLowerCase()) {
+    throw new PasskeyError('MISMATCH', 'This passkey record opens a different account. It was not used.');
+  }
+}
+
+/**
+ * Records from this device first; the backup only adds credentials this device does not hold.
+ * The server can therefore never replace a record the person already has here (a bad copy could
+ * only fail to decrypt, but it would have overwritten the good one).
+ */
+export function mergeKeepingLocal(local: PasskeyRecord[], remote: PasskeyRecord[]): PasskeyRecord[] {
+  const mine = mergeRecords(local);
+  const have = new Set(mine.map((r) => r.credentialId));
+  return mergeRecords(mine, mergeRecords(remote).filter((r) => !have.has(r.credentialId)));
 }
 
 /** Merges records from this device and the backup: one per credential, the newest wins. */

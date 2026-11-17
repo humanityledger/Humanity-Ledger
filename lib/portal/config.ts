@@ -41,13 +41,35 @@ function parseBlock(v: string | undefined): bigint {
   return BigInt(v.trim());
 }
 
-export function parsePortalConfig(env: Record<string, string | undefined>): PortalConfig | null {
+/**
+ * Ethereum mainnet: the only L1 contract each symbol may name. A build whose asset list points a
+ * symbol anywhere else (a typo, a look-alike token, a tampered build environment) gets no portal
+ * at all rather than a "USDC" that is not USDC.
+ */
+export const MAINNET_CANONICAL_L1: Readonly<Record<string, string>> = {
+  DAI: '0x6b175474e89094c44da98b954eedeac495271d0f',
+  USDC: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+  USDT: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+  ETH: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', // WETH9
+  WETH: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+};
+const MAINNET_DECIMALS: Readonly<Record<string, number>> = { DAI: 18, USDC: 6, USDT: 6, ETH: 18, WETH: 18 };
+
+/**
+ * `aztecNetwork` is the wallet's network (NEXT_PUBLIC_AZTEC_NETWORK): the Aztec test network pairs
+ * only with Sepolia and Aztec Alpha only with Ethereum, so a build can never send test-network
+ * claims to mainnet funds or the reverse. Omitted (tests, tools), either chain is accepted.
+ */
+export function parsePortalConfig(env: Record<string, string | undefined>, aztecNetwork?: 'testnet' | 'mainnet'): PortalConfig | null {
   const portal = env.NEXT_PUBLIC_HL_PORTAL ?? '';
   const factory = env.NEXT_PUBLIC_HL_RECEIVER_FACTORY ?? '';
   const implementation = env.NEXT_PUBLIC_HL_RECEIVER_IMPLEMENTATION ?? '';
   const l1ChainId = Number(env.NEXT_PUBLIC_HL_PORTAL_L1_CHAIN_ID ?? '');
   if (!EVM.test(portal) || !EVM.test(factory) || !EVM.test(implementation)) return null;
   if (l1ChainId !== 1 && l1ChainId !== 11155111) return null;
+  if (aztecNetwork === 'mainnet' && l1ChainId !== 1) return null;
+  if (aztecNetwork === 'testnet' && l1ChainId !== 11155111) return null;
+  if (new Set([portal.toLowerCase(), factory.toLowerCase(), implementation.toLowerCase()]).size !== 3) return null;
   let assets: PortalAsset[] = [];
   try {
     const raw = JSON.parse(env.NEXT_PUBLIC_HL_PORTAL_ASSETS ?? '[]');
@@ -65,6 +87,13 @@ export function parsePortalConfig(env: Record<string, string | undefined>): Port
   } catch {
     assets = [];
   }
+  if (l1ChainId === 1) {
+    // Any mismatch disables the whole portal: a partial list would hide that the build is wrong.
+    const wrong = assets.some((a) => MAINNET_CANONICAL_L1[a.symbol] !== a.l1.toLowerCase() || MAINNET_DECIMALS[a.symbol] !== a.decimals);
+    if (wrong) return null;
+  }
+  if (new Set(assets.map((a) => a.symbol)).size !== assets.length) return null;
+  if (new Set(assets.map((a) => a.l2.toLowerCase())).size !== assets.length) return null;
   if (!assets.length) return null;
   const artifactUrl = env.NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT ?? '';
   if (!/^\/[A-Za-z0-9/_.-]+\.json$/.test(artifactUrl)) return null;
@@ -89,4 +118,4 @@ export const PORTAL_CONFIG: PortalConfig | null = parsePortalConfig({
   NEXT_PUBLIC_HL_PORTAL_ASSETS: process.env.NEXT_PUBLIC_HL_PORTAL_ASSETS,
   NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT: process.env.NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT,
   NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK: process.env.NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK,
-});
+}, process.env.NEXT_PUBLIC_AZTEC_NETWORK === 'alpha' ? 'mainnet' : 'testnet');

@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { PasskeyCard, PasskeyOpen } from './wallet/PasskeyCard';
 import { ReceiversCard } from './wallet/ReceiversCard';
+import { SecurityCenter } from './wallet/SecurityCenter';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
 import {
@@ -76,7 +77,7 @@ interface ZkWalletPanelProps {
 }
 
 type Sheet = 'shield' | 'unshield' | 'send' | 'receive' | 'fees' | null;
-type View = 'overview' | 'activity' | 'protocol';
+type View = 'overview' | 'activity' | 'security' | 'protocol';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 /** Shield, Unshield and Send need a configured token; Receive only shows the address. */
@@ -227,6 +228,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             options={[
               { value: 'overview', label: 'Overview' },
               { value: 'activity', label: 'Activity', badge: inFlight || undefined },
+              { value: 'security', label: 'Security' },
               { value: 'protocol', label: 'Protocol' },
             ]}
           />
@@ -296,6 +298,12 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   <PasskeyOpen address={address} onOpen={openWithPasskey} disabled={!isWalletConfigured()} />
                 )}
                 </>
+              ) : view === 'security' ? (
+                <>
+                  <SecurityCenter address={address} alpha={ALPHA} linkedComputer={linkedComputer} />
+                  <PasskeyCard address={address} onEnroll={enrollPasskey} disabled={state.busy} />
+                  <WhatIsSeen />
+                </>
               ) : view === 'activity' ? (
                 <>
                   <ActivityList
@@ -338,13 +346,10 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                     <KV k="Network" v={ALPHA ? 'Aztec Alpha, settles on Ethereum' : networkLabel()} />
                     <KV k="Proofs" v="Made on this device" />
                     {linkedComputer && <KV k="Signing" v="Approved on your phone" />}
+                    <KV k="Security" hint="Passkeys, address checks, audit status" v={<TextButton onClick={() => setView('security')}>Review</TextButton>} />
                   </Section>
 
-                  <PasskeyCard address={address} onEnroll={enrollPasskey} disabled={state.busy} />
-
                   <ReceiversCard address={address} ready={ready} />
-
-                  <WhatIsSeen />
 
                   {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
                   {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#r1' && <FirstPayment disabled={state.busy} />}

@@ -26,6 +26,12 @@ A passkey is a second way to obtain the account root.
 4. **Unlocking.** WebAuthn `get` asks for any enrolled passkey of this account (`evalByCredential`). The root it unwraps goes once into the existing derivation (`PrivateWallet.connect`). The account, the address and the notes are the same as with the Ethereum wallet.
 5. **Authenticators.** Support is decided at enrolment. A credential that returns no PRF is refused with `NO_PRF`. PRF is offered by iCloud Keychain, Google Password Manager, 1Password, Windows Hello and FIDO2 keys with `hmac-secret` (YubiKey 5 among them), depending on the browser. None of these has been tested on a real device yet (§6).
 
+6. **Hardening (17 Nov 2026).**
+   - Before any key is derived, an unwrapped root that is a 65-byte ECDSA signature must recover, over this network's typed data, to the account's own Ethereum address (`assertRootOwner`). A record that would open any other account, including the same wallet's test-network account, is refused with `MISMATCH`. A longer root is a smart-account signature (EIP-1271/6492), which cannot be checked offline; it is let through.
+   - Records on this device take precedence over the backup (`mergeKeepingLocal`). The server can add a credential this device does not have. It can never replace one this device already holds.
+   - The relying party is `ledgerchat.org` on the apex domain and on every subdomain (`passkeyRpId`), so a passkey enrolled on `www` also works on the apex. Browsers refuse an rpId that is not the page's own domain or a parent of it, so no other site can ask for these passkeys. A self-hosted copy uses its own host.
+   - The backup refuses to move a credential to another network when that network already holds 10 records.
+
 Decision: a passkey wraps the existing root rather than replacing it. Existing accounts keep their address, notes and Fee Juice. Sign-In with Ethereum stays the way to sign in to Ledger Chat. The passkey opens only the private wallet.
 
 ## 3. Recovery

@@ -33,6 +33,18 @@ Decision: the Aztec token and the bridge are one contract, with private balances
 
 **Privacy of a withdrawal.** The L2->L1 message is a public output of the Aztec transaction, and that transaction's fee is paid from the person's account (until Module 3). So a withdrawal links the account to the L1 recipient and the amount. The wallet says so and asks for an explicit acknowledgement before withdrawing. A private fee payer (Module 3) removes the account from the transaction; the recipient and amount stay public by nature.
 
+**In the wallet (17 Nov 2026).**
+- Claims and withdrawals are exits. They stay available in exits-only mode, so an operator pause never traps funds.
+- Before proving, the wallet checks that the PortalToken is one of this build's configured assets. It also reads `portal_address()` on the device and refuses an instance that is linked to any other L1 contract. A withdrawal to an unknown portal would burn the balance into a message that no honest contract executes.
+- The withdraw form refuses the zero address and the person's own receiver addresses (`lib/portal/withdraw.ts`). It shows a review step before anything is proved.
+- The form stays **off** (`WITHDRAW_COMPLETES_IN_WALLET = false` in `components/zk/wallet/ReceiversCard.tsx`) until the wallet also fetches the Outbox proof and sends the L1 payout itself. Starting a withdrawal that only a script could finish is not offered.
+
+**Build configuration** (`lib/portal/config.ts`). The portal is off unless every check passes:
+- The Aztec test network pairs only with Sepolia, and Aztec Alpha only with Ethereum (chain 1).
+- On Ethereum, every symbol must be its canonical token with its real decimals: DAI `0x6b17…1d0f` (18), USDC `0xa0b8…eb48` (6), USDT `0xdac1…1ec7` (6), WETH and ETH `0xc02a…6cc2` (18). One mismatch turns the whole portal off.
+- The portal, the factory and the implementation must be three different addresses.
+- No two assets may share a symbol or an Aztec token.
+
 Not wired yet: fetching the Outbox proof from the Aztec node in the wallet. `lib/portal/l1.ts executeWithdrawal` takes the proof as input; the aztec.js v6 call that produces it is to be confirmed against a deployment.
 
 ## 4. Invariants (`HLPortal`)

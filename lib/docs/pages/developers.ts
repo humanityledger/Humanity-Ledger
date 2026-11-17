@@ -7,7 +7,7 @@ export const developers: DocPage = {
   title: "Developers",
   summary: "Everything you need to read, run and contribute to the Humanity Ledger code.",
   keywords: ["developer", "developers", "api", "sdk", "code", "github", "repository", "run locally", "contribute", "setup", "install", "stack", "env"],
-  updated: "2026-11-15",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -32,7 +32,30 @@ export const developers: DocPage = {
         { label: "Fallback relay", state: "partial", text: "Stores readable messages when XMTP delivery fails. Labelled in the interface." },
         { label: "Community content", state: "partial", text: "Stored readable on the server." },
         { label: "Mobile apps", state: "development", text: "Not submitted to the stores. The web client is the supported one." },
+        { label: "Private wallet on Aztec Alpha", state: "partial", text: "Send, shield and unshield with a cap per payment. Each account pays its own fee." },
+        { label: "Passkeys", state: "partial", text: "In code and unit tests. Not yet tested on a real authenticator." },
+        { label: "Ethereum portal", state: "development", text: "Contracts and wallet code tested in CI. Not deployed on any network." },
       ],
+    },
+    { t: "h2", text: "Integrations added on 17 November 2026" },
+    {
+      t: "table",
+      head: ["Integration", "Code", "Tests", "State"],
+      strongFirst: true,
+      rows: [
+        ["Passkey unlock (WebAuthn PRF)", "`lib/aztec/wallet/passkey.ts`, `passkey-store.ts`, `app/api/aztec/passkeys`", "`test/unit/aztec/passkey.test.ts`", "In the wallet. Real devices not tested."],
+        ["G7 binding scheme v2 (network bound)", "`lib/aztec/peer-binding.ts`", "`test/unit/aztec/peer-binding-network.test.ts`", "Issued by every wallet. Required on Alpha."],
+        ["Ethereum portal (`HLPortal`)", "`contracts/portal/HLPortal.sol`, `AztecMessaging.sol`", "`test/portal/HLPortal.test.ts` (Hardhat)", "Not deployed."],
+        ["Receiver addresses", "`contracts/portal/HLReceiver.sol`, `lib/portal/receivers.ts`", "Hardhat and `test/unit/portal/`", "Not deployed."],
+        ["PortalToken (aztec-nr)", "`contracts/aztec/portal_token`", "11 TXE tests (`aztec test` in that folder)", "Not deployed."],
+        ["Portal configuration", "`lib/portal/config.ts`", "`test/unit/portal/config.test.ts`", "Off unless every value is set and every Ethereum token is canonical."],
+        ["Security view", "`components/zk/wallet/SecurityCenter.tsx`", "Rendered from live wallet state", "In the wallet."],
+        ["One signature sign in", "`lib/xmtp/device-key-vault.ts`", "`test/unit/chat/calls-ring-anywhere-and-expressions.test.ts`", "In main. Falls back to the signature where IndexedDB is unavailable."],
+      ],
+    },
+    {
+      t: "p",
+      text: "Design notes: `docs/ACCOUNT_MODEL.md`, `docs/PORTAL.md` and `docs/RECEIVER_ADDRESSES.md` in the repository. The portal's build variables (`NEXT_PUBLIC_HL_PORTAL`, `NEXT_PUBLIC_HL_RECEIVER_FACTORY`, `NEXT_PUBLIC_HL_RECEIVER_IMPLEMENTATION`, `NEXT_PUBLIC_HL_PORTAL_L1_CHAIN_ID`, `NEXT_PUBLIC_HL_PORTAL_ASSETS`, `NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT`, `NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK`) are listed in `.env.example` and are empty by default.",
     },
     { t: "h2", text: "The stack" },
     {
@@ -43,7 +66,7 @@ export const developers: DocPage = {
         ["Application", "Next.js 15, React 19, TypeScript", "App Router. The middleware runs on the Edge runtime and holds the identity perimeter."],
         ["Messaging", "XMTP browser SDK, MLS", "Direct messages are encrypted in the browser. A server fallback exists and is labelled."],
         ["Identity", "Sign in with Ethereum, JWT", "Sessions are cookies scripts cannot read. Identity is never taken from a header or a query parameter."],
-        ["Payments", "wagmi, viem; Aztec and Noir", "Public payments are signed in the user's wallet. Private payments on Aztec are experimental."],
+        ["Payments", "wagmi, viem; Aztec 6.0.0 and aztec-nr; Solidity for the portal", "Public payments are signed in the user's wallet. Private payments run on Aztec Alpha with a cap per payment; proofs are made in the browser."],
         ["Data", "PostgreSQL with Prisma, Redis", "Redis is optional in development. Rate limiting and nonce storage degrade gracefully without it."],
         ["Realtime", "Server sent events, WebRTC", "Some views still poll, which is the current scaling limit."],
         ["Testing", "Vitest, Playwright", "Unit tests in `test/`, end to end tests in `e2e/`."],
