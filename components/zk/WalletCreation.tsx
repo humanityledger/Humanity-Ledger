@@ -19,11 +19,12 @@ import React, { useRef } from 'react';
 import { AlertTriangle, Check } from 'lucide-react';
 import s from './PaymentProgress.module.css';
 
+import { AT, creationSteps, stepStates, type CreationPhase, type StepKey } from './walletCreationSteps';
+
 const INK = '#15171c';
 
-export type CreationPhase = 'idle' | 'signing' | 'starting' | 'needs-fee-juice' | 'deploying' | 'ready' | 'error' | string;
-
-type StepKey = 'sign' | 'keys' | 'fees' | 'account';
+export type { CreationPhase };
+export { creationSteps, stepStates };
 
 export interface WalletCreationProps {
   phase: CreationPhase;
@@ -43,21 +44,6 @@ export interface WalletCreationProps {
   children?: React.ReactNode;
 }
 
-export function creationSteps(alpha: boolean, networkName: string, linkedComputer?: boolean): { key: StepKey; label: string; note: string }[] {
-  return [
-    {
-      key: 'sign',
-      label: linkedComputer ? 'Approve on your phone' : 'Sign a message in your wallet',
-      note: 'Free, and it sends no transaction. Check that the site is ledgerchat.org',
-    },
-    { key: 'keys', label: 'Create your keys on this device', note: 'We never receive them' },
-    ...(alpha ? [{ key: 'fees' as const, label: 'Add Fee Juice', note: 'Your account pays its own network fee. The fee payer is public' }] : []),
-    { key: 'account', label: `Create your account on ${networkName}`, note: 'About a minute. Keep this page open' },
-  ];
-}
-
-const AT: Record<string, StepKey | undefined> = { signing: 'sign', starting: 'keys', 'needs-fee-juice': 'fees', deploying: 'account' };
-
 export function WalletCreation(p: WalletCreationProps) {
   const steps = creationSteps(p.alpha, p.networkName, p.linkedComputer);
   // Where an error stopped it: the last step that was running.
@@ -65,8 +51,7 @@ export function WalletCreation(p: WalletCreationProps) {
   if (AT[p.phase]) last.current = AT[p.phase];
   const failed = p.phase === 'error';
   const working = p.phase === 'signing' || p.phase === 'starting' || p.phase === 'deploying' || p.phase === 'needs-fee-juice';
-  const current = failed ? last.current ?? 'sign' : AT[p.phase];
-  const activeIndex = current ? steps.findIndex((x) => x.key === current) : -1;
+  const states = stepStates(p.phase, steps, last.current);
 
   const title = failed ? 'Your private wallet did not open' : p.phase === 'needs-fee-juice' ? 'Add Fee Juice to create your account' : working ? 'Opening your private wallet' : 'Open your private wallet';
 
@@ -94,9 +79,7 @@ export function WalletCreation(p: WalletCreationProps) {
       {!p.blocked && (
         <ol className={`${s.steps} mt-3`} aria-label="Steps">
           {steps.map((st, i) => {
-            const state = failed
-              ? i < activeIndex ? 'done' : i === activeIndex ? 'bad' : 'todo'
-              : i < activeIndex ? 'done' : i === activeIndex ? 'active' : 'todo';
+            const state = states[i];
             return (
               <li key={st.key} className={`${s.step} ${s[state]}`} aria-current={state === 'active' || state === 'bad' ? 'step' : undefined}>
                 <span className={s.dot} aria-hidden="true">{state === 'done' && <Check size={12} strokeWidth={3} />}</span>
