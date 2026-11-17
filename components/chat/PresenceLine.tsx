@@ -1,4 +1,5 @@
 'use client';
+import { PeerTypingLottie } from '@/components/chat/ChatLottie';
 import React from 'react';
 
 /**
@@ -12,8 +13,9 @@ export function PresenceLine({ typing, online, idle }: { typing: boolean; online
   const live = typing || online;
   return (
     <span className="relative block h-[18px] leading-[18px] min-w-0" aria-live="polite">
-      <span key={text} className={`hl-fade-in block truncate text-[13px] ${live ? 'font-medium text-[#12804a]' : 'text-[#5b606b]'}`}>
-        {text}
+      <span key={text} className={`hl-fade-in flex items-center gap-1 truncate text-[13px] ${live ? 'font-medium text-[#12804a]' : 'text-[#5b606b]'}`}>
+        {typing ? <PeerTypingLottie size="inline" /> : null}
+        <span className="truncate">{text}</span>
       </span>
     </span>
   );

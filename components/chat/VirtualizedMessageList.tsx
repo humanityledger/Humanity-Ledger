@@ -2,6 +2,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { REVEAL_MESSAGE_EVENT } from '@/lib/chat/reveal-message';
 import { renderKey } from '@/lib/chat/optimistic-send';
+import { PeerTypingLottie } from '@/components/chat/ChatLottie';
 
 interface VirtualizedMessageListProps {
   messages: any[];
@@ -252,12 +253,9 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
       {/* Typing indicator inside the scroll flow to avoid compressing list height */}
       {isTyping && (
-        <div className="flex self-start items-start mt-2 ml-1" role="status" aria-label={typingLabel || "Typing"}>
-          <div className="px-4 py-2.5 bg-white rounded-[18px] rounded-bl-[6px] border border-[#e4e7ec] flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" />
-            <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" />
-            <div className="w-1.5 h-1.5 bg-[#a3a9b4] rounded-full" />
-          </div>
+        <div className="hl-fade-in flex self-start items-start mt-2 ml-1" role="status" aria-label={typingLabel || "Typing"} data-testid="peer-typing">
+          {/* The animation draws its own grey bubble with the three dots. */}
+          <PeerTypingLottie />
         </div>
       )}
 

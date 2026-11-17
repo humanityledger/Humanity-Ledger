@@ -97,6 +97,7 @@ import { getSelfLink, remoteSign, RemoteSignError } from '@/lib/link/channel';
 import type { ExpressionTab } from '@/components/chat/ExpressionPicker';
 import { LinkedDeviceApprover } from '@/components/link/LinkedDeviceApprover';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
+import { NewConversationLottie, SendConfirmationBurst, WelcomeLottie } from '@/components/chat/ChatLottie';
 import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
@@ -5914,7 +5915,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       openStudio(q || undefined);
       return;
     }
-    setSendAnimKey(k => k + 1);
     // ── [FASE 16: Rate-Limit Guard] ──────────────────────────────────────
     const now = Date.now();
     const rl = rateLimitRef.current;
@@ -5924,6 +5924,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       return;
     }
     rl.timestamps.push(now);
+    // The send confirmation plays once, for a message that is really going out.
+    setSendAnimKey(k => k + 1);
     let txt = inputText.trim();
     if (replyingTo) {
       const snippet = (carriesSecret(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
@@ -6538,10 +6540,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 </button>
               )}
               {conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 text-center">
-                  <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#727a88]">
-                    <MessageSquare size={24} strokeWidth={1.7} aria-hidden="true" />
-                  </div>
+                <div className="flex flex-col items-center justify-center flex-1 gap-2 p-8 text-center">
+                  <WelcomeLottie />
                   <div>
                     <p className="text-[16px] font-semibold text-[#15171c] mb-1">No conversations yet</p>
                     <p className="text-[14px] text-[#727a88] leading-relaxed max-w-[240px]">Search for a name or paste a wallet address above to start your first chat.</p>
@@ -7021,10 +7021,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     );
                   }
                   return (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6">
-                      <div className="bg-white rounded-2xl px-6 py-7 max-w-[300px] text-center border border-[#e4e7ec]">
-                        <div className="w-12 h-12 bg-[#eff1f4] rounded-full flex items-center justify-center mx-auto mb-4 text-[#475061]">
-                          <MessageSquare size={22} strokeWidth={1.8} aria-hidden="true" />
+                    <div className="flex-1 flex flex-col items-center justify-center p-6" data-testid="new-conversation">
+                      <div className="bg-white rounded-2xl px-6 pt-4 pb-7 max-w-[300px] text-center border border-[#e4e7ec]">
+                        {/* Only while this conversation has no message: the first one replaces this card with the thread. */}
+                        <div className="flex justify-center -mb-1">
+                          <NewConversationLottie />
                         </div>
                         <p className="text-[16px] font-semibold text-[#15171c] mb-1.5">Say hello</p>
                         <p className="text-[14px] text-[#727a88] leading-relaxed">Send the first message. It is encrypted on this device and only you and {getDisplayName(activePeer!)} can read it.</p>
@@ -7040,6 +7041,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                     clientInboxId={client?.inboxId}
                     isLoadingMore={false}
                     onLoadMore={() => {}}
+                    isTyping={peerStatus.isTyping || (!!activePeer && typingPeers.has(activePeer.toLowerCase()))}
+                    typingLabel={`${getDisplayName(activePeer!)} is typing`}
                     renderMessage={(msg, isMe, enter) => {
                       const sentTime = typeof msg.sentAtNs === 'number' ? new Date(msg.sentAtNs) : (msg.sent || msg.sentAt || new Date());
                       const dateStr = new Date(sentTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -7264,6 +7267,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 {/* Gallery picker — opens photo library on iOS/Android */}
                 <input type="file" ref={galleryRef} className="hidden" accept="image/*,video/*" onChange={handleFileUpload} />
                 <form onSubmit={handleSend} className="flex flex-col w-full relative">
+                  <SendConfirmationBurst burst={sendAnimKey} className="absolute right-0 -top-[60px] z-10" />
                   {/* ── App Drawer (WhatsApp-style icon grid) ── */}
                   <AnimatePresence>
                   {showAppDrawer && (
@@ -7512,8 +7516,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] relative overflow-y-auto p-6 md:p-12">
             <ChatCredit align="end" className="hidden md:flex absolute bottom-6 right-7 max-w-[340px]" />
             <div className="w-full max-w-md flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-6">
-                <MessageSquare size={28} strokeWidth={1.6} aria-hidden="true" />
+              <div className="mb-3" data-testid="welcome-lottie">
+                <WelcomeLottie />
               </div>
               <h1 className="text-[24px] md:text-[28px] font-bold tracking-[-0.03em] text-[#15171c] mb-2">Ledger Chat</h1>
               <p className="text-[15px] text-[#727a88] leading-relaxed max-w-[320px]">
