@@ -28,43 +28,11 @@
 // No admin, no owner, no pause, no upgrade. The portal address and decimals are set at deployment.
 
 use aztec::macros::aztec;
-use aztec::protocol::hash::sha256_to_field;
 
+// The message contents live in their own module: at this level `aztec` names the macro imported
+// above, so a path through the aztec crate does not resolve here.
+pub mod content;
 mod test;
-
-/// sha256ToField(abi.encodeWithSignature("mint_to_private(uint256)", amount)), as HLPortal builds it.
-pub fn mint_to_private_content(amount: u128) -> Field {
-    // keccak256("mint_to_private(uint256)")[0..4]
-    let selector: [u8; 4] = [0x8b, 0x3a, 0xf5, 0xe8];
-    let amount_bytes: [u8; 32] = (amount as Field).to_be_bytes();
-    let mut data = [0 as u8; 36];
-    for i in 0..4 {
-        data[i] = selector[i];
-    }
-    for i in 0..32 {
-        data[4 + i] = amount_bytes[i];
-    }
-    sha256_to_field(data)
-}
-
-/// sha256ToField(abi.encodeWithSignature("withdraw(address,uint256,address)", recipient, amount, caller)).
-pub fn withdraw_content(recipient: Field, amount: u128, caller_on_l1: Field) -> Field {
-    // keccak256("withdraw(address,uint256,address)")[0..4]
-    let selector: [u8; 4] = [0x69, 0x32, 0x8d, 0xec];
-    let recipient_bytes: [u8; 32] = recipient.to_be_bytes();
-    let amount_bytes: [u8; 32] = (amount as Field).to_be_bytes();
-    let caller_bytes: [u8; 32] = caller_on_l1.to_be_bytes();
-    let mut data = [0 as u8; 100];
-    for i in 0..4 {
-        data[i] = selector[i];
-    }
-    for i in 0..32 {
-        data[4 + i] = recipient_bytes[i];
-        data[36 + i] = amount_bytes[i];
-        data[68 + i] = caller_bytes[i];
-    }
-    sha256_to_field(data)
-}
 
 #[aztec]
 pub contract PortalToken {
@@ -97,7 +65,7 @@ pub contract PortalToken {
     fn claim_private(recipient: AztecAddress, amount: u128, secret: Field, message_leaf_index: Field) {
         assert(amount > 0, "PortalToken: zero amount");
         let portal = self.storage.portal.read();
-        let content = crate::mint_to_private_content(amount);
+        let content = crate::content::mint_to_private_content(amount);
         self.context.consume_l1_to_l2_message(content, [secret], portal, message_leaf_index);
         self.storage.balances.at(recipient).add(amount).deliver(MessageDelivery::onchain_constrained());
     }
@@ -126,7 +94,7 @@ pub contract PortalToken {
         let portal = self.storage.portal.read();
         self.context.message_portal(
             portal,
-            crate::withdraw_content(recipient.to_field(), amount, caller_on_l1.to_field()),
+            crate::content::withdraw_content(recipient.to_field(), amount, caller_on_l1.to_field()),
         );
     }
 

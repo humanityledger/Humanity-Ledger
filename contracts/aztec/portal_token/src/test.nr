@@ -2,7 +2,7 @@
 // A deposit message is seeded as the portal would send it (sender = the portal's L1 address,
 // content = mint_to_private(amount)); the claim must use the right secret, amount and index, once.
 
-use crate::{mint_to_private_content, PortalToken};
+use crate::{content::{mint_to_private_content, withdraw_content}, PortalToken};
 use aztec::{
     context::calls::UtilityCall,
     protocol::{
@@ -54,7 +54,7 @@ unconstrained fn contents_match_the_portal() {
     // The same vectors as test/unit/portal/receivers.test.ts and the Solidity side
     // (sha256ToField of abi.encodeWithSignature(...)).
     assert(mint_to_private_content(25000000) == 0x00e90eec23412b6f89fb744d00d81c1153b7be8eed3b116fc650df4da1b2b8c3);
-    assert(crate::withdraw_content(0xbeef, 4000, 0) == 0x0082b27f9b81bbea08119e9875dab341b46c3899d243dd4871fcd53f4c70dc74);
+    assert(withdraw_content(0xbeef, 4000, 0) == 0x0082b27f9b81bbea08119e9875dab341b46c3899d243dd4871fcd53f4c70dc74);
 }
 
 #[test]
