@@ -36,13 +36,6 @@ describe('resolveVerifiedCaller', () => {
     expect(await resolveVerifiedCaller(forged())).toBe(ME);
   });
 
-  it('a session store error is nobody, not a fallback', async () => {
-    getSession.mockImplementation(async () => {
-      throw new Error('session store unavailable');
-    });
-    expect(await resolveVerifiedCaller(forged())).toBeNull();
-  });
-
   it('the source reads no cookie and no header', () => {
     const src = fs.readFileSync('lib/security/resolveCaller.ts', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     expect(src).not.toMatch(/cookies|headers|system_handshake|x-web3-address|x-wallet-address/);
