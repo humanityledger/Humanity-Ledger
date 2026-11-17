@@ -28,6 +28,11 @@ describe('chat animations', () => {
     expect(before.lastIndexOf('if (filteredMsgs.length === 0) {')).toBeGreaterThan(before.lastIndexOf('<VirtualizedMessageList'));
     // An optimistic message counts: it is in filteredMsgs as soon as it is sent.
     expect((chat.match(/<NewConversationLottie \/>/g) || []).length).toBe(1);
+    // It enters with an animation each time a chat is empty, including right after Clear chat.
+    expect(chat).toMatch(/key=\{`new-\$\{activePeer\}`\}[^>]*data-testid="new-conversation"/);
+    expect(chat).toContain('hl-empty-enter');
+    const art = JSON.parse(read('public/lottie/new-conversation.json'));
+    expect([art.w, art.h, art.fr, art.op]).toEqual([350, 230, 60, 156]);
   });
 
   it('the typing animation shows in the thread and the header while the other person writes', () => {
