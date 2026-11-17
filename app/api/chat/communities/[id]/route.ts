@@ -31,7 +31,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           members: true,
           channels: { orderBy: { position: 'asc' } },
           permissions: true,
-          _count: { select: { members: true, posts: true, channels: true } },
+          // Community has no `posts` relation (CommunityPost only stores communityId), so counting
+          // posts here made Prisma throw on every request and the community never opened.
+          _count: { select: { members: true, channels: true } },
         },
       });
     } catch {
@@ -75,14 +77,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    const { joinCode, members, ...rest } = community;
+    const postsCount: number = await (prisma as any).communityPost
+      .count({ where: { communityId: community.id } })
+      .catch(() => 0);
+
+    const { joinCode, members, _count, ...rest } = community;
     return NextResponse.json({
       community: {
         ...rest,
         ...(isMember ? { members, joinCode } : { members: [] }),
         isMember,
-        membersCount: community._count.members,
-        postsCount: community._count.posts,
+        membersCount: community._count?.members ?? (members || []).length,
+        postsCount,
       },
     });
   } catch (e: any) {

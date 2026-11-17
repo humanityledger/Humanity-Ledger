@@ -126,3 +126,16 @@ describe('pins', () => {
     expect(route).toMatch(/k === 'slowModeSeconds' && typeof v === 'number' && SLOW_MODE_SECONDS\.includes\(v\)/);
   });
 });
+
+describe('opening a community', () => {
+  it('counts only relations Community has: no posts relation, so posts are counted separately', () => {
+    const schema = read('prisma/schema.prisma');
+    const model = schema.slice(schema.indexOf('model Community {'), schema.indexOf('}', schema.indexOf('model Community {')));
+    expect(model).not.toMatch(/^\s+posts\s/m);
+    const route = read('app/api/chat/communities/[id]/route.ts');
+    expect(route).toMatch(/_count: \{ select: \{ members: true, channels: true \} \}/);
+    expect(route).not.toMatch(/_count: \{ select: \{[^}]*posts/);
+    expect(route).toMatch(/communityPost\s*\.count\(\{ where: \{ communityId: community\.id \} \}\)/);
+    expect(route).toMatch(/community\._count\?\.members \?\?/);
+  });
+});
