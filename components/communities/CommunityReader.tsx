@@ -117,8 +117,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const fetchPosts = useCallback(async () => {
     try {
       const res = await f(`/api/chat/communities/${encodeURIComponent(communityId)}/posts`, { headers, credentials: 'include', cache: 'no-store' });
-      if (!res.ok) throw new Error(String(res.status));
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLoad('error');
+        return;
+      }
       const incoming: ReaderPost[] = Array.isArray(d.posts) ? d.posts : [];
       setPosts((prev) => {
         // Posts still sending or failed on this device stay until they are resolved.

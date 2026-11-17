@@ -128,11 +128,21 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
   const fetchCommunity = useCallback(async () => {
     try {
       const res = await f(base, { headers, credentials: 'include', cache: 'no-store' });
-      if (!res.ok) throw new Error(String(res.status));
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const text = res.status === 401
+          ? 'You are signed out. Sign in again, then open this community.'
+          : res.status === 404
+            ? 'This community is not available on this account.'
+            : (typeof d?.error === 'string' && d.error.length < 160 ? d.error : 'This community could not be loaded. Check your connection and try again.');
+        setNote({ kind: 'error', text });
+        setLoad('error');
+        return;
+      }
       setCommunity(d.community ?? d);
       setLoad('ready');
     } catch {
+      setNote({ kind: 'error', text: 'This community could not be loaded. Check your connection and try again.' });
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
   }, [base, f, headers]);
@@ -192,7 +202,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
           )}
 
           {load === 'loading' && !community && <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading…</p>}
-          {load === 'error' && !community && (
+          {load === 'error' && !community && !note && (
             <div className="py-10 text-center" role="alert">
               <p className="text-[18px] leading-snug" style={{ color: INK }}>This community could not be loaded. Check your connection and try again.</p>
               <button type="button" onClick={() => { setLoad('loading'); fetchCommunity(); }} className={`${primary} mx-auto mt-4`}>Try again</button>
