@@ -35,7 +35,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         },
       });
     } catch {
-      // DB unavailable — fall through to in-memory lookup
+      try {
+        community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+      } catch {
+        community = null;
+      }
     }
 
     // ── In-memory fallback ────────────────────────────────────────────────────
