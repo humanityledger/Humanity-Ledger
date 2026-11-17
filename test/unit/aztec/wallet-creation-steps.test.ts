@@ -40,7 +40,7 @@ describe('wallet creation steps on Aztec Alpha', () => {
     // INITIALIZED accounts skip deployAccount and go to 'ready' (no Fee Juice step, no deposit asked).
     expect(client).toMatch(/if \(String\(meta\?\.initializationStatus\) !== 'INITIALIZED'\) \{\s*const deployed = await this\.deployAccount\(\);/);
     const panel = fs.readFileSync('components/zk/ZkWalletPanel.tsx', 'utf8');
-    expect(panel).toMatch(/\) : !ready \? \(\s*<WalletCreation/);
+    expect(panel).toMatch(/\) : !ready \? \(\s*(?:<>\s*)?<WalletCreation/);
     expect(keys).toContain('fees');
   });
 });
