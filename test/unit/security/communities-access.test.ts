@@ -84,11 +84,12 @@ describe('communities access control', () => {
     await patch({
       communityId: 'mine',
       action: 'UPDATE_PERMISSIONS',
-      permissions: { canPost: true, communityId: 'other', id: 'x', nested: { connect: { id: '1' } }, label: 'text' },
+      // canPost is not a column of CommunityPermission: dropped like the others (the route keeps only real columns).
+      permissions: { sendMessages: false, canPost: true, communityId: 'other', id: 'x', nested: { connect: { id: '1' } }, label: 'text' },
     });
     const call = db.communityPermission.upsert.mock.calls[0][0];
-    expect(call.create).toEqual({ communityId: 'mine', canPost: true });
-    expect(call.update).toEqual({ canPost: true });
+    expect(call.create).toEqual({ communityId: 'mine', sendMessages: false });
+    expect(call.update).toEqual({ sendMessages: false });
   });
 
   it('a new community is private unless the creator says otherwise', async () => {
