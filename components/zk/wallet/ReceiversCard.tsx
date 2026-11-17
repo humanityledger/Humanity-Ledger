@@ -99,7 +99,9 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
     if (!publicClient || !receivers.length) return;
     setBusy(true);
     try {
-      const found = await findDeposits({ getLogs: (a: any) => (publicClient as any).getLogs(a) } as any, cfg, receivers.map((r) => r.secretHash));
+      const found = await findDeposits(
+        { getLogs: (a: any) => (publicClient as any).getLogs(a), getBlockNumber: () => publicClient.getBlockNumber() } as any,
+        cfg, receivers.map((r) => r.secretHash));
       // The claim delay counts from when this wallet first saw the deposit, not from its block.
       const seen = readJson<Record<string, number>>(SEEN_KEY(evm), {});
       const now = Math.floor(Date.now() / 1000);

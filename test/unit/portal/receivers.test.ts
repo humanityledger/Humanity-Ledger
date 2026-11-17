@@ -104,9 +104,12 @@ describe('portal client', () => {
     const expectMaster = Buffer.from(hkdfSync('sha256', Buffer.from(ROOT.slice(2), 'hex'), 'humanity-ledger/portal', 'hl/portal/v1/master', 64));
     expect(master).toBe('0x' + expectMaster.toString('hex'));
     const r = await deriveReceiver(master, 3, crypto);
-    const seed = Buffer.from(hkdfSync('sha256', expectMaster, 'humanity-ledger/portal', 'hl/portal/v1/receiver/3', 64));
+    const seed = Buffer.from(hkdfSync('sha256', expectMaster, 'humanity-ledger/portal', 'hl/portal/v1/receiver/3', 96));
     expect(r.secret).toBe(BigInt('0x' + seed.subarray(0, 48).toString('hex')) % FR_MODULUS);
-    expect(r.rescueKey).toBe(BigInt('0x' + seed.subarray(16, 64).toString('hex')) % SECP256K1_N);
+    expect(r.rescueKey).toBe(BigInt('0x' + seed.subarray(48, 96).toString('hex')) % SECP256K1_N);
+    // The two keys come from disjoint halves of the seed: knowing one reveals no bit of the other.
+    const { secret: _s, ...rest } = r;
+    expect(JSON.stringify(rest, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))).not.toContain(r.secret.toString());
     expect(r.secretHash).toMatch(/^0x[0-9a-f]{64}$/);
   });
 

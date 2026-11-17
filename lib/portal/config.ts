@@ -35,6 +35,12 @@ export interface PortalConfig {
 const EVM = /^0x[0-9a-fA-F]{40}$/;
 const AZTEC = /^0x[0-9a-fA-F]{64}$/;
 
+/** A non-negative block number; anything else scans from block 0 (slower, never wrong). */
+function parseBlock(v: string | undefined): bigint {
+  if (!v || !/^\d{1,15}$/.test(v.trim())) return 0n;
+  return BigInt(v.trim());
+}
+
 export function parsePortalConfig(env: Record<string, string | undefined>): PortalConfig | null {
   const portal = env.NEXT_PUBLIC_HL_PORTAL ?? '';
   const factory = env.NEXT_PUBLIC_HL_RECEIVER_FACTORY ?? '';
@@ -62,12 +68,7 @@ export function parsePortalConfig(env: Record<string, string | undefined>): Port
   if (!assets.length) return null;
   const artifactUrl = env.NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT ?? '';
   if (!/^\/[A-Za-z0-9/_.-]+\.json$/.test(artifactUrl)) return null;
-  let deployBlock = 0n;
-  try {
-    deployBlock = BigInt(env.NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK ?? '0');
-  } catch {
-    deployBlock = 0n;
-  }
+  const deployBlock = parseBlock(env.NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK);
   return {
     portal: portal.toLowerCase(),
     factory: factory.toLowerCase(),

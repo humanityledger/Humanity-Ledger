@@ -27,10 +27,10 @@ From the account root R (the wallet signature every key comes from; also obtaine
 | Value | Formula | Where it is |
 |---|---|---|
 | P | HKDF-SHA256(R, salt `humanity-ledger/portal`, info `hl/portal/v1/master`, 64 bytes) | wallet memory |
-| seed_i | HKDF-SHA256(P, same salt, info `hl/portal/v1/receiver/<i>`, 64 bytes) | transient |
+| seed_i | HKDF-SHA256(P, same salt, info `hl/portal/v1/receiver/<i>`, 96 bytes) | transient |
 | secret_i | seed_i[0..48) mod Fr | wallet memory, used only in the claim proof |
 | secretHash_i | poseidon2([secret_i], DOM_SEP__SECRET_HASH) (aztec.js `computeSecretHash`) | Ethereum (receiver storage, deposit events) |
-| rescueKey_i | seed_i[16..64) mod n(secp256k1) | wallet memory |
+| rescueKey_i | seed_i[48..96) mod n(secp256k1) | wallet memory |
 | rescueSigner_i | Ethereum address of rescueKey_i | Ethereum (receiver storage) |
 | receiver_i | CREATE2(factory, keccak256(abi.encode(secretHash_i, rescueSigner_i)), EIP-1167(implementation)) | Ethereum |
 

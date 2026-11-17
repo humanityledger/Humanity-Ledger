@@ -32,9 +32,9 @@ const withdrawContent = (recipient: string, amount: bigint, caller: string) =>
 const big = (b: Buffer) => BigInt("0x" + b.toString("hex"));
 function derive(rootHex: string, index: number) {
   const master = Buffer.from(hkdfSync("sha256", Buffer.from(rootHex.slice(2), "hex"), "humanity-ledger/portal", "hl/portal/v1/master", 64));
-  const seed = Buffer.from(hkdfSync("sha256", master, "humanity-ledger/portal", `hl/portal/v1/receiver/${index}`, 64));
+  const seed = Buffer.from(hkdfSync("sha256", master, "humanity-ledger/portal", `hl/portal/v1/receiver/${index}`, 96));
   const secret = big(seed.subarray(0, 48)) % FIELD;
-  const rescueKey = big(seed.subarray(16, 64)) % SECP_N;
+  const rescueKey = big(seed.subarray(48, 96)) % SECP_N;
   // Stand-in for poseidon2 on L1: the portal only checks that the secret hash is a field element.
   const secretHash = ethers.toBeHex(BigInt(ethers.keccak256(ethers.toBeHex(secret, 32))) % FIELD, 32);
   return { secret, rescueKey, secretHash, rescueSigner: ethers.computeAddress(ethers.toBeHex(rescueKey, 32)).toLowerCase() };
@@ -244,7 +244,7 @@ describe("HLPortal", function () {
 
     it("a sunset closes deposits forever and leaves withdrawals open", async function () {
       const f = await deploy();
-      const { portal, dai, outbox, admin, alice, bob } = f;
+      const { portal, dai, admin, alice, bob } = f;
       await dai.mint(alice.address, E("10"));
       await dai.connect(alice).approve(await portal.getAddress(), E("10"));
       await portal.connect(alice).depositToAztecPrivate(await dai.getAddress(), E("10"), SECRET_HASH);

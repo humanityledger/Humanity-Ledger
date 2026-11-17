@@ -3,7 +3,7 @@
  * find deposits for one's receivers, execute a proven withdrawal. Uses the same viem-shaped
  * L1Clients as the Fee Juice bridge (lib/aztec/fee-juice.ts).
  */
-import type { L1Clients } from '../aztec/fee-juice';
+import { portalLogs, type L1Clients } from '../aztec/fee-juice';
 import type { PortalAsset, PortalConfig } from './config';
 import type { PendingDeposit } from './receivers';
 
@@ -111,6 +111,19 @@ export const PORTAL_ABI = [
   },
 ] as const;
 
+const ERC20_ALLOWANCE = [
+  {
+    type: 'function',
+    name: 'allowance',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+    ],
+    outputs: [{ type: 'uint256' }],
+  },
+] as const;
+
 const ERC20_APPROVE = [
   {
     type: 'function',
@@ -167,8 +180,21 @@ export async function depositFromWallet(
   if (asset.native) {
     hash = await l1.writeContract({ address: hex(c.portal), abi: PORTAL_ABI, functionName: 'depositEthToAztecPrivate', args: [b32(secretHash)], value: amount });
   } else {
-    const approve = await l1.writeContract({ address: hex(asset.l1), abi: ERC20_APPROVE, functionName: 'approve', args: [hex(c.portal), amount] });
-    await l1.waitForTransactionReceipt({ hash: approve });
+    // Approve only what is missing. USDT refuses a new non-zero allowance over a non-zero one, so a
+    // too-small leftover is reset to 0 first; an allowance already large enough costs no transaction.
+    const current = BigInt(
+      await l1.readContract({ address: hex(asset.l1), abi: ERC20_ALLOWANCE, functionName: 'allowance', args: [hex(l1.account), hex(c.portal)] }),
+    );
+    if (current < amount) {
+      if (current > 0n) {
+        const reset = await l1.writeContract({ address: hex(asset.l1), abi: ERC20_APPROVE, functionName: 'approve', args: [hex(c.portal), 0n] });
+        const rr = await l1.waitForTransactionReceipt({ hash: reset });
+        if (rr.status !== 'success') throw new Error('The approval failed on Ethereum.');
+      }
+      const approve = await l1.writeContract({ address: hex(asset.l1), abi: ERC20_APPROVE, functionName: 'approve', args: [hex(c.portal), amount] });
+      const ar = await l1.waitForTransactionReceipt({ hash: approve });
+      if (ar.status !== 'success') throw new Error('The approval failed on Ethereum.');
+    }
     hash = await l1.writeContract({
       address: hex(c.portal),
       abi: PORTAL_ABI,
@@ -188,13 +214,16 @@ export async function depositFromWallet(
 export async function findDeposits(l1: L1Clients, c: PortalConfig, secretHashes: string[]): Promise<PendingDeposit[]> {
   if (!l1.getLogs || !secretHashes.length) return [];
   const event = PORTAL_ABI.find((x) => x.type === 'event')!;
-  const logs = await l1.getLogs({
+  // One request, or block windows when the RPC refuses the range (as for Fee Juice claims).
+  const logs = await portalLogs(
+    { getLogs: (q) => l1.getLogs!(q), getBlockNumber: l1.getBlockNumber ? () => l1.getBlockNumber!() : undefined },
+    {
     address: hex(c.portal),
     event,
     args: { secretHash: secretHashes.map(b32) },
     fromBlock: c.deployBlock,
-    toBlock: 'latest',
-  });
+    },
+  );
   const out: PendingDeposit[] = [];
   for (const log of logs) {
     const a = log.args ?? {};
@@ -203,6 +232,8 @@ export async function findDeposits(l1: L1Clients, c: PortalConfig, secretHashes:
       amount: BigInt(a.amount),
       token: String(a.token).toLowerCase(),
       secretHash: String(a.secretHash).toLowerCase(),
+      // Logs carry no time unless the RPC adds blockTimestamp. The caller (ReceiversCard) keeps the
+      // first-seen time per deposit, so a rescan never restarts the claim delay.
       at: Number(log.blockTimestamp ?? 0) || Math.floor(Date.now() / 1000),
     });
   }

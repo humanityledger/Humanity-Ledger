@@ -10,10 +10,10 @@
  *
  *   P             = HKDF-SHA256(R, salt "humanity-ledger/portal", info "hl/portal/v1/master", 64 bytes)
  *                   (derived when the wallet opens, kept in memory like the other derived keys)
- *   seed_i        = HKDF-SHA256(P, salt "humanity-ledger/portal", info "hl/portal/v1/receiver/<i>", 64 bytes)
+ *   seed_i        = HKDF-SHA256(P, salt "humanity-ledger/portal", info "hl/portal/v1/receiver/<i>", 96 bytes)
  *   secret_i      = seed_i[0..48)  mod Fr                    claims deposits on Aztec (never leaves the device)
  *   secretHash_i  = poseidon2([secret_i], DOM_SEP__SECRET_HASH)   written on Ethereum, in the receiver
- *   rescueKey_i   = seed_i[16..64) mod n(secp256k1), != 0     signs rescues only
+ *   rescueKey_i   = seed_i[48..96) mod n(secp256k1), != 0     signs rescues only
  *   rescueSigner_i= address(rescueKey_i)                       written on Ethereum, in the receiver
  *   receiver_i    = CREATE2(factory, keccak256(abi.encode(secretHash_i, rescueSigner_i)), EIP-1167(impl))
  *
@@ -90,10 +90,12 @@ export async function deriveReceiver(masterHex: string, index: number, c: Receiv
   if (!Number.isInteger(index) || index < 0 || index >= MAX_RECEIVERS) throw new Error('Receiver index out of range.');
   const master = hexToBytes(masterHex);
   if (master.length !== 64) throw new Error('Invalid portal master secret.');
-  const seed = await hkdf(master, `hl/portal/v1/receiver/${index}`, 64);
+  // 96 bytes: two disjoint 48-byte halves, so the claim secret and the rescue key share no input
+  // bits (48 bytes per key keeps the modular bias below 2^-128).
+  const seed = await hkdf(master, `hl/portal/v1/receiver/${index}`, 96);
   master.fill(0);
   const secret = toBigInt(seed.slice(0, 48)) % FR_MODULUS;
-  const rescueKey = toBigInt(seed.slice(16, 64)) % SECP256K1_N;
+  const rescueKey = toBigInt(seed.slice(48, 96)) % SECP256K1_N;
   seed.fill(0);
   if (secret === 0n || rescueKey === 0n) throw new Error('Derived a zero key.');
   const secretHash = await c.secretHash(secret);
