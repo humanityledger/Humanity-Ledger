@@ -16,6 +16,7 @@
  *   - An open row closes on: a tap on the row (which then does not open the chat), a tap anywhere
  *     else, scrolling the list, Escape, or another row opening. Only one row is open at a time.
  *   - With reduced motion the row moves without the spring.
+ *   - Only on touch screens. With a mouse the row does not slide: right click opens the same actions.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -78,6 +79,16 @@ export default function SwipeableConversationRow({
   isMuted = false,
 }: SwipeableConversationRowProps) {
   const reduced = useReducedMotion();
+  // Touch screens slide; a mouse uses right click (the list's own menu) instead.
+  const [touch, setTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const q = window.matchMedia('(pointer: coarse)');
+    const on = () => setTouch(q.matches);
+    on();
+    q.addEventListener?.('change', on);
+    return () => q.removeEventListener?.('change', on);
+  }, []);
   const x = useMotionValue(0);
   const rowRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<Side | null>(null);
@@ -181,11 +192,11 @@ export default function SwipeableConversationRow({
 
   return (
     <div ref={rowRef} className="relative overflow-hidden bg-[#f2f4f7]" data-swipe-open={open ?? "none"}>
-      {RIGHT_W > 0 && <Island side="right" actions={right} width={RIGHT_W} x={x} interactive={open === "right"} onRun={run} name={displayName} />}
-      {LEFT_W > 0 && <Island side="left" actions={left} width={LEFT_W} x={x} interactive={open === "left"} onRun={run} name={displayName} />}
+      {touch && RIGHT_W > 0 && <Island side="right" actions={right} width={RIGHT_W} x={x} interactive={open === "right"} onRun={run} name={displayName} />}
+      {touch && LEFT_W > 0 && <Island side="left" actions={left} width={LEFT_W} x={x} interactive={open === "left"} onRun={run} name={displayName} />}
 
       <motion.div
-        drag="x"
+        drag={touch ? "x" : false}
         dragDirectionLock
         dragConstraints={{ left: -LEFT_W, right: RIGHT_W }}
         dragElastic={0.12}

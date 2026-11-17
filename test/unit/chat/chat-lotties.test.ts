@@ -8,7 +8,7 @@ import fs from 'node:fs';
 const read = (p: string) => fs.readFileSync(p, 'utf8');
 
 describe('chat animations', () => {
-  for (const f of ['new-conversation', 'peer-typing', 'send-confirmation', 'welcome-notification']) {
+  for (const f of ['new-conversation', 'peer-typing', 'send-confirmation', 'send-confirmation-plane', 'welcome-notification']) {
     it(`${f}.json is a self-contained Lottie`, () => {
       const raw = read(`public/lottie/${f}.json`);
       const a = JSON.parse(raw);
@@ -46,6 +46,13 @@ describe('chat animations', () => {
     const lottie = read('components/chat/ChatLottie.tsx');
     expect(lottie).toMatch(/loop=\{false\} onComplete=\{\(\) => setShown\(0\)\}/);
     expect(lottie).toMatch(/if \(!\(burst > 0\) \|\| reduced\) return;\s*setShown\(burst\);/);
+    // Drawn for this button: one file per button shape, the same size as the button, fetched ahead of the first send.
+    expect(lottie).toMatch(/src=\{wide \? LOTTIE\.SEND_CONFIRMATION_WIDE : LOTTIE\.SEND_CONFIRMATION\} width=\{size\} height=\{size\}/);
+    expect(chat).toContain('preloadSendConfirmation()');
+    for (const f of ['send-confirmation', 'send-confirmation-plane']) {
+      const a = JSON.parse(read(`public/lottie/${f}.json`));
+      expect([a.w, a.h, a.fr, a.op]).toEqual([96, 96, 60, 54]);
+    }
   });
 
   it('the welcome animation is on the Ledger Chat home and the empty list', () => {

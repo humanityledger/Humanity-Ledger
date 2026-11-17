@@ -5,7 +5,9 @@
  *
  *   NEW_CONVERSATION  public/lottie/new-conversation.json   an empty conversation, until its first message
  *   PEER_TYPING       public/lottie/peer-typing.json        while the other person is writing
- *   SEND_CONFIRMATION public/lottie/send-confirmation.json  once, when a message is sent
+ *   SEND_CONFIRMATION public/lottie/send-confirmation.json  once, when a message is sent (phones: arrow)
+ *   SEND_CONFIRMATION_WIDE public/lottie/send-confirmation-plane.json  the same on wide screens (paper plane)
+ *                     Both are drawn for the button by scripts/lottie/build-send-confirmation.mjs.
  *   WELCOME           public/lottie/welcome-notification.json  the Ledger Chat home, no chat open
  *
  * The JSON is fetched once per page and shared (it is not in the JS bundle). With
@@ -20,6 +22,7 @@ export const LOTTIE = {
   NEW_CONVERSATION: '/lottie/new-conversation.json',
   PEER_TYPING: '/lottie/peer-typing.json',
   SEND_CONFIRMATION: '/lottie/send-confirmation.json',
+  SEND_CONFIRMATION_WIDE: '/lottie/send-confirmation-plane.json',
   WELCOME: '/lottie/welcome-notification.json',
 } as const;
 
@@ -37,6 +40,17 @@ export function loadLottie(src: string): Promise<unknown> {
     cache.set(src, p);
   }
   return p;
+}
+
+/**
+ * Fetches both send confirmations and the player ahead of the first send, so the first message
+ * plays at once instead of after a download.
+ */
+export function preloadSendConfirmation(): void {
+  if (typeof window === 'undefined') return;
+  loadLottie(LOTTIE.SEND_CONFIRMATION).catch(() => {});
+  loadLottie(LOTTIE.SEND_CONFIRMATION_WIDE).catch(() => {});
+  import('lottie-web').catch(() => {});
 }
 
 export function usePrefersReducedMotion(): boolean {
@@ -99,37 +113,30 @@ export function PeerTypingLottie({ size = 'bubble' }: { size?: 'bubble' | 'inlin
 }
 
 /**
- * Plays the send confirmation once for each change of `burst` (> 0), then removes itself.
+ * The send confirmation, played once in the send button's own place and shape, with the button's
+ * own colour behind it: the button's icon leaves (the arrow upwards on phones, the paper plane up
+ * and to the right on wide screens), a tick draws itself, then the slot fades back to what is
+ * there after the send. 0.9 s, vector, drawn for this button (scripts/lottie/build-send-confirmation.mjs).
  * Not shown with reduce motion. It never takes clicks.
  */
-/**
- * The send confirmation: a paper plane that turns into a tick, played once in the send button's own
- * place, cropped to its shape, so it never spills over the messages or past the chat's edge.
- * The file is 4:3 with the round badge filling its height; it is drawn a little larger than the slot
- * and centred, so the badge fills the slot exactly. Its visible part lasts 0.7 s (frames 0 to 21 of
- * a 12 s file), so it is taken away after 0.8 s instead of waiting for the file to end.
- */
-export function SendConfirmationBurst({ burst, size = 40, className }: { burst: number; size?: number; className?: string }) {
+export function SendConfirmationBurst({ burst, size = 40, wide = false, className }: { burst: number; size?: number; wide?: boolean; className?: string }) {
   const reduced = usePrefersReducedMotion();
   const [shown, setShown] = useState(0);
   useEffect(() => {
     if (!(burst > 0) || reduced) return;
     setShown(burst);
-    const t = setTimeout(() => setShown((s) => (s === burst ? 0 : s)), 800);
+    // Removed when the animation ends; this is only the fallback if it never starts.
+    const t = setTimeout(() => setShown((s) => (s === burst ? 0 : s)), 1100);
     return () => clearTimeout(t);
   }, [burst, reduced]);
   if (!shown || shown !== burst) return null;
-  const h = Math.round(size * 1.04);
-  const w = Math.round((h * 4) / 3);
   return (
     <div
-      className={`pointer-events-none overflow-hidden bg-[#f6f6f6] ${className ?? ''}`}
+      className={`hl-send-burst pointer-events-none overflow-hidden ${wide ? 'rounded-2xl bg-[#2456e6]' : 'rounded-full bg-[#15171c]'} ${className ?? ''}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <div style={{ position: 'absolute', left: '50%', top: '50%', width: w, height: h, transform: 'translate(-50%, -50%)' }}>
-        <ChatLottie key={shown} src={LOTTIE.SEND_CONFIRMATION} width={w} height={h} loop={false} onComplete={() => setShown(0)} />
-      </div>
+      <ChatLottie key={shown} src={wide ? LOTTIE.SEND_CONFIRMATION_WIDE : LOTTIE.SEND_CONFIRMATION} width={size} height={size} loop={false} onComplete={() => setShown(0)} />
     </div>
   );
 }

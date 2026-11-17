@@ -231,6 +231,12 @@ export const viewport = {
 
   initialScale: 1,
 
+  // The page is never laid out wider than the screen. Without it, one element wider than a phone
+  // made Safari and Chrome lay the whole app out at ~780 px and show it at half size (tablet
+  // layout, tiny text), so focusing the message field zoomed in and Send was off screen.
+  // Zooming in still works.
+  minimumScale: 1,
+
   // Pinch zoom stays enabled: maximumScale 1 / userScalable false blocked
   // zooming, which fails WCAG 1.4.4 (Resize text) and the Lighthouse
   // meta-viewport audit.
@@ -333,12 +339,14 @@ export default async function RootLayout({
             Pinch zoom stays available (WCAG 1.4.4). Runs now and again once Next's viewport tag exists.
             iPhone and iPad (Safari, Chrome, any iOS browser): maximum-scale=1 stops the page from zooming
             in when a field gets focus. iOS ignores it for the person's own pinch zoom, which keeps
-            working; Android is not given it, because there it would block pinch zoom. */}
+            working; Android is not given it, because there it would block pinch zoom. minimum-scale=1
+            and shrink-to-fit=no keep the layout at the phone's width even if something overflows.
+            Next.js rewrites the tag on navigation, so it is put back whenever it changes. */}
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){try{
 var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);
 var named=/MetaMaskMobile|TrustWallet|Trust\\/|CoinbaseWallet|CoinbaseBrowser|Rainbow|OKApp|Phantom|imToken|TokenPocket|BitKeep|Bitget|Zerion|BinanceWeb3|Rabby|SafePal|Uniswap/i.test(ua);
 var ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
-if(ios&&!(named||window.ethereum)){var ci='width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content';var si=function(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=ci;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)m[i].setAttribute('content',ci)};si();document.addEventListener('DOMContentLoaded',si,{once:true});return}
+if(ios&&!(named||window.ethereum)){var ci='width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, shrink-to-fit=no, interactive-widget=resizes-content';var si=function(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=ci;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)if(m[i].getAttribute('content')!==ci)m[i].setAttribute('content',ci)};si();document.addEventListener('DOMContentLoaded',si,{once:true});try{new MutationObserver(si).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']})}catch(e){}return}
 if(!mobile||!(named||window.ethereum))return;
 document.documentElement.setAttribute('data-wallet-browser','1');
 var c='width=device-width, initial-scale=0.9, viewport-fit=cover, interactive-widget=resizes-content';

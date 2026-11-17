@@ -189,10 +189,12 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                       <span className={`block text-[15.5px] font-medium truncate ${call.missed ? 'text-[#d93036]' : 'text-[#15171c]'}`}>
                         {nameOf(call.peerAddress, call.peerName)}
                       </span>
-                      <span className="flex items-center gap-1.5 mt-0.5 text-[13.5px] text-[#727a88]">
+                      <span className="flex items-center gap-1.5 mt-0.5 text-[13.5px] text-[#727a88] min-w-0">
                         <DirIcon size={13} strokeWidth={2} className={call.missed ? 'text-[#d93036]' : 'text-[#727a88]'} aria-hidden="true" />
-                        <span>{label} {call.type === 'video' ? 'video call' : 'call'}</span>
-                        {call.duration ? <span className="tabular-nums">, {formatDuration(call.duration)}</span> : null}
+                        <span className="truncate">
+                          {label} {call.type === 'video' ? 'video call' : 'call'}
+                          {call.duration ? <span className="tabular-nums">, {formatDuration(call.duration)}</span> : null}
+                        </span>
                       </span>
                     </span>
                   </button>
