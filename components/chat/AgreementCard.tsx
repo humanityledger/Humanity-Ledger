@@ -88,7 +88,8 @@ function AddressAnnouncement({ raw, isMe, dmPeerInboxId, senderInboxId, selfInbo
     if (isMe || !store || !dmPeerInboxId || !senderInboxId) return;
     // Signed (v2) announcements are checked with the Aztec SDK before anything is pinned (G7).
     (signed ? sdkBindingCrypto() : Promise.resolve(undefined))
-      .then((crypto) => recordPeerAnnouncement(store, { senderInboxId, peerInboxId: dmPeerInboxId, body: raw, selfInboxId }, crypto))
+      // A proof for another Aztec network is refused here when the wallet knows its own.
+      .then((crypto) => recordPeerAnnouncement(store, { senderInboxId, peerInboxId: dmPeerInboxId, body: raw, selfInboxId }, crypto, { network: getPrivateWallet().bindingContext().network }))
       .then(setResult)
       .catch(() => setResult({ status: 'ignored', reason: 'could not check the proof' }));
   }, [raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId, signed]);

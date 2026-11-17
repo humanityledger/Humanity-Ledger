@@ -36,7 +36,7 @@ import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
 import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
 import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
-import { BINDING_SCHEME, bindingStatement, sdkBindingCrypto, verifyAddressProof, type AddressProof } from '../peer-binding';
+import { BINDING_SCHEME_V2, bindingStatement, networkTagOf, sdkBindingCrypto, valueBindingContext, verifyAddressProof, type AddressProof, type BindingNetworkContext } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
   assertNodeForValue,
@@ -220,6 +220,8 @@ class PrivateWallet {
   /** Schnorr signing key (Fq) and salt (Fr), kept in memory for G7 address proofs only. */
   private signingKey: any = null;
   private salt: any = null;
+  /** "aztec:<l1ChainId>:<rollupVersion>" of the node, for G7 proofs (peer-binding.ts scheme v2). */
+  private networkTag: string | undefined;
   private claimPoll: ReturnType<typeof setInterval> | null = null;
   private tokens = new Map<TokenKey, any>();
   private faucetAddress: any = null;
@@ -390,6 +392,7 @@ class PrivateWallet {
       // (unknown classes, rejected proofs); say so now, in words.
       // A different node release is reported; a different rollup or L1 is refused.
       const identity = identifyNode(info as any);
+      this.networkTag = networkTagOf(info as any);
       const blocking = identity.drift.filter((d) => d.field !== 'nodeVersion');
       for (const d of identity.drift.filter((x) => x.field === 'nodeVersion')) {
         console.warn(`[wallet] Aztec node ${d.actual}, this build was made for ${d.expected}`);
@@ -843,24 +846,80 @@ class PrivateWallet {
     const schnorr = new (Schnorr as any)();
     const pk = await schnorr.computePublicKey(this.signingKey);
     const address = this.me.toString().toLowerCase();
-    const msg = Fr.fromHexString(await crypto.messageField(bindingStatement(address, signerInboxId, recipientInboxId)));
+    if (!this.networkTag) throw new Error('Open your private wallet first.');
+    const network = this.networkTag;
+    const msg = Fr.fromHexString(await crypto.messageField(bindingStatement(address, signerInboxId, recipientInboxId, network)));
     const sig = await schnorr.constructSignature(msg, this.signingKey);
     const proof: AddressProof = {
-      scheme: BINDING_SCHEME,
+      scheme: BINDING_SCHEME_V2,
       signingPublicKey: { x: pk.x.toString(), y: pk.y.toString() },
       salt: this.salt.toString(),
       publicKeys: this.manager.getInstance().publicKeys.toString(),
       signerInboxId,
       recipientInboxId,
+      network,
       signature: sig.toString(),
     };
     const check = await verifyAddressProof(
       { type: 'hl.aztec_address', version: 2, address, proof },
-      { senderInboxId: signerInboxId, selfInboxId: recipientInboxId },
+      { senderInboxId: signerInboxId, selfInboxId: recipientInboxId, network, requireNetwork: true },
       crypto,
     );
     if (!check.ok) throw new Error(`Could not prove control of your Aztec address: ${check.reason}.`);
     return proof;
+  }
+
+  /**
+   * The network context for a G7 check before value moves (peer-binding.ts valueBindingContext):
+   * this wallet's network tag, and, on Alpha, proofs that name it.
+   */
+  bindingContext(): BindingNetworkContext {
+    return valueBindingContext(this.networkTag, AZTEC_WALLET_CONFIG.network);
+  }
+
+  /* -------------------------------------------------------------- passkeys */
+
+  /**
+   * Enrols a passkey for the open account (lib/aztec/wallet/passkey.ts). The wallet asks for the
+   * account signature again (wallets sign it deterministically) and the result must derive exactly
+   * the keys of the open account: a wallet that signs differently each time is refused here,
+   * never wrapped into a passkey that would open a different, empty account.
+   */
+  async enrollPasskey(signTypedData: SignTypedData, label: string): Promise<{ backedUp: boolean }> {
+    if (this.snapshot.phase !== 'ready' || !this.evmAddress || !this.signingKey || !this.salt) throw new Error('Open your private wallet first.');
+    const [pk, store, sdk] = await Promise.all([import('./passkey'), import('./passkey-store'), Promise.resolve(this.sdk!)]);
+    const api = pk.browserWebAuthn();
+    if (!api) throw new pk.PasskeyError('UNSUPPORTED', 'This browser cannot use passkeys.');
+    const root = await signTypedData(walletTypedData());
+    const keys = await deriveAccountKeys(root, sdk.Fr.MODULUS, sdk.Fq.MODULUS);
+    if (new sdk.Fr(keys.salt).toString() !== this.salt.toString() || new sdk.Fq(keys.signingKey).toString() !== this.signingKey.toString()) {
+      throw new pk.PasskeyError('MISMATCH', 'Your wallet gave a different signature than when the private wallet was opened, so a passkey would open a different account. This wallet cannot be used with passkeys.');
+    }
+    const network = AZTEC_WALLET_CONFIG.network as 'testnet' | 'mainnet';
+    const existing = await store.allRecords(this.evmAddress, network);
+    const record = await pk.enrolPasskey({ evm: this.evmAddress, network, rootHex: root, label, existing, rpId: location.hostname, api });
+    return store.saveRecord(record);
+  }
+
+  /**
+   * Opens the wallet with an enrolled passkey instead of an Ethereum signature: the passkey yields
+   * the same account root, so the account, its address and its notes are the same.
+   */
+  async connectWithPasskey(evmAddress: string): Promise<void> {
+    const evm = evmAddress.toLowerCase();
+    const [pk, store] = await Promise.all([import('./passkey'), import('./passkey-store')]);
+    const api = pk.browserWebAuthn();
+    if (!api) throw new pk.PasskeyError('UNSUPPORTED', 'This browser cannot use passkeys.');
+    const network = AZTEC_WALLET_CONFIG.network as 'testnet' | 'mainnet';
+    const records = await store.allRecords(evm, network);
+    const { rootHex } = await pk.unlockWithPasskey({ evm, network, records, rpId: location.hostname, api });
+    let used = false;
+    return this.connect(evm, async () => {
+      // One use: the root is handed to the derivation once, never kept.
+      if (used) throw new Error('Open the wallet with your passkey again.');
+      used = true;
+      return rootHex;
+    });
   }
 
   /**
@@ -1255,6 +1314,7 @@ class PrivateWallet {
     await this.teardown();
     this.faucetAddress = null;
     this.evmAddress = null;
+    this.networkTag = undefined;
     this.set({ phase: 'idle', aztecAddress: undefined, balances: [], activity: [], step: undefined, error: undefined, feeJuice: undefined });
   }
 }

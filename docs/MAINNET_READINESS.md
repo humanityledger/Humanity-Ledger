@@ -25,7 +25,7 @@ Production runs on Aztec Alpha (Ethereum mainnet, chain 1) and HLC is confirmed 
 | R5 | A dollar-denominated token | HLC is issued by the operator, uncapped and unbacked; nobody holds it as money | Decision, then build | Proposal P2 below |
 | R6 | Agreements (escrow, streams) on Alpha | Off. The fee source is compiled with Aztec 6.0.0 and TXE-tested (escrow 19, streams 29); the classes are recorded as current with `address: null`, `status: not-deployed`. Not deployed on Alpha: TREASURY is the zero placeholder and there is no external audit | Stefan (treasury address, external audit), then deploy | `deployments/aztec-testnet.json`; `docs/AZTEC_FOUNDATION_DOSSIER.md` section 0; G5 |
 | R7 | External audit | G8 open; no claim of audited contracts may be made | Stefan | Engage an auditor; record the report under `audit` |
-| R8 | Two-browser G7 run | Peer address proof verified only in tests | Stefan + one tester | `docs/chat/G6_SESSION_CHECKLIST.md` |
+| R8 | Two-browser G7 run | Peer address proof verified only in tests. Since 17 November proofs name the network (scheme v2) and Alpha refuses v1-scheme proofs: the run must use two clients on this build | Stefan + one tester | `docs/chat/G6_SESSION_CHECKLIST.md` |
 | R9 | `DATABASE_URL_UNPOOLED` | #63 works around it; the correct value is the direct database | Stefan | `${{Postgres.DATABASE_URL}}` in Railway |
 
 ### R1 record: first private payment on Aztec Alpha (14 November 2026)
