@@ -3613,7 +3613,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       const track = stream.getVideoTracks()[0];
       if (!track) throw new Error('No screen track');
-      if (!activeConnectionRef.current || callStateRef.current === 'idle') {
+      // The state may have changed while the picker was open (TypeScript narrowed it above).
+      if (!activeConnectionRef.current || (callStateRef.current as string) === 'idle') {
         // The call ended while the picker was open.
         stream.getTracks().forEach(t => t.stop());
         return;
@@ -8452,7 +8453,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
        <AnimatePresence>
         {showProfile && activePeer && (
           <LedgerChatProfile
-            peerAddress={callPeer}
+            peerAddress={activePeer}
             onClose={() => setShowProfile(false)}
             onClearChat={clearChat}
             onBlockUser={() => toggleBlock(activePeer)}
