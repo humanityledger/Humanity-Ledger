@@ -17,8 +17,6 @@
 import React from "react";
 import {
   ArrowLeft,
-  Hash,
-  Megaphone,
   Check,
   CheckCheck,
   Lock,
@@ -30,7 +28,6 @@ import {
   Plus,
   RefreshCw,
   SendHorizontal,
-  Users,
   Video,
 } from "lucide-react";
 import s from "./PhoneShowcase.module.css";
@@ -472,7 +469,6 @@ export function AgreementChatScreen({ p }: ScreenProps) {
  * are not end-to-end encrypted like direct messages), so no lock badge here.
  */
 export function CommunitiesScreen({ p }: ScreenProps) {
-  const yes = Math.round(38 + 26 * Math.min(1, Math.max(0, (p - 0.35) / 0.5)));
   return (
     <div className={s.screenLight}>
       <StatusBar />
@@ -486,57 +482,26 @@ export function CommunitiesScreen({ p }: ScreenProps) {
             <span className={s.commSub}>214 members</span>
           </span>
         </span>
-        <span className={s.commAction}>
-          <Users size={18} strokeWidth={2.1} />
-        </span>
+        <span className={s.commManage}>Manage</span>
       </div>
-      <div className={s.commTabs}>
-        <span className={s.commTabOn}>Chat & Channels</span>
-        <span>Posts</span>
-        <span>Governance</span>
-        <span>Members</span>
-      </div>
+      <div className={s.commNote}>People in this community can read what you write here. It is not a private conversation.</div>
       <div className={s.commList}>
-        <div className={`${s.chanRow} ${s.in}`}>
-          <Hash size={17} strokeWidth={2.2} /> <span className={s.chanName}>general</span>
-          <span className={s.chanCount}>3</span>
-        </div>
-        <div className={`${s.chanRow} ${s.in}`}>
-          <Megaphone size={17} strokeWidth={2.1} /> <span className={s.chanName}>announcements</span>
-        </div>
-        <div className={`${s.chanRow} ${at(p, 0.1)}`}>
-          <Hash size={17} strokeWidth={2.2} /> <span className={s.chanName}>aztec-contracts</span>
-          <span className={s.chanCount}>12</span>
-        </div>
-
-        <div className={`${s.pinCard} ${at(p, 0.2)}`}>
-          <span className={s.pinTag}>Pinned</span>
+        <div className={`${s.pinCard} ${s.in}`}>
+          <span className={s.pinTag}>Marta</span>
           <span className={s.pinText}>Weekly call moves to Thursday 17:00 CET.</span>
         </div>
-
-        <div className={`${s.propCard} ${at(p, 0.3)}`}>
-          <div className={s.propTop}>
-            <span className={s.propTag}>Proposal</span>
-            <span className={s.propRule}>1 wallet, 1 vote</span>
-          </div>
-          <div className={s.propTitle}>Fund a second audit of the escrow contract</div>
-          <div className={s.propBar}>
-            <span style={{ width: `${yes}%` }} />
-          </div>
-          <div className={s.propNums}>
-            <span className={s.num}>Yes {yes}%</span>
-            <span className={s.num}>No {100 - yes}%</span>
-          </div>
-          <span className={`${s.propVote} ${p >= 0.6 ? s.propVoted : ""}`}>
-            {p >= 0.6 ? (
-              <>
-                <Check size={14} strokeWidth={2.6} /> You voted yes
-              </>
-            ) : (
-              "Vote"
-            )}
-          </span>
+        <div className={`${s.pinCard} ${at(p, 0.15)}`}>
+          <span className={s.pinTag}>Ana</span>
+          <span className={s.pinText}>Notes from the last call are in the group folder.</span>
         </div>
+        <div className={`${s.pinCard} ${at(p, 0.45)}`}>
+          <span className={s.pinTag}>You</span>
+          <span className={s.pinText}>Thursday works for me.</span>
+        </div>
+      </div>
+      <div className={s.commField}>
+        <span className={s.commFieldText}>Write your message here</span>
+        <span className={s.commSend}>Send</span>
       </div>
     </div>
   );

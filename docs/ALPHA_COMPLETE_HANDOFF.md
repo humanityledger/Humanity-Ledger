@@ -1,8 +1,8 @@
-# Alpha complete — handoff for an implementer (16 November 2026, updated 17 November 2026)
+# Alpha complete — handoff for an implementer (16 November 2026, updated 17 November 2026, second pass)
 
 This file tells an implementer what is already true, what is still missing before Ledger Chat can be called complete on Aztec Alpha, and what must not be done. It is a gap list. It is not a claim that the product is complete, audited, or free of visual defects.
 
-Authority, when documents disagree: `docs/AZTEC_FOUNDATION_DOSSIER.md` section 0, then this file. `docs/MAINNET_READINESS.md` row R6 is stale. The fee classes have been compiled and tested. They are not deployed.
+Authority, when documents disagree: `docs/AZTEC_FOUNDATION_DOSSIER.md` section 0, then this file. `docs/MAINNET_READINESS.md` row R6 is stale. The fee classes have been compiled with the designated treasury and tested. They are not deployed.
 
 Nothing in the decision package of 16 November 2026 has been accepted or rejected by Stefan Antonio Cirisanu. Do not treat a recommendation as a decision.
 
@@ -15,7 +15,7 @@ Nothing in the decision package of 16 November 2026 has been accepted or rejecte
 - Do not close Q1–Q10. They are OPEN.
 - Do not edit `lib/docs/pages/legal.ts` or `protocol.ts`. R2 is counsel’s text.
 - Do not edit `lib/aztec/` to measure prover memory. That edit was not authorized.
-- Do not register a new class id by hand. The two below are the current recorded ones, compiled with the zero placeholder. A new class id is recorded only after the "Aztec contracts" workflow recompiles the designated-treasury source and TXE passes inside each crate.
+- Do not register a new class id by hand. The two below are the current recorded ones, compiled by the "Aztec contracts" workflow from the designated-treasury source after TXE passed inside each crate, and computed with `getContractClassFromArtifact` from the committed artifacts.
 
 ## What already exists
 
@@ -23,10 +23,12 @@ Production Ledger Chat runs on Aztec Alpha (Ethereum L1 chain 1) when the build 
 
 HLC on Alpha is `0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5`. The retired token `0x2cd0f377…e55d` is do-not-use. The recorded per-payment cap is 1000 HLC. Each account pays its own Fee Juice. `/api/aztec/sponsor` answers 410. Two old LedgerSponsor instances exist and nothing in the app calls them.
 
-The fee baseline (spec sections 6 and 8, authorized 16 November 2026) is in the escrow and stream source. Aztec 6.0.0 compiled it. TXE from inside each crate: PrivateEscrow 19 passed, PaymentStream 29 passed. Current classes, `status: not-deployed`, `address: null`, `tracksCurrentArtifact: true`:
+The fee baseline (spec sections 6 and 8, authorized 16 November 2026) is in the escrow and stream source, with the designated treasury. Aztec 6.0.0 compiled it in CI on 17 November 2026 (run 44061471400). TXE from inside each crate: PrivateEscrow 19 passed, PaymentStream 29 passed. Current classes, `status: not-deployed`, `address: null`, `tracksCurrentArtifact: true`:
 
-- PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`
-- PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`
+- PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`
+- PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`
+
+The zero-treasury classes `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee` and `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3` stay in the record with `tracksCurrentArtifact: false` and `supersededBy`. The client refuses them.
 
 The client refuses to deploy while the treasury is unset, and it accepts only a class that tracks the current artifact. Pre-fee testnet instances keep their old class ids and no longer track the current artifact. No fee class has an address.
 
@@ -57,7 +59,7 @@ That state is not the state of the repository today.
 
 Do these only inside the blocker above them. Do not skip a blocker.
 
-1. **Fee classes on Alpha.** Source and TXE are done. Still required before any deploy, and not sufficient alone: B1, B2, B3. After a real treasury address exists, replace the zero constant, recompile, run TXE again from inside `contracts/aztec/escrow` and `contracts/aztec/streams` (`cd` into the crate; `aztec test` from the repo root fails because there is no root `Nargo.toml`), record the new class ids only if those tests pass, and deploy nothing until B2 and B3 are met. `assertCanOpen` must keep refusing a missing treasury and any class that is not current. The pre-fee classes must stay `tracksCurrentArtifact: false`.
+1. **Fee classes on Alpha.** Source, treasury, recompile, TXE and class ids are done (17 November 2026). Still required before any deploy, and not sufficient alone: B1, B2, B3. If the treasury changes (for example to the 4-of-7), replace the constant, recompile, run TXE again from inside `contracts/aztec/escrow` and `contracts/aztec/streams` (`cd` into the crate; `aztec test` from the repo root fails because there is no root `Nargo.toml`), record the new class ids only if those tests pass, and deploy nothing until B2 and B3 are met. `assertCanOpen` must keep refusing a missing treasury and any class that is not current. The pre-fee classes must stay `tracksCurrentArtifact: false`.
 
 2. **Agreements are not on Alpha.** Escrow, stream, and identity instances on testnet are keyed and are not Alpha instances. `docs/MAINNET_READINESS.md` R6 still says the nullifier recompile has not happened. That sentence is stale. The fee source is compiled. The absence on Alpha is not stale.
 
@@ -147,13 +149,37 @@ The operator states that a private transfer between two non-operator accounts su
 
 Not opened: anything behind a signed-in session on a build with these changes (the real wallet, a DM payment card, settings, the clear-chat and delete-for-me reload checks), the `/connect` failure screen, a physical phone. They need the deployed build and Stefan's wallet.
 
+## 17 November 2026, second pass — class ids, MetaMask on the phone, Communities, pins
+
+Base: `e02fbfc` (pull request 124 merged). No Alpha transaction, no deploy, no broadcast. `audit` is still null. Q1–Q10 are still OPEN. `communityMls` is still false. No B item is closed.
+
+| Area | Change |
+|---|---|
+| Class ids | The pending-recompile hold on escrow and streams is removed (`deployments/aztec-pending-recompile.json` → `"pending": []`), and the "Aztec contracts" workflow now also runs when that file changes. Run 44061471400 compiled both with Aztec 6.0.0, committed the artifacts (commit `9e19e9d`) and passed TXE inside each crate: escrow 19, identity 20, streams 29. `scripts/aztec/print-class-ids.mjs` (read-only) printed the class ids in run 44063139479. Recorded as current: PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`, PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`, with the artifact sha256. The old ids stay with `tracksCurrentArtifact: false`. On testnet the client now accepts the current classes; on Alpha it still refuses (no audit) |
+| MetaMask | `components/connect/ConnectView.tsx` → Open in MetaMask is an `<a href>` chosen by platform: iPhone and iPad `metamask://dapp/ledgerchat.org`; Android `intent://dapp/ledgerchat.org#Intent;scheme=metamask;package=io.metamask;S.browser_fallback_url=https%3A%2F%2Flink.metamask.io%2Fdapp%2Fledgerchat.org;end`; elsewhere and as "Get MetaMask" `https://link.metamask.io/dapp/ledgerchat.org`. The signing screen says "simulation failed" is expected for a signature |
+| Wallet steps | `components/zk/walletCreationSteps.ts`: Add Fee Juice is checked only in `deploying` (Fee Juice present); in `needs-fee-juice` it waits unchecked; an error marks only the step that stopped; an existing account goes to `ready` |
+| Communities | Start one asks a name and private or public, then opens it; joining opens the community. The reading screen has one field and Send only. Manage (`components/communities/CommunityManage.tsx`) is rows in the reading screen's style; the old `CommunityView` and the components only it used are deleted |
+| Pins | `CommunityPost.pinnedAt` / `pinnedBy` (migration `20261117120000_community_post_pins`, additive). Sending stores null. `PIN_MESSAGE` / `UNPIN_MESSAGE` on `PATCH /api/chat/communities` (owner, admin, or member when allowed); Unpin does not delete. `GET /api/chat/communities/:id/posts?pinned=1` returns only pinned posts. Before: the filter was ignored, every post looked pinned, and the actions returned ok without doing anything |
+| Permissions | `UPDATE_PERMISSIONS` accepts only the permission columns and saves slow mode, which it dropped |
+
+### Screens opened in this pass
+
+| Screen | How | Result |
+|---|---|---|
+| Open in MetaMask with iPhone Safari, iPhone Chrome and Android Chrome user agents, 390 px and 1280 px | Chrome (Playwright), the real `MetaMaskDappLink` bundled | The tap is a trusted user gesture on an `<a>`, not prevented; the hrefs are the URLs above |
+| Wallet creation: signing, keys, Fee Juice missing, account with Fee Juice, error | Same, 1280 px and 390 px | Add Fee Juice unchecked when missing, checked when present; nothing later checked after a failed signature |
+| Communities: start one, opened, send two posts, Manage, Pinned posts empty, pin one, reload, unpin, reload, Members, Invite, Channels, Permissions, Moderation and slow mode, Privacy and discovery, a plain member's Manage | Same, against a stand-in server that follows the routes' rules | Sent posts stored with `pinnedAt: null`; after Pin only that post is listed; after Unpin and reload the list is empty and the post remains; no old tab, no Write a post button, no hash on Manage; members see no admin rows and no Pin; no target under 48 px, no text under 7:1, no sideways scroll |
+
+Not opened: a physical iPhone or Android phone (none was in this session), the signed-in production build, the real database.
+
 ## What only Stefan can still close
 
 1. Treasury: the 4-of-7 multisig account (launch condition 3). The designated account is not it.
 2. External audit of PrivateEscrow and PaymentStream (launch condition 1), recorded in `deployments/aztec-mainnet.json` → `audit`.
-3. Fee-class deploy on Alpha, after 2 and after the recompile with the designated treasury passes TXE and its class ids are recorded.
+3. Fee-class deploy on Alpha, after 2. The recompile with the designated treasury passed TXE and its class ids are recorded (17 November 2026).
 4. Legal text (R2) with counsel.
 5. A named test community, before any `communityMls` change.
 6. TURN credentials (B9).
 7. The direct database URL, `DATABASE_URL_UNPOOLED` (B10).
-8. Pushing this change to a `claude/**` branch so the "Aztec contracts" workflow recompiles and runs TXE; then recording the new class ids only if it passes.
+8. Merging the pull request of 17 November 2026 (class ids, MetaMask, Manage, pins). It applies an additive migration (`CommunityPost.pinnedAt`, `pinnedBy`) on deploy.
+9. Opening /connect on a physical iPhone (Safari) and an Android phone (Chrome) with MetaMask installed, and tapping Open in MetaMask.

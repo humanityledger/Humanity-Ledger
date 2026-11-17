@@ -120,8 +120,8 @@ const PHONES: Phone[] = [
   {
     id: "communities",
     label: "Communities",
-    title: "Channels, pinned posts and votes.",
-    text: "One vote per wallet. Community posts live on our servers, so new members can read them.",
+    title: "Read, write, Send.",
+    text: "Members, pins and votes are in Manage. Community posts live on our servers, so new members can read them.",
     Screen: CommunitiesScreen,
     island: "idle",
   },

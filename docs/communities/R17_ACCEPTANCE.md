@@ -14,7 +14,7 @@ Propuesta operativa. No activa el flag. Stefan tiene que autorizar una comunidad
 
 Todos los puntos siguientes tienen que cumplirse. Hoy solo se cumplen el default del esquema y el comportamiento 410 cuando el flag ya es true en un mock.
 
-1. `components/chat/CommunitySettingsPanel.tsx` tiene un cliente XMTP. Hoy no lo importa.
+1. La pantalla que crea canales tiene un cliente XMTP. Desde el 17 de noviembre de 2026 es Manage → Channels (`components/communities/CommunityManage.tsx`); `CommunitySettingsPanel.tsx` se borró. Hoy no importa ningún cliente XMTP.
 2. Al crear un canal, ese panel llama a `createSecureGroup` (`lib/xmtp/groups.ts`) y el servidor guarda solo el `groupId` devuelto en `CommunityChannel.xmtpGroupId`. Hoy el panel no llama a esa función.
 3. AC-01: un volcado de la base de una comunidad con el flag en true no contiene el texto del post.
 4. AC-02: `POST /api/chat/communities/[id]/posts` responde 410. La ruta ya lo hace si el flag es true. Nada escribe el flag.
@@ -63,7 +63,7 @@ Todos los puntos siguientes tienen que cumplirse. Hoy solo se cumplen el default
 
 **Estado:** ⬜ No verificado (requiere prueba manual con dos cuentas)
 
-**Qué falta para cablear AC-03 (16 noviembre 2026).** `removeGroupMember` existe en `lib/xmtp/groups.ts` y no lo llama ninguna ruta ni el panel de ajustes. `CommunitySettingsPanel` no tiene cliente XMTP. No hay expulsión que rote el epoch. El test `AC-03` sigue en `describe.skip`. No poner `communityMls = true` hasta que el panel cree el grupo con `createSecureGroup`, guarde `xmtpGroupId`, y la expulsión llame a `removeGroupMember`. Con el default `false`, las rutas de posts escriben el texto como antes.
+**Qué falta para cablear AC-03 (16 noviembre 2026).** `removeGroupMember` existe en `lib/xmtp/groups.ts` y no lo llama ninguna ruta ni el panel de ajustes. Manage → Channels no tiene cliente XMTP. No hay expulsión que rote el epoch. El test `AC-03` sigue en `describe.skip`. No poner `communityMls = true` hasta que el panel cree el grupo con `createSecureGroup`, guarde `xmtpGroupId`, y la expulsión llame a `removeGroupMember`. Con el default `false`, las rutas de posts escriben el texto como antes.
 
 ---
 

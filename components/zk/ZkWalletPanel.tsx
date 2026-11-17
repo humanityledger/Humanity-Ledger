@@ -3,14 +3,23 @@
 /**
  * ZkWalletPanel: the private payments wallet in Ledger Chat.
  *
- * Every number on this panel is read from the Aztec test network through the
- * PXE running in the browser (lib/aztec/wallet/client.ts), and every button
- * sends a real transaction proven on this device. There is no demo mode and
- * no balance kept anywhere else.
+ * Every number on this panel is read from Aztec through the PXE running in the
+ * browser (lib/aztec/wallet/client.ts), and every button sends a real
+ * transaction proven on this device. There is no demo mode and no balance kept
+ * anywhere else.
  *
- * Shield and Unshield move tokens between the public and the private balance
- * on Aztec. There is no bridge from Ethereum yet, so the labels say "Public"
- * and "Private", not "L1" and "ZK".
+ * Layout, top to bottom:
+ *   1. The network and Close.
+ *   2. The private balance, large, with Hide amounts and Sync; the public
+ *      remainder and, on Aztec Alpha, the Fee Juice that pays the next fee.
+ *   3. The action dock: Send, Receive, Add funds (Alpha), Shield, Unshield.
+ *   4. Three views: Overview (fees, Ethereum, account, what the network sees),
+ *      Activity (grouped by day, filterable, notes), Protocol.
+ * Each action opens a bottom sheet (components/zk/wallet/WalletSheets.tsx).
+ *
+ * Shield and Unshield move tokens between the public and the private balance on
+ * Aztec. Fee Juice is public; the note is not. Nothing here claims an audit: the
+ * Alpha box says the protocol is not externally audited.
  *
  * The parent's onShield / onUnshield / onSend callbacks are accepted for
  * compatibility and ignored: the panel always uses its own flows, so a parent
@@ -21,22 +30,27 @@ import Link from 'next/link';
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
-  ArrowDownToLine, ArrowUpFromLine, Send, X, ExternalLink, Copy, Check,
-  Droplets, AlertTriangle, ScanLine, UserPlus, ChevronDown, ChevronUp, Layers, Clock,
+  ArrowDownLeft, ArrowUpRight, Droplets, Fuel, Lock, Plus, RefreshCw, ShieldCheck, LockOpen, X,
 } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
-import { decodePaymentRequest, encodePaymentRequest, humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
+import { humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
 import {
-  AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, NO_PRIVATE_TOKENS_MESSAGE, explorerTxUrl, hasPrivateTokens, isWalletConfigured, networkLabel, type TokenKey,
+  AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, isWalletConfigured, networkLabel, type TokenKey,
 } from '@/lib/aztec/wallet/config';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
-import type { Activity } from '@/lib/aztec/wallet/history';
 import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
-import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
 import { WalletCreation } from '@/components/zk/WalletCreation';
+import {
+  ActionTile, BigAmount, Card, CardHead, CopyKV, Figure, FOCUS, HideAmountsButton, IconButton, INK, INK_2, INK_3, KV, NetworkChip, Notice,
+  PrimaryButton, Segmented, Sheet as SheetFrame, Spinner, TextButton, cleanAmount, shortHex, useHiddenAmounts,
+} from '@/components/zk/wallet/WalletUI';
+import { ActivityList, NotesCard, isInFlight } from '@/components/zk/wallet/WalletActivity';
+import { feeRunway } from '@/components/zk/wallet/walletLogic';
+
+export { feeRunway };
+import { ReceiveView, SendFlow, ShieldFlow, symbolOf } from '@/components/zk/wallet/WalletSheets';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -45,8 +59,6 @@ const FeeRequestBox = dynamic(() => import('@/components/zk/FeeSponsor').then((m
 
 // The Protocol tab is loaded only when opened (React.lazy): the wallet tab never pays for it.
 const ProtocolSummary = lazy(() => import('@/components/protocol/ProtocolSummary'));
-
-const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
 interface ZkWalletPanelProps {
   address: string;
@@ -62,25 +74,48 @@ interface ZkWalletPanelProps {
 }
 
 type Sheet = 'shield' | 'unshield' | 'send' | 'receive' | 'fees' | null;
+type View = 'overview' | 'activity' | 'protocol';
 
-const INK = '#15171c';
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 /** Shield, Unshield and Send need a configured token; Receive only shows the address. */
 const sheetAvailable = (s: Exclude<Sheet, null>) => s === 'receive' || (s === 'fees' ? ALPHA : hasPrivateTokens());
-/** First configured wallet slot (on Alpha the operator's token may sit in any slot). */
-const FIRST_TOKEN: TokenKey = AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC';
-/** What the user sees for a slot: the configured symbol (e.g. HLC), never the internal key. */
-const symbolOf = (key: TokenKey) => AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.symbol ?? key;
-const short = (s?: string, n = 6) => (s ? `${s.slice(0, n + 2)}…${s.slice(-n)}` : '');
+
+const SHEET_TITLE: Record<Exclude<Sheet, null>, string> = {
+  shield: 'Shield',
+  unshield: 'Unshield',
+  send: 'Send privately',
+  receive: 'Receive',
+  fees: 'Network fees',
+};
+
+const SHEET_SUBTITLE: Record<Exclude<Sheet, null>, string> = {
+  shield: 'Public balance to private notes',
+  unshield: 'Private notes to public balance',
+  send: 'Proven on this device',
+  receive: 'Your Aztec address and a payment request',
+  fees: 'Fee Juice pays every Aztec transaction',
+};
+
+/** How the next transaction pays (same words as the Fee Juice screen). */
+function planLabel(plan: string): string {
+  if (plan === 'claim') return 'Arrived deposit';
+  if (plan === 'balance') return 'Your Fee Juice';
+  if (plan === 'wait-claim') return 'Waiting for deposit';
+  if (plan === 'top-up') return 'Add more Fee Juice';
+  if (plan === 'sponsored') return 'Sponsored';
+  return 'Add Fee Juice';
+}
 
 /* -------------------------------------------------------------------------- */
 
 export function ZkWalletPanel({ address, onClose, className, initialSheet = null, onPaymentSent }: ZkWalletPanelProps) {
   const { state, wallet, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(address);
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
+  const [sheetBack, setSheetBack] = useState<(() => void) | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [tab, setTab] = useState<'wallet' | 'protocol'>('wallet');
+  const [syncedAt, setSyncedAt] = useState<number | null>(null);
+  const [view, setView] = useState<View>('overview');
+  const [hidden, toggleHidden] = useHiddenAmounts();
   const ready = state.phase === 'ready';
 
   const handleOpen = async () => {
@@ -98,6 +133,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
     try {
       await wallet.refresh();
       if (ALPHA) await wallet.refreshFeeJuice();
+      setSyncedAt(Date.now());
     } catch (err) {
       toast.error(humanError(err));
     } finally {
@@ -110,19 +146,22 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
     if (!ready || !wallet) return;
     // Alpha: the Fee Juice balance is shown with the balances, so read it on open and with every refresh.
     if (ALPHA) wallet.refreshFeeJuice().catch(() => {});
+    setSyncedAt(Date.now());
     const t = setInterval(() => {
       if (!wallet.state.busy) {
-        wallet.refresh().catch(() => {});
+        wallet.refresh().then(() => setSyncedAt(Date.now()), () => {});
         if (ALPHA) wallet.refreshFeeJuice().catch(() => {});
       }
     }, 30_000);
     return () => clearInterval(t);
   }, [ready, wallet]);
 
-  const notes = useMemo(
-    () => state.activity.filter((a) => (a.kind === 'receive' || a.kind === 'shield') && a.status === 'settled'),
-    [state.activity],
-  );
+  const inFlight = useMemo(() => state.activity.filter(isInFlight).length, [state.activity]);
+  const main = state.balances[0];
+  const closeSheet = () => {
+    setSheet(null);
+    setSheetBack(undefined);
+  };
 
   return (
     <motion.div
@@ -130,246 +169,202 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
-      className={`relative flex flex-col h-full bg-[#F4F5F7] text-[#15171c] ${className ?? ''}`}
+      className={`relative flex flex-col h-full bg-white text-[#15171c] ${className ?? ''}`}
+      aria-label="Private wallet"
     >
-      {/* Header: the network in plain words, then the balance as the one thing to read */}
-      <div className="flex-shrink-0 bg-white px-6 pt-6 pb-5 border-b border-[#eceef2]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[17px] font-semibold tracking-[-0.015em]">Private wallet</div>
-            <div className="mt-1 inline-flex items-center gap-1.5 text-[12.5px] text-[#5b6170]">
-              <span className={`w-1.5 h-1.5 rounded-full ${ready ? 'bg-[#1f9d55]' : 'bg-[#c3c8d0]'}`} aria-hidden="true" />
-              {ALPHA ? 'Aztec Alpha on Ethereum mainnet' : networkLabel()}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-9 px-4 shrink-0 rounded-full text-[13px] font-medium text-[#5b6170] hover:bg-[#f2f4f7] hover:text-[#0b0c0e] transition-colors"
-          >
-            Close
-          </button>
+      {/* 1. The network and Close */}
+      <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 pt-[max(20px,env(safe-area-inset-top))] pb-3">
+        <div className="min-w-0 flex flex-col gap-1.5">
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em] leading-none" style={{ color: INK }}>
+            Private wallet
+          </h1>
+          <NetworkChip label={ALPHA ? 'Aztec Alpha · Ethereum mainnet' : networkLabel()} live={ready} />
         </div>
+        <IconButton label="Close" onClick={onClose}>
+          <X size={20} strokeWidth={2} />
+        </IconButton>
+      </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        {/* 2. Balance and 3. actions */}
         {ready && state.aztecAddress && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-[12.5px] font-medium text-[#8a909c]">Private balance</span>
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={refreshing || state.busy}
-                className="text-[12.5px] font-medium text-[#5b6170] hover:text-[#0b0c0e] disabled:opacity-50 transition-colors"
-              >
-                {refreshing ? 'Syncing…' : 'Sync'}
-              </button>
-            </div>
-            {state.balances.length === 0 ? (
-              <div className="mt-1 text-[34px] font-semibold tracking-[-0.03em] tabular-nums text-[#c3c8d0]">0</div>
-            ) : (
-              <>
-                <div className="mt-1 flex items-baseline gap-2">
-                  <span className="text-[38px] leading-none font-semibold tracking-[-0.035em] tabular-nums">
-                    {formatUnits(state.balances[0].privateUnits, state.balances[0].decimals)}
-                  </span>
-                  <span className="text-[15px] font-medium text-[#5b6170]">{state.balances[0].symbol}</span>
-                </div>
-                {state.balances[0].publicUnits > 0n && (
-                  <p className="mt-1.5 text-[12.5px] text-[#727a88] tabular-nums">
-                    {formatUnits(state.balances[0].publicUnits, state.balances[0].decimals)} public, not yet shielded
-                  </p>
-                )}
-                {state.balances.length > 1 && (
-                  <div className="mt-4 space-y-2">
-                    {state.balances.slice(1).map((b) => <BalanceRow key={b.key} b={b} />)}
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {hasPrivateTokens() && <TextAction primary label="Send" onClick={() => setSheet('send')} />}
-              <TextAction primary={!hasPrivateTokens()} label="Receive" onClick={() => setSheet('receive')} />
-              {ALPHA && <TextAction label="Add funds" onClick={() => setSheet('fees')} />}
-              {hasPrivateTokens() && <TextAction label="Shield" onClick={() => setSheet('shield')} />}
-              {hasPrivateTokens() && <TextAction label="Unshield" onClick={() => setSheet('unshield')} />}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Tabs: the wallet, and a compact summary of /protocol from the same endpoint */}
-      <div role="tablist" aria-label="Private wallet sections" className="flex-shrink-0 flex gap-1 bg-white px-4 border-b border-[#E4E7EC]">
-        {(['wallet', 'protocol'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`h-11 px-3 text-[13px] font-medium border-b-2 -mb-px transition-colors duration-150 ease-out ${
-              tab === t ? 'border-[#15171C] text-[#15171C]' : 'border-transparent text-[#727A88] hover:text-[#15171C]'
-            }`}
-          >
-            {t === 'wallet' ? 'Wallet' : 'Protocol'}
-          </button>
-        ))}
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
-        {tab === 'protocol' ? (
-          <Suspense fallback={<div className="h-[340px] rounded-2xl bg-white border border-[#E4E7EC]" aria-busy="true" />}>
-            <ProtocolSummary />
-          </Suspense>
-        ) : (
-        <>
-        {/* Alpha info box — only shown on Aztec Alpha, reminds users of unaudited status */}
-        <AlphaInfoBox />
-        {!ready && state.phase === 'needs-fee-juice' ? (
-          // Same card and status rows as opening the wallet (WalletCreation), at the Fee Juice step.
-          <WalletCreation
-            phase={state.phase}
-            step={state.step}
-            blocked={null}
-            alpha={ALPHA}
-            networkName={networkLabel()}
-            linkedComputer={linkedComputer}
-            onOpen={handleOpen}
-          >
-            {state.error && (
-              <div className="mt-3 rounded-xl bg-[#fff4f4] border border-[#ffd6d6] px-3 py-2 text-[12.5px] text-[#b42318] break-words" role="alert">
-                {state.error}
-                <button type="button" onClick={() => navigator.clipboard?.writeText(state.error || '').catch(() => {})} className="ml-2 underline">Copy details</button>
-                <button type="button" onClick={() => open().catch(() => {})} className="ml-2 underline">Try again</button>
+          <div className="px-5 pt-3 pb-5">
+            <BalanceHero
+              balances={state.balances}
+              hidden={hidden}
+              onToggleHidden={toggleHidden}
+              refreshing={refreshing || state.busy}
+              onRefresh={handleRefresh}
+              syncedAt={syncedAt}
+              feeJuice={ALPHA ? state.feeJuice : undefined}
+              onShield={hasPrivateTokens() && main && main.publicUnits > 0n ? () => setSheet('shield') : undefined}
+            />
+            {/* Send and Receive first and wide; then the three ways money moves between balances. */}
+            <div className="mt-4 space-y-2" role="group" aria-label="Wallet actions">
+              <div className="grid grid-cols-2 gap-2">
+                {hasPrivateTokens() && <WideAction primary label="Send" icon={<ArrowUpRight size={19} strokeWidth={2.2} />} onClick={() => setSheet('send')} />}
+                <WideAction primary={!hasPrivateTokens()} label="Receive" icon={<ArrowDownLeft size={19} strokeWidth={2.2} />} onClick={() => setSheet('receive')} />
               </div>
-            )}
-            <div className="-mx-5 mt-3">
-              <FeeJuiceStation userAddress={address} />
-              <FeeRequestBox />
-            </div>
-          </WalletCreation>
-        ) : !ready ? (
-          <WalletCreation
-            phase={state.phase}
-            step={state.step}
-            error={state.error}
-            errorDetail={state.errorDetail}
-            blocked={openBlocked({ configured: isWalletConfigured(), hasAddress: /^0x[0-9a-fA-F]{40}$/.test(address), walletConnected, sameAccount })}
-            alpha={ALPHA}
-            networkName={networkLabel()}
-            linkedComputer={linkedComputer}
-            onOpen={handleOpen}
-            onCopyDetails={(detail) => {
-              // The exact reason, for support: step and raw error, never keys.
-              navigator.clipboard?.writeText(detail).then(
-                () => toast.success('Details copied. Paste them to support.'),
-                () => toast.error('Could not copy. Select the text in the console instead.'),
-              );
-            }}
-          />
-        ) : (
-          <>
-            {state.error && (
-              <div role="status" className="flex gap-2 rounded-xl bg-[#fff7e6] border border-[#f5dfb0] px-3 py-2.5 text-[12.5px] leading-snug text-[#7a5200]">
-                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                <span>{state.error}</span>
-              </div>
-            )}
-            {!hasPrivateTokens() && (
-              <p role="status" className="rounded-2xl bg-white border border-[#eceef2] px-4 py-3 text-[13px] leading-relaxed text-[#5b6170]">
-                {NO_PRIVATE_TOKENS_MESSAGE}
-              </p>
-            )}
-
-            {ALPHA && (
-              <Section title="Network fees" action={{ label: 'Add', onClick: () => setSheet('fees') }}>
-                <Row k="Fee Juice" v={state.feeJuice ? formatUnits(state.feeJuice.balance, 18, 4) : '…'} />
-                {state.feeJuice && state.feeJuice.claims.length > 0 && (
-                  <Row
-                    k="Deposits on the way"
-                    v={`${state.feeJuice.claims.length} (${state.feeJuice.claims.filter((c) => c.ready).length} ready)`}
-                  />
-                )}
-                {state.feeJuice && state.feeJuice.minForTx > 0n && (
-                  <Row k="Needed per transaction" v={`${formatUnits(state.feeJuice.minForTx, 18, 2)} at most`} />
-                )}
-                <Row k="Next fee paid from" v={state.feeJuice ? planLabel(state.feeJuice.plan) : '…'} />
-              </Section>
-            )}
-
-            {ALPHA && (
-              <Section title="On Ethereum">
-                <EthereumHoldings userAddress={address} />
-              </Section>
-            )}
-
-            <Section title="Account">
-              <CopyRow k="Aztec address" v={state.aztecAddress ?? ''} />
-              <CopyRow k="Ethereum address" v={address} />
-              <Row k="Network" v={ALPHA ? 'Aztec Alpha, settles on Ethereum' : networkLabel()} />
-              <Row k="Proofs" v="Made on this device" />
-              {linkedComputer && <Row k="Signing" v="Approved on your phone" />}
-            </Section>
-
-            {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
-            {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#r1' && <FirstPayment disabled={state.busy} />}
-            {ALPHA && state.phase === 'ready' && <IssueTokens disabled={state.busy} />}
-
-            <ActivityList items={state.activity} />
-
-            <div className="bg-white rounded-2xl border border-black/[0.05] overflow-hidden">
-              <button
-                type="button"
-                className="w-full flex items-center gap-2.5 px-4 py-3 text-left"
-                onClick={() => setShowNotes((v) => !v)}
-              >
-                <Layers size={16} className="text-black/60" strokeWidth={2.2} />
-                <span className="font-semibold text-[14px] flex-1">Shielded notes ({notes.length})</span>
-                {showNotes ? <ChevronUp size={16} className="text-black/40" /> : <ChevronDown size={16} className="text-black/40" />}
-              </button>
-              {showNotes && (
-                <div className="border-t border-black/[0.05]">
-                  <p className="px-4 pt-3 text-[12px] leading-relaxed text-black/50">
-                    Private notes this wallet has received or created by shielding. Only your browser can read them. Notes
-                    you have since spent still appear here; your balance above is always the current total.
-                  </p>
-                  {notes.length === 0 ? (
-                    <div className="px-4 py-3 text-[12px] text-black/40">No notes yet.</div>
-                  ) : (
-                    <ul className="divide-y divide-black/[0.04]">
-                      {notes.map((n) => (
-                        <li key={n.id} className="flex items-center gap-3 px-4 py-2.5 text-[12.5px] tabular-nums">
-                          <span className="font-semibold">{fmt(n)}</span>
-                          <span className="text-black/45">{n.kind === 'shield' ? 'from shielding' : `from ${short(n.counterparty)}`}</span>
-                          {n.blockNumber && <span className="ml-auto text-black/35">block {n.blockNumber}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+              {(ALPHA || hasPrivateTokens()) && (
+                <div className={`grid gap-2 ${ALPHA && hasPrivateTokens() ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {ALPHA && <ActionTile label="Add funds" icon={<Plus size={18} strokeWidth={2.2} />} onClick={() => setSheet('fees')} />}
+                  {hasPrivateTokens() && <ActionTile label="Shield" icon={<Lock size={17} strokeWidth={2.1} />} onClick={() => setSheet('shield')} />}
+                  {hasPrivateTokens() && <ActionTile label="Unshield" icon={<LockOpen size={17} strokeWidth={2.1} />} onClick={() => setSheet('unshield')} />}
                 </div>
               )}
             </div>
+          </div>
+        )}
 
-            <p className="px-1 pb-2 text-center text-[11.5px] leading-relaxed text-black/40">
-              Proofs are made on this device and sent to {ALPHA ? networkLabel() : 'the Aztec test network'}. Our server never sees your keys, your
-              balances or who you pay.{' '}
-              <Link href="/docs/zero-knowledge" className="underline underline-offset-2">
-                How it works
-              </Link>
-            </p>
-          </>
-        )}
-        </>
-        )}
+        {/* 4. Views */}
+        <div className="sticky top-0 z-[5] bg-white/95 backdrop-blur-sm px-5 py-2 border-b border-[#eef0f3]">
+          <Segmented<View>
+            label="Private wallet sections"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'overview', label: 'Overview' },
+              { value: 'activity', label: 'Activity', badge: inFlight || undefined },
+              { value: 'protocol', label: 'Protocol' },
+            ]}
+          />
+        </div>
+
+        <div className="px-4 sm:px-5 py-4 space-y-4 bg-[#fafbfc] min-h-[60%] pb-[max(24px,env(safe-area-inset-bottom))]">
+          {view === 'protocol' ? (
+            <Suspense fallback={<div className="h-[340px] rounded-[20px] bg-white border border-[#e4e7ec]" aria-busy="true" />}>
+              <ProtocolSummary />
+            </Suspense>
+          ) : (
+            <>
+              {/* Alpha info box — only shown on Aztec Alpha, reminds users of unaudited status */}
+              {view === 'overview' && <AlphaInfoBox />}
+              {!ready && state.phase === 'needs-fee-juice' ? (
+                // Same card and status rows as opening the wallet (WalletCreation), at the Fee Juice step.
+                <WalletCreation
+                  phase={state.phase}
+                  step={state.step}
+                  blocked={null}
+                  alpha={ALPHA}
+                  networkName={networkLabel()}
+                  linkedComputer={linkedComputer}
+                  onOpen={handleOpen}
+                >
+                  {state.error && (
+                    <div className="mt-3">
+                      <Notice
+                        tone="bad"
+                        action={
+                          <>
+                            <TextButton onClick={() => navigator.clipboard?.writeText(state.error || '').catch(() => {})}>Copy details</TextButton>
+                            <TextButton onClick={() => open().catch(() => {})}>Try again</TextButton>
+                          </>
+                        }
+                      >
+                        {state.error}
+                      </Notice>
+                    </div>
+                  )}
+                  <div className="-mx-5 mt-3">
+                    <FeeJuiceStation userAddress={address} />
+                    <FeeRequestBox />
+                  </div>
+                </WalletCreation>
+              ) : !ready ? (
+                <WalletCreation
+                  phase={state.phase}
+                  step={state.step}
+                  error={state.error}
+                  errorDetail={state.errorDetail}
+                  blocked={openBlocked({ configured: isWalletConfigured(), hasAddress: /^0x[0-9a-fA-F]{40}$/.test(address), walletConnected, sameAccount })}
+                  alpha={ALPHA}
+                  networkName={networkLabel()}
+                  linkedComputer={linkedComputer}
+                  onOpen={handleOpen}
+                  onCopyDetails={(detail) => {
+                    // The exact reason, for support: step and raw error, never keys.
+                    navigator.clipboard?.writeText(detail).then(
+                      () => toast.success('Details copied. Paste them to support.'),
+                      () => toast.error('Could not copy. Select the text in the console instead.'),
+                    );
+                  }}
+                />
+              ) : view === 'activity' ? (
+                <>
+                  <ActivityList
+                    items={state.activity}
+                    hidden={hidden}
+                    emptyHint={ALPHA ? 'Shield tokens, then send a private payment.' : 'Get test tokens, shield them, then send a private payment.'}
+                  />
+                  <NotesCard items={state.activity} hidden={hidden} />
+                </>
+              ) : (
+                <>
+                  {state.error && <Notice tone="warn">{state.error}</Notice>}
+                  {!hasPrivateTokens() && <Notice>{NO_PRIVATE_TOKENS_MESSAGE}</Notice>}
+
+                  {ALPHA && (
+                    <Section title="Network fees" action={{ label: 'Add', onClick: () => setSheet('fees') }}>
+                      <KV k="Fee Juice" v={state.feeJuice ? <Figure text={formatUnits(state.feeJuice.balance, 18, 4)} hidden={hidden} strong /> : '…'} />
+                      {state.feeJuice && state.feeJuice.claims.length > 0 && (
+                        <KV
+                          k="Deposits on the way"
+                          v={`${state.feeJuice.claims.length} (${state.feeJuice.claims.filter((c) => c.ready).length} ready)`}
+                        />
+                      )}
+                      {state.feeJuice && state.feeJuice.minForTx > 0n && (
+                        <KV k="Needed per transaction" v={`${formatUnits(state.feeJuice.minForTx, 18, 2)} at most`} />
+                      )}
+                      <KV k="Next fee paid from" v={state.feeJuice ? planLabel(state.feeJuice.plan) : '…'} />
+                    </Section>
+                  )}
+
+                  {ALPHA && (
+                    <Section title="On Ethereum">
+                      <EthereumHoldings userAddress={address} />
+                    </Section>
+                  )}
+
+                  <Section title="Account">
+                    <CopyKV k="Aztec address" v={state.aztecAddress ?? ''} />
+                    <CopyKV k="Ethereum address" v={address} />
+                    <KV k="Network" v={ALPHA ? 'Aztec Alpha, settles on Ethereum' : networkLabel()} />
+                    <KV k="Proofs" v="Made on this device" />
+                    {linkedComputer && <KV k="Signing" v="Approved on your phone" />}
+                  </Section>
+
+                  <WhatIsSeen />
+
+                  {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
+                  {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#r1' && <FirstPayment disabled={state.busy} />}
+                  {ALPHA && state.phase === 'ready' && <IssueTokens disabled={state.busy} />}
+
+                  <p className="px-2 pb-2 text-center text-[13px] leading-relaxed" style={{ color: INK_3 }}>
+                    Proofs are made on this device and sent to {ALPHA ? networkLabel() : 'the Aztec test network'}. Our server never sees your keys, your
+                    balances or who you pay.{' '}
+                    <Link href="/docs/zero-knowledge" className="underline underline-offset-2 font-medium" style={{ color: INK }}>
+                      How it works
+                    </Link>
+                  </p>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
         {sheet && ready && sheetAvailable(sheet) && (
-          <SheetFrame key={sheet} title={SHEET_TITLE[sheet]} onClose={() => setSheet(null)}>
-            {sheet === 'shield' && <ShieldForm mode="shield" onDone={() => setSheet(null)} />}
-            {sheet === 'unshield' && <ShieldForm mode="unshield" onDone={() => setSheet(null)} />}
-            {sheet === 'send' && <SendForm onDone={() => setSheet(null)} onPaymentSent={onPaymentSent} />}
+          <SheetFrame key={sheet} title={SHEET_TITLE[sheet]} subtitle={SHEET_SUBTITLE[sheet]} onClose={closeSheet} onBack={sheetBack}>
+            {sheet === 'shield' && <ShieldFlow mode="shield" onDone={closeSheet} />}
+            {sheet === 'unshield' && <ShieldFlow mode="unshield" onDone={closeSheet} />}
+            {sheet === 'send' && (
+              <SendFlow
+                onDone={closeSheet}
+                onPaymentSent={onPaymentSent}
+                onStepChange={(_, back) => setSheetBack(() => back)}
+              />
+            )}
             {sheet === 'receive' && <ReceiveView aztecAddress={state.aztecAddress!} />}
             {sheet === 'fees' && <FeeJuiceStation userAddress={address} />}
           </SheetFrame>
@@ -381,119 +376,174 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
 
 export default ZkWalletPanel;
 
-const SHEET_TITLE: Record<Exclude<Sheet, null>, string> = {
-  shield: 'Shield',
-  unshield: 'Unshield',
-  send: 'Send privately',
-  receive: 'Receive',
-  fees: 'Network fees',
-};
-
-function fmt(a: Activity) {
-  if (!a.amount || !a.token) return '';
-  const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.key === a.token);
-  return `${formatUnits(BigInt(a.amount), t?.decimals ?? 18)} ${t?.symbol ?? a.token}`;
-}
-
 /* --------------------------------------------------------------- pieces */
 
-/** How the next transaction pays (same words as the Fee Juice screen). */
-function planLabel(plan: string): string {
-  if (plan === 'claim') return 'Arrived deposit';
-  if (plan === 'balance') return 'Your Fee Juice';
-  if (plan === 'wait-claim') return 'Waiting for deposit';
-  if (plan === 'top-up') return 'Add more Fee Juice';
-  if (plan === 'sponsored') return 'Sponsored';
-  return 'Add Fee Juice';
-}
-
-function TextAction({ label, onClick, primary }: { label: string; onClick: () => void; primary?: boolean }) {
+/** Send and Receive: wide, icon and word side by side. */
+function WideAction({ label, icon, onClick, primary }: { label: string; icon: React.ReactNode; onClick: () => void; primary?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`h-11 rounded-full text-[14px] font-semibold tracking-[-0.01em] transition-[background-color,transform] active:scale-[0.98] ${
-        primary ? 'bg-[#0b0c0e] text-white hover:bg-[#23262d]' : 'bg-[#f2f4f7] text-[#0b0c0e] hover:bg-[#e8ebef]'
+      className={`h-[60px] rounded-2xl flex items-center justify-center gap-2.5 text-[16px] font-semibold tracking-[-0.01em] transition-[background-color,transform] duration-150 active:scale-[0.98] ${FOCUS} ${
+        primary ? 'bg-[#15171c] text-white hover:bg-[#262932]' : 'bg-white text-[#15171c] border-2 border-[#15171c] hover:bg-[#f7f8fa]'
       }`}
     >
+      <span aria-hidden="true">{icon}</span>
       {label}
     </button>
   );
 }
 
+/** A titled card. The action, when there is one, sits on the right of the title. */
 function Section({ title, action, children }: { title: string; action?: { label: string; onClick: () => void }; children: React.ReactNode }) {
   return (
-    <section className="bg-white rounded-2xl border border-[#eceef2] px-4 pt-3.5 pb-1">
-      <div className="flex items-center justify-between pb-1">
-        <h3 className="text-[12.5px] font-medium text-[#8a909c]">{title}</h3>
-        {action && (
-          <button type="button" onClick={action.onClick} className="text-[13px] font-semibold text-[#0b0c0e] hover:opacity-70">
-            {action.label}
-          </button>
+    <Card label={title}>
+      <CardHead title={title} action={action ? <TextButton onClick={action.onClick}>{action.label}</TextButton> : undefined} />
+      <div className="px-5 pb-2">{children}</div>
+    </Card>
+  );
+}
+
+function BalanceHero({
+  balances,
+  hidden,
+  onToggleHidden,
+  refreshing,
+  onRefresh,
+  syncedAt,
+  feeJuice,
+  onShield,
+}: {
+  balances: TokenBalance[];
+  hidden: boolean;
+  onToggleHidden: () => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+  syncedAt: number | null;
+  feeJuice?: { balance: bigint; minForTx: bigint };
+  onShield?: () => void;
+}) {
+  const main = balances[0];
+  const runway = feeJuice ? feeRunway(feeJuice.balance, feeJuice.minForTx) : null;
+  return (
+    <div className="relative rounded-[28px] border border-[#e4e7ec] bg-white px-5 pt-4 pb-5 overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]">
+      {/* A fine engraved grid, the only ornament: ink at 4 %. */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.6]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, rgba(21,23,28,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(21,23,28,0.04) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+          maskImage: 'radial-gradient(120% 90% at 100% 0%, black, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(120% 90% at 100% 0%, black, transparent 70%)',
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative">
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: INK_2 }}>
+            <ShieldCheck size={15} strokeWidth={2} aria-hidden="true" />
+            Private balance
+          </span>
+          <span className="flex items-center -mr-2">
+            <HideAmountsButton hidden={hidden} onToggle={onToggleHidden} />
+            <IconButton label={refreshing ? 'Syncing' : 'Sync'} onClick={onRefresh} disabled={refreshing} size={40}>
+              {refreshing ? <Spinner size={16} /> : <RefreshCw size={17} strokeWidth={2} />}
+            </IconButton>
+          </span>
+        </div>
+
+        <div className="mt-2" data-testid="wallet-balance">
+          {!main ? (
+            <BigAmount text="0" symbol="" muted hidden={hidden} />
+          ) : (
+            <BigAmount text={formatUnits(main.privateUnits, main.decimals)} symbol={main.symbol} hidden={hidden} />
+          )}
+        </div>
+
+        <p className="mt-2 text-[13px] tabular-nums" style={{ color: INK_3 }} role="status" aria-live="polite">
+          {refreshing ? 'Syncing with Aztec…' : syncedAt ? `Synced at ${new Date(syncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet'}
+        </p>
+
+        {main && main.publicUnits > 0n && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-[#f7f8fa] border border-[#eceef2] pl-4 pr-3 py-2">
+            <span className="min-w-0">
+              <span className="block text-[14px] font-semibold tabular-nums" style={{ color: INK }}>
+                <Figure text={formatUnits(main.publicUnits, main.decimals)} hidden={hidden} strong /> {main.symbol} public
+              </span>
+              <span className="block text-[12.5px]" style={{ color: INK_3 }}>
+                Not yet shielded, visible on the network
+              </span>
+            </span>
+            {onShield && <TextButton onClick={onShield}>Shield</TextButton>}
+          </div>
+        )}
+
+        {balances.length > 1 && (
+          <ul className="mt-3 divide-y divide-[#eef0f3] border-t border-[#eef0f3]">
+            {balances.slice(1).map((b) => (
+              <li key={b.key} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="text-[14px] font-semibold" style={{ color: INK }}>
+                  {b.symbol}
+                </span>
+                <span className="text-right">
+                  <Figure text={formatUnits(b.privateUnits, b.decimals)} hidden={hidden} strong className="block text-[16px]" />
+                  {b.publicUnits > 0n && (
+                    <span className="block text-[12.5px] tabular-nums" style={{ color: INK_3 }}>
+                      {hidden ? '••••' : formatUnits(b.publicUnits, b.decimals)} public, not yet shielded
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {feeJuice && (
+          <div className="mt-3 flex items-center gap-3 pt-3 border-t border-[#eef0f3]">
+            <span className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center shrink-0" aria-hidden="true">
+              <Fuel size={15} strokeWidth={2} style={{ color: INK }} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[14px] font-semibold" style={{ color: INK }}>
+                <Figure text={formatUnits(feeJuice.balance, 18, 4)} hidden={hidden} strong /> Fee Juice
+              </span>
+              <span className="block text-[12.5px]" style={{ color: INK_3 }}>
+                {runway === null ? 'Pays the network fee, publicly' : runway === 0 ? 'Not enough for the next transaction' : `Enough for at least ${runway} transaction${runway === 1 ? '' : 's'}`}
+              </span>
+            </span>
+          </div>
         )}
       </div>
-      {children}
-    </section>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 py-3 border-t border-[#eef0f3] first-of-type:border-t-0">
-      <span className="text-[14px] text-[#5b6170] shrink-0">{k}</span>
-      <span className="text-[14px] font-medium text-right tabular-nums text-[#0b0c0e] min-w-0 truncate">{v}</span>
     </div>
   );
 }
 
-function CopyRow({ k, v }: { k: string; v: string }) {
-  const [copied, setCopied] = useState(false);
+/** What stays private and what the network can see, side by side. */
+function WhatIsSeen() {
   return (
-    <button
-      type="button"
-      onClick={() => { navigator.clipboard?.writeText(v).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
-      className="w-full flex items-baseline justify-between gap-4 py-3 border-t border-[#eef0f3] first-of-type:border-t-0 text-left"
-    >
-      <span className="text-[14px] text-[#5b6170] shrink-0">{k}</span>
-      <span className="text-[13px] font-mono text-[#0b0c0e] truncate">{copied ? 'Copied' : short(v, 6)}</span>
-    </button>
-  );
-}
-
-function BalanceRow({ b }: { b: TokenBalance }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-[13px] font-semibold text-black/70">{b.symbol}</span>
-      <span className="text-right">
-        <span className="block text-[18px] font-semibold tabular-nums tracking-tight">{formatUnits(b.privateUnits, b.decimals)}</span>
-        {b.publicUnits > 0n && (
-          <span className="block text-[11.5px] tabular-nums text-black/45">
-            {formatUnits(b.publicUnits, b.decimals)} public, not yet shielded
+    <Card label="What the network sees">
+      <CardHead title="What the network sees" />
+      <div className="px-5 pb-5 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] p-4">
+          <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: INK }}>
+            <Lock size={15} strokeWidth={2} aria-hidden="true" /> Private
           </span>
-        )}
-      </span>
-    </div>
-  );
-}
-
-function CopyLine({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard?.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      }}
-      className="mt-3 w-full flex items-center justify-between gap-2 rounded-xl bg-black/[0.035] px-3 py-2 text-left hover:bg-black/[0.06] transition-colors"
-    >
-      <span className="min-w-0">
-        <span className="block text-[10.5px] font-mono uppercase tracking-[0.12em] text-black/45">{label}</span>
-        <span className="block truncate font-mono text-[12px] text-black/75">{value}</span>
-      </span>
-      {copied ? <Check size={14} /> : <Copy size={14} className="text-black/50" />}
-    </button>
+          <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
+            The amount, the sender and the recipient of a private payment, and your private balance.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[#e4e7ec] bg-white p-4">
+          <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: INK }}>
+            <LockOpen size={15} strokeWidth={2} aria-hidden="true" /> Public
+          </span>
+          <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
+            {ALPHA
+              ? 'That your account paid a network fee in Fee Juice, a Fee Juice deposit from Ethereum, and any amount you shield or unshield.'
+              : 'That a transaction happened, and any amount you shield or unshield.'}
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -506,6 +556,19 @@ export function openBlocked(p: { configured: boolean; hasAddress: boolean; walle
   return null;
 }
 
+/* --------------------------------------------------------------- operator and test tools */
+
+function ToolCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card label={title} className="p-5">
+      <h3 className="text-[15px] font-semibold" style={{ color: INK }}>
+        {title}
+      </h3>
+      {children}
+    </Card>
+  );
+}
+
 function IssueTokens({ disabled }: { disabled: boolean }) {
   const { wallet } = useAztecWallet('');
   const keys = wallet?.issuableTokens() ?? [];
@@ -514,6 +577,7 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
   if (!wallet || keys.length === 0) return null;
   const key = keys[0];
   const sym = symbolOf(key);
+  const decimals = AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.decimals ?? 18;
   const run = async () => {
     setBusy(true);
     const id = toast.loading(`Issuing ${amount} ${sym} to your private balance. The proof is made on this device.`);
@@ -527,29 +591,29 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
     }
   };
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.05] p-4">
-      <div className="text-[13px] font-semibold">Issue {sym}</div>
-      <p className="mt-1 text-[12px] leading-relaxed text-black/50">
+    <ToolCard title={`Issue ${sym}`}>
+      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
         This account is the issuer of {sym} on Aztec Alpha. Issued tokens go to your private balance. At most 1,000 {sym} per issue; the fee is paid in Fee Juice.
       </p>
       <div className="mt-3 flex gap-2">
         <input
           inputMode="decimal"
           value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-          className="h-11 flex-1 rounded-xl border border-black/10 px-3 text-[14px] font-mono"
+          onChange={(e) => setAmount(cleanAmount(e.target.value, decimals))}
+          className="min-h-[48px] flex-1 min-w-0 rounded-2xl border-2 border-[#e4e7ec] px-4 text-[16px] tabular-nums outline-none focus:border-[#15171c]"
           aria-label={`Amount of ${sym} to issue`}
+          style={{ color: INK }}
         />
         <button
           type="button"
           disabled={disabled || busy || !amount}
           onClick={run}
-          className="h-11 px-4 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold disabled:opacity-40"
+          className={`min-h-[48px] px-5 rounded-2xl bg-[#15171c] text-white text-[15px] font-semibold disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
         >
           {busy ? 'Issuing…' : 'Issue'}
         </button>
       </div>
-    </div>
+    </ToolCard>
   );
 }
 
@@ -561,7 +625,9 @@ function FirstPayment({ disabled }: { disabled: boolean }) {
   const [err, setErr] = useState('');
   if (!wallet) return null;
   const run = async () => {
-    setBusy(true); setErr(''); setLog([]);
+    setBusy(true);
+    setErr('');
+    setLog([]);
     try {
       await wallet.firstPaymentWithNewToken(
         { name: 'Humanity Ledger Corp.', symbol: 'HLC', decimals: 6, mint: '1', pay: '0.10', to: to.trim() },
@@ -577,30 +643,34 @@ function FirstPayment({ disabled }: { disabled: boolean }) {
   const done = log.filter((l) => l.txHash);
   const token = log.find((l) => l.token)?.token;
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.05] p-4">
-      <div className="text-[13px] font-semibold">First private payment (operator)</div>
-      <p className="mt-1 text-[12px] leading-relaxed text-black/50">
-        Creates HLC with this account as issuer, issues 1 HLC to your private balance and pays 0.10 HLC privately to the address below. Three transactions, each paid in Fee Juice. Keep this tab open until all three settle.
+    <ToolCard title="First private payment (operator)">
+      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
+        Creates HLC with this account as issuer, issues 1 HLC to your private balance and pays 0.10 HLC privately to the address below. Three transactions, each paid in Fee
+        Juice. Keep this tab open until all three settle.
       </p>
       <input
         value={to}
         onChange={(e) => setTo(e.target.value)}
         placeholder="Recipient Aztec address (0x… 64 characters)"
-        className="mt-3 h-11 w-full rounded-xl border border-black/10 px-3 text-[12px] font-mono"
+        className="mt-3 min-h-[48px] w-full rounded-2xl border-2 border-[#e4e7ec] px-4 text-[13.5px] font-mono outline-none focus:border-[#15171c]"
         aria-label="Recipient Aztec address"
+        style={{ color: INK }}
       />
-      <button
-        type="button"
-        disabled={disabled || busy || to.trim().length !== 66}
-        onClick={run}
-        className="mt-2 h-11 w-full rounded-xl bg-[#15171c] text-white text-[13px] font-semibold disabled:opacity-40"
-      >
-        {busy ? `Working: ${log[log.length - 1]?.step ?? 'starting'}…` : 'Create HLC and pay 0.10'}
-      </button>
-      {token && <CopyRow k="Token" v={token} />}
-      {done.map((l) => <CopyRow key={l.step + l.txHash} k={l.step === 'deploy' ? 'Hash 0 (token)' : l.step === 'mint' ? 'Hash 1 (issue)' : 'Hash 2 (payment)'} v={l.txHash!} />)}
-      {err && <p className="mt-2 text-[12px] text-red-700">{err}</p>}
-    </div>
+      <div className="mt-2">
+        <PrimaryButton disabled={disabled || to.trim().length !== 66} busy={busy} onClick={run}>
+          {busy ? `Working: ${log[log.length - 1]?.step ?? 'starting'}…` : 'Create HLC and pay 0.10'}
+        </PrimaryButton>
+      </div>
+      {token && <CopyKV k="Token" v={token} />}
+      {done.map((l) => (
+        <CopyKV key={l.step + l.txHash} k={l.step === 'deploy' ? 'Hash 0 (token)' : l.step === 'mint' ? 'Hash 1 (issue)' : 'Hash 2 (payment)'} v={l.txHash!} />
+      ))}
+      {err && (
+        <div className="mt-2">
+          <Notice tone="bad">{err}</Notice>
+        </div>
+      )}
+    </ToolCard>
   );
 }
 
@@ -621,11 +691,9 @@ function Faucet({ disabled }: { disabled: boolean }) {
     }
   };
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.05] p-4">
-      <div className="flex items-center gap-2 text-[13px] font-semibold">
-        <Droplets size={15} className="text-black/60" /> Get test tokens
-      </div>
-      <p className="mt-1 text-[12px] leading-relaxed text-black/50">
+    <ToolCard title="Get test tokens">
+      <p className="mt-1 text-[14px] leading-relaxed flex gap-2" style={{ color: INK_2 }}>
+        <Droplets size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
         Free test tokens for the Aztec test network. They have no value and cannot be exchanged.
       </p>
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -635,421 +703,16 @@ function Faucet({ disabled }: { disabled: boolean }) {
             type="button"
             disabled={disabled || !!busy}
             onClick={() => run(t.key)}
-            className="h-9 rounded-xl border border-black/10 text-[12px] font-semibold hover:bg-black/[0.04] disabled:opacity-40 flex items-center justify-center gap-1.5"
+            className={`min-h-[48px] rounded-2xl border border-[#d4d8de] text-[14px] font-semibold hover:bg-[#f7f8fa] disabled:opacity-40 ${FOCUS}`}
+            style={{ color: INK }}
           >
             {busy === t.key ? 'Adding…' : `+${FAUCET_AMOUNT[t.key]} ${t.symbol}`}
           </button>
         ))}
       </div>
-    </div>
+    </ToolCard>
   );
 }
 
-const KIND_LABEL: Record<Activity['kind'], string> = {
-  shield: 'Shielded',
-  unshield: 'Unshielded',
-  send: 'Sent',
-  receive: 'Received',
-  faucet: 'Test tokens',
-  issue: 'Issued',
-  deploy: 'Private account created',
-  operator: 'Operator transaction',
-};
-
-const STATUS_LABEL: Record<Activity['status'], string> = {
-  proving: 'Proving on this device',
-  pending: 'Waiting for the network',
-  settled: 'Settled',
-  failed: 'Failed',
-};
-
-function ActivityList({ items }: { items: Activity[] }) {
-  return (
-    <div className="bg-white rounded-2xl border border-black/[0.05] overflow-hidden">
-      <div className="px-4 py-3.5 border-b border-black/[0.05] flex items-center justify-between">
-        <span className="font-semibold text-[14px]">Recent transactions</span>
-        <span className="text-[12px] text-black/40">{items.length}</span>
-      </div>
-      {items.length === 0 ? (
-        <div className="py-8 flex flex-col items-center gap-2 text-black/45">
-          <Clock size={20} />
-          <span className="text-[13px] font-semibold text-black/70">No transactions yet</span>
-          <span className="text-[12px] text-center max-w-[220px]">
-            {ALPHA ? 'Shield tokens, then send a private payment.' : 'Get test tokens, shield them, then send a private payment.'}
-          </span>
-        </div>
-      ) : (
-        <ul className="divide-y divide-black/[0.04]">
-          {items.slice(0, 40).map((a) => {
-            const inbound = a.kind === 'receive' || a.kind === 'faucet' || a.kind === 'issue';
-            return (
-              <li key={a.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center shrink-0">
-                  {a.status === 'proving' || a.status === 'pending' ? (
-                    <Clock size={14} strokeWidth={1.75} className="text-black/60" aria-label="In progress" />
-                  ) : a.status === 'failed' ? (
-                    <AlertTriangle size={14} className="text-[#c0362c]" />
-                  ) : inbound ? (
-                    <ArrowDownToLine size={14} className="text-black/70" />
-                  ) : (
-                    <ArrowUpFromLine size={14} className="text-black/70" />
-                  )}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] font-semibold truncate">
-                    {KIND_LABEL[a.kind]}
-                    {a.counterparty && (a.kind === 'send' || a.kind === 'receive' || a.kind === 'unshield') && (
-                      <span className="font-normal text-black/50"> {a.kind === 'receive' ? 'from' : 'to'} {short(a.counterparty)}</span>
-                    )}
-                  </span>
-                  <span className={`block text-[11.5px] ${a.status === 'failed' ? 'text-[#c0362c]' : 'text-black/45'}`}>
-                    {(a.status === 'failed' || a.status === 'pending') && a.error ? a.error : STATUS_LABEL[a.status]}
-                    {a.blockNumber ? ` · block ${a.blockNumber}` : ''}
-                  </span>
-                </span>
-                <span className="flex flex-col items-end gap-0.5 shrink-0">
-                  {a.amount && (
-                    <span className="text-[13px] font-semibold tabular-nums">
-                      {inbound || a.kind === 'shield' ? '+' : '−'}
-                      {fmt(a)}
-                    </span>
-                  )}
-                  {a.txHash && (
-                    <a
-                      href={explorerTxUrl(a.txHash)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] text-black/45 hover:text-black flex items-center gap-0.5"
-                    >
-                      <ExternalLink size={9} /> Explorer
-                    </a>
-                  )}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/* --------------------------------------------------------------- sheets */
-
-function SheetFrame({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <motion.div className="absolute inset-0 z-10 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <motion.div
-        role="dialog"
-        aria-label={title}
-        initial={{ y: 40 }}
-        animate={{ y: 0 }}
-        exit={{ y: 40 }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
-        className="relative max-h-[88%] overflow-y-auto rounded-t-3xl bg-white px-5 pt-4 pb-6"
-      >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/10" />
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-[16px] font-semibold">{title}</span>
-          <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center">
-            <X size={15} />
-          </button>
-        </div>
-        {children}
-      </motion.div>
-    </motion.div>
-  );
-}
-
-function TokenPicker({ value, onChange }: { value: TokenKey; onChange: (k: TokenKey) => void }) {
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {AZTEC_WALLET_CONFIG.tokens.map((t) => (
-        <button
-          key={t.key}
-          type="button"
-          onClick={() => onChange(t.key)}
-          className={`h-9 rounded-xl border text-[12.5px] font-semibold transition-colors ${
-            value === t.key ? 'border-[#15171c] bg-[#15171c] text-white' : 'border-black/10 hover:bg-black/[0.04]'
-          }`}
-        >
-          {t.symbol}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function AmountField({ value, onChange, max, decimals, symbol }: { value: string; onChange: (v: string) => void; max: bigint; decimals: number; symbol: string }) {
-  return (
-    <label className="block">
-      <span className="flex items-center justify-between text-[12px] text-black/50">
-        <span>Amount</span>
-        <button type="button" onClick={() => onChange(formatUnits(max, decimals, decimals).replace(/,/g, ''))} className="font-semibold text-black/70 hover:text-black">
-          Available {formatUnits(max, decimals)} {symbol}
-        </button>
-      </span>
-      <input
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder="0.00"
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ''))}
-        className="mt-1.5 w-full h-12 rounded-xl border border-black/10 px-3.5 text-[18px] font-semibold tabular-nums outline-none focus:border-[#15171c]"
-      />
-    </label>
-  );
-}
-
-function SubmitButton({ busy, children, disabled }: { busy: boolean; children: React.ReactNode; disabled?: boolean }) {
-  return (
-    <button
-      type="submit"
-      disabled={busy || disabled}
-      className="w-full h-12 rounded-xl text-white text-[14.5px] font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
-      style={{ background: INK }}
-    >
-      {busy && <Clock size={16} strokeWidth={1.75} aria-hidden />}
-      {children}
-    </button>
-  );
-}
-
-function ShieldForm({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () => void }) {
-  const { state, wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
-  const [amount, setAmount] = useState('');
-  const [busy, setBusy] = useState(false);
-  const bal = state.balances.find((b) => b.key === token);
-  const max = mode === 'shield' ? bal?.publicUnits ?? 0n : bal?.privateUnits ?? 0n;
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wallet) return;
-    setBusy(true);
-    const id = toast.loading('Making the proof on this device. This can take up to a minute.');
-    try {
-      if (mode === 'shield') await wallet.shield(token, amount);
-      else await wallet.unshield(token, amount);
-      toast.success(mode === 'shield' ? 'Shielded. The amount is now private.' : 'Unshielded to your public balance.', { id });
-      onDone();
-    } catch (err) {
-      toast.error(humanError(err), { id });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <p className="text-[12.5px] leading-relaxed text-black/55">
-        {mode === 'shield'
-          ? 'Moves tokens from your public Aztec balance into private notes. The amount you shield is visible on the network; what you do with it afterwards is not.'
-          : 'Moves tokens from your private notes to your public Aztec balance. The amount becomes visible on the network.'}
-      </p>
-      <TokenPicker value={token} onChange={setToken} />
-      <AmountField value={amount} onChange={setAmount} max={max} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? symbolOf(token)} />
-      <SubmitButton busy={busy} disabled={!amount || max === 0n}>
-        {mode === 'shield' ? 'Shield' : 'Unshield'}
-      </SubmitButton>
-    </form>
-  );
-}
-
-function SendForm({ onDone, onPaymentSent }: { onDone: () => void; onPaymentSent?: (info: { txHash: string; token: TokenKey }) => void }) {
-  const { state, wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
-  const [amount, setAmount] = useState('');
-  const [to, setTo] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [busy, setBusy] = useState(false);
-  // The payment in flight: its stage is read from the wallet's own activity record.
-  const [run, setRun] = useState<{ startedAt: number; amount: string; symbol: string; to: string; error?: string; txHash?: string } | null>(null);
-  const bal = state.balances.find((b) => b.key === token);
-  const entry = useMemo(() => {
-    if (!run) return undefined;
-    return state.activity
-      .filter((a) => a.kind === 'send' && a.createdAt >= run.startedAt - 2000 && (!a.counterparty || a.counterparty.toLowerCase() === run.to.toLowerCase()))
-      .sort((a, b) => b.createdAt - a.createdAt)[0];
-  }, [run, state.activity]);
-  const stage: PaymentStage = run?.error
-    ? 'failed'
-    : entry?.status === 'settled'
-      ? 'settled'
-      : entry?.status === 'failed'
-        ? 'failed'
-        : entry?.status === 'pending'
-          ? 'sending'
-          : entry?.status === 'proving'
-            ? 'proving'
-            : 'preparing';
-  const txHash = entry?.txHash ?? run?.txHash;
-
-  const applyScan = (text: string) => {
-    const req = decodePaymentRequest(text);
-    if (!req) {
-      toast.error('That QR code is not an Aztec payment request.');
-      return;
-    }
-    setTo(req.address);
-    if (req.token) setToken(req.token);
-    if (req.amount) setAmount(req.amount);
-    setScanning(false);
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wallet) return;
-    setBusy(true);
-    setRun({ startedAt: Date.now(), amount, symbol: bal?.symbol ?? symbolOf(token), to });
-    try {
-      const receipt: any = await wallet.send(token, amount, to);
-      const hash = String(receipt?.txHash ?? '');
-      setRun((r) => (r ? { ...r, txHash: hash || r.txHash } : r));
-      onPaymentSent?.({ txHash: hash, token });
-    } catch (err) {
-      setRun((r) => (r ? { ...r, error: humanError(err) } : r));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (run) {
-    return (
-      <PaymentProgress
-        stage={stage}
-        amount={run.amount}
-        symbol={run.symbol}
-        recipient={run.to}
-        network={networkLabel()}
-        startedAt={run.startedAt}
-        txHash={txHash}
-        blockNumber={entry?.blockNumber}
-        error={run.error ?? entry?.error}
-        explorerUrl={txHash ? explorerTxUrl(txHash) : undefined}
-        onDone={() => { setRun(null); if (stage === 'settled') onDone(); }}
-        onRetry={() => setRun(null)}
-      />
-    );
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <label className="block">
-        <span className="text-[12px] text-black/50">Recipient's Aztec address</span>
-        <div className="mt-1.5 flex gap-2">
-          <input
-            value={to}
-            onChange={(e) => setTo(e.target.value.trim())}
-            onBlur={() => {
-              const req = decodePaymentRequest(to);
-              if (req) applyScan(to);
-            }}
-            placeholder="0x… (64 characters)"
-            spellCheck={false}
-            className="min-w-0 flex-1 h-11 rounded-xl border border-black/10 px-3 font-mono text-[12px] outline-none focus:border-[#15171c]"
-          />
-          <button
-            type="button"
-            onClick={() => setScanning((v) => !v)}
-            aria-label="Scan a QR code"
-            className="h-11 w-11 shrink-0 rounded-xl border border-black/10 flex items-center justify-center hover:bg-black/[0.04]"
-          >
-            <ScanLine size={17} />
-          </button>
-        </div>
-      </label>
-      {scanning && (
-        <div className="overflow-hidden rounded-2xl border border-black/10">
-          <QrScanner onScanSuccess={applyScan} />
-        </div>
-      )}
-      <TokenPicker value={token} onChange={setToken} />
-      <AmountField value={amount} onChange={setAmount} max={bal?.privateUnits ?? 0n} decimals={bal?.decimals ?? 18} symbol={bal?.symbol ?? symbolOf(token)} />
-      <p className="text-[12px] leading-relaxed text-black/50">
-        Paid from your private balance. The network sees that a transaction happened, not the amount, you or the recipient.
-        Check the address: a payment cannot be reversed.
-      </p>
-      <SubmitButton busy={busy} disabled={!amount || !to}>
-        Send privately
-      </SubmitButton>
-    </form>
-  );
-}
-
-function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
-  const { wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
-  const [amount, setAmount] = useState('');
-  const [sender, setSender] = useState('');
-  const [adding, setAdding] = useState(false);
-  const request = encodePaymentRequest(aztecAddress, token, /^\d+(\.\d+)?$/.test(amount) ? amount : undefined);
-
-  const addSender = async () => {
-    if (!wallet) return;
-    setAdding(true);
-    try {
-      await wallet.addSender(sender);
-      toast.success('Sender added. Payments from this address will now appear.');
-      setSender('');
-    } catch (err) {
-      toast.error(humanError(err));
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-center gap-3 rounded-2xl bg-[#F4F5F7] p-5">
-        <div className="rounded-2xl bg-white p-3 border border-black/[0.06]">
-          <QRCodeSVG value={request} size={176} level="M" includeMargin={false} />
-        </div>
-        <span className="text-center text-[12px] text-black/55 max-w-[260px]">
-          Show this code to the person paying you. It contains your Aztec address{amount ? ', the token and the amount' : ''}.
-        </span>
-      </div>
-      <TokenPicker value={token} onChange={setToken} />
-      <label className="block">
-        <span className="text-[12px] text-black/50">Amount to request (optional)</span>
-        <input
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
-          placeholder="Any amount"
-          className="mt-1.5 w-full h-11 rounded-xl border border-black/10 px-3 text-[15px] tabular-nums outline-none focus:border-[#15171c]"
-        />
-      </label>
-      <CopyLine label="Your Aztec address" value={aztecAddress} />
-
-      <div className="rounded-2xl border border-black/[0.08] p-4">
-        <div className="flex items-center gap-2 text-[13px] font-semibold">
-          <UserPlus size={15} className="text-black/60" /> Not seeing a payment?
-        </div>
-        <p className="mt-1 text-[12px] leading-relaxed text-black/50">
-          Aztec wallets find incoming payments through tags shared with the sender. If a payment from someone new does not
-          appear after a sync, add their Aztec address here.
-        </p>
-        <div className="mt-3 flex gap-2">
-          <input
-            value={sender}
-            onChange={(e) => setSender(e.target.value.trim())}
-            placeholder="Sender's Aztec address"
-            spellCheck={false}
-            className="min-w-0 flex-1 h-10 rounded-xl border border-black/10 px-3 font-mono text-[12px] outline-none focus:border-[#15171c]"
-          />
-          <button
-            type="button"
-            onClick={addSender}
-            disabled={!sender || adding}
-            className="h-10 px-3.5 rounded-xl text-white text-[12.5px] font-semibold disabled:opacity-40"
-            style={{ background: INK }}
-          >
-            {adding ? 'Adding…' : 'Add'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+/** Kept for callers that show an address inline. */
+export const shortAddress = (s?: string) => shortHex(s);

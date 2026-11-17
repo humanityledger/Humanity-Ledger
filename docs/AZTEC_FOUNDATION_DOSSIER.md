@@ -60,15 +60,15 @@ The fee baseline is in the source. It is not deployable on Alpha.
 | Fact | Record |
 |---|---|
 | Source | `PrivateEscrow` and `PaymentStream` charge the authorized baseline on settlement. Aztec 6.0.0 compiled that source |
-| TXE | `aztec test` inside each crate, 16 November 2026. PrivateEscrow 19 passed. PaymentStream 29 passed. Exit 0 on both |
-| Class ids | Registered in `deployments/aztec-testnet.json` with `tracksCurrentArtifact: true`, `status: not-deployed`, `address: null`. PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`. PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3` |
-| TREASURY | Recorded classes: `AztecAddress { inner: 0 }`. Source since 17 November 2026: `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed`, designated by Stefan Antonio Cirisanu, created on Aztec Alpha in L2 block 33001, Fee Juice bridged from `0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675`. It is not the 4-of-7 multisig. The source is pinned in `deployments/aztec-pending-recompile.json` until CI recompiles it and TXE passes |
+| TXE | `aztec test` inside each crate, 16 November 2026 with the zero placeholder, and again on 17 November 2026 with the designated treasury ("Aztec contracts" run 44061471400): PrivateEscrow 19 passed, PaymentStream 29 passed, IdentityCredential 20 passed |
+| Class ids | Current, in `deployments/aztec-testnet.json` with `tracksCurrentArtifact: true`, `status: not-deployed`, `address: null`, computed with `getContractClassFromArtifact` from the committed artifacts (run 44063139479): PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`, PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`. The zero-treasury classes `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee` and `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3` stay in the record with `tracksCurrentArtifact: false`; the client refuses them |
+| TREASURY | Current classes and source since 17 November 2026: `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed`, designated by Stefan Antonio Cirisanu, created on Aztec Alpha in L2 block 33001, Fee Juice bridged from `0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675`. It is not the 4-of-7 multisig. Nothing is held in `deployments/aztec-pending-recompile.json` |
 | External audit | None. Launch condition 1 of `docs/TOKENOMICS.md` (“Fee contract deployed on Aztec Alpha and externally audited”) is not met |
 | Alpha | Not deployable until both blockers below are resolved. Nothing in this section was sent on Alpha |
 
 Two blockers, both open:
 
-1. TREASURY: designated on 17 November 2026 and written into the source; the recorded classes still carry the zero placeholder until the recompile and TXE in CI. The client refuses those classes. The designated account is not the 4-of-7 multisig.
+1. TREASURY: designated on 17 November 2026, written into the source, compiled and TXE-tested; the current class ids carry it. The designated account is not the 4-of-7 multisig, and whether the treasury must be the multisig before Alpha is Stefan's decision.
 2. No external audit. Launch condition 1 is unmet.
 
 State: not deployable on Alpha until both are resolved.
@@ -149,7 +149,7 @@ No row below is an Aztec decision. There is no transaction here between two peop
 | Studio closed | `app/studio/page.tsx`, `middleware.ts` | Same file: the page does not import the studio; `/api/studio/` returns `STUDIO_LOCKED` |
 | Payment card: failed step and Fee Juice text | `components/zk/PaymentProgress.tsx` | Same file: `feeJuiceGuidance` for an insufficient-fee error. Not a live payment |
 | Settings copy (HLC, Fee Juice, local handle, TURN not assumed) | `components/chat/LedgerSettingsFull.tsx` | Reading the strings. No separate test |
-| Fee baseline compiled, class ids recorded, not deployed | `contracts/aztec/escrow`, `contracts/aztec/streams`, `deployments/aztec-testnet.json` | TXE 16 November 2026: escrow 19 passed, streams 29 passed. Current classes `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee` and `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`, status `not-deployed`, address null. Not an audit. TREASURY is zero |
+| Fee baseline compiled, class ids recorded, not deployed | `contracts/aztec/escrow`, `contracts/aztec/streams`, `deployments/aztec-testnet.json` | TXE 17 November 2026 with the designated treasury: escrow 19 passed, streams 29 passed. Current classes `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6` and `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`, status `not-deployed`, address null. Not an audit |
 | R-17 stays off | `test/communities/r17-acceptance.test.ts` guard; `docs/communities/R17_ACCEPTANCE.md` checklist | The guard fails if `app/`, `components/` or `lib/` writes `communityMls` true. Schema default remains false |
 
 Commands that reproduce the rows which are unit tests:
@@ -314,7 +314,7 @@ Same day. No production contract was added. No Alpha payment. Not an external au
 
 ## Estado de completitud — 16 noviembre 2026
 
-Nothing in this file is an external audit. The fee is in the escrow and stream source. TXE on 16 November 2026 passed: PrivateEscrow 19, PaymentStream 29. The current class ids are recorded and not deployed: PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`, PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`. Sections 6 and 8 are the authorized fee baseline (16 November 2026). Q1–Q10 stay OPEN. R8 has no hash. `communityMls` stays false. TREASURY has no address.
+Nothing in this file is an external audit. The fee is in the escrow and stream source. TXE on 17 November 2026 passed with the designated treasury: PrivateEscrow 19, PaymentStream 29. The current class ids are recorded and not deployed: PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`, PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`. Sections 6 and 8 are the authorized fee baseline (16 November 2026). Q1–Q10 stay OPEN. R8 has no hash. `communityMls` stays false. TREASURY is the designated address above, not the 4-of-7.
 
 | Bucket | What |
 |---|---|
@@ -331,7 +331,7 @@ With `communityMls` false, post routes store the post. The 410 path runs only wh
 
 The full list is `docs/communities/R17_ACCEPTANCE.md`. All of the following have to be true first. None of them is true today except the schema default and the 410 behaviour on a mocked flag.
 
-1. `CommunitySettingsPanel` holds an XMTP client and calls `createSecureGroup` when a channel is created. It does not do either.
+1. The screen that adds a channel (since 17 November 2026, Manage → Channels in `components/communities/CommunityManage.tsx`; the old `CommunitySettingsPanel` is deleted) holds an XMTP client and calls `createSecureGroup` when a channel is created. It does not do either.
 2. The server stores only the returned group id on `CommunityChannel.xmtpGroupId`. It does not store the post.
 3. AC-01: a database dump of a flagged community contains no post text.
 4. AC-02: `POST` of a post to a flagged community returns 410. The route does this when the flag is already true. Nothing sets the flag.
@@ -377,7 +377,7 @@ Known gaps an analyst should treat as open, not as closed holes we have exploite
 - Community post text is readable by the server while the flag is false.
 - TURN for calls may be unset (`docs/MAINNET_READINESS.md` R3).
 - Prover memory on a phone is unmeasured.
-- The fee baseline is authorized, compiled, and not deployed. TXE passed (escrow 19, streams 29). That run is not an external audit. TREASURY has no address.
+- The fee baseline is authorized, compiled with the designated treasury, and not deployed. TXE passed (escrow 19, streams 29). That run is not an external audit.
 
 ### Still waiting on Stefan before the next phase
 

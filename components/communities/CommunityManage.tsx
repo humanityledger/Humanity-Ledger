@@ -202,10 +202,10 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
           )}
 
           {load === 'loading' && !community && <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading…</p>}
-          {load === 'error' && !community && !note && (
-            <div className="py-10 text-center" role="alert">
-              <p className="text-[18px] leading-snug" style={{ color: INK }}>This community could not be loaded. Check your connection and try again.</p>
-              <button type="button" onClick={() => { setLoad('loading'); fetchCommunity(); }} className={`${primary} mx-auto mt-4`}>Try again</button>
+          {load === 'error' && !community && (
+            <div className="py-10 text-center" role={note ? undefined : 'alert'}>
+              {!note && <p className="text-[18px] leading-snug" style={{ color: INK }}>This community could not be loaded. Check your connection and try again.</p>}
+              <button type="button" onClick={() => { setNote(null); setLoad('loading'); fetchCommunity(); }} className={`${primary} mx-auto mt-4`}>Try again</button>
             </div>
           )}
 

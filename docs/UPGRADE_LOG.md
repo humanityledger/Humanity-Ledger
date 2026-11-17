@@ -776,3 +776,42 @@ Ejecutados aquí (ejecutor local sin `npm install`): `alpha-agreement-gates` 14/
 ### Solo Stefan
 
 Multisig 4-of-7, auditoría externa, deploy de las clases de fee en Alpha, texto legal, comunidad de prueba con nombre, TURN, `DATABASE_URL_UNPOOLED`, y subir este cambio a una rama `claude/**` para que CI recompile y pase TXE.
+
+## Sesión 20 — 17 noviembre 2026 (class ids con la tesorería designada, MetaMask en el teléfono, Manage en filas, fijados)
+
+Base: `e02fbfc` (PR 124 fusionado). Ninguna transacción en Alpha, ningún deploy, ningún broadcast. `audit` sigue null. Q1–Q10 siguen OPEN. `communityMls` sigue false. Ninguna fila del paquete de decisión aceptada. Ningún B cerrado.
+
+### Class ids
+
+Se quitó la retención de recompilado de escrow y streams (`deployments/aztec-pending-recompile.json` → `"pending": []`) y el workflow "Aztec contracts" también corre cuando cambia ese fichero. Run 44061471400: Aztec 6.0.0 compiló ambos, hizo commit de los artefactos (`9e19e9d`) y TXE pasó dentro de cada crate: escrow 19, identity 20, streams 29. `scripts/aztec/print-class-ids.mjs` (solo lectura, `getContractClassFromArtifact`) imprimió los ids en el run 44063139479. Clases actuales: PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`, PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`, con el sha256 del artefacto. Las de tesorería cero (`0x177021…66e0ee`, `0x2c22f3…ba1ae3`) quedan con `tracksCurrentArtifact: false` y `supersededBy`. En testnet el cliente ya acepta las clases actuales; en Alpha sigue negando (sin auditoría).
+
+### MetaMask en el teléfono
+
+Open in MetaMask es un `<a href>` según plataforma: iPhone/iPad `metamask://dapp/ledgerchat.org`; Android `intent://dapp/ledgerchat.org#Intent;scheme=metamask;package=io.metamask;S.browser_fallback_url=…;end`; si no, y como "Get MetaMask", `https://link.metamask.io/dapp/ledgerchat.org`. La pantalla de firma dice en una línea que "simulation failed" es normal en una firma. El test que defendía el enlace ignorado se sustituyó. Los pasos de creación salen de la fase real (`components/zk/walletCreationSteps.ts`): Add Fee Juice solo se marca con Fee Juice presente.
+
+### Comunidades y Manage
+
+Start one pide nombre y si es privada, y la abre; unirse abre la comunidad. La pantalla de lectura tiene un campo y solo Send. Manage (`components/communities/CommunityManage.tsx`) son filas con el estilo de la lectura, cableadas a las APIs existentes; filas de admin ocultas al resto; Delete solo para el propietario; sin interruptor de `communityMls`; sin hash en la primera pantalla. Se borraron `CommunityView` y los componentes que solo usaba él (`CommunityChatView`, `CommunitySettingsPanel`, `CommunityMemberPanel`, `CommunityMessageReactions`, `RichPostEditor`).
+
+### Fijados
+
+`CommunityPost.pinnedAt` y `pinnedBy` (migración aditiva `20261117120000_community_post_pins`). Enviar guarda null. `PIN_MESSAGE` / `UNPIN_MESSAGE` en `PATCH /api/chat/communities`; desfijar no borra. `GET …/posts?pinned=1` devuelve solo los fijados. Antes el filtro se ignoraba y todo salía fijado, y las acciones devolvían ok sin hacer nada. `UPDATE_PERMISSIONS` acepta solo columnas reales y guarda el modo lento.
+
+### Pantallas abiertas
+
+Chrome (Playwright) a 1280 px y 390 px con los componentes reales: Open in MetaMask con agentes iPhone Safari, iPhone Chrome y Android Chrome (toque confiable sobre `<a>`, no prevenido); pasos del wallet; Comunidades (empezar, enviar, Manage, fijar, recargar, desfijar, recargar, filas de un miembro). Sin teléfono físico en esta sesión.
+
+### Solo Stefan
+
+Multisig 4-of-7, auditoría externa, deploy en Alpha, texto legal, comunidad de prueba con nombre, TURN, `DATABASE_URL_UNPOOLED`, fusionar el PR, y probar Open in MetaMask en un iPhone y un Android reales.
+
+## Sesión 21 — 17 noviembre 2026 (Lotties del chat, nueva private wallet, firma en el teléfono, Comunidades que abren)
+
+Ninguna transacción en Alpha, ningún deploy, ningún broadcast. `audit` sigue null. Q1–Q10 siguen OPEN. `communityMls` sigue false.
+
+- **Comunidades que abren.** Los logs de Railway (deployment `5347a05e`) mostraban cada `GET /api/chat/communities/:id` con `Cannot read properties of undefined (reading 'members')`: la consulta contaba `posts` en `Community`, relación que no existe, Prisma fallaba y el respaldo sin `_count` rompía. Ahora los posts se cuentan en `CommunityPost` por `communityId` (también en el PR 128).
+- **Lotties.** `public/lottie/new-conversation.json` en una conversación sin mensajes (desaparece con el primero, también el optimista); `peer-typing.json` en el hilo y junto a "typing…" mientras la otra persona escribe (la lista no recibía `isTyping`); `send-confirmation.json` una vez por mensaje enviado, tras el límite de envío; `welcome-notification.json` en el inicio de Ledger Chat y con la lista vacía. Sin imágenes ni expresiones; con "reducir movimiento" no hay bucles ni confirmación de envío.
+- **Private wallet.** Rehecha sobre el mismo cliente: saldo grande, ocultar importes (solo este navegador), Sync con hora, saldo público con Shield, Fee Juice con cuántas transacciones cubre como mínimo; Send y Receive anchos; Overview, Activity (por día, filtros) y Protocol; Send en dos pasos con revisión que dice que la fee en Fee Juice es pública y el pago no; Receive con QR, dirección agrupada, Copy y Share; Shield/Unshield con origen y destino; hojas modales con Escape. Reglas en `components/zk/wallet/walletLogic.ts` con tests.
+- **Firma en el teléfono.** La pantalla de fallo pone Open in MetaMask primero en Safari/Chrome sin wallet y muestra "Details" con el código y el texto de error de la wallet. La captura de las 12:14 era del build anterior al enlace `metamask://dapp/ledgerchat.org` (desplegado 11:24 UTC). La firma por WalletConnect dentro de Safari no se pudo reproducir aquí: no había iPhone en la sesión.
+
+Pantallas abiertas en Chrome (Playwright), 1280 px y 390 px: la wallet (Overview, Activity, filtros, ocultar importes, Send con errores, revisión, Receive, Shield) y las cuatro animaciones con los componentes reales y lottie-web.

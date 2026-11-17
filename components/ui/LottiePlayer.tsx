@@ -11,6 +11,10 @@ interface LottiePlayerProps {
     width?: string | number;
     height?: string | number;
     speed?: number;
+    /** Called once when a non-looping animation reaches its last frame. */
+    onComplete?: () => void;
+    /** Accessible name; without it the animation is decorative and hidden from assistive tech. */
+    label?: string;
 }
 
 export const LottiePlayer = ({
@@ -21,10 +25,14 @@ export const LottiePlayer = ({
     style,
     width = '100%',
     height = '100%',
-    speed
+    speed,
+    onComplete,
+    label,
 }: LottiePlayerProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const instanceRef = useRef<any>(null);
+    const onCompleteRef = useRef(onComplete);
+    onCompleteRef.current = onComplete;
 
     const lottieStyle = useMemo(() => ({
         width,
@@ -59,6 +67,7 @@ export const LottiePlayer = ({
                 if (speed !== undefined) {
                     localInstance.setSpeed(speed);
                 }
+                localInstance.addEventListener?.('complete', () => onCompleteRef.current?.());
                 
                 instanceRef.current = localInstance;
             } catch (err) {
@@ -93,5 +102,7 @@ export const LottiePlayer = ({
 
     if (!animationData) return null;
 
-    return <div ref={containerRef} className={className} style={lottieStyle} />;
+    return label
+        ? <div ref={containerRef} className={className} style={lottieStyle} role="img" aria-label={label} />
+        : <div ref={containerRef} className={className} style={lottieStyle} aria-hidden="true" />;
 };
