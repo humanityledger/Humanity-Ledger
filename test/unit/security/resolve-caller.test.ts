@@ -37,7 +37,9 @@ describe('resolveVerifiedCaller', () => {
   });
 
   it('a session store error is nobody, not a fallback', async () => {
-    getSession.mockRejectedValue(new Error('down'));
+    getSession.mockImplementation(async () => {
+      throw new Error('session store unavailable');
+    });
     expect(await resolveVerifiedCaller(forged())).toBeNull();
   });
 
