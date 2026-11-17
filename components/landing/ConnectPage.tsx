@@ -155,6 +155,15 @@ function clearDisconnectGuard() {
   }
 }
 
+/** Short, non-secret description of a failed signature: the wallet's error code and text, and the browser. */
+function signErrorDetailOf(e: unknown, connector?: string): string {
+  const err = e as { code?: unknown; name?: unknown; message?: unknown; cause?: { message?: unknown } } | null;
+  const code = err?.code !== undefined ? `code ${String(err.code)}` : "";
+  const msg = [err?.message, err?.cause?.message].filter((x) => typeof x === "string" && x).join(" / ");
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent.replace(/\s+/g, " ").slice(0, 160) : "";
+  return [connector ? `wallet ${connector}` : "", code, msg.slice(0, 300), ua].filter(Boolean).join("\n");
+}
+
 export default function ConnectPage() {
   const isMobile = useIsMobile();
   const [externalMobile, setExternalMobile] = useState(false);
@@ -176,6 +185,7 @@ export default function ConnectPage() {
   const [authStatus, setAuthStatus] = useState<"idle" | "verifying" | "failed">("idle");
   const [signStep, setSignStep] = useState<1 | 2 | 3>(2);
   const [signError, setSignError] = useState<string | null>(null);
+  const [signErrorDetail, setSignErrorDetail] = useState<string | null>(null);
   const [mobileDeepLink, setMobileDeepLink] = useState<string | null>(null);
   // iPhone: the link "Open … to sign" follows (this request's id and topic), and whether the relay has the
   // request yet. Until it does, the button waits: leaving for the wallet earlier is what lost the request.
@@ -450,6 +460,7 @@ export default function ConnectPage() {
       setAuthStatus("verifying");
       setSignStep(2);
       setSignError(null);
+      setSignErrorDetail(null);
 
       // A session may already exist for this address.
       try {
@@ -690,6 +701,7 @@ export default function ConnectPage() {
         if (stale()) return;
         console.warn("[SIWE] signature did not complete:", (e as { message?: string })?.message);
         setSignError(SIGN_MESSAGES[classifySignError(e)]);
+        setSignErrorDetail(signErrorDetailOf(e, activeConnector?.name));
         setAuthStatus("failed");
         signingRef.current = false;
       }
@@ -875,6 +887,7 @@ export default function ConnectPage() {
         pendingWallet={pendingWallet}
         signStep={signStep}
         errorMessage={signError}
+        errorDetail={signErrorDetail}
         mobileDeepLink={mobileDeepLink}
         signLink={signLink}
         signReady={signReady}

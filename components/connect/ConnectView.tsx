@@ -48,6 +48,8 @@ export interface ConnectViewProps {
   /** 1 wallet connected, 2 waiting for signature, 3 opening the session. */
   signStep?: 1 | 2 | 3;
   errorMessage?: string | null;
+  /** The wallet's own error text, shown under "Details" so a failure on a phone can be reported exactly. */
+  errorDetail?: string | null;
   mobileDeepLink?: string | null;
   /**
    * iPhone: the link to this signature request in the connected wallet (lib/auth/wc-sign-request.ts),
@@ -420,14 +422,22 @@ function Failed(p: ConnectViewProps) {
         {p.errorMessage || "The signature was declined or timed out. Nothing was charged and nothing was sent."}
       </p>
       <div className={s.actions}>
-        <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={p.onRetry}>
+        {/* On a phone browser without a wallet, signing inside MetaMask is the path that does not depend
+            on the WalletConnect relay, so it comes first. */}
+        {p.isMobile && p.externalMobile ? <MetaMaskDappLink /> : null}
+        <button type="button" className={`${s.btn} ${p.isMobile && p.externalMobile ? s.btnSecondary : s.btnPrimary}`} onClick={p.onRetry}>
           Try again
         </button>
-        {p.isMobile && p.externalMobile ? <MetaMaskDappLink /> : null}
         <button type="button" className={`${s.btn} ${s.btnSecondary}`} onClick={p.onDisconnect}>
           Use a different wallet
         </button>
       </div>
+      {p.errorDetail ? (
+        <details className={s.details}>
+          <summary>Details</summary>
+          <code data-testid="sign-error-detail">{p.errorDetail}</code>
+        </details>
+      ) : null}
     </>
   );
 }

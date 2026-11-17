@@ -997,3 +997,28 @@
     text-wrap: balance;
   }
 }
+
+.details {
+  margin-top: 16px;
+  width: 100%;
+  font-size: 13px;
+  color: var(--hl-ink-2, #3d424b);
+}
+
+.details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.details code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f2f4f7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+}
