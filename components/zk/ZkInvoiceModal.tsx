@@ -212,10 +212,10 @@ export function ZkInvoiceModal({
             </div>
             <div>
               <h2 className="text-[16px] font-semibold text-gray-900 leading-tight">
-                {existingInvoice ? existingInvoice.invoiceNumber : 'Create Shielded Freelance Invoice'}
+                {existingInvoice ? existingInvoice.invoiceNumber : 'New invoice'}
               </h2>
               <p className="text-[12.5px] text-gray-500">
-                {existingInvoice ? 'Review & settle privately on Aztec' : 'Confidential settlement without on-chain trail'}
+                {existingInvoice ? 'Review and pay' : 'Sent as an encrypted message in this chat. A private payment hides the amount and both people; the network fee payer is public.'}
               </p>
             </div>
           </div>
@@ -472,7 +472,7 @@ export function ZkInvoiceModal({
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
               }`}
             >
-              <FileText size={16} /> Generate & Send Shielded Invoice
+              <FileText size={16} /> Send invoice
             </button>
           </form>
         )}

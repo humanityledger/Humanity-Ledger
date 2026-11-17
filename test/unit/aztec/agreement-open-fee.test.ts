@@ -29,13 +29,16 @@ describe('direct agreement creation', () => {
     );
   });
 
-  it('blocks a valid escrow and a large stream while the treasury address is unset', async () => {
-    await expect(assertCanOpen('escrow', 20_000n, ids.escrow[0])).rejects.toThrow(
-      'No treasury address is set. This agreement cannot be deployed.',
-    );
+  it('blocks a valid escrow and a large stream while the source with the treasury awaits recompile', async () => {
+    const pending = 'This agreement contract is being recompiled with the treasury address.';
+    await expect(assertCanOpen('escrow', 20_000n, ids.escrow[0], 'testnet')).rejects.toThrow(pending);
     // A stream total over TX_CAP is not a fee refusal. create_stream allows it.
-    await expect(assertCanOpen('streams', 2_000_000_000n, ids.streams[0])).rejects.toThrow(
-      'No treasury address is set. This agreement cannot be deployed.',
-    );
+    await expect(assertCanOpen('streams', 2_000_000_000n, ids.streams[0], 'testnet')).rejects.toThrow(pending);
+  });
+
+  it('on Aztec Alpha refuses because there is no external audit, with the treasury designated', async () => {
+    const noAudit = 'Escrows and streams cannot be opened on Aztec Alpha. The contracts have no external audit';
+    await expect(assertCanOpen('escrow', 20_000n, ids.escrow[0], 'mainnet')).rejects.toThrow(noAudit);
+    await expect(assertCanOpen('streams', 2_000_000_000n, ids.streams[0], 'mainnet')).rejects.toThrow(noAudit);
   });
 });

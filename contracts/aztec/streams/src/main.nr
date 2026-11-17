@@ -87,10 +87,11 @@
 //   quote `total` against TX_CAP. A large stream is created and withdrawn in
 //   slices. Each slice is quoted on its own amount and pays its own fee.
 //   A slice over the cap is refused. That is the baseline, not a bypass.
-//   TREASURY is the zero placeholder. Noir 1.0.0-rc.3 has no test-only attribute,
-//   so the constructor does not assert that placeholder. The zero check is
-//   in the client and the deploy scripts. No owner, no pause, no oracle,
-//   no daily cap, no buyback, no burn.
+//   TREASURY is the Aztec account designated on 17 November 2026 (created on
+//   Aztec Alpha, L2 block 33001). It is not the 4-of-7 multisig. Deploying
+//   this class on Alpha stays refused in the client and the scripts: there is
+//   no external audit. No owner, no pause, no oracle, no daily cap, no
+//   buyback, no burn.
 // ══════════════════════════════════════════════════════════════════════════════
 
 use aztec::macros::aztec;
@@ -175,8 +176,8 @@ pub contract PaymentStream {
     global STREAM_MIN_FEE: u128 = 0;
     global MAX_FEE_SHARE_BPS: u128 = 1000;
     global TX_CAP: u128 = 5000000;
-    // Zero placeholder. Not a treasury account. Deploy stays blocked while this is zero.
-    global TREASURY: AztecAddress = AztecAddress { inner: 0 };
+    // Designated treasury, 17 November 2026. Not the 4-of-7 multisig. Bytecode, not storage.
+    global TREASURY: AztecAddress = AztecAddress { inner: 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed };
 
     // Separator of the per-state nullifier shared by withdraw and cancel
     // (SEC-S12). Distinct from every separator in contracts/aztec.

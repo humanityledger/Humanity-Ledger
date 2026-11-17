@@ -50,6 +50,8 @@ import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact } from '../../lib/aztec/keyed-deploy.ts';
+import { deployRefusal } from '../../lib/protocol/agreement-gate.ts';
+import { TREASURY_ADDRESS_SET } from '../../lib/protocol/fees.ts';
 import { CredentialTree, aztecPoseidon2, credentialLeaf, identityCommitment } from '../../lib/aztec/credential-tree.ts';
 import { openEscrow, acceptInvite, confirmAgreement, escrowMismatches, type EscrowView, type StreamView } from '../../lib/aztec/agreements.ts';
 import { currentClassIds } from '../../lib/aztec/agreement-invite.ts';
@@ -156,6 +158,9 @@ const big = (x: any): bigint => (typeof x === 'bigint' ? x : typeof x === 'numbe
 async function main() {
   const info = await node.getNodeInfo();
   log('node', info.nodeVersion, 'L1', info.l1ChainId, 'rollup', info.rollupVersion);
+  if (Number(info.l1ChainId) === 1) {
+    throw new Error('Refusing to run: this node settles on Ethereum mainnet (Aztec Alpha). This end-to-end run is for the test network only.');
+  }
 
   const wa = await newWallet();
   const wb = await newWallet();
@@ -185,8 +190,16 @@ async function main() {
       'utf8',
     );
     if (source.includes('AztecAddress { inner: 0 }')) {
-      throw new Error('Deploy blocked: TREASURY is the zero placeholder. No 4-of-7 Aztec address has been provided.');
+      throw new Error('Deploy blocked: TREASURY is the zero placeholder. No treasury address is in the source.');
     }
+    const refusal = deployRefusal({
+      kind: c,
+      network: 'testnet',
+      audit: null,
+      pendingContracts: (JSON.parse(fs.readFileSync('deployments/aztec-pending-recompile.json', 'utf8')).pending ?? []).map((p: { contract?: string }) => String(p.contract ?? '')),
+      treasurySet: TREASURY_ADDRESS_SET,
+    });
+    if (refusal) throw new Error(`Deploy blocked: ${refusal}`);
     const artifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS[c], 'utf8')));
     const secretKey = Fr.random();
     const salt = Fr.random();

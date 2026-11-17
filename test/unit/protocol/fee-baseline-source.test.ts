@@ -17,12 +17,14 @@ describe('fee baseline source', () => {
   const escrow = read('contracts/aztec/escrow/src/main.nr');
   const streams = read('contracts/aztec/streams/src/main.nr');
 
-  it('uses the D5 constants and the zero treasury placeholder', () => {
+  it('uses the D5 constants and the designated treasury', () => {
     for (const source of [escrow, streams]) {
       expect(source).toContain('global FEE_BPS: u128 = 50;');
       expect(source).toContain('global MAX_FEE_SHARE_BPS: u128 = 1000;');
       expect(source).toContain('global TX_CAP: u128 = 5000000;');
-      expect(source).toContain('global TREASURY: AztecAddress = AztecAddress { inner: 0 };');
+      // Designated by Stefan Antonio Cirisanu on 17 November 2026. Not the 4-of-7 multisig.
+      expect(source).toContain('global TREASURY: AztecAddress = AztecAddress { inner: 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed };');
+      expect(source).not.toContain('AztecAddress { inner: 0 }');
       expect(source).not.toContain('DAILY_CAP');
       expect(source).not.toMatch(/fn\s+pause|fn\s+trigger_buyback|fn\s+set_fee_params/);
       expect(source).not.toContain('#[cfg');
@@ -33,7 +35,7 @@ describe('fee baseline source', () => {
     expect(quoteBody(streams)).not.toContain('amount *');
   });
 
-  it('blocks deploy scripts and the composer while the placeholder is zero', () => {
+  it('blocks deploy scripts and the composer: zero placeholder, pending recompile, Alpha without audit', () => {
     const deploy = read('scripts/aztec/deploy-keyed.ts');
     const e2e = read('scripts/aztec/e2e-escrow-testnet.mts');
     const composer = read('components/chat/AgreementComposer.tsx');

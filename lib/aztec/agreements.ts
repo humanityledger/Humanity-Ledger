@@ -44,6 +44,7 @@ import {
   type AgreementInvite,
 } from './agreement-invite';
 import { baselineFee, BASELINE_ESCROW_SCHEDULE, TREASURY_ADDRESS_SET } from '../protocol/fees';
+import { buildNetwork, deployRefusal, type AgreementNetwork } from '../protocol/agreement-gate';
 
 type Artifact = ReturnType<typeof loadKeyedArtifact>;
 type AnyWallet = any;
@@ -88,7 +89,6 @@ function enforcePolicy(policy: AgreementPolicy | undefined, classId: string, tok
 
 const CLASS_REFUSED = 'This artifact is not the current agreement class.';
 const FEE_REFUSED = 'This amount is refused. The contract would not accept the fee.';
-const TREASURY_REFUSED = 'No treasury address is set. This agreement cannot be deployed.';
 
 /**
  * Gate for openEscrow and openStream, before any transaction is sent.
@@ -96,11 +96,19 @@ const TREASURY_REFUSED = 'No treasury address is set. This agreement cannot be d
  * direct call cannot deploy the pre-fee artifact. An escrow amount the
  * contract would refuse is refused here with the same baselineFee arithmetic.
  * A stream total is not quoted against TX_CAP: create_stream allows it, and
- * each withdrawal pays its own fee. Nothing is deployed while TREASURY is unset.
+ * each withdrawal pays its own fee. Then lib/protocol/agreement-gate.ts: on
+ * Alpha nothing is deployed while deployments/aztec-mainnet.json has no audit;
+ * a crate whose source is ahead of its artifact (pending recompile with the
+ * designated treasury) is not deployed; nothing is deployed without a treasury.
  */
-export async function assertCanOpen(kind: KeyedContract, amount: bigint, classId: string): Promise<void> {
-  const mod = (await import('../../deployments/aztec-testnet.json')) as { default?: unknown };
-  const record = (mod.default ?? mod) as Parameters<typeof currentClassIds>[0];
+export async function assertCanOpen(
+  kind: KeyedContract,
+  amount: bigint,
+  classId: string,
+  network: AgreementNetwork = buildNetwork(),
+): Promise<void> {
+  const unwrap = <T>(m: unknown): T => ((m as { default?: unknown }).default ?? m) as T;
+  const record = unwrap<Parameters<typeof currentClassIds>[0]>(await import('../../deployments/aztec-testnet.json'));
   const allowed = currentClassIds(record)[kind];
   if (!allowed.some((id) => id.toLowerCase() === classId.toLowerCase())) {
     throw new Error(CLASS_REFUSED);
@@ -109,7 +117,16 @@ export async function assertCanOpen(kind: KeyedContract, amount: bigint, classId
     const quoted = baselineFee(amount, BASELINE_ESCROW_SCHEDULE);
     if (!quoted.ok) throw new Error(FEE_REFUSED);
   }
-  if (!TREASURY_ADDRESS_SET) throw new Error(TREASURY_REFUSED);
+  const mainnet = unwrap<{ audit?: unknown }>(await import('../../deployments/aztec-mainnet.json'));
+  const pending = unwrap<{ pending?: Array<{ contract?: string }> }>(await import('../../deployments/aztec-pending-recompile.json'));
+  const refusal = deployRefusal({
+    kind,
+    network,
+    audit: mainnet.audit ?? null,
+    pendingContracts: (pending.pending ?? []).map((p) => String(p.contract ?? '')),
+    treasurySet: TREASURY_ADDRESS_SET,
+  });
+  if (refusal) throw new Error(refusal);
 }
 
 export interface Opened<I extends AgreementInvite> {

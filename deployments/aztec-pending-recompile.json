@@ -1,4 +1,19 @@
 {
   "$comment": "Sources that are deliberately ahead of their committed artifact. Checked by scripts/aztec/check-artifact-sources.mjs on every PR. The app deploys and recognises the ARTIFACT (class IDs in deployments/aztec-testnet.json), not this source. To clear an entry: let the 'Aztec contracts' workflow recompile, record the new class IDs (old ones tracksCurrentArtifact=false), run the testnet e2e, then delete the entry.",
-  "pending": []
+  "pending": [
+    {
+      "contract": "PrivateEscrow",
+      "source": "contracts/aztec/escrow/src/main.nr",
+      "sha256": "c97fc087b4d32c2f4ddb562b1e21ad27ce2a376790b3bc8d776aa43b1ecc951b",
+      "since": "2026-11-17",
+      "reason": "TREASURY set to the address designated by Stefan Antonio Cirisanu on 17 November 2026 (0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed, not the 4-of-7 multisig). Needs aztec compile and aztec test inside the crate (workflow \"Aztec contracts\"), then the new class id recorded with the old one set tracksCurrentArtifact=false. Not deployed on Alpha: no external audit."
+    },
+    {
+      "contract": "PaymentStream",
+      "source": "contracts/aztec/streams/src/main.nr",
+      "sha256": "9ee259bbce7cbb514d8e041d0626a19ccc3fc2798609a1849c34646806d311a5",
+      "since": "2026-11-17",
+      "reason": "TREASURY set to the address designated by Stefan Antonio Cirisanu on 17 November 2026 (0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed, not the 4-of-7 multisig). Needs aztec compile and aztec test inside the crate (workflow \"Aztec contracts\"), then the new class id recorded with the old one set tracksCurrentArtifact=false. Not deployed on Alpha: no external audit."
+    }
+  ]
 }

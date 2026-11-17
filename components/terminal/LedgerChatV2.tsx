@@ -77,6 +77,7 @@ const InChatSearch = dynamic(() => import('@/components/chat/InChatSearch').then
 const LedgerCallsTab = dynamic(() => import('@/components/chat/LedgerCallsTab').then(m => m.LedgerCallsTab), { ssr: false });
 const LedgerCommunitiesTab = dynamic(() => import('@/components/chat/LedgerCommunitiesTab').then(m => m.LedgerCommunitiesTab), { ssr: false });
 const CommunityView = dynamic(() => import('@/components/chat/CommunityView').then(m => m.CommunityView), { ssr: false });
+const CommunityReader = dynamic(() => import('@/components/communities/CommunityReader').then(m => m.CommunityReader), { ssr: false });
 const ExpressionPicker = dynamic(() => import('@/components/chat/ExpressionPicker').then(m => m.ExpressionPicker), { ssr: false });
 const ZkMoneyModal = dynamic(() => import('@/components/chat/ZkMoneyModal').then(m => m.ZkMoneyModal), { ssr: false });
 const ZkWalletPanel = dynamic(() => import('@/components/zk/ZkWalletPanel').then(m => m.ZkWalletPanel), { ssr: false });
@@ -102,6 +103,7 @@ import { EncryptedMediaEngine } from '@/lib/chat/media';
 import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
 import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal';
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
+import { clearCutoff, clearedAtMs, markCleared, previewAfterClear, previewAfterDelete, survivesClear } from '@/lib/chat/cleared-chats';
 
 
 
@@ -622,6 +624,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // The address of the person in the current call: call signals go to them even if another chat is open.
   const callPeerAddrRef = useRef<string | null>(null);
   const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
+  // Opening a community shows the reading and writing screen; members, channels, apps,
+  // settings, analytics, governance and the treasury are behind its "Manage" button.
+  const [communityManage, setCommunityManage] = useState(false);
+  useEffect(() => { setCommunityManage(false); }, [activeCommunity]);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const push = usePushNotifications(address || undefined);
   const [replyingTo, setReplyingTo] = useState<any | null>(null); // Phase 2: Message Quoting
@@ -1504,20 +1510,23 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (!activePeer) return;
     const peerLower = activePeer.toLowerCase();
     const dmId = `dm-${peerLower}`;
-    const clearTs = Date.now() + 5000;
     const myAddr = (effectiveAddress || address || '').toLowerCase();
+    // Cut-off: now, or the newest message on screen if its clock is ahead.
+    // No margin into the future: a reply sent a moment later must show.
+    const clearTs = clearCutoff(
+      Date.now(),
+      messages.filter(m => (m.conversationId || '').toLowerCase() === dmId).map(m => m.sentAtNs),
+    );
 
-    try {
-      localStorage.setItem(`ledger_cleared_${peerLower}`, clearTs.toString());
-      if (myAddr) {
-        localStorage.setItem(`ledger_cleared_${myAddr}_${peerLower}`, clearTs.toString());
-        try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
-      }
-      if (address) {
-        localStorage.setItem(`ledger_cleared_${address.toLowerCase()}_${peerLower}`, clearTs.toString());
-        localStorage.setItem(`ledger_cleared_${address}_${peerLower}`, clearTs.toString());
-      }
-    } catch {}
+    if (!markCleared(peerLower, [myAddr, address], clearTs)) {
+      // Nothing was recorded, so the messages would come back on reload: say so and keep them.
+      setShowClearConfirm(false);
+      toast.error('Could not clear this chat on this device. Nothing was removed.');
+      return;
+    }
+    if (myAddr) {
+      try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
+    }
 
     // Immediately remove all messages of this active chat from React state
     setMessages(prev => prev.filter(m => {
@@ -1542,6 +1551,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     });
 
     // Wipe persistent local IndexedDB records for this conversation
+    // The cut-off above already hides these rows if this fails; the next
+    // load of the chat filters them by time.
     import('@/lib/chat/indexeddb').then(({ chatDB }) => {
       chatDB.clearConversation(dmId).catch(() => {});
       chatDB.clearConversation(peerLower).catch(() => {});
@@ -1764,6 +1775,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           readPeers.includes(c.peerAddress.toLowerCase()) && c.unreadCount ? { ...c, unreadCount: 0 } : c
         ));
       }
+      // A chat cleared on another device: its list line is re-checked against the cut-off.
+      if (keys.some(k => k.startsWith('cleared:'))) setConversations(prev => [...prev]);
       const active = activePeerRef.current?.toLowerCase();
       if (active && keys.includes(`cleared:${active}`)) {
         const ts = Number(store.get(`cleared:${active}`) || 0);
@@ -1790,8 +1803,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     for (const s of sigs) if (!known.has(s.id)) { list.push(s); known.add(s.id); }
     callSignalsRef.current.set(p, list.slice(-500));
     if (p !== activePeerRef.current?.toLowerCase()) return;
-    let clearedAt = 0;
-    try { clearedAt = parseInt(localStorage.getItem(`ledger_cleared_${address}_${p}`) || '0', 10) || 0; } catch {}
+    const clearedAt = clearedAtMs(p, [effectiveAddress, address]);
     const msgs = callLogMessages(deriveCallLog(callSignalsRef.current.get(p) || []), {
       conversationId: `dm-${p}`,
       selfInboxId: (client as any)?.inboxId || '',
@@ -3728,6 +3740,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                      const peer = (p.sender?.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender)?.toLowerCase();
                      if (!peer) continue;
                      const ts = p.createdAt ? new Date(p.createdAt).getTime() : Date.now();
+                     // Cleared or deleted here: it must not come back into the thread or the list line.
+                     if (!survivesClear(ts, clearedAtMs(peer, [address])) || (p.id && isHidden(peer, String(p.id)))) continue;
                      const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
                          merged.push({ peerAddress: peer, lastMessage: lastMessageOf(p.content).slice(0, 30), lastAt: new Date(ts) });
@@ -3769,6 +3783,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              }
           }
 
+          merged = merged.map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [address])));
           if (merged.length > 0) {
             localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: merged.map((c: any) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
           }
@@ -4032,7 +4047,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Sync contacts to backend debounced
   const persistToLocal = useCallback((arr: ConversationMeta[]) => {
     if (!address) return;
-    localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: arr.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
+    const stored = arr.map((c) => previewAfterClear(c, clearedAtMs(c.peerAddress, [address])));
+    localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: stored.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
     
     // Also backup to server — send x-web3-address so WalletConnect users are accepted
     fetch('/api/chat/contacts', {
@@ -4114,6 +4130,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 const isMeMsg = dm.sender?.toLowerCase() === address?.toLowerCase();
                 const peerAddress = isMeMsg ? dm.recipient : dm.sender;
                 const peerLower = peerAddress?.toLowerCase() ?? '';
+                if (!peerLower || !survivesClear(dm.createdAt, clearedAtMs(peerLower, [address])) || isHidden(peerLower, dmId)) continue;
                 const activePeerLower = activePeerRef.current?.toLowerCase() ?? '';
                 const isFromActivePeer = peerLower === activePeerLower;
                 
@@ -4382,6 +4399,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
             pruneOptimisticMap(); // prune stale optimistic entries
+
+            // Cleared or deleted on this device: a replay after a reconnect must not bring it back.
+            if (!survivesClear(sentAtNs, clearedAtMs(msgConvPeer, [address])) || isHidden(msgConvPeer, realId)) continue;
 
             // Delivery receipt (double grey tick on the sender's side) for a message that arrived on
             // this device but is not being read now: page hidden, or another chat open. Sent once,
@@ -4839,7 +4859,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 setConversations(prev => {
                   const updated = prev.map(c =>
                     c.peerAddress.toLowerCase() === currentActivePeer
-                      ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date() }
+                      ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()) }
                       : c
                   );
                   persistToLocal(updated);
@@ -4884,7 +4904,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (exists) {
                   updated = prev.map(c =>
                     c.peerAddress.toLowerCase() === msgConvPeer
-                      ? { ...c, ...(isSystemSignal(content) ? {} : { lastMessage: lastMessageOf(content).slice(0, 80) }), lastAt: new Date(), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
+                      ? { ...c, ...(isSystemSignal(content) ? {} : { lastMessage: lastMessageOf(content).slice(0, 80) }), lastAt: new Date(sentAtNs || Date.now()), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
                       : c
                   );
                 } else {
@@ -4892,7 +4912,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   updated = [{
                     peerAddress: msgConvPeer,
                     lastMessage: isSystemSignal(content) ? '' : lastMessageOf(content).slice(0, 80),
-                    lastAt: new Date(),
+                    lastAt: new Date(sentAtNs || Date.now()),
                     unreadCount: countsAsUnread ? 1 : 0,
                   }, ...prev];
                 }
@@ -6536,6 +6556,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 return PAY.some(p => inner.startsWith(p)) || /^(Payment|Private payment|Invoice|Private tip|Payment stream|Escrow|Private agreement)/i.test(formatMessagePreview(raw).replace(/^[^A-Za-z]+/, ''));
               };
               const list = conversations
+                // A chat cleared on this device shows no line until a newer message arrives.
+                .map(conv => previewAfterClear(conv, clearedAtMs(conv.peerAddress, [effectiveAddress, address])))
                 .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase())
                 .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase()))
                 .filter(conv => chatFilter === 'all' ? true
@@ -6731,22 +6753,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden lg:flex') : (!showList ? 'flex' : 'hidden lg:flex')} relative flex-1 flex-col w-full h-full min-w-0 min-h-0 overflow-hidden`}>
         {sidebarTab === 'communities' ? (
           activeCommunity ? (
-            <CommunityView 
-              communityId={activeCommunity} 
-              myAddress={address || ''} 
-              onBack={() => {
-                setActiveCommunity(null);
-                setShowList(true);
-              }} 
-            />
+            communityManage ? (
+              <CommunityView
+                communityId={activeCommunity}
+                myAddress={address || ''}
+                onBack={() => setCommunityManage(false)}
+              />
+            ) : (
+              <CommunityReader
+                communityId={activeCommunity}
+                myAddress={address || ''}
+                nameFor={(addr) => resolveContactName(address || '', addr) || undefined}
+                onBack={() => {
+                  setActiveCommunity(null);
+                  setShowList(true);
+                }}
+                onManage={() => setCommunityManage(true)}
+              />
+            )
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] p-8 text-center">
               <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-5">
                 <Users size={26} strokeWidth={1.6} aria-hidden="true" />
               </div>
-              <h3 className="text-[20px] font-semibold tracking-[-0.015em] text-[#15171c]">Choose a community</h3>
-              <p className="text-[15px] text-[#727a88] max-w-sm mt-1.5 leading-relaxed">
-                Pick a community on the left to see its channels, posts and members.
+              <h3 className="text-[22px] font-semibold tracking-[-0.015em] text-[#15171c]">Choose a community</h3>
+              <p className="text-[18px] text-[#3d424b] max-w-sm mt-1.5 leading-relaxed">
+                Pick a community on the left to read its posts and write one.
               </p>
             </div>
           )
@@ -6923,7 +6955,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
                   <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
                   <span>
-                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Payments settle privately on Aztec.' : ''}{' '}
+                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and both people; the account that pays the network fee is public.' : ''}{' '}
                     <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
                   </span>
                 </button>
@@ -8133,14 +8165,35 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                  <div className="h-px bg-[#eceef2] my-1 mx-2" />
                  {/* Delete for me – persists via deleted-messages.ts */}
                  <button role="menuitem" type="button" onClick={() => {
-                   if (contextMenu?.id) {
-                     markDeletedForMe(activePeer, contextMenu.id);
-                    markDeletedForMe(null, contextMenu.id);
-                     setMessages(prev => prev.filter(m => m.id !== contextMenu.id));
-                     chatDB.deleteMessages([contextMenu.id]).catch(() => {});
-                     setContextMenu(null);
-                     toast.success('Message deleted for you');
+                   if (!contextMenu?.id) return;
+                   const id = contextMenu.id;
+                   setContextMenu(null);
+                   // Recorded first. If the record fails the message stays, with an
+                   // error: it must not vanish now and come back on the next reload.
+                   if (!markDeletedForMe(activePeer, id)) {
+                     toast.error('Could not delete this message on this device. It is still in the chat.');
+                     return;
                    }
+                   markDeletedForMe(null, id);
+                   const peerLower = (activePeer || '').toLowerCase();
+                   const dmId = `dm-${peerLower}`;
+                   const thread = messages.filter(m => (m.conversationId || '').toLowerCase() === dmId);
+                   const next = previewAfterDelete(thread, id, isSystemSignal);
+                   setMessages(prev => prev.filter(m => m.id !== id));
+                   chatDB.deleteMessages([id]).catch(() => {});
+                   // The line under the address follows the thread: the previous
+                   // visible message, or nothing when none is left.
+                   if (peerLower && next.kind !== 'unchanged') {
+                     setConversations(prev => {
+                       const updated = prev.map(c => c.peerAddress.toLowerCase() !== peerLower ? c
+                         : next.kind === 'previous'
+                           ? { ...c, lastMessage: lastMessageOf(next.content).slice(0, 80), lastAt: next.atMs ? new Date(next.atMs) : c.lastAt }
+                           : { ...c, lastMessage: '' });
+                       persistToLocal(updated);
+                       return updated;
+                     });
+                   }
+                   toast.success('Message deleted for you');
                  }} className={`${item} text-[#d93036]`}>
                    <Trash2 size={16} strokeWidth={1.8} /> <span>Delete for me</span>
                  </button>
@@ -8506,7 +8559,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
              animate={{ opacity: 1, x: 0 }}
              exit={{ opacity: 0, x: '100%' }}
              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-             className="fixed inset-y-0 right-0 w-84 z-[500] shadow-2xl"
+             className="fixed inset-y-0 right-0 w-full sm:w-[420px] max-w-full z-[500] shadow-2xl"
            >
              <ZkWalletPanel
                address={address || ''}

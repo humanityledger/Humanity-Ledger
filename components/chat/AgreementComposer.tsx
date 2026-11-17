@@ -28,11 +28,27 @@ import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/
 import {
   BASELINE_ESCROW_SCHEDULE,
   BASELINE_STREAM_SCHEDULE,
+  BASELINE_TX_CAP,
   TREASURY_ADDRESS_SET,
   baselineFee,
 } from '@/lib/protocol/fees';
+import { deployRefusal } from '@/lib/protocol/agreement-gate';
+import mainnetRecord from '@/deployments/aztec-mainnet.json';
+import pendingRecompile from '@/deployments/aztec-pending-recompile.json';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
+const PENDING_CONTRACTS = ((pendingRecompile as { pending?: Array<{ contract?: string }> }).pending ?? []).map((p) => String(p.contract ?? ''));
+
+/** Why this kind of agreement cannot be deployed now (lib/protocol/agreement-gate.ts), or null. Same rule as assertCanOpen. */
+function refusalFor(kind: 'escrow' | 'stream'): string | null {
+  return deployRefusal({
+    kind: kind === 'escrow' ? 'escrow' : 'streams',
+    network: AZTEC_WALLET_CONFIG.network,
+    audit: (mainnetRecord as { audit?: unknown }).audit ?? null,
+    pendingContracts: PENDING_CONTRACTS,
+    treasurySet: TREASURY_ADDRESS_SET,
+  });
+}
 
 const DURATIONS = {
   escrow: [
@@ -134,8 +150,9 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
     setError(null);
     setStartedAt(Date.now());
     if (!peer) return;
-    if (!TREASURY_ADDRESS_SET) {
-      setError('No treasury address is set. This agreement cannot be deployed.');
+    const refused = refusalFor(kind);
+    if (refused) {
+      setError(refused);
       setStartedAt(0);
       return;
     }
@@ -190,6 +207,15 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
             ? `An escrow or a payment stream in its own contract on ${networkLabel()}. Real funds. Amounts and parties stay private; the fee payer is public. The contracts have no external audit.`
             : 'An escrow or a payment stream in its own contract on the Aztec test network. Amounts and parties stay private. Test tokens only, no value. The contracts have no external audit.'}
         </p>
+        {/* Shown first, before any field and before any transaction: the same refusal assertCanOpen enforces. */}
+        {(() => {
+          const notice = refusalFor(kind) ?? refusalFor(kind === 'escrow' ? 'stream' : 'escrow');
+          return notice ? (
+            <p role="status" className="mt-3 rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24] leading-snug">
+              {notice} You can still share your Aztec address.
+            </p>
+          ) : null;
+        })()}
 
         {!ready ? (
           <div className="mt-4">
@@ -276,17 +302,23 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                       : ' This is the fee if the whole amount is withdrawn once. Each withdrawal is charged on its own, with no minimum. The unaccrued part of a cancel is not charged.'}
                   </p>
                 )}
-                {quote && !quote.q.ok && (
+                {quote && !quote.q.ok && kind === 'escrow' && (
                   <p role="status" className="text-[12.5px] text-[#7a2e12] leading-snug">
                     {quote.q.reason === 'fee-exceeds-tx-cap'
-                      ? 'Refused: the fee would be above 5 HLC. The contract does not reduce it.'
-                      : 'Refused: the fee would take more than 10% of this amount.'}
-                    {kind === 'stream' ? ' A smaller withdrawal can still settle. Creating the stream is not charged.' : ''}
+                      ? `Refused: the fee would be above ${formatUnits(BASELINE_TX_CAP, quote.decimals)} ${quote.symbol}. The contract refuses it and does not reduce it.`
+                      : quote.q.reason === 'fee-exceeds-share'
+                        ? 'Refused: the fee would take more than 10% of this amount.'
+                        : 'Enter an amount above zero.'}
                   </p>
                 )}
-                {!TREASURY_ADDRESS_SET && (
-                  <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">
-                    No treasury address is set. The agreement cannot be deployed until the 4-of-7 address exists.
+                {quote && !quote.q.ok && kind === 'stream' && (
+                  // create_stream does not quote the total against TX_CAP: the stream is not refused.
+                  <p role="note" className="text-[12.5px] text-[#4a505c] leading-snug">
+                    {quote.q.reason === 'fee-exceeds-tx-cap'
+                      ? `The stream can be created. Withdrawing all of it at once would put the fee above ${formatUnits(BASELINE_TX_CAP, quote.decimals)} ${quote.symbol}, which the contract refuses, so ${peerName} withdraws it in parts. Each part pays its own fee. Creating the stream is not charged.`
+                      : quote.q.reason === 'fee-exceeds-share'
+                        ? `The stream can be created. A withdrawal this small would be refused, because its fee would take more than 10% of it. ${peerName} can withdraw once more has accrued.`
+                        : 'Enter an amount above zero.'}
                   </p>
                 )}
                 <p className="text-[12.5px] text-[#727a88] leading-snug">
@@ -295,7 +327,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
                 {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !TREASURY_ADDRESS_SET || (kind === 'escrow' && !!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !!refusalFor(kind) || (kind === 'escrow' && !!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
                 </button>
               </div>

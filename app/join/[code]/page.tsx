@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = community.isPrivate
     ? `${community.name} is a private group on Humanity Ledger. Entry requires admin approval.`
-    : `${community._count.members} members. Join this secure, end-to-end encrypted community on Humanity Ledger.`;
+    : `${community._count.members} members. Join this community on Ledger Chat. Posts are visible to its members and stored on our server.`;
 
   return {
     title,
@@ -101,7 +101,7 @@ export default async function JoinCommunityPage({ params }: Props) {
         </div>
 
         <p className="text-[14px] text-[#727a88] leading-relaxed mb-5 max-w-xs mx-auto">
-          {community.description || 'An encrypted private community on Humanity Ledger.'}
+          {community.description || 'A community on Ledger Chat. People in it can read what is posted. It is not a private conversation.'}
         </p>
 
         <div className="flex items-center justify-center gap-2 mb-6 bg-[#f2f4f7] px-3.5 py-1.5 rounded-full border border-black/[0.04] w-fit mx-auto">

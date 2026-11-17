@@ -36,6 +36,7 @@ import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import type { Activity } from '@/lib/aztec/wallet/history';
 import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
 import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
+import { WalletCreation } from '@/components/zk/WalletCreation';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -226,34 +227,46 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
         {/* Alpha info box — only shown on Aztec Alpha, reminds users of unaudited status */}
         <AlphaInfoBox />
         {!ready && state.phase === 'needs-fee-juice' ? (
-          <div className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden">
-            <div className="px-5 pt-5 text-[14px] font-semibold">Add Fee Juice to create your private account</div>
-            <p className="px-5 mt-1.5 text-[12.5px] leading-relaxed text-black/55">
-              On {networkLabel()} every transaction, including the one that creates your account, pays its network fee in Fee Juice.
-              Bridge AZTEC from your Ethereum wallet here; your account is created automatically when it arrives.
-            </p>
+          // Same card and status rows as opening the wallet (WalletCreation), at the Fee Juice step.
+          <WalletCreation
+            phase={state.phase}
+            step={state.step}
+            blocked={null}
+            alpha={ALPHA}
+            networkName={networkLabel()}
+            linkedComputer={linkedComputer}
+            onOpen={handleOpen}
+          >
             {state.error && (
-              <div className="mx-5 mt-3 rounded-xl bg-[#fff4f4] border border-[#ffd6d6] px-3 py-2 text-[12.5px] text-[#b42318] break-words">
+              <div className="mt-3 rounded-xl bg-[#fff4f4] border border-[#ffd6d6] px-3 py-2 text-[12.5px] text-[#b42318] break-words" role="alert">
                 {state.error}
                 <button type="button" onClick={() => navigator.clipboard?.writeText(state.error || '').catch(() => {})} className="ml-2 underline">Copy details</button>
                 <button type="button" onClick={() => open().catch(() => {})} className="ml-2 underline">Try again</button>
               </div>
             )}
-            <FeeJuiceStation userAddress={address} />
-            <FeeRequestBox />
-          </div>
+            <div className="-mx-5 mt-3">
+              <FeeJuiceStation userAddress={address} />
+              <FeeRequestBox />
+            </div>
+          </WalletCreation>
         ) : !ready ? (
-          <Gate
+          <WalletCreation
             phase={state.phase}
             step={state.step}
             error={state.error}
             errorDetail={state.errorDetail}
-            configured={isWalletConfigured()}
-            walletConnected={walletConnected}
-            sameAccount={sameAccount}
+            blocked={openBlocked({ configured: isWalletConfigured(), hasAddress: /^0x[0-9a-fA-F]{40}$/.test(address), walletConnected, sameAccount })}
+            alpha={ALPHA}
+            networkName={networkLabel()}
             linkedComputer={linkedComputer}
-            hasAddress={/^0x[0-9a-fA-F]{40}$/.test(address)}
             onOpen={handleOpen}
+            onCopyDetails={(detail) => {
+              // The exact reason, for support: step and raw error, never keys.
+              navigator.clipboard?.writeText(detail).then(
+                () => toast.success('Details copied. Paste them to support.'),
+                () => toast.error('Could not copy. Select the text in the console instead.'),
+              );
+            }}
           />
         ) : (
           <>
@@ -484,105 +497,13 @@ function CopyLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Gate(props: {
-  phase: string;
-  step?: string;
-  error?: string;
-  errorDetail?: string;
-  configured: boolean;
-  walletConnected: boolean;
-  sameAccount: boolean;
-  hasAddress: boolean;
-  /** A computer linked to the phone by QR: the phone approves the signature. */
-  linkedComputer?: boolean;
-  onOpen: () => void;
-}) {
-  const working = props.phase === 'signing' || props.phase === 'starting' || props.phase === 'deploying';
-  let body: React.ReactNode;
-  if (!props.configured) {
-    body = <p>The private wallet has not been set up on this server yet.</p>;
-  } else if (!props.hasAddress) {
-    body = <p>The private wallet needs the Ethereum wallet you sign in with. Sign in with your wallet to use it.</p>;
-  } else if (!props.walletConnected) {
-    body = <p>Connect the wallet you signed in with. Its signature creates the keys of your private wallet.</p>;
-  } else if (!props.sameAccount) {
-    body = <p>The connected wallet is a different account from the one you signed in with. Switch accounts in your wallet.</p>;
-  } else if (props.linkedComputer) {
-    body = (
-      <>
-        <p>
-          This computer is linked to your phone, and your phone holds the wallet. When you tap Open, your phone receives a
-          request: open Ledger Chat on your phone and tap <strong>Approve</strong>. It signs a message, free and with no
-          transaction, and the keys of your private wallet are then created in this browser.
-        </p>
-        <p className="mt-2">Keep Ledger Chat open on your phone until this computer shows your wallet.</p>
-      </>
-    );
-  } else {
-    body = (
-      <>
-        <p>
-          Your wallet will ask you to sign a message. It is free and sends no transaction. The signature creates the keys
-          of your private wallet in this browser; we never receive them.
-        </p>
-        <p className="mt-2">
-          Some wallets show &ldquo;simulation failed&rdquo; for this message. That is expected: it is a signature, not a
-          transaction, so there is nothing to simulate. Check that the site is ledgerchat.org and the message names Humanity Ledger.
-        </p>
-        <p className="mt-2">
-          {ALPHA
-            ? `The first time, your private account is also created on ${networkLabel()}, paid with Fee Juice you bridge from your Ethereum wallet. That takes about a minute once the Fee Juice arrives.`
-            : 'The first time, your private account is also created on the Aztec test network. That takes about a minute.'}
-        </p>
-      </>
-    );
-  }
-  const canOpen = props.configured && props.hasAddress && props.walletConnected && props.sameAccount;
-  return (
-    <div className="bg-white rounded-2xl border border-black/[0.06] p-5">
-      <div className="text-[14px] font-semibold">Open your private wallet</div>
-      <div className="mt-2 text-[13px] leading-relaxed text-black/60">{body}</div>
-      {props.error && props.phase === 'error' && (
-        <div className="mt-3 flex gap-2 rounded-xl bg-[#fdeeec] px-3 py-2.5 text-[12.5px] text-[#c0362c]">
-          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          <span className="min-w-0">
-            {props.error}
-            {props.errorDetail && (
-              <button
-                type="button"
-                className="block mt-1.5 underline font-medium"
-                onClick={() => {
-                  // The exact reason, for support: step and raw error, never keys.
-                  navigator.clipboard?.writeText(props.errorDetail!).then(
-                    () => toast.success('Details copied. Paste them to support.'),
-                    () => toast.error('Could not copy. Select the text in the console instead.'),
-                  );
-                }}
-              >
-                Copy details
-              </button>
-            )}
-          </span>
-        </div>
-      )}
-      {working ? (
-        <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-3 text-[12.5px] text-black/70" aria-live="polite">
-          <Clock size={15} strokeWidth={1.75} className="shrink-0" aria-hidden />
-          <span>{props.step}</span>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={props.onOpen}
-          disabled={!canOpen}
-          className="mt-4 w-full h-11 rounded-xl text-white text-[14px] font-semibold disabled:opacity-40 transition-colors"
-          style={{ background: INK }}
-        >
-          {props.phase === 'error' ? 'Try again' : 'Open private wallet'}
-        </button>
-      )}
-    </div>
-  );
+/** Why the wallet cannot be opened from this screen, in one sentence, or null. */
+export function openBlocked(p: { configured: boolean; hasAddress: boolean; walletConnected: boolean; sameAccount: boolean }): string | null {
+  if (!p.configured) return 'The private wallet has not been set up on this server yet.';
+  if (!p.hasAddress) return 'The private wallet needs the Ethereum wallet you sign in with. Sign in with your wallet to use it.';
+  if (!p.walletConnected) return 'Connect the wallet you signed in with. Its signature creates the keys of your private wallet.';
+  if (!p.sameAccount) return 'The connected wallet is a different account from the one you signed in with. Switch accounts in your wallet.';
+  return null;
 }
 
 function IssueTokens({ disabled }: { disabled: boolean }) {

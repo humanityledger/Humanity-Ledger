@@ -25,7 +25,7 @@ function CommunityMark({ c, size = 44 }: { c: Community; size?: number }) {
   return (
     <span
       className="rounded-[14px] flex items-center justify-center font-semibold shrink-0 select-none"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.36), ...tintFor(Array.from(c.id).map(ch => ch.charCodeAt(0).toString(16)).join('').slice(0, 6)) }}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.36), ...tintFor(Array.from(c.id).map(ch => ch.charCodeAt(0).toString(16)).join('').slice(0, 6)), color: '#15171c' }}
       aria-hidden="true"
     >
       {letters}
@@ -37,20 +37,18 @@ function CommunityRow({ c, onOpen }: { c: Community; onOpen: () => void }) {
   const members = c.membersCount || 1;
   return (
     <li>
-      <button type="button" onClick={onOpen} className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-[#f7f8fa] transition-colors text-left">
-        <CommunityMark c={c} />
+      <button type="button" onClick={onOpen} aria-label={`Open ${c.name}`} className="w-full min-h-[72px] flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/20 transition-colors text-left">
+        <CommunityMark c={c} size={48} />
         <span className="flex-1 min-w-0">
-          <span className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[15.5px] font-medium text-[#15171c] truncate">{c.name}</span>
-            <span className="text-[11.5px] font-medium text-[#727a88] shrink-0">{c.isPrivate ? 'Private' : 'Public'}</span>
-          </span>
-          <span className="block text-[13px] text-[#727a88] truncate mt-0.5 tabular-nums">
-            {countLabel(members, 'member', 'members')}{c.myRole === 'ADMIN' ? ' · Admin' : c.myRole === 'MODERATOR' ? ' · Moderator' : ''}
+          <span className="block text-[18px] font-semibold text-[#15171c] truncate">{c.name}</span>
+          <span className="block text-[16px] text-[#3d424b] mt-0.5 tabular-nums leading-snug">
+            {countLabel(members, 'member', 'members')} · {c.isPrivate ? 'Private' : 'Public'}{c.myRole === 'ADMIN' ? ' · You manage it' : c.myRole === 'MODERATOR' ? ' · You moderate it' : ''}
           </span>
           {c.description && (
-            <span className="block text-[13px] text-[#727a88] truncate">{c.description}</span>
+            <span className="block text-[16px] text-[#3d424b] truncate">{c.description}</span>
           )}
         </span>
+        <span aria-hidden="true" className="text-[24px] text-[#3d424b] shrink-0">›</span>
       </button>
     </li>
   );
@@ -151,26 +149,26 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
     <div className="flex-1 overflow-y-auto flex flex-col bg-white">
       <div className="px-4 pt-3 pb-2 sticky top-0 bg-white z-10 border-b border-[#eceef2]">
         <div className="flex p-1 bg-[#f2f4f7] rounded-xl" role="tablist" aria-label="Communities">
-          {([['mine', 'Yours'], ['discover', 'Public']] as const).map(([id, label]) => (
+          {([['mine', 'Your communities'], ['discover', 'Find one']] as const).map(([id, label]) => (
             <button
               key={id}
               type="button"
               role="tab"
               aria-selected={view === id}
               onClick={() => setView(id)}
-              className={`flex-1 h-8 text-[14px] font-medium rounded-lg transition-colors ${view === id ? 'bg-white text-[#15171c]' : 'text-[#727a88] hover:text-[#15171c]'}`}
+              className={`flex-1 min-h-[48px] text-[17px] font-semibold rounded-lg transition-colors ${view === id ? 'bg-white text-[#15171c] shadow-sm' : 'text-[#3d424b] hover:text-[#15171c]'}`}
             >
               {label}
             </button>
           ))}
         </div>
         {view === 'mine' ? (
-          <div className="flex gap-2 mt-3">
-            <PrimaryButton onClick={() => setShowCreate(true)} className="flex-1 h-10 text-[14.5px]">
-              New community
-            </PrimaryButton>
-            <SecondaryButton onClick={() => setShowJoin(true)} className="h-10 text-[14.5px]">
-              Join with a link or code
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 mt-3">
+            <SecondaryButton onClick={() => setShowJoin(true)} className="flex-1 min-h-[48px] text-[17px]">
+              Join with an invite
+            </SecondaryButton>
+            <SecondaryButton onClick={() => setShowCreate(true)} className="flex-1 min-h-[48px] text-[17px]">
+              Start one
             </SecondaryButton>
           </div>
         ) : (
@@ -180,16 +178,12 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
 
       {view === 'mine' ? (
         loading ? (
-          <div className="flex-1 px-4 py-4 space-y-2" role="status" aria-label="Loading">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-14 rounded-xl bg-[#EFF1F4]" aria-hidden />
-            ))}
-          </div>
+          <p className="flex-1 px-5 py-8 text-[18px] text-[#3d424b]" role="status">Loading your communities…</p>
         ) : communities.length === 0 ? (
           <EmptyState
-            title="No communities yet"
-            text="Create a space for a team, a project or friends, then invite people with a link."
-            action={<PrimaryButton onClick={() => setShowCreate(true)}>New community</PrimaryButton>}
+            title="You are not in a community yet"
+            text="If someone sent you an invite, tap Join with an invite. You can also start one for a team, a project or friends."
+            action={<PrimaryButton onClick={() => setShowJoin(true)} className="min-h-[48px] text-[17px]">Join with an invite</PrimaryButton>}
           />
         ) : (
           <ul className="px-2 py-2">
@@ -256,7 +250,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               </button>
             ))}
           </fieldset>
-          <p className="text-[13px] text-[#727a88] leading-relaxed">Posts in communities are stored on our server so new members can read them. They are not end to end encrypted.</p>
+          <p className="text-[16px] text-[#3d424b] leading-relaxed">People in a community can read what is written there, and the posts are stored on our server. It is not a private conversation.</p>
         </div>
       </Sheet>
 

@@ -1,0 +1,127 @@
+/**
+ * The Alpha client cannot deploy the fee classes: there is no external audit.
+ * The designated treasury is in the source, the client and nowhere else; the
+ * committed artifacts still carry the zero placeholder until the "Aztec
+ * contracts" workflow recompiles and TXE passes, so nothing deploys meanwhile.
+ * Source checks only: no network, no transaction.
+ */
+import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { TREASURY_ADDRESS, TREASURY_ADDRESS_SET, baselineFee, BASELINE_ESCROW_SCHEDULE, BASELINE_STREAM_SCHEDULE, BASELINE_TX_CAP } from '@/lib/protocol/fees';
+import { AUDIT_REFUSED, RECOMPILE_REFUSED, TREASURY_REFUSED, buildNetwork, deployRefusal, hasAudit } from '@/lib/protocol/agreement-gate';
+
+const read = (p: string) => fs.readFileSync(p, 'utf8');
+const DESIGNATED = '0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed';
+const mainnet = JSON.parse(read('deployments/aztec-mainnet.json'));
+const pending = JSON.parse(read('deployments/aztec-pending-recompile.json')).pending as Array<{ contract: string; source: string; sha256: string }>;
+
+describe('designated treasury', () => {
+  it('client and both contract sources carry the same address, and only that one', () => {
+    expect(TREASURY_ADDRESS).toBe(DESIGNATED);
+    expect(TREASURY_ADDRESS_SET).toBe(true);
+    for (const f of ['contracts/aztec/escrow/src/main.nr', 'contracts/aztec/streams/src/main.nr']) {
+      const src = read(f);
+      expect(src).toContain(`global TREASURY: AztecAddress = AztecAddress { inner: ${DESIGNATED} };`);
+      expect(src.match(/global TREASURY:/g)?.length).toBe(1);
+    }
+  });
+
+  it('no audit is recorded, and no treasury field is invented in the deployment records', () => {
+    expect(mainnet.audit).toBe(null);
+    for (const f of ['deployments/aztec-mainnet.json', 'deployments/aztec-testnet.json']) {
+      expect(read(f)).not.toMatch(/"treasury"\s*:/i);
+    }
+  });
+
+  it('both sources are pinned as pending recompile, with the sha256 of the file on disk', () => {
+    expect(pending.map((p) => p.contract).sort()).toEqual(['PaymentStream', 'PrivateEscrow']);
+    for (const p of pending) expect(p.sha256).toBe(createHash('sha256').update(read(p.source)).digest('hex'));
+  });
+});
+
+describe('deploy gate', () => {
+  const base = { kind: 'escrow' as const, audit: null, pendingContracts: [] as string[], treasurySet: true };
+
+  it('Alpha without an audit is refused first, even with the treasury set and nothing pending', () => {
+    expect(deployRefusal({ ...base, network: 'mainnet' })).toBe(AUDIT_REFUSED);
+    expect(deployRefusal({ ...base, network: 'mainnet', audit: {} })).toBe(AUDIT_REFUSED);
+    expect(hasAudit({ report: 'x' })).toBe(true);
+  });
+
+  it('a pending recompile refuses; without it and with a treasury the test network may deploy', () => {
+    expect(deployRefusal({ ...base, network: 'testnet', pendingContracts: ['PrivateEscrow'] })).toBe(RECOMPILE_REFUSED);
+    expect(deployRefusal({ ...base, network: 'testnet', kind: 'streams', pendingContracts: ['PrivateEscrow'] })).toBe(null);
+    expect(deployRefusal({ ...base, network: 'testnet', treasurySet: false })).toBe(TREASURY_REFUSED);
+  });
+
+  it('Alpha is chosen only by name', () => {
+    expect(buildNetwork('alpha')).toBe('mainnet');
+    expect(buildNetwork('mainnet')).toBe('testnet');
+    expect(buildNetwork(undefined)).toBe('testnet');
+  });
+
+  it('the app reads the network by its literal variable name, so the browser bundle gets it', () => {
+    expect(read('lib/protocol/agreement-gate.ts')).toContain('process.env.NEXT_PUBLIC_AZTEC_NETWORK');
+  });
+});
+
+describe('composer and assertCanOpen use the same rule', () => {
+  const composer = read('components/chat/AgreementComposer.tsx');
+  const agreements = read('lib/aztec/agreements.ts');
+
+  it('the refusal is shown before any field and disables Open', () => {
+    const notice = composer.indexOf('{notice} You can still share your Aztec address.');
+    expect(notice).toBeGreaterThan(-1);
+    expect(composer.indexOf('Share my Aztec address')).toBeGreaterThan(notice);
+    expect(composer).toContain('!!refusalFor(kind)');
+    expect(agreements).toContain('deployRefusal({');
+  });
+
+  it('a stream above TX_CAP is noted, not refused; escrow refuses what the contract refuses', () => {
+    expect(baselineFee(2_000_000_000n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-tx-cap' });
+    expect(composer).toContain('The stream can be created.');
+    expect(composer).toContain("(kind === 'escrow' && !!quote && !quote.q.ok)");
+    expect(baselineFee(9_999n, BASELINE_ESCROW_SCHEDULE).ok).toBe(false);
+    expect(baselineFee(1_000_000_000n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: true, fee: BASELINE_TX_CAP, net: 995_000_000n });
+    expect(baselineFee(1_000_000_001n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-tx-cap' });
+  });
+});
+
+describe('scripts', () => {
+  it('keyed deploy refuses Alpha, the shared gate and a class that is not current, before any wallet', () => {
+    const src = read('scripts/aztec/deploy-keyed.ts');
+    const alpha = src.indexOf('Deploy blocked: this node settles on Ethereum mainnet (Aztec Alpha).');
+    const gate = src.indexOf('deployRefusal({');
+    const current = src.indexOf('is not a current ${CONTRACT} class');
+    const wallet = src.indexOf('EmbeddedWallet.create(');
+    expect(alpha).toBeGreaterThan(-1);
+    expect(gate).toBeGreaterThan(alpha);
+    expect(current).toBeGreaterThan(gate);
+    expect(wallet).toBeGreaterThan(current);
+  });
+
+  it('the end-to-end run refuses Alpha and a pending recompile', () => {
+    const src = read('scripts/aztec/e2e-escrow-testnet.mts');
+    expect(src).toContain('Refusing to run: this node settles on Ethereum mainnet (Aztec Alpha).');
+    expect(src).toContain('deployRefusal({');
+  });
+
+  it('no route claims a working sponsor', () => {
+    expect(fs.existsSync('app/api/test-aztec/route.ts')).toBe(false);
+    expect(fs.existsSync('app/api/aztec/sponsor/route.ts')).toBe(false);
+    expect(read('lib/security/retiredRoutes.ts')).toContain("'/api/aztec/sponsor'");
+  });
+});
+
+describe('copy', () => {
+  it('community screens never say end-to-end encrypted', () => {
+    const join = read('app/join/[code]/page.tsx');
+    expect(join).not.toMatch(/end-to-end encrypted community|encrypted private community/i);
+  });
+
+  it('payments copy names the public fee payer and no "no on-chain trail"', () => {
+    expect(read('components/zk/ZkInvoiceModal.tsx')).not.toMatch(/without on-chain trail/i);
+    expect(read('components/terminal/LedgerChatV2.tsx')).not.toContain('Payments settle privately on Aztec.');
+  });
+});

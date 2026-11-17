@@ -1,8 +1,8 @@
 # Protocol fee: contract specification (Phase 0)
 
-State: **written in source, not deployed**. `PrivateEscrow` and `PaymentStream` charge the fee on settlement.
-The committed artifact is still the pre-fee class: `aztec compile` did not run in the session that wrote the
-source, so there is no new class id. Sections 6 and 8 are the authorized baseline (16 November 2026). Launch
+State: **compiled, not deployed**. `PrivateEscrow` and `PaymentStream` charge the fee on settlement. Aztec 6.0.0
+compiled that source; TXE passed (escrow 19, streams 29); the current classes are recorded in
+`deployments/aztec-testnet.json` with `address: null` (dossier section 0). Sections 6 and 8 are the authorized baseline (16 November 2026). Launch
 condition 1 of `docs/TOKENOMICS.md` (deployed and externally audited) is unmet. There is no external audit.
 `TREASURY` is the zero placeholder. Nothing here was deployed, and nothing was sent on Alpha.
 
@@ -121,7 +121,7 @@ The fee contract is done when all of these hold:
 
 ## 6. Decisions before deployment
 
-These change what users pay. The recommendation text in each row is unchanged. Status of every row: **authorized by Stefan as baseline — 16 November 2026.** The source under `contracts/aztec/` follows these rows. It is not compiled to a new class id and it is not deployed. `TREASURY` still has no address.
+These change what users pay. The recommendation text in each row is unchanged. Status of every row: **authorized by Stefan as baseline — 16 November 2026.** The source under `contracts/aztec/` follows these rows. It is compiled and its classes are recorded; it is not deployed. `TREASURY` still has no address.
 
 | ID | Decision | Engineering recommendation (values unchanged) | Status |
 |---|---|---|---|
@@ -135,7 +135,7 @@ The escrow minimum to compile is section 8’s `MIN_FEE` of 1,000, not the `minF
 
 ## 8. Parameter proposals D1–D7 (16 November 2026)
 
-**Status of every row in this section: authorized by Stefan as baseline — 16 November 2026.** The values below are unchanged. The source uses them. There is no new class id, no deploy, and no external audit. No treasury address is stated here.
+**Status of every row in this section: authorized by Stefan as baseline — 16 November 2026.** The values below are unchanged. The source uses them and is compiled. There is no deploy and no external audit. No treasury address is stated here.
 
 D1–D7 here are the parameter questions named in `docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md`. They are not section 6’s D-1–D-5. Section 6 stays an unconfirmed engineering recommendation. The implementation log quotes an earlier router sketch (`HLFeeRouter`, public mutable parameters, `trigger_buyback`, fee taken inside `deposit`). That sketch is not the text of sections 1–6. Where the sketch and this section disagree, this section is the proposal to review. `test/unit/aztec/fee-router.adversarial.test.ts` still describes the sketch and every case stays `it.skip`.
 
@@ -151,9 +151,9 @@ Path A, as this repository uses it: the agreement token moves only by Aztec priv
 | D6 | The Aztec class has **no owner and no pause flag**. Operational stop is the client’s class-id allow-list (section 4). **`Ownable2Step` is proposed only for a future L1 contract** that would hold public proceeds after an unshield, if that contract is ever written: the next owner must accept, `address(0)` cannot own it, and pause cannot move tokens. 4-of-7 and a 48-hour timelock, as in `docs/TOKENOMICS.md`. No Solidity is written | OpenZeppelin `Ownable2Step` is an L1 pattern. `LedgerDeadmanSwitch` already uses it. An aztec-nr pause bit would be public admin state and could zero the fee, which is a silent waiver. Keyed instances keep the bytecode they were deployed with; changing the fee is a new class id, not a storage write | authorized by Stefan as baseline — 16 November 2026 |
 | D7 | Value leaves the agreement **only on settlement**, by the existing private token transfer: `net` to the recipient and `fee` to the treasury on claim or withdraw. A refund pays the full amount and no fee. No admin `collect`, no public withdraw, no unshield in this path | This is the same recommendation as section 6’s D-1. Taking the fee on deposit would charge an agreement that is later refunded. The sketch’s “inside deposit” default is not the baseline. Authwit nonce stays 0. The call stays the raw selector (Q3, still OPEN) | authorized by Stefan as baseline — 16 November 2026 |
 
-### D5 constants (authorized baseline, not compiled)
+### D5 constants (authorized baseline, compiled, not deployed)
 
-HLC has 6 decimals: 1 HLC = 1,000,000 base units. The Alpha per-payment cap already recorded for HLC is 1000 HLC (`docs/MAINNET_READINESS.md`). The same numbers are globals in the two contract sources and in `lib/protocol/fees.ts` (`baselineFee`). They are not a compiled class id.
+HLC has 6 decimals: 1 HLC = 1,000,000 base units. The Alpha per-payment cap already recorded for HLC is 1000 HLC (`docs/MAINNET_READINESS.md`). The same numbers are globals in the two contract sources and in `lib/protocol/fees.ts` (`baselineFee`). They are part of the recorded current classes, which are not deployed.
 
 | Constant | Proposed value | What it is | Status |
 |---|---|---|---|
@@ -170,5 +170,5 @@ Changing any adopted constant later is a new class id (section 4), recorded in t
 
 - It does not deploy a treasury account, a burn role, or a buyback contract. No treasury address is written here.
 - It does not meet launch condition 1 (deployed and externally audited). There is no external audit.
-- The contract source is `contracts/aztec/escrow` and `contracts/aztec/streams`. The documentary skeleton remains `docs/protocol/fee-router-skeleton/` and is not bytecode. The source is ahead of the committed artifact (`deployments/aztec-pending-recompile.json`).
+- The contract source is `contracts/aztec/escrow` and `contracts/aztec/streams`. The documentary skeleton remains `docs/protocol/fee-router-skeleton/` and is not bytecode. The committed artifacts match the source (`deployments/aztec-pending-recompile.json` lists nothing pending).
 - Q1–Q10 stay OPEN. R8 is not run. `communityMls` stays false.

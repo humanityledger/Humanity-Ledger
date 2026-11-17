@@ -604,6 +604,7 @@ export function CommunityView({ communityId, myAddress, onBack }: CommunityViewP
                         onChange={e => setInlineTitle(e.target.value)}
                         className="w-full bg-[#f2f4f7] rounded-xl px-3.5 py-2 text-[14px] font-semibold text-[#15171c] outline-none placeholder:text-[#727a88]"
                       />
+                      <p className="text-[13px] leading-snug text-[#4a505c]" role="note">People in this community can read what you write here. It is not a private conversation.</p>
                       <textarea
                         rows={3}
                         placeholder="Write your announcement or thoughts here..."

@@ -26,6 +26,9 @@ import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 import { EmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { KEYED_ARTIFACT_PATHS, computeKeyedInstance, loadKeyedArtifact, type KeyedContract } from '../../lib/aztec/keyed-deploy';
+import { currentClassIds } from '../../lib/aztec/agreement-invite';
+import { deployRefusal } from '../../lib/protocol/agreement-gate';
+import { TREASURY_ADDRESS_SET } from '../../lib/protocol/fees';
 
 const NODE_URL = process.env.AZTEC_NODE_URL;
 const CONTRACT = (process.env.CONTRACT ?? 'escrow') as KeyedContract;
@@ -41,15 +44,40 @@ async function main() {
     'utf8',
   );
   if (source.includes('AztecAddress { inner: 0 }')) {
-    throw new Error('Deploy blocked: TREASURY is the zero placeholder. No 4-of-7 Aztec address has been provided.');
+    throw new Error('Deploy blocked: TREASURY is the zero placeholder. No treasury address is in the source.');
   }
+
+  // Test network only. Agreements are not deployed on Aztec Alpha: there is no
+  // external audit (docs/AZTEC_FOUNDATION_DOSSIER.md, section 0).
+  const node = createAztecNodeClient(NODE_URL, { maxBatchSize: 3 });
+  const info = await node.getNodeInfo();
+  if (Number(info.l1ChainId) === 1) {
+    throw new Error('Deploy blocked: this node settles on Ethereum mainnet (Aztec Alpha). Agreements are not deployed on Alpha.');
+  }
+  // Same rule as the app (lib/protocol/agreement-gate.ts): a crate pending recompile
+  // would deploy an artifact still compiled with the zero treasury.
+  const readJson = (p: string) => JSON.parse(fs.readFileSync(p, 'utf8'));
+  const refusal = deployRefusal({
+    kind: CONTRACT,
+    network: Number(info.l1ChainId) === 1 ? 'mainnet' : 'testnet',
+    audit: readJson('deployments/aztec-mainnet.json').audit ?? null,
+    pendingContracts: (readJson('deployments/aztec-pending-recompile.json').pending ?? []).map((p: { contract?: string }) => String(p.contract ?? '')),
+    treasurySet: TREASURY_ADDRESS_SET,
+  });
+  if (refusal) throw new Error(`Deploy blocked: ${refusal}`);
 
   const artifact = loadKeyedArtifact(JSON.parse(fs.readFileSync(KEYED_ARTIFACT_PATHS[CONTRACT], 'utf8')));
   const token = AztecAddress.fromStringUnsafe(TOKEN);
   const secretKey = Fr.random();
   const salt = Fr.random();
 
-  const node = createAztecNodeClient(NODE_URL, { maxBatchSize: 3 });
+  // Only a class recorded as current (tracksCurrentArtifact) may be deployed:
+  // a pre-fee artifact would deploy an agreement that charges no fee.
+  const expectedClass = (await computeKeyedInstance(artifact, { secretKey, salt, token })).instance.currentContractClassId.toString();
+  const current = currentClassIds(JSON.parse(fs.readFileSync('deployments/aztec-testnet.json', 'utf8')))[CONTRACT];
+  if (!current.some((id) => id.toLowerCase() === expectedClass.toLowerCase())) {
+    throw new Error(`Deploy blocked: class ${expectedClass} is not a current ${CONTRACT} class in deployments/aztec-testnet.json.`);
+  }
   const fpc = await getContractInstanceFromInstantiationParams(SponsoredFPCContract.artifact, { salt: new Fr(0) });
   const fee = { paymentMethod: new SponsoredFeePaymentMethod(fpc.address) };
   const wallet = await EmbeddedWallet.create(NODE_URL, {

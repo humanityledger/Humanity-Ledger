@@ -84,21 +84,30 @@ export function isHidden(peer: string | null | undefined, id: unknown, storage?:
   return hiddenIds(peer, storage).has(id);
 }
 
+/**
+ * Hides a message for this person. Returns true only when the id is stored,
+ * so a delete that could not be recorded is not shown as done (it would come
+ * back on the next reload or sync).
+ */
 export function markDeletedForMe(
   peer: string | null | undefined,
   messageId: string,
   storage: Storage | undefined = getStorage()
-): void {
-  if (!storage || !messageId) return;
+): boolean {
+  if (!storage || !messageId) return false;
   try {
     const key = getDeletedKey(peer);
-    const existing: string[] = JSON.parse(storage.getItem(key) || '[]');
+    const parsed: unknown = JSON.parse(storage.getItem(key) || '[]');
+    const existing: string[] = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
     if (!existing.includes(messageId)) {
       existing.push(messageId);
       if (existing.length > MAX_DELETED_IDS) existing.shift();
       storage.setItem(key, JSON.stringify(existing));
     }
-  } catch {}
+    return hiddenIds(peer, storage).has(messageId);
+  } catch {
+    return false;
+  }
 }
 
 export function markRevoked(

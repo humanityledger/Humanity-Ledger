@@ -24,7 +24,7 @@ Humanity Ledger (Ledger Chat) is a messaging application with private payments o
 | First private payment from Ledger Chat | 14 November 2026. Transfer `0x1eb2bb76ae52d876e0ef8e107bf9de5b83ce9cb42850a1a1a938cae3c24040a5`, L2 block 29012, 0.10 HLC. Preflight run 43583640304. Sender and recipient were both operator accounts |
 | Later the same day | 0.9 HLC in block 29771; a new-account path in blocks 29921 and 29923. Still operator accounts |
 | What is public | The fee payer and the fee. Sender, recipient and amount of the private transfer are not visible |
-| Fees since 15 November 2026 | Each account pays its own Fee Juice (the user bridges it, or a contact bridges it through `/fees`). Ledger Chat sponsors nothing. `/api/aztec/sponsor` answers 410. The protocol fee is in the PrivateEscrow and PaymentStream source. The current classes are recorded in `deployments/aztec-testnet.json` and are not deployed: PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`, PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`. TREASURY is the zero placeholder. There is no external audit. Two LedgerSponsor instances exist on Alpha and nothing in the app calls them (`docs/MAINNET_READINESS.md`) |
+| Fees since 15 November 2026 | Each account pays its own Fee Juice (the user bridges it, or a contact bridges it through `/fees`). Ledger Chat sponsors nothing. `/api/aztec/sponsor` answers 410. The protocol fee is in the PrivateEscrow and PaymentStream source. The current classes are recorded in `deployments/aztec-testnet.json` and are not deployed: PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`, PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3`. On 17 November 2026 the operator designated the treasury `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed` (created on Aztec Alpha, L2 block 33001; not the 4-of-7 multisig); it is in the source, pending recompile. There is no external audit. Two LedgerSponsor instances exist on Alpha and nothing in the app calls them (`docs/MAINNET_READINESS.md`) |
 
 ### Agreements, L1, communities
 
@@ -62,13 +62,13 @@ The fee baseline is in the source. It is not deployable on Alpha.
 | Source | `PrivateEscrow` and `PaymentStream` charge the authorized baseline on settlement. Aztec 6.0.0 compiled that source |
 | TXE | `aztec test` inside each crate, 16 November 2026. PrivateEscrow 19 passed. PaymentStream 29 passed. Exit 0 on both |
 | Class ids | Registered in `deployments/aztec-testnet.json` with `tracksCurrentArtifact: true`, `status: not-deployed`, `address: null`. PrivateEscrow `0x177021740d92d13f78e3f96a5bd3447eeb268cb6e9073e88832d14856b66e0ee`. PaymentStream `0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3` |
-| TREASURY | `AztecAddress { inner: 0 }`. Not an address. No treasury account is recorded |
+| TREASURY | Recorded classes: `AztecAddress { inner: 0 }`. Source since 17 November 2026: `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed`, designated by Stefan Antonio Cirisanu, created on Aztec Alpha in L2 block 33001, Fee Juice bridged from `0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675`. It is not the 4-of-7 multisig. The source is pinned in `deployments/aztec-pending-recompile.json` until CI recompiles it and TXE passes |
 | External audit | None. Launch condition 1 of `docs/TOKENOMICS.md` (“Fee contract deployed on Aztec Alpha and externally audited”) is not met |
 | Alpha | Not deployable until both blockers below are resolved. Nothing in this section was sent on Alpha |
 
 Two blockers, both open:
 
-1. No TREASURY address. The constant is the zero placeholder. The client refuses to deploy while it stays unset.
+1. TREASURY: designated on 17 November 2026 and written into the source; the recorded classes still carry the zero placeholder until the recompile and TXE in CI. The client refuses those classes. The designated account is not the 4-of-7 multisig.
 2. No external audit. Launch condition 1 is unmet.
 
 State: not deployable on Alpha until both are resolved.
@@ -87,7 +87,9 @@ These are recommendations aligned with Aztec Labs Path A. They are not decisions
 
 ### Decision package for Stefan Antonio Cirisanu — 16 November 2026
 
-Stefan Antonio Cirisanu confirms or rejects each row. Nothing in this package is a decision already taken. No treasury address is recorded. No external audit exists. No Alpha transaction is included. `communityMls` stays false.
+Stefan Antonio Cirisanu confirms or rejects each row. Nothing in this package is a decision already taken. No external audit exists. No Alpha transaction is included. `communityMls` stays false.
+
+Note, 17 November 2026: Stefan designated `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed` as the treasury and it is written into the source. Row 1 asks for the 4-of-7 multisig; that account is not it, so row 1 is not marked accepted.
 
 | # | Point | Action required of Stefan Antonio Cirisanu | Current state |
 |---|---|---|---|

@@ -1152,6 +1152,8 @@ export function CommunityChatView({
           )}
         </AnimatePresence>
 
+        {/* communityMls is false: posts are stored on our server and readable by it. Said once, in plain words. */}
+        <p className="px-1 pb-1.5 text-[13px] leading-snug text-[#4a505c]" role="note">People in this community can read what you write here. It is not a private conversation.</p>
         <form onSubmit={handleSend} className="flex items-end gap-2">
           <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,video/*" />
 
@@ -1167,7 +1169,8 @@ export function CommunityChatView({
                 type="button"
                 onClick={() => setShowAppDrawer(v => !v)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[#54656f] hover:bg-black/5 hover:text-[#111b21] transition-colors mb-0.5 ${showAppDrawer ? 'rotate-45 text-[#1C1C1E]' : ''}`}
-                title="Adjuntar"
+                title="Attach"
+                aria-label="Attach"
               >
                 <Plus size={22} />
               </button>
@@ -1179,7 +1182,8 @@ export function CommunityChatView({
                   value={input}
                   onChange={autoGrow}
                   onKeyDown={handleKeyDown}
-                  placeholder="Escribe un mensaje"
+                  placeholder="Write a message"
+                  aria-label="Write a message"
                   disabled={sending}
                   rows={1}
                   className="w-full bg-transparent outline-none text-[16px] sm:text-[15px] text-[#111b21] placeholder-[#8696a0] resize-none leading-[22px] max-h-[120px] overflow-y-auto disabled:opacity-50 py-[11px]"
