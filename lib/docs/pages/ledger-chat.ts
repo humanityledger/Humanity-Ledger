@@ -7,7 +7,7 @@ export const messaging: DocPage = {
   title: "Messaging in Ledger Chat",
   summary: "How direct messages are encrypted, where your history is kept, and how to recognise a message that was not.",
   keywords: ["chat", "messages", "dm", "direct message", "encryption", "e2ee", "end to end", "xmtp", "mls", "history", "fallback", "readable"],
-  updated: "2026-11-13",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -46,6 +46,17 @@ export const messaging: DocPage = {
       t: "p",
       text: "Your conversation history is stored in your browser on each device. If you clear your browser data, or use a private window, the history on that device is removed. It can be downloaded again from XMTP only for as long as the network keeps it and only on a device that holds valid keys.",
     },
+    { t: "h3", text: "One signature to sign in" },
+    {
+      t: "p",
+      text: "The local history is encrypted with its own key. Since 17 November 2026 that key is kept on your device, wrapped by a browser key that no script can read or export, so signing in takes one signature instead of two or three on every visit. A device that used the old method asks for that signature one last time. Where the browser cannot keep the key (a private window, some older browsers), Ledger Chat asks for the signature on each visit, as before.",
+    },
+    {
+      t: "hint",
+      tone: "info",
+      title: "The trade off",
+      text: "Like a desktop messenger, the local copy is now protected by your browser profile. Someone who can use your unlocked browser profile on this device can read it. A copy of the profile's files alone cannot, because the key never leaves the browser.",
+    },
     { t: "h2", text: "Attachments" },
     {
       t: "p",
@@ -69,7 +80,10 @@ export const messaging: DocPage = {
       t: "ul",
       items: [
         "Replies, reactions, voice notes, images, polls and GIFs.",
+        "Emoji, stickers and GIFs in one panel. Switch between them with the tabs or by swiping with a finger or a trackpad.",
+        "Voice notes play on Safari. When the browser cannot play one directly, Ledger Chat decodes it itself; if that also fails, it says so and offers the file.",
         "Read receipts, which you can turn off in settings.",
+        "Clear chat empties a conversation on this device. The chat list shows nothing from before the clear.",
         "Saved messages for anything you want to keep.",
         "Message search across the history stored on your device.",
       ],
@@ -83,7 +97,7 @@ export const routing: DocPage = {
   label: "How messages travel",
   summary: "The path a message takes from your device to someone else's, and what each part of the path can see.",
   keywords: ["routing", "relay", "delivery", "offline", "fallback", "network", "path", "server", "metadata", "p2p"],
-  updated: "2026-11-13",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -122,7 +136,7 @@ export const communities: DocPage = {
   label: "Communities",
   summary: "Groups with channels, roles and invite links, and how their privacy differs from direct messages.",
   keywords: ["community", "group", "channel", "server", "roles", "admin", "moderator", "invite", "posts", "members", "paid channel"],
-  updated: "2026-11-13",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -163,7 +177,7 @@ export const calls: DocPage = {
   label: "Voice and video calls",
   summary: "How calls connect, how they are encrypted, and what they reveal about your network.",
   keywords: ["call", "voice", "video", "webrtc", "ip address", "turn", "stun", "relay", "group call", "microphone", "camera"],
-  updated: "2026-11-13",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -178,9 +192,21 @@ export const calls: DocPage = {
     {
       t: "steps",
       items: [
-        { title: "Signalling", text: "The two browsers exchange connection details through the public PeerJS signalling service. It sees an identifier for each side and when the call is set up, not the audio or video." },
+        { title: "Ringing", text: "The ring, the answer, a decline and a hang up travel as encrypted XMTP messages, so a call reaches the other person wherever they are in the app, without the conversation open." },
+        { title: "Signalling", text: "The two browsers exchange connection details through a PeerJS signalling server. It sees an identifier for each side and when the call is set up, not the audio or video." },
         { title: "Finding a route", text: "Each browser asks a STUN server, operated by Google, for its public network address so the two can try to connect directly." },
         { title: "Direct or relayed", text: "If a direct connection is not possible, for example on a mobile network or behind a strict company network, the call needs a relay (a TURN server). Ledger Chat uses its own relay service when it is switched on; the public relay it used before no longer works and was removed. The relay passes encrypted packets and cannot decode them. Until the relay is switched on, calls between two networks that both block direct connections may not connect." },
+      ],
+    },
+    { t: "h2", text: "During a call" },
+    {
+      t: "ul",
+      items: [
+        "Answering takes one tap and opens the caller's conversation. A ring never changes the conversation you have open.",
+        "On a computer the call is a card; on a phone it fills the screen.",
+        "Hanging up or declining ends the call on both sides in every state, also while it is still connecting or reconnecting.",
+        "Screen sharing is offered where the browser can capture a screen. Phone browsers that cannot say so and point to a computer.",
+        "Call settings let you choose the audio output where the browser allows it.",
       ],
     },
     { t: "h2", text: "Your IP address" },
@@ -191,7 +217,7 @@ export const calls: DocPage = {
     { t: "h2", text: "Group calls" },
     {
       t: "p",
-      text: "Communities can start a group call that members can join from the community page. Group calls use the same encryption as one to one calls.",
+      text: "Calls are one to one. Group calls are not available: the server routes for them answer 410.",
     },
     {
       t: "hint",
@@ -207,7 +233,7 @@ export const payments: DocPage = {
   label: "Payments in chat",
   summary: "Send tokens to the person you are talking to, from your own wallet, without leaving the conversation.",
   keywords: ["pay", "payment", "send money", "transfer", "usdc", "usdt", "eth", "tokens", "wallet", "fees", "receipt", "qr"],
-  updated: "2026-11-13",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -232,11 +258,42 @@ export const payments: DocPage = {
         "You can also show a payment request as a QR code that any Ethereum wallet can scan.",
       ],
     },
+    { t: "h2", text: "Private payments" },
+    {
+      t: "p",
+      text: "The private wallet sends payments on Aztec that hide the amount, the sender and the recipient. It runs on Aztec Alpha with a cap per payment and has no external audit. See [Private payments on Aztec](/docs/zero-knowledge) for how it works.",
+    },
+    {
+      t: "table",
+      head: ["Section", "What it shows"],
+      strongFirst: true,
+      rows: [
+        ["Overview", "Your private and public balances, Send, Receive, Shield and Unshield, Fee Juice, and Ethereum."],
+        ["Activity", "Every payment with its real stage, from making the proof on your device to settled in a block."],
+        ["Security", "What protects the account right now and what does not yet: keys made on your device, the ways to open it, address checks bound to the network, whether new payments are allowed, the public fee payer and the audit status. Passkeys are managed here."],
+        ["Protocol", "The contracts and network the wallet uses."],
+      ],
+    },
+    { t: "h3", text: "Passkeys" },
+    {
+      t: "p",
+      text: "You can open the private wallet with Face ID, Touch ID, Windows Hello or a security key instead of your Ethereum wallet. The passkey unlocks the same account: same address, same balance. Ledger Chat keeps only an encrypted copy of the account key that the passkey alone can open.",
+    },
     {
       t: "hint",
-      tone: "info",
-      title: "Looking for private payments?",
-      text: "Payments that hide the amount and the people involved are being built on Aztec and are still experimental. See [Private payments on Aztec](/docs/zero-knowledge).",
+      tone: "warning",
+      title: "A passkey can spend",
+      text: "Whoever holds an enrolled passkey can open the wallet and spend, exactly like whoever holds your Ethereum wallet. Add passkeys only on devices you control, and remove any you no longer control. If you lose both your Ethereum wallet and every passkey, nobody can open the account, Ledger Chat included.",
+    },
+    { t: "h3", text: "Checking who you pay" },
+    {
+      t: "p",
+      text: "Before a private payment, Ledger Chat checks that the Aztec address belongs to the person in the conversation, with a proof signed by their account. Since 17 November 2026 that proof names the network, so a test network address can never receive a payment of real value.",
+    },
+    { t: "h3", text: "Receiving from Ethereum" },
+    {
+      t: "p",
+      text: "Receiver addresses are written and tested but not live. They are ordinary Ethereum addresses you give to a payer; what arrives there becomes part of your private balance, and nothing on Ethereum names your Aztec account. The wallet shows their status and moves no money through them until the contracts are audited and deployed.",
     },
   ],
 };
@@ -247,7 +304,7 @@ export const devices: DocPage = {
   label: "Linked devices",
   summary: "Use Ledger Chat on more than one device, and what to expect from the desktop and mobile apps.",
   keywords: ["device", "link", "qr", "second device", "phone", "desktop", "windows", "mac", "linux", "ios", "android", "app", "download", "install"],
-  updated: "2026-11-13",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",

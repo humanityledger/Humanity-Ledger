@@ -7,7 +7,7 @@ export const overview: DocPage = {
   title: "Humanity Ledger documentation",
   summary: "What Humanity Ledger is, what Ledger Chat does today, and where to read more.",
   keywords: ["intro", "introduction", "start", "what is", "about", "humanity ledger", "ledger chat", "begin"],
-  updated: "2026-10-21",
+  updated: "2026-11-17",
   blocks: [
     {
       t: "p",
@@ -40,9 +40,11 @@ export const overview: DocPage = {
         { label: "Direct messages", state: "available", text: "Encrypted on your device and delivered through the XMTP network." },
         { label: "Fallback delivery", state: "partial", text: "When XMTP delivery fails, a message can travel through our server in readable form. The chat labels these messages." },
         { label: "Communities", state: "available", text: "Channels, roles, posts and invite links. Community posts are not yet encrypted end to end." },
-        { label: "Voice and video calls", state: "available", text: "Direct browser to browser calls, encrypted by WebRTC." },
+        { label: "Voice and video calls", state: "available", text: "Direct browser to browser calls, encrypted by WebRTC. A call rings anywhere in the app, and screen sharing works where the browser can capture." },
         { label: "Payments in chat", state: "available", text: "Send tokens from your own wallet to the person you are talking to." },
-        { label: "Private payments on Aztec", state: "partial", text: "Shield, send, receive by QR code and unshield work on the Aztec test network, with test tokens that have no value. No bridge from Ethereum and no independent audit yet." },
+        { label: "Private payments on Aztec", state: "partial", text: "Shield, send, receive and unshield on Aztec Alpha with a cap per payment, and on the test network. Each account pays its own network fee. No independent audit yet." },
+        { label: "Passkeys for the private wallet", state: "partial", text: "Open the wallet with Face ID, Touch ID, Windows Hello or a security key. Not yet tested on every kind of device." },
+        { label: "Receiving from Ethereum", state: "development", text: "Receiver addresses and a portal to Aztec are written and tested, not deployed." },
         { label: "Attachments", state: "partial", text: "Files are uploaded to our storage provider and are not yet encrypted end to end." },
         { label: "Windows app", state: "partial", text: "An unsigned preview build. The web app is the supported client." },
         { label: "iPhone and Android apps", state: "development", text: "Not yet submitted to the App Store or Google Play." },

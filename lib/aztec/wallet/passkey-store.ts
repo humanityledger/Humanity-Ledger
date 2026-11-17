@@ -7,7 +7,7 @@
  * device finds its record there. The server stores ciphertext it cannot open: the key is the PRF
  * output, which only the authenticator can produce.
  */
-import { mergeRecords, PasskeyRecordSchema, type PasskeyRecord } from './passkey';
+import { mergeKeepingLocal, mergeRecords, PasskeyRecordSchema, type PasskeyRecord } from './passkey';
 
 const KEY = (network: string, evm: string) => `hl.passkeys.${network}.${evm}`;
 
@@ -52,7 +52,7 @@ export async function backupRecords(network: string, f: typeof fetch = fetch): P
 export async function allRecords(evm: string, network: string, f: typeof fetch = fetch): Promise<PasskeyRecord[]> {
   const local = localRecords(evm, network);
   const remote = ((await backupRecords(network, f)) ?? []).filter((r) => r.evm === evm);
-  const merged = mergeRecords(local, remote);
+  const merged = mergeKeepingLocal(local, remote);
   if (remote.length) saveLocal(evm, network, merged);
   return merged;
 }

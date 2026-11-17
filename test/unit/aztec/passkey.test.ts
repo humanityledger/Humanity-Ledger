@@ -139,3 +139,49 @@ describe('passkey unlock', () => {
     expect(merged[0].label).toBe('Renamed');
   });
 });
+
+describe('passkey hardening', () => {
+  it('a root is accepted only if it is the account\'s own signature over the network typed data', async () => {
+    const { privateKeyToAccount } = await import('viem/accounts');
+    const { assertRootOwner } = await import('@/lib/aztec/wallet/passkey');
+    const { WALLET_TYPED_DATA_ALPHA, WALLET_TYPED_DATA } = await import('@/lib/aztec/wallet/keys');
+    const me = privateKeyToAccount(('0x' + '11'.repeat(32)) as `0x${string}`);
+    const other = privateKeyToAccount(('0x' + '22'.repeat(32)) as `0x${string}`);
+    const mine = await me.signTypedData(WALLET_TYPED_DATA_ALPHA as any);
+    const theirs = await other.signTypedData(WALLET_TYPED_DATA_ALPHA as any);
+    const testnet = await me.signTypedData(WALLET_TYPED_DATA as any);
+    await assertRootOwner(mine, me.address.toLowerCase(), WALLET_TYPED_DATA_ALPHA as any);
+    const refused = async (root: string) => {
+      try {
+        await assertRootOwner(root, me.address.toLowerCase(), WALLET_TYPED_DATA_ALPHA as any);
+        return null;
+      } catch (e: any) {
+        return e.code;
+      }
+    };
+    expect(await refused(theirs)).toBe('MISMATCH');
+    // The test-network signature of the same wallet does not open the Alpha account.
+    expect(await refused(testnet)).toBe('MISMATCH');
+    // A smart-account signature (not 65 bytes) cannot be checked offline and is let through.
+    expect(await refused('0x' + 'ab'.repeat(100))).toBeNull();
+  });
+
+  it('the backup never replaces a record this device holds; it only adds missing credentials', async () => {
+    const { mergeKeepingLocal } = await import('@/lib/aztec/wallet/passkey');
+    const a = authenticator(undefined, false);
+    const r1 = await enrol(a.api);
+    const r2 = await enrol(a.api, [r1]);
+    const planted = { ...r1, ct: r1.ct.slice(0, -4) + 'AAAA', createdAt: r1.createdAt + 1000 };
+    const merged = mergeKeepingLocal([r1], [planted, r2]);
+    expect(merged.map((r) => r.credentialId).sort()).toEqual([r1.credentialId, r2.credentialId].sort());
+    expect(merged.find((r) => r.credentialId === r1.credentialId)!.ct).toBe(r1.ct);
+  });
+
+  it('passkeys are bound to ledgerchat.org on every subdomain, and to the host elsewhere', async () => {
+    const { passkeyRpId } = await import('@/lib/aztec/wallet/passkey');
+    expect(passkeyRpId('ledgerchat.org')).toBe('ledgerchat.org');
+    expect(passkeyRpId('www.ledgerchat.org')).toBe('ledgerchat.org');
+    expect(passkeyRpId('evil-ledgerchat.org')).toBe('evil-ledgerchat.org');
+    expect(passkeyRpId('localhost')).toBe('localhost');
+  });
+});

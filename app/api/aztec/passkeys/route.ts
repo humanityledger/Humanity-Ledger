@@ -70,7 +70,8 @@ export async function PUT(req: NextRequest) {
   if (existing && existing.walletAddress !== who) {
     return NextResponse.json({ error: 'This passkey is enrolled for another account.' }, { status: 409 });
   }
-  if (!existing) {
+  // A new credential, or one moved to another network, counts against that network's limit.
+  if (!existing || existing.network !== r.network) {
     const count = await prisma.aztecPasskeyRecord.count({ where: { walletAddress: who, network: r.network } });
     if (count >= MAX_PASSKEYS) return NextResponse.json({ error: `At most ${MAX_PASSKEYS} passkeys per account.` }, { status: 409 });
   }
