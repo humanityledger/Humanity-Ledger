@@ -804,3 +804,14 @@ Chrome (Playwright) a 1280 px y 390 px con los componentes reales: Open in MetaM
 ### Solo Stefan
 
 Multisig 4-of-7, auditoría externa, deploy en Alpha, texto legal, comunidad de prueba con nombre, TURN, `DATABASE_URL_UNPOOLED`, fusionar el PR, y probar Open in MetaMask en un iPhone y un Android reales.
+
+## Sesión 21 — 17 noviembre 2026 (Lotties del chat, nueva private wallet, firma en el teléfono, Comunidades que abren)
+
+Ninguna transacción en Alpha, ningún deploy, ningún broadcast. `audit` sigue null. Q1–Q10 siguen OPEN. `communityMls` sigue false.
+
+- **Comunidades que abren.** Los logs de Railway (deployment `5347a05e`) mostraban cada `GET /api/chat/communities/:id` con `Cannot read properties of undefined (reading 'members')`: la consulta contaba `posts` en `Community`, relación que no existe, Prisma fallaba y el respaldo sin `_count` rompía. Ahora los posts se cuentan en `CommunityPost` por `communityId` (también en el PR 128).
+- **Lotties.** `public/lottie/new-conversation.json` en una conversación sin mensajes (desaparece con el primero, también el optimista); `peer-typing.json` en el hilo y junto a "typing…" mientras la otra persona escribe (la lista no recibía `isTyping`); `send-confirmation.json` una vez por mensaje enviado, tras el límite de envío; `welcome-notification.json` en el inicio de Ledger Chat y con la lista vacía. Sin imágenes ni expresiones; con "reducir movimiento" no hay bucles ni confirmación de envío.
+- **Private wallet.** Rehecha sobre el mismo cliente: saldo grande, ocultar importes (solo este navegador), Sync con hora, saldo público con Shield, Fee Juice con cuántas transacciones cubre como mínimo; Send y Receive anchos; Overview, Activity (por día, filtros) y Protocol; Send en dos pasos con revisión que dice que la fee en Fee Juice es pública y el pago no; Receive con QR, dirección agrupada, Copy y Share; Shield/Unshield con origen y destino; hojas modales con Escape. Reglas en `components/zk/wallet/walletLogic.ts` con tests.
+- **Firma en el teléfono.** La pantalla de fallo pone Open in MetaMask primero en Safari/Chrome sin wallet y muestra "Details" con el código y el texto de error de la wallet. La captura de las 12:14 era del build anterior al enlace `metamask://dapp/ledgerchat.org` (desplegado 11:24 UTC). La firma por WalletConnect dentro de Safari no se pudo reproducir aquí: no había iPhone en la sesión.
+
+Pantallas abiertas en Chrome (Playwright), 1280 px y 390 px: la wallet (Overview, Activity, filtros, ocultar importes, Send con errores, revisión, Receive, Shield) y las cuatro animaciones con los componentes reales y lottie-web.
