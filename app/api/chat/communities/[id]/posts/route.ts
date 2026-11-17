@@ -48,10 +48,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    // Posts tab = rich community posts (with a title)
+    // Posts of the reading screen = community posts (with a title).
+    // ?pinned=1 returns only the posts a person pinned, newest pin first. An empty list is an
+    // empty list: the client must show nothing, not the previous result.
+    const pinnedOnly = ['1', 'true'].includes(req.nextUrl.searchParams.get('pinned') ?? '');
     const posts = await (prisma as any).communityPost.findMany({
-      where: { communityId, title: { not: null } },
-      orderBy: { createdAt: 'desc' },
+      where: { communityId, title: { not: null }, ...(pinnedOnly ? { pinnedAt: { not: null } } : {}) },
+      orderBy: pinnedOnly ? { pinnedAt: 'desc' } : { createdAt: 'desc' },
       take: 100,
     }).catch(() => []);
     return NextResponse.json({ posts });
@@ -132,6 +135,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         title: postTitle,
         content: text || html,
         contentHtml: html || text,
+        // Sending never pins. Only PIN_MESSAGE sets pinnedAt.
+        pinnedAt: null,
+        pinnedBy: null,
       },
     });
 
