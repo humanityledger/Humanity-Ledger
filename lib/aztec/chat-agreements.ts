@@ -24,7 +24,7 @@ import type { EscrowView, StreamView } from './agreements';
 import { getPrivateWallet } from './wallet/client';
 import { parseUnits } from './wallet/amounts';
 import { AZTEC_WALLET_CONFIG } from './wallet/config';
-import { localStoragePeerBindingStore, sdkBindingCrypto, verifiedPeerBinding } from './peer-binding';
+import { localStoragePeerBindingStore, networkTagOf, sdkBindingCrypto, valueBindingContext, verifiedPeerBinding } from './peer-binding';
 import { authorizedMainnetRecord, checkAgreementContext } from './agreement-policy';
 import { AZTEC_NETWORKS } from './sequencer/networks';
 import { streamStart, streamTerms } from './stream-terms';
@@ -97,7 +97,8 @@ async function policyFor(
   const info = await ctx.node.getNodeInfo();
   const network = L.fees.feeNetworkFromL1ChainId(Number(info.l1ChainId));
   // G7 is re-verified from the stored proof now; a cached flag is never enough to move value.
-  const binding = await verifiedPeerBinding(localStoragePeerBindingStore(), peer.dmPeerInboxId, peer.selfInboxId, await sdkBindingCrypto());
+  // On Alpha the proof must name this node's network (scheme v2).
+  const binding = await verifiedPeerBinding(localStoragePeerBindingStore(), peer.dmPeerInboxId, peer.selfInboxId, await sdkBindingCrypto(), valueBindingContext(networkTagOf(info as any), AZTEC_WALLET_CONFIG.network));
   const pre = checkAgreementContext({
     nodeNetwork: network,
     buildNetwork: AZTEC_WALLET_CONFIG.network,

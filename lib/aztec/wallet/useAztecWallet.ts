@@ -42,7 +42,8 @@ export function useAztecWallet(sessionAddress: string) {
   const sameAccount =
     (!!sessionAddress && !!connected && connected.toLowerCase() === sessionAddress.toLowerCase()) || isLocalConnected || linkedComputer;
 
-  const open = useCallback(async () => {
+  /** The account's signer: the connected wallet, the in-memory wallet, or the linked phone. */
+  const resolveSigner = useCallback(async (): Promise<{ activeAddress: string; sign: (td: WalletTypedData) => Promise<string> }> => {
     let activeAddress: string | null = null;
     let signFn: (td: WalletTypedData) => Promise<string>;
 
@@ -83,7 +84,7 @@ export function useAztecWallet(sessionAddress: string) {
     }
 
     const remote = !isConnected && !isLocalConnected; // the phone signs; remoteSign has its own wait
-    await getPrivateWallet().connect(activeAddress, async (td: WalletTypedData) => {
+    return { activeAddress, sign: async (td: WalletTypedData) => {
       try {
         return remote ? await signFn(td) : await withSignTimeout(signFn(td), SIGN_WAIT_MS);
       } catch (err: any) {
@@ -97,13 +98,32 @@ export function useAztecWallet(sessionAddress: string) {
           `Your wallet could not sign the request${msg ? `: ${msg}` : '.'} Unlock it, update it if it is old, and try again. Hardware wallets need typed-data signing enabled.`,
         );
       }
-    });
+    } };
   }, [connected, isConnected, sessionAddress, isLocalConnected, signTypedDataAsync]);
+
+  const open = useCallback(async () => {
+    const { activeAddress, sign } = await resolveSigner();
+    await getPrivateWallet().connect(activeAddress, sign);
+  }, [resolveSigner]);
+
+  /** Opens the wallet with an enrolled passkey: no Ethereum wallet needed (lib/aztec/wallet/passkey.ts). */
+  const openWithPasskey = useCallback(async () => {
+    if (!sessionAddress) throw new Error('Sign in first.');
+    await getPrivateWallet().connectWithPasskey(sessionAddress);
+  }, [sessionAddress]);
+
+  /** Enrols a passkey for the open account; the wallet signs once more to confirm the account. */
+  const enrollPasskey = useCallback(async (label: string) => {
+    const { sign } = await resolveSigner();
+    return getPrivateWallet().enrollPasskey(sign, label);
+  }, [resolveSigner]);
 
   return {
     state,
     wallet: typeof window === 'undefined' ? null : getPrivateWallet(),
     open,
+    openWithPasskey,
+    enrollPasskey,
     walletConnected: isConnected || isLocalConnected || linkedComputer,
     sameAccount,
     /** A computer linked to the phone by QR: it reads everything, and the phone approves each signature. */

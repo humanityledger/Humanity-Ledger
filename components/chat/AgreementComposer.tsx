@@ -93,7 +93,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
     // Fresh G7 check (stored Schnorr proof re-verified); chat-agreements repeats it before any value moves.
     let live = true;
     import('@/lib/aztec/peer-binding')
-      .then(async (pb) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), dmPeerInboxId, selfInboxId ?? '', await pb.sdkBindingCrypto()))
+      .then(async (pb) => pb.verifiedPeerBinding(pb.localStoragePeerBindingStore(), dmPeerInboxId, selfInboxId ?? '', await pb.sdkBindingCrypto(), getPrivateWallet().bindingContext()))
       .then((b) => live && setPeerVerified(b.verified))
       .catch(() => live && setPeerVerified(false));
     return () => {

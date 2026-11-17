@@ -40,6 +40,18 @@
  * Only then is the address pinned as VERIFIED. A v2 announcement that fails
  * any check is rejected and never pinned.
  *
+ * Scheme v2 ("hl/aztec-binding/v2", 17 Nov 2026) adds the Aztec network to the
+ * proof and to the signed statement:
+ *
+ *   "network": "aztec:<l1ChainId>:<rollupVersion>"
+ *   statement = "... | dm:<recipientInboxId> | net:<network>"
+ *
+ * so a proof made on one network (the test network) cannot stand for another
+ * (Alpha), where the same keys give the same address. Value never moves on
+ * Alpha on a v1-scheme proof: verifiedPeerBinding is called there with
+ * requireNetwork, and the peer's client re-announces with v2. On the test
+ * network a v1-scheme proof is still accepted, for older clients.
+ *
  * What a valid proof establishes: the sender holds the signing key that
  * authorises transactions for that address. It does not prove the sender
  * holds the address's privacy keys (publicKeys are public data). A peer could
@@ -62,21 +74,34 @@ export const AztecAddressAnnouncementSchema = z
   .strict();
 export type AztecAddressAnnouncement = z.infer<typeof AztecAddressAnnouncementSchema>;
 
-export const BINDING_SCHEME = 'hl/aztec-binding/v1';
+export const BINDING_SCHEME_V1 = 'hl/aztec-binding/v1';
+/** The scheme this client makes: names the Aztec network (see the header). */
+export const BINDING_SCHEME_V2 = 'hl/aztec-binding/v2';
+/** @deprecated kept for older imports; new proofs use BINDING_SCHEME_V2. */
+export const BINDING_SCHEME = BINDING_SCHEME_V1;
+
+/** "aztec:<l1ChainId>:<rollupVersion>", from the node the wallet is connected to. */
+export const NETWORK_TAG = /^aztec:\d{1,12}:\d{1,12}$/;
+export function networkTagOf(info: { l1ChainId: number | bigint | string; rollupVersion?: number | bigint | string }): string {
+  return `aztec:${String(info.l1ChainId)}:${String(info.rollupVersion ?? 0)}`;
+}
 
 const inboxId = z.string().min(1).max(128).regex(/^[0-9A-Za-z_.:-]+$/, 'unexpected inbox id');
 
 export const AddressProofSchema = z
   .object({
-    scheme: z.literal(BINDING_SCHEME),
+    scheme: z.union([z.literal(BINDING_SCHEME_V1), z.literal(BINDING_SCHEME_V2)]),
     signingPublicKey: z.object({ x: hex32, y: hex32 }).strict(),
     salt: hex32,
     publicKeys: z.string().regex(/^0x[0-9a-fA-F]{64,2048}$/, 'expected PublicKeys hex'),
     signerInboxId: inboxId,
     recipientInboxId: inboxId,
+    /** v2 only: the Aztec network the proof is for. */
+    network: z.string().regex(NETWORK_TAG, 'expected aztec:<l1ChainId>:<rollupVersion>').optional(),
     signature: z.string().regex(/^0x[0-9a-fA-F]{128}$/, 'expected a 64-byte Schnorr signature'),
   })
-  .strict();
+  .strict()
+  .refine((p) => (p.scheme === BINDING_SCHEME_V2) === (p.network !== undefined), 'v2 proofs name the network; v1 proofs do not');
 export type AddressProof = z.infer<typeof AddressProofSchema>;
 
 export const AztecAddressAnnouncementV2Schema = z
@@ -92,9 +117,19 @@ export type AztecAddressAnnouncementV2 = z.infer<typeof AztecAddressAnnouncement
 /** Largest announcement accepted, in bytes (v1 is about 110, v2 about 1,300). */
 export const MAX_ANNOUNCEMENT_BYTES = 4096;
 
-/** The exact text whose sha256ToField the peer signs. */
-export function bindingStatement(address: string, signerInboxId: string, recipientInboxId: string): string {
-  return `${BINDING_SCHEME} | ${address.toLowerCase()} | ${signerInboxId} | dm:${recipientInboxId}`;
+/** The exact text whose sha256ToField the peer signs. With a network: scheme v2. */
+export function bindingStatement(address: string, signerInboxId: string, recipientInboxId: string, network?: string): string {
+  if (network === undefined) return `${BINDING_SCHEME_V1} | ${address.toLowerCase()} | ${signerInboxId} | dm:${recipientInboxId}`;
+  if (!NETWORK_TAG.test(network)) throw new Error('Invalid Aztec network tag.');
+  return `${BINDING_SCHEME_V2} | ${address.toLowerCase()} | ${signerInboxId} | dm:${recipientInboxId} | net:${network}`;
+}
+
+/** What the verifier knows about its own network. */
+export interface BindingNetworkContext {
+  /** This wallet's network tag (networkTagOf the node). A v2 proof for another network is refused. */
+  network?: string;
+  /** Refuse v1-scheme proofs (no network in them). Set where real value moves (Alpha). */
+  requireNetwork?: boolean;
 }
 
 /**
@@ -115,10 +150,16 @@ export type ProofCheck = { ok: true } | { ok: false; reason: string };
 /** Checks a v2 proof against who sent it and who received it. Never throws. */
 export async function verifyAddressProof(
   ann: AztecAddressAnnouncementV2,
-  ctx: { senderInboxId: string; selfInboxId: string },
+  ctx: { senderInboxId: string; selfInboxId: string } & BindingNetworkContext,
   crypto: BindingCrypto,
 ): Promise<ProofCheck> {
   const p = ann.proof;
+  if (p.scheme === BINDING_SCHEME_V2 && ctx.network !== undefined && p.network !== ctx.network) {
+    return { ok: false, reason: 'the proof was made for another Aztec network' };
+  }
+  if (ctx.requireNetwork && (p.scheme !== BINDING_SCHEME_V2 || ctx.network === undefined)) {
+    return { ok: false, reason: ctx.network === undefined ? 'this wallet does not know its Aztec network yet' : 'the proof does not name the Aztec network (made by an older Ledger Chat)' };
+  }
   if (p.signerInboxId.toLowerCase() !== ctx.senderInboxId.toLowerCase()) {
     return { ok: false, reason: 'the proof was made by someone other than the sender' };
   }
@@ -130,7 +171,7 @@ export async function verifyAddressProof(
     if (derived.toLowerCase() !== ann.address.toLowerCase()) {
       return { ok: false, reason: 'the keys in the proof do not produce this address' };
     }
-    const msg = await crypto.messageField(bindingStatement(ann.address, p.signerInboxId, p.recipientInboxId));
+    const msg = await crypto.messageField(bindingStatement(ann.address, p.signerInboxId, p.recipientInboxId, p.scheme === BINDING_SCHEME_V2 ? p.network : undefined));
     if (!(await crypto.verify(msg, p.signingPublicKey, p.signature))) {
       return { ok: false, reason: 'the signature does not verify' };
     }
@@ -233,6 +274,7 @@ export async function recordPeerAnnouncement(
   store: PeerBindingStore,
   msg: { senderInboxId: string; peerInboxId: string; body: unknown; selfInboxId?: string },
   crypto?: BindingCrypto,
+  net: BindingNetworkContext = {},
 ): Promise<AnnouncementResult> {
   const ann = parseAnnouncement(msg.body);
   if (!ann) return { status: 'ignored', reason: 'not an announcement' };
@@ -244,7 +286,8 @@ export async function recordPeerAnnouncement(
   let verified = false;
   if (ann.version === 2) {
     if (!crypto || !msg.selfInboxId) return { status: 'ignored', reason: 'cannot check the proof here' };
-    const check = await verifyAddressProof(ann, { senderInboxId: msg.senderInboxId, selfInboxId: msg.selfInboxId }, crypto);
+    // Pinning only refuses a proof for another network; requireNetwork is for moving value.
+    const check = await verifyAddressProof(ann, { senderInboxId: msg.senderInboxId, selfInboxId: msg.selfInboxId, network: net.network }, crypto);
     if (!check.ok) return { status: 'rejected', address: announced, reason: check.reason };
     verified = true;
   }
@@ -286,18 +329,30 @@ export async function verifiedPeerBinding(
   peerInboxId: string,
   selfInboxId: string,
   crypto: BindingCrypto,
-): Promise<{ address?: string; verified: boolean }> {
+  net: BindingNetworkContext = {},
+): Promise<{ address?: string; verified: boolean; reason?: string }> {
   try {
     const address = await store.get(peerInboxId);
-    if (!address) return { verified: false };
-    if (!selfInboxId) return { address, verified: false };
+    if (!address) return { verified: false, reason: 'no Aztec address was shared in this chat' };
+    if (!selfInboxId) return { address, verified: false, reason: 'your own chat identity is not known yet' };
     const ann = parseAnnouncement(await store.get(PROOF(peerInboxId)));
-    if (!ann || ann.version !== 2 || ann.address.toLowerCase() !== address.toLowerCase()) return { address, verified: false };
-    const check = await verifyAddressProof(ann, { senderInboxId: peerInboxId, selfInboxId }, crypto);
-    return { address, verified: check.ok };
+    if (!ann || ann.version !== 2 || ann.address.toLowerCase() !== address.toLowerCase()) {
+      return { address, verified: false, reason: 'the address has no proof of control' };
+    }
+    const check = await verifyAddressProof(ann, { senderInboxId: peerInboxId, selfInboxId, ...net }, crypto);
+    return check.ok ? { address, verified: true } : { address, verified: false, reason: check.reason };
   } catch {
-    return { verified: false };
+    return { verified: false, reason: 'the proof could not be checked' };
   }
+}
+
+/**
+ * The network context for a value-moving G7 check on this build: the wallet's
+ * network tag, and requireNetwork on Alpha. Undefined tag (wallet not open)
+ * fails closed on Alpha.
+ */
+export function valueBindingContext(networkTag: string | undefined, network: 'testnet' | 'mainnet' | string): BindingNetworkContext {
+  return { network: networkTag, requireNetwork: network === 'mainnet' };
 }
 
 /** The pinned Aztec address of a DM peer, to pass as `peer` to verifyAgreementInvite. */
