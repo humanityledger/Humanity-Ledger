@@ -3,9 +3,11 @@
  *
  *   fee = max(minFee, ceil(amount × feeBps / 10,000))
  *
- * State: the same arithmetic is in PrivateEscrow and PaymentStream (settlement only).
- * The committed artifact is still the pre-fee class until `aztec compile` records a new
- * class id. Nothing is deployed. TREASURY has no address. There is no external audit.
+ * State: the same arithmetic is in PrivateEscrow and PaymentStream (settlement only),
+ * compiled with Aztec 6.0.0 and recorded as the current classes in
+ * deployments/aztec-testnet.json. Those classes were compiled with the zero treasury
+ * placeholder; the source now carries the designated treasury and is pending recompile.
+ * Nothing is deployed. There is no external audit.
  * Every function is pure and works in bigint base units of the token (HLC: 6 decimals).
  *
  * Two properties carried over to the contract:
@@ -93,8 +95,15 @@ export const BASELINE_STREAM_MIN_FEE = 0n;
 export const BASELINE_MAX_FEE_SHARE_BPS = 1_000n;
 export const BASELINE_TX_CAP = 5_000_000n;
 
-/** False until Stefan supplies the 4-of-7 Aztec address. The contract constant is zero. */
-export const TREASURY_ADDRESS_SET = false;
+/**
+ * The treasury Aztec account designated by Stefan Antonio Cirisanu on 17 November 2026
+ * (created on Aztec Alpha, L2 block 33001). It is not the 4-of-7 multisig of launch
+ * condition 3. The same value is TREASURY in contracts/aztec/escrow and contracts/aztec/streams.
+ */
+export const TREASURY_ADDRESS = '0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed';
+
+/** True: a treasury is designated. Deploy still needs a recompiled class and, on Alpha, an external audit. */
+export const TREASURY_ADDRESS_SET = /^0x[0-9a-f]{64}$/.test(TREASURY_ADDRESS) && BigInt(TREASURY_ADDRESS) !== 0n;
 
 export const BASELINE_ESCROW_SCHEDULE: FeeSchedule = {
   feeBps: BASELINE_FEE_BPS,

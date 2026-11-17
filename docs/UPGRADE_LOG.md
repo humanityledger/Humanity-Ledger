@@ -728,3 +728,51 @@ El paquete “Decision package for Stefan Antonio Cirisanu — 16 November 2026�
 |---|---|
 | `docs/AZTEC_FOUNDATION_DOSSIER.md` | Paquete de decisión, seis puntos sin aceptar |
 | `docs/UPGRADE_LOG.md` | Esta entrada |
+
+---
+
+## Sesión 19 — 17 noviembre 2026 (tesorería designada en el fuente, puertas de Alpha, borrar chat, Comunidades, creación del wallet)
+
+Base `af6fa15`. Ninguna transacción en Alpha, ningún deploy, ningún broadcast. `audit` sigue en null. Q1–Q10 siguen OPEN. `communityMls` sigue en false. Ninguna fila del paquete de decisión se marca aceptada. Ningún B1–B10 se cierra. No se editó `lib/docs/pages/legal.ts` ni `protocol.ts`. Studio sigue cerrado. `/api/aztec/sponsor` sigue en 410.
+
+Sobre R8: The operator states that a private transfer between two non-operator accounts succeeded. No hash was supplied. Los registros operador-a-operador (bloques 29012 y 29771) no se tocaron.
+
+### Tesorería
+
+`TREASURY` en `contracts/aztec/escrow/src/main.nr` y `contracts/aztec/streams/src/main.nr` pasa a `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed`, designada por Stefan Antonio Cirisanu el 17 de noviembre (creada en Aztec Alpha, bloque L2 33001; Fee Juice desde `0x1Ba9c5cC429Ac7B8742F58c0215D6D58c009f675`). No es el multisig 4-of-7. Cliente: `TREASURY_ADDRESS` en `lib/protocol/fees.ts`. Las constantes D5 y la fórmula no cambian.
+
+Esta sesión no tenía el toolchain de Aztec, así que no se recompiló ni se ejecutó TXE. Los dos fuentes quedan fijados en `deployments/aztec-pending-recompile.json` con su sha256. El workflow "Aztec contracts" recompila y ejecuta `aztec test` dentro de cada crate en una rama `claude/**`. Los class ids nuevos se registran solo si eso pasa. Hasta entonces las clases registradas (compiladas con el cero) siguen siendo las actuales y el cliente las rechaza.
+
+### Puertas
+
+`lib/protocol/agreement-gate.ts`, compartido por `assertCanOpen`, el compositor, `deploy-keyed.ts` y el e2e. Orden: en Alpha con `audit: null`, rechazo por falta de auditoría externa; crate pendiente de recompilar, rechazo; sin tesorería, rechazo. Antes: clase actual (`tracksCurrentArtifact`) y, para escrow, `baselineFee`. Un stream no se rechaza por `TX_CAP`. El aviso se ve antes de cualquier campo y desactiva Abrir. `deploy-keyed.ts` rechaza un nodo de Alpha, la puerta y una clase no actual antes de crear wallet; el e2e rechaza Alpha y la recompilación pendiente. Eliminado `app/api/test-aztec/route.ts` (ruta retirada que hablaba de un fee payer patrocinado).
+
+### Borrar chat y borrar para mí
+
+`lib/chat/cleared-chats.ts`: un corte por conversación, sin margen al futuro, consultado por la caché, la cola offline, la lectura heredada `/api/chat/direct`, la reproducción del stream, el historial guardado y la línea de la lista. Si el corte no se puede guardar, error y no se borra nada. Borrar para mí se guarda antes de quitar el mensaje; si falla, el mensaje se queda con un error; la línea pasa al anterior visible o queda vacía.
+
+### Comunidades
+
+Al abrir una comunidad se ve `components/communities/CommunityReader.tsx`: los posts, la frase "People in this community can read what you write here. It is not a private conversation.", un campo grande y Send. Miembros, canales, apps, ajustes, analítica, gobernanza y tesorería quedan tras **Manage** (el `CommunityView` existente). Un post fallido queda marcado "Not sent" con Try again y Remove. Lista con nombres de 18 px, detalles de 16 px y objetivos de 48 px. El servidor no cambia.
+
+### Creación del wallet
+
+`components/zk/WalletCreation.tsx` sustituye el bloque "Open your private wallet" y el paso de Fee Juice por las filas de estado de la tarjeta de envío HLC (`PaymentProgress.module.css`): una frase, pasos que siguen la fase real, un botón. El aviso de no auditado de encima no cambia. El panel del wallet tenía `w-84`, clase que Tailwind 3 no define; ahora es ancho completo en móvil y 420 px en escritorio.
+
+### Copy y docs
+
+Banner del chat y factura nombran el fee payer público. `/join` ya no dice "end-to-end encrypted community". Ajustes no da por hecho un TURN. README alineado con el repositorio. `MAINNET_READINESS.md` R6, líneas de estado de `FEE_CONTRACT_SPEC.md` y líneas de tesorería de la sección 0 del dossier. `docs/ALPHA_COMPLETE_HANDOFF.md` actualizado.
+
+### Pantallas abiertas
+
+- `/connect` en producción (build anterior a este cambio), navegador integrado: escritorio, y 390 px con agente móvil (**Open in MetaMask** con `https://link.metamask.io/dapp/ledgerchat.org`). No se firmó nada.
+- Comunidades (lista, abrir, leer, escribir, Cancel, Send, envío fallido, Try again, Manage) y creación del wallet (inicio, firma, claves, Fee Juice, cuenta, error, bloqueado) más la tarjeta de envío HLC: Chrome con Playwright a 1280 px y 390 px, con los componentes reales empaquetados, respuestas del servidor simuladas y Tailwind generado de sus clases. Ningún objetivo bajo 48 px, ningún texto bajo 7:1, sin desplazamiento lateral. Se encontró y corrigió un bucle de recarga en cada render, un post fallido oculto bajo el campo en móvil y una etiqueta de botón partida.
+- No abiertas: todo lo que exige sesión iniciada sobre un build con estos cambios (wallet real, tarjeta de pago en un DM, ajustes, comprobación de borrar chat y borrar para mí con recarga), la pantalla de fallo de `/connect` y un teléfono físico.
+
+### Tests
+
+Ejecutados aquí (ejecutor local sin `npm install`): `alpha-agreement-gates` 14/14, `fee-baseline-source` 2/2, `fees` 14/14, `clear-and-delete` 14/14, `deleted-messages` 3/3, `no-sponsorship` 4/4, `connect-wallet-only` 8/8, más los tests que leen `LedgerChatV2.tsx`. `check-forbidden-copy`, `check-no-fake-data` y `check-artifact-sources` (dos PENDING esperados) pasan. No ejecutables aquí: `r17-acceptance`, `session8-guards`, `deployments-registry`, `agreement-open-fee`. Hay que correr el comando completo con dependencias.
+
+### Solo Stefan
+
+Multisig 4-of-7, auditoría externa, deploy de las clases de fee en Alpha, texto legal, comunidad de prueba con nombre, TURN, `DATABASE_URL_UNPOOLED`, y subir este cambio a una rama `claude/**` para que CI recompile y pase TXE.

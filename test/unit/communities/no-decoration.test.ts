@@ -10,6 +10,7 @@ const FILES = [
   ...readdirSync(join(ROOT, 'components/chat'))
     .filter((f) => /^Community.*\.tsx$/.test(f) || f === 'LedgerCommunitiesTab.tsx')
     .map((f) => `components/chat/${f}`),
+  'components/communities/CommunityReader.tsx',
   'components/chat/community-apps/CommunityApps.tsx',
   'components/chat/community-apps/AppFrame.tsx',
   'components/zk/ZkCommunityTreasury.tsx',

@@ -310,34 +310,12 @@ describe('Suite 6 — API Balance Endpoint', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // SUITE 7: Test Aztec Connection Endpoint
 // ─────────────────────────────────────────────────────────────────────────────
-describe('Suite 7 — /api/test-aztec Connection Endpoint', () => {
-  it('Endpoint responds without crashing', { timeout: TIMEOUT_MS }, async () => {
+describe('Suite 7 — /api/test-aztec is retired', () => {
+  // The route disclosed the node URL and described a sponsored fee payer as if
+  // the app used one. It is in lib/security/retiredRoutes.ts and its file is gone.
+  it('answers 410', { timeout: TIMEOUT_MS }, async () => {
     const res = await fetch(`${DEV_URL}/api/test-aztec`);
-    // Any response (even 500) means the server is up; 200 = connected
-    expect([200, 500]).toContain(res.status);
-  });
-
-  it('Response is valid JSON', { timeout: TIMEOUT_MS }, async () => {
-    const res = await fetch(`${DEV_URL}/api/test-aztec`);
-    const body = await res.json();
-    expect(body).toHaveProperty('success');
-  });
-
-  it('If connected: rollupAddress is present and valid', { timeout: TIMEOUT_MS }, async () => {
-    const res = await fetch(`${DEV_URL}/api/test-aztec`);
-    const body = await res.json() as any;
-    if (body.success) {
-      // rollupAddress is the canonical check — chainId may be absent from nodeInfo in v5 rc.2
-      expect(body.rollupAddress).toBeDefined();
-      expect(body.rollupAddress).toMatch(/^0x[0-9a-f]/i);
-      console.log(`  ✅ Aztec Mainnet v5 CONNECTED!`);
-      console.log(`  ✅ Rollup Contract: ${body.rollupAddress}`);
-      console.log(`  ✅ Node Version: ${body.nodeVersion}`);
-      console.log(`  ✅ Sponsored FPC: ${body.sponsoredFpc}`);
-    } else {
-      console.warn(`  ⚠️  Aztec RPC not reachable: ${body.error}`);
-      // This is informational — in CI the public testnet must be accessible
-    }
+    expect(res.status).toBe(410);
   });
 });
 

@@ -175,7 +175,8 @@ describe('D-2 placeholder schedule (printed minFee 1, not the compile minimum)',
 
 describe('authorized baseline (16 November 2026)', () => {
   it('charges the escrow minimum on settlement amounts and refuses the share and the cap', () => {
-    expect(TREASURY_ADDRESS_SET).toBe(false);
+    // Designated 17 November 2026 (not the 4-of-7). Deploy is still gated: lib/protocol/agreement-gate.ts.
+    expect(TREASURY_ADDRESS_SET).toBe(true);
     expect(minimumAmount(BASELINE_ESCROW_SCHEDULE)).toBe(10_000n);
     expect(baselineFee(10_000n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: true, fee: 1_000n, net: 9_000n });
     expect(baselineFee(9_999n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-share' });

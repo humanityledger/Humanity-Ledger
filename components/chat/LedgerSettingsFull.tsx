@@ -1370,7 +1370,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   {[
                     ['Direct messages', 'Sent with XMTP using MLS (Messaging Layer Security). Only you and the other person can read them.'],
                     ['Server fallback', 'If XMTP is unavailable, a message can go through our server. Those messages are not end to end encrypted and are marked in the chat.'],
-                    ['Calls', 'Voice and video use WebRTC with DTLS SRTP. With IP masking on, media is relayed through a TURN server but stays encrypted.'],
+                    ['Calls', 'Voice and video use WebRTC with DTLS-SRTP. With IP masking on, media goes through a TURN relay only when the server has one configured; it stays encrypted either way.'],
                     ['Communities', 'Community posts are stored on our server and are not end to end encrypted.'],
                     ['Your account', 'Your wallet is your account. To use another device, sign in with the same wallet there.'],
                     ['Payments', 'Private payments run on Aztec Alpha in HLC, with a cap per payment and no external audit. The amount and the parties stay private. The fee is paid publicly in Fee Juice by your account. Nothing is sponsored.'],
