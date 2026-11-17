@@ -35,6 +35,10 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/auth/verify',
   // Sponsored fees removed on 2026-11-15 (product decision): every account pays its own fees.
   '/api/aztec/sponsor',
+  // Internal audit IA-06 (18 Nov 2026): a public endpoint that asked for a seed phrase in the request
+  // body and returned a SHA-256 "address" labelled aztec-mainnet. Nothing calls it; the real wallet
+  // derives keys on the device (lib/aztec/wallet/keys.ts). A seed phrase must never leave a device.
+  '/api/aztec/derive-address',
   '/api/aztec/fhe-router',
   '/api/aztec/restore-session',
   '/api/aztec/session',
