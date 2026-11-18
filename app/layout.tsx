@@ -331,6 +331,8 @@ export default async function RootLayout({
     <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
+        {/* The boot mark's image (components/layout/BootMark.tsx): fetched before the first paint so it never pops in. */}
+        <link rel="preload" href="/boot-mark.webp" as="image" type="image/webp" />
         <meta charSet="utf-8" />
         {/* Proper viewport already handled by Next.js `viewport` export above */}
         {/* Wallet in-app browsers (MetaMask, Trust, Coinbase, Rainbow, OKX, Phantom…) draw pages larger

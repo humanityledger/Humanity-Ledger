@@ -99,13 +99,17 @@ function Row({ icon, children, onClick, trailing, label }: { icon: React.ReactNo
   );
 }
 
-export function ProfilePanel({ address, name, photo, onEditName, onEditUsername, onOpenShare }: {
+export function ProfilePanel({ address, name, photo, onEditName, onEditUsername, onOpenShare, header, children }: {
   address: string;
   name: string;
   photo?: string | null;
   onEditName?: () => void;
   onEditUsername: () => void;
   onOpenShare: () => void;
+  /** Replaces the read-only avatar at the top (Settings passes its editable profile card). */
+  header?: React.ReactNode;
+  /** More groups after the username, in the same page (devices, visibility, data, session). */
+  children?: React.ReactNode;
 }) {
   const u = useUsername(!!address);
   const [menu, setMenu] = useState(false);
@@ -123,23 +127,32 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col items-center pt-2">
-        <PeerAvatar address={address} name={name} photo={photo} size={88} />
-        {onEditName && (
-          <button type="button" onClick={onEditName} className={`mt-3 h-8 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13px] font-semibold ${FOCUS}`} style={{ color: INK }}>
-            Edit name and photo
-          </button>
-        )}
-      </div>
+      {header ?? (
+        <div className="flex flex-col items-center pt-2">
+          <PeerAvatar address={address} name={name} photo={photo} size={88} />
+          {onEditName && (
+            <button type="button" onClick={onEditName} className={`mt-3 h-8 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13px] font-semibold ${FOCUS}`} style={{ color: INK }}>
+              Edit name and photo
+            </button>
+          )}
+        </div>
+      )}
 
-      <Group footer="Your name and photo are visible to the people you message, your contacts and your groups.">
-        <Row icon={<User size={18} strokeWidth={1.8} style={{ color: INK }} />} onClick={onEditName} label={onEditName ? 'Edit your name' : undefined}>
-          {name}
-        </Row>
-        <Row icon={<span className="text-[12px] font-semibold" style={{ color: INK_3 }}>0x</span>} trailing={<button type="button" onClick={() => copy(address, 'Wallet address')} aria-label="Copy wallet address" className={`w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}><Copy size={15} strokeWidth={1.8} style={{ color: INK_2 }} /></button>}>
-          <span className="tabular-nums">{shortAddr(address)}</span>
-        </Row>
-      </Group>
+      {header ? (
+        // The editable card already shows the name and the address: only the note stays.
+        <p className="text-[12.5px] leading-relaxed px-1.5 -mt-2" style={{ color: INK_3 }}>
+          Your name and photo are visible to the people you message, your contacts and your groups.
+        </p>
+      ) : (
+        <Group footer="Your name and photo are visible to the people you message, your contacts and your groups.">
+          <Row icon={<User size={18} strokeWidth={1.8} style={{ color: INK }} />} onClick={onEditName} label={onEditName ? 'Edit your name' : undefined}>
+            {name}
+          </Row>
+          <Row icon={<span className="text-[12px] font-semibold" style={{ color: INK_3 }}>0x</span>} trailing={<button type="button" onClick={() => copy(address, 'Wallet address')} aria-label="Copy wallet address" className={`w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}><Copy size={15} strokeWidth={1.8} style={{ color: INK_2 }} /></button>}>
+            <span className="tabular-nums">{shortAddr(address)}</span>
+          </Row>
+        </Group>
+      )}
 
       <Group footer="Your username, QR code and link are not shown on your profile. Share them only with people you trust: anyone who has one can start a chat with you.">
         {!u.loaded ? (
@@ -207,6 +220,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
           QR code or link
         </Row>
       </Group>
+      {children}
     </div>
   );
 }

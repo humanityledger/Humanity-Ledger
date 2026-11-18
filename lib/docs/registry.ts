@@ -20,6 +20,7 @@ import { brand } from "./pages/brand";
 import { guide } from "./pages/guide";
 import { changelog } from "./pages/changelog";
 import { legalNotice, terms, privacy, cookies, contentPolicy, disclaimer } from "./pages/legal";
+import { communityGuidelines } from "./pages/community-guidelines";
 
 export const NAV: NavGroup[] = [
   { title: "Getting started", pages: [overview, quickstart, identity, pin] },
@@ -28,7 +29,7 @@ export const NAV: NavGroup[] = [
   { title: "Security", pages: [securityModel, audits, bugBounty] },
   { title: "Developers", pages: [developers] },
   { title: "Company", pages: [about, brand, blog, changelog, status, contact] },
-  { title: "Legal", pages: [legalNotice, terms, privacy, cookies, contentPolicy, disclaimer] },
+  { title: "Legal", pages: [legalNotice, terms, privacy, communityGuidelines, cookies, contentPolicy, disclaimer] },
 ];
 
 const ALL: { page: DocPage; group: string }[] = [
