@@ -52,9 +52,8 @@ import { revealMessage } from '@/lib/chat/reveal-message';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
 import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
 import { ThemePickerSheet, chatThemeStyle, canvasStyle, canvasTone, type AppearanceTab } from '@/components/chat/ThemePickerSheet';
-import { CHAT_THEMES, findChatTheme, isChatThemeId, type ChatTheme } from '@/lib/chat/themes';
-import { BUBBLE_STYLES, isBubbleStyleId } from '@/lib/chat/bubbleStyles';
-import { WALLPAPER_OPTIONS } from '@/components/chat/WallpaperPickerSheet';
+import { findChatTheme, isChatThemeId, type ChatTheme } from '@/lib/chat/themes';
+import { isBubbleStyleId } from '@/lib/chat/bubbleStyles';
 import { resolveWallpaper } from '@/lib/chat/wallpapers';
 import { StickerSceneHost } from '@/components/chat/StickerSceneHost';
 // Panels, sheets and tabs that open on demand load on demand: less JavaScript to parse and keep
@@ -7744,39 +7743,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   New group
                 </button>
               </div>
-              {/* What Ledger Chat does, in words the code backs up. Each line is
-                  scoped: direct messages are MLS end to end; community posts are
-                  stored by the server, and the card says so. */}
-              <ul className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left max-w-[440px]">
-                {[
-                  { icon: <Lock size={16} strokeWidth={1.75} />, title: 'Encrypted direct messages', text: 'One-to-one chats use MLS end-to-end encryption through XMTP.' },
-                  { icon: <Users size={16} strokeWidth={1.75} />, title: 'Communities', text: 'Channels, roles, invite links and apps. Community posts are stored on our server.' },
-                  ...((ledgerSettings as any)?.payments_enabled !== false ? [{ icon: <Wallet size={16} strokeWidth={1.75} />, title: 'Payments', text: 'Send tokens from your wallet without leaving the chat.' }] : []),
-                  { icon: <Palette size={16} strokeWidth={1.75} />, title: 'Appearance', text: `${CHAT_THEMES.length} themes, ${WALLPAPER_OPTIONS.length} wallpapers and ${BUBBLE_STYLES.length} bubble styles.`, onClick: () => openAppearance() },
-                ].map((f, idx) => {
-                  const body = (
-                    <>
-                      <span className="w-8 h-8 rounded-lg bg-[#f2f4f7] text-[#15171c] flex items-center justify-center mb-2.5" aria-hidden="true">{f.icon}</span>
-                      <span className="block text-[13.5px] font-semibold text-[#15171c]">{f.title}</span>
-                      <span className="block text-[12.5px] text-[#5b6271] leading-snug mt-0.5">{f.text}</span>
-                    </>
-                  );
-                  return (
-                    <motion.li
-                      key={f.title}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: 'spring', stiffness: 320, damping: 30, delay: idx * 0.04 }}
-                    >
-                      {'onClick' in f && f.onClick ? (
-                        <button type="button" onClick={f.onClick} className="w-full h-full text-left bg-white rounded-2xl p-4 border border-[#e4e7ec] hover:border-[#c9ced6] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">{body}</button>
-                      ) : (
-                        <div className="h-full bg-white rounded-2xl p-4 border border-[#e4e7ec]">{body}</div>
-                      )}
-                    </motion.li>
-                  );
-                })}
-              </ul>
+              {/* The four feature cards that sat here were removed (18 November 2026): a cleaner
+                  entry with the two actions only. What each feature does is in the docs. */}
               <p className="mt-6 text-[12px] text-[#727a88]">Messaging by XMTP · Private wallet on {networkLabel()}</p>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { LivePhone, PhoneShowcase, phoneShowcaseStyles } from "./PhoneShowcase";
 import { AppearancePlayground, FirstPaymentRecord, LaunchClose, LaunchHero, StackExplorer, type LandingMode } from "./LaunchSections";
 import { AztecSection, DesktopTour, LiveActivities } from "./Showcase";
 import { DevicesSection, TokenSection } from "./ProtocolSections";
+import { LiveGlobe } from "./LiveGlobe";
 import s from "./Landing.module.css";
 import st from "./Story.module.css";
 
@@ -106,6 +107,9 @@ export function HumanityLanding() {
 
         <div className={`${s.wrap} ${st.stack}`}>
           {ALPHA && <FirstPaymentRecord />}
+
+          {/* Live: accounts, @usernames and visitors on a lit globe, from the database (lib/stats). */}
+          <LiveGlobe />
 
           {/* The real interface on a computer, pinned while you scroll through it. */}
           <DesktopTour />

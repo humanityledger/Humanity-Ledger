@@ -1,6 +1,7 @@
 "use client";
 import dynamic from 'next/dynamic';
 import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
+import { useVisitBeacon } from '@/lib/stats/useVisitBeacon';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
 import { KeyboardViewport } from '@/components/layout/KeyboardViewport';
 import { BootMark } from '@/components/layout/BootMark';
@@ -23,6 +24,8 @@ const LedgerChat = dynamic(
 );
 
 export default function ChatPage() {
+  // Counts this browser once a day for the live map on the landing page (lib/stats).
+  useVisitBeacon();
   return (
     <TuringShieldGate>
       <KeyboardViewport />

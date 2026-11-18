@@ -24,6 +24,7 @@
 
 import type { Client } from '@xmtp/browser-sdk';
 import { hasSyncGroupName } from '@/lib/sync/xmtpSyncChannel';
+import { isSyncWaitError, redactXmtpError } from './syncErrors';
 
 export { isPersistableXmtpGroupId } from './groupId';
 
@@ -127,13 +128,26 @@ export async function createSecureGroup(
   }
 
   // 4. Create the group via XMTP (MLS handles key material securely)
-  const group = await (client.conversations as any).newGroupWithIdentifiers(
-    validatedIdentifiers,
-    {
-      groupName: safeName,
-      groupDescription: safeDescription,
-    }
-  );
+  const startedNs = BigInt(Date.now() - 5_000) * 1_000_000n;
+  let group: any;
+  try {
+    group = await (client.conversations as any).newGroupWithIdentifiers(
+      validatedIdentifiers,
+      {
+        groupName: safeName,
+        groupDescription: safeDescription,
+      }
+    );
+  } catch (e) {
+    // "synced N messages, 0 failed N succeeded from cursor …": the group was created and the
+    // commit published; only the wait for the network's receipt ran out (isSyncWaitError).
+    // Find it instead of reporting a failure, and let a later sync finish the invitations.
+    if (!isSyncWaitError(e)) throw e;
+    group = await findGroupCreatedSince(client, safeName, startedNs);
+    if (!group) throw new Error('The group may still be on its way. Pull to refresh in a moment.');
+    console.warn(`[GroupChat] Group "${safeName}" created; the network confirmed it late (${redactXmtpError(e)}).`);
+    setTimeout(() => { Promise.resolve(group.sync?.()).catch(() => {}); }, 3_000);
+  }
 
   console.log(`[GroupChat] Group "${safeName}" created with ID: ${group.id}`);
   return group.id;
@@ -285,3 +299,15 @@ export async function getGroupMessages(client: Client, groupId: string): Promise
     return [];
   }
 }
+
+/** The newest group with this name created after `sinceNs`, from the local database. */
+async function findGroupCreatedSince(client: Client, name: string, sinceNs: bigint): Promise<any | null> {
+  try { await client.conversations.sync(); } catch { /* local list still has it */ }
+  const groups: any[] = await (client.conversations as any).listGroups();
+  const created = (g: any) => { try { return BigInt(g.createdAtNs ?? 0); } catch { return 0n; } };
+  const matches = groups
+    .filter((g) => sanitizeGroupMetadata(g.name ?? '') === name && created(g) >= sinceNs)
+    .sort((a, b) => (created(b) > created(a) ? 1 : -1));
+  return matches[0] ?? null;
+}
+

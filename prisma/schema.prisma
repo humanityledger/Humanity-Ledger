@@ -1898,3 +1898,14 @@ model AlphaMember {
   riskAckAt      DateTime?
   revokedAt      DateTime?
 }
+
+/// Visits to ledgerchat.org, counted for the live map on the landing page. One row per UTC day
+/// and IANA time zone, with the number of different browsers that came that day. No IP address,
+/// account or browser id is stored: the time zone is the only place information (lib/stats).
+model VisitorTally {
+  day   String
+  tz    String
+  count Int    @default(0)
+
+  @@id([day, tz])
+}
