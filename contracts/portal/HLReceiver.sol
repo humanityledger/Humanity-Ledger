@@ -117,6 +117,8 @@ contract HLReceiver is ReentrancyGuard {
         rescueNonce = nonce + 1;
         emit Rescued(token, to, amount, nonce);
         if (token == address(0)) {
+            // Slither arbitrary-send-eth: `to` is signed by rescueSigner, EIP-712 with nonce and deadline.
+            // slither-disable-next-line arbitrary-send-eth
             (bool ok,) = to.call{value: amount}("");
             if (!ok) revert EthTransferFailed();
         } else {
@@ -153,6 +155,8 @@ contract HLReceiverFactory {
     function deploy(bytes32 secretHash, address rescueSigner) public returns (address receiver) {
         receiver = predict(secretHash, rescueSigner);
         if (receiver.code.length > 0) return receiver;
+        // Slither unused-return: CREATE2: the clone is at `receiver`, predicted above; a failed create reverts.
+        // slither-disable-next-line unused-return
         Clones.cloneDeterministic(implementation, saltOf(secretHash, rescueSigner));
         HLReceiver(payable(receiver)).initialize(secretHash, rescueSigner);
         emit ReceiverDeployed(receiver);
@@ -164,6 +168,8 @@ contract HLReceiverFactory {
         returns (bytes32 key, uint256 index)
     {
         address receiver = deploy(secretHash, rescueSigner);
+        // Slither unused-return: both values are returned to the caller.
+        // slither-disable-next-line unused-return
         return HLReceiver(payable(receiver)).forward(token, amount);
     }
 }

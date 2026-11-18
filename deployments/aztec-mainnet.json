@@ -8,6 +8,13 @@
   },
   "sponsoredFpc": null,
   "audit": null,
+  "$internalReviewComment": "An internal security review is not an audit: audit stays null and the Alpha deploy gate (lib/protocol/agreement-gate.ts) still refuses. This field only points to the report.",
+  "internalReview": {
+    "report": "docs/audit/INTERNAL_SECURITY_REVIEW_2026-11-18.md",
+    "date": "2026-11-18",
+    "baseCommit": "6251a73",
+    "workflow": "Security review (.github/workflows/security-review.yml)"
+  },
   "contracts": [],
   "$tokensComment": "Private tokens the wallet may list on Alpha (NEXT_PUBLIC_AZTEC_TOKENS must match these: scripts/aztec/check-alpha-config.mjs). key is the wallet's internal slot, never shown to users; symbol is what users see. deployBlock 0 (status pending-preflight) means not yet confirmed: the preflight (test/live/aztec-mainnet-preflight.live.test.ts) reads the block of deployTx from the node and prints it, together with the instance's class ID; both are then written here. Nothing is invented. HLC is issued by Humanity Ledger, is not backed by and has no relation to USDC.",
   "tokens": [

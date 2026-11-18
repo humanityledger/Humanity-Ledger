@@ -120,6 +120,8 @@ contract ZKVerificationKeyRegistry is Ownable2Step {
      */
     function executeVK(bytes32 circuitId) external {
         Pending memory p = _pending[circuitId];
+        // Slither incorrect-equality: a zero timestamp is the "does not exist" sentinel, not a clock comparison.
+        // slither-disable-next-line incorrect-equality
         if (p.eta == 0) revert NoPendingChange(circuitId);
         if (block.timestamp < p.eta) revert TimelockNotElapsed(circuitId, p.eta);
         delete _pending[circuitId];
@@ -132,6 +134,8 @@ contract ZKVerificationKeyRegistry is Ownable2Step {
      */
     function cancelVK(bytes32 circuitId) external onlyOwner {
         Pending memory p = _pending[circuitId];
+        // Slither incorrect-equality: a zero timestamp is the "does not exist" sentinel, not a clock comparison.
+        // slither-disable-next-line incorrect-equality
         if (p.eta == 0) revert NoPendingChange(circuitId);
         delete _pending[circuitId];
         emit VKProposalCancelled(circuitId, p.vkHash);

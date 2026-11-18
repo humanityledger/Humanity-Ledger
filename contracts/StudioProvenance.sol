@@ -23,6 +23,8 @@ contract StudioProvenance {
      * @dev Anchors a new document hash. Fails if the hash already exists.
      */
     function anchorDocument(bytes32 documentHash, string calldata metadataURI) external {
+        // Slither incorrect-equality: a zero timestamp is the "does not exist" sentinel, not a clock comparison.
+        // slither-disable-next-line incorrect-equality
         require(anchoredDocuments[documentHash].timestamp == 0, "Document hash already anchored by another user");
         
         anchoredDocuments[documentHash] = Document({

@@ -1,0 +1,53 @@
+# Foundry, beside Hardhat (internal security review, Phase 0 step 3). Hardhat stays the main
+# contract suite (npm run test:contracts); Foundry adds invariant fuzzing, fuzzed unit tests,
+# coverage, Halmos and the Gambit mutation runs. Tools are installed in CI only
+# (.github/workflows/security-review.yml); forge-std is fetched there into foundry-lib/.
+[profile.default]
+src = "contracts"
+test = "test/foundry"
+out = "out-foundry"
+cache_path = "cache-foundry"
+libs = ["node_modules", "foundry-lib"]
+solc_version = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+remappings = [
+  "@openzeppelin/=node_modules/@openzeppelin/",
+  "forge-std/=foundry-lib/forge-std/src/",
+]
+
+[profile.default.fuzz]
+runs = 1000
+
+[profile.default.invariant]
+runs = 256
+depth = 32
+fail_on_revert = false
+
+# Every push and PR: 10,000 runs per invariant.
+[profile.ci.fuzz]
+runs = 10000
+
+[profile.ci.invariant]
+runs = 10000
+depth = 20
+fail_on_revert = false
+
+# Nightly: 1,000,000 runs per invariant.
+[profile.nightly.fuzz]
+runs = 100000
+
+[profile.nightly.invariant]
+runs = 1000000
+depth = 20
+fail_on_revert = false
+
+# Gambit: one quick pass of every test per mutant.
+[profile.mutation.fuzz]
+runs = 64
+
+[profile.mutation.invariant]
+runs = 32
+depth = 16
+fail_on_revert = false

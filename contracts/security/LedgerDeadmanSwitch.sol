@@ -28,6 +28,9 @@ import {IERC20Metadata}          from "@openzeppelin/contracts/token/ERC20/exten
 import {SafeERC20}               from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC721}                 from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
+// Slither locked-ether: receive and fallback always revert: the switch can never hold ETH.
+
+// slither-disable-next-line locked-ether
 contract LedgerDeadmanSwitch is Ownable2Step, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 

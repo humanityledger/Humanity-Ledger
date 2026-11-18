@@ -1,0 +1,29 @@
+[
+  {
+    "filename": "contracts/portal/HLPortal.sol",
+    "sourceroot": ".",
+    "solc": "solc",
+    "solc_remappings": ["@openzeppelin=node_modules/@openzeppelin"],
+    "outdir": "gambit_out/HLPortal",
+    "num_mutants": 200,
+    "seed": 18112026
+  },
+  {
+    "filename": "contracts/portal/HLReceiver.sol",
+    "sourceroot": ".",
+    "solc": "solc",
+    "solc_remappings": ["@openzeppelin=node_modules/@openzeppelin"],
+    "outdir": "gambit_out/HLReceiver",
+    "num_mutants": 120,
+    "seed": 18112026
+  },
+  {
+    "filename": "contracts/portal/AztecMessaging.sol",
+    "sourceroot": ".",
+    "solc": "solc",
+    "solc_remappings": ["@openzeppelin=node_modules/@openzeppelin"],
+    "outdir": "gambit_out/AztecMessaging",
+    "num_mutants": 40,
+    "seed": 18112026
+  }
+]

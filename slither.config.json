@@ -1,0 +1,15 @@
+{
+  "filter_paths": "node_modules|contracts/mocks|test/|foundry-lib",
+  "exclude_dependencies": true,
+  "solc_remaps": "@openzeppelin=node_modules/@openzeppelin",
+  "detectors_to_exclude": "timestamp,low-level-calls,solc-version,pragma,naming-convention,calls-loop",
+  "fail_on": "medium",
+  "_justification": {
+    "timestamp": "block.timestamp is the intended clock for the UTC-day caps (HLPortal I6), the timelocks (I4, I5) and the heartbeats. A validator can move it by seconds, which cannot cross a 2-day timelock or a 90-day timeout; the day boundary is analysed as IR-07 in docs/audit/INTERNAL_SECURITY_REVIEW_2026-11-18.md.",
+    "low-level-calls": "Native ETH is sent with call (HLPortal.withdraw, HLReceiver.rescue, HumanTimeLock.withdraw), every result is checked, and each function is nonReentrant. HumanityTimeLockVault._tryTransfer uses call on purpose so one blocked token cannot stop the sweep of the others.",
+    "solc-version": "Hardhat and Foundry both compile with solc 0.8.24 (hardhat.config.js, foundry.toml); the ^0.8.20 pragmas only state the minimum.",
+    "pragma": "Same as solc-version: two minimum pragmas (^0.8.20, ^0.8.24), one compiler.",
+    "naming-convention": "Style only (leading underscores on parameters).",
+    "calls-loop": "HumanityTimeLockVault.executeDeadManSwitch and LedgerDeadmanSwitch.triggerInheritance loop over tokens by design; the vault caps the list at MAX_TOKENS and the switch's caller chooses its list."
+  }
+}

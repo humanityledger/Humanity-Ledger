@@ -628,3 +628,39 @@ unconstrained fn cancel_with_accrued_above_the_cap_charges_the_cap() {
     assert(paid + back + 5000000 == total);
     assert(balance(env, token, streams) == 0);
 }
+
+// Internal security review (18 November 2026): one negative test per reachable assert.
+#[test(should_fail_with = "zero total")]
+unconstrained fn a_zero_total_fails() {
+    let s = setup();
+    s.env.call_private(
+        s.sender,
+        PaymentStream::at(s.streams).create_stream(s.recipient, 0, RATE, s.env.last_block_timestamp(), 1, 1),
+    );
+}
+
+#[test(should_fail_with = "zero rate")]
+unconstrained fn a_zero_rate_fails() {
+    let s = setup();
+    s.env.call_private(
+        s.sender,
+        PaymentStream::at(s.streams).create_stream(s.recipient, TOTAL, 0, s.env.last_block_timestamp(), 1, 1),
+    );
+}
+
+#[test(should_fail_with = "zero withdrawal")]
+unconstrained fn a_zero_withdrawal_fails() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 40);
+    withdraw(s, 1, 0);
+}
+
+// 1 unit: the fee rounds up to 1, above the 10% share of the amount.
+#[test(should_fail_with = "fee exceeds share")]
+unconstrained fn a_dust_withdrawal_is_refused_by_the_share() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start + 40);
+    withdraw(s, 1, 1);
+}

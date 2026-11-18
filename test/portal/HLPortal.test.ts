@@ -182,6 +182,33 @@ describe("HLPortal", function () {
       await expect(portal.connect(guardian).lowerCaps(d, E("10"), E("10"), E("10"))).to.emit(portal, "CapsLowered");
       await expect(portal.connect(guardian).lowerCaps(d, E("11"), E("10"), E("10"))).to.be.revertedWithCustomError(portal, "InvalidCaps");
     });
+
+    it("IR-02: disabling an asset or lowering its caps drops a relaxation queued before it", async function () {
+      const { portal, dai, admin, guardian } = await deploy();
+      const d = await dai.getAddress();
+      // Queued before the emergency: higher caps, enabled.
+      await portal.connect(admin).queueAsset(d, asset(L2_DAI, { perDepositCap: E("1500") }));
+      await expect(portal.connect(guardian).disableAsset(d)).to.emit(portal, "AssetQueueCancelled").withArgs(d);
+      await time.increase(TIMELOCK);
+      await expect(portal.connect(admin).executeAsset(d)).to.be.revertedWithCustomError(portal, "NothingQueued");
+      expect((await portal.assets(d)).enabled).to.equal(false);
+
+      await portal.connect(admin).queueAsset(d, asset(L2_DAI, { perDepositCap: E("1500") }));
+      await time.increase(TIMELOCK);
+      await portal.connect(admin).executeAsset(d);
+      await portal.connect(admin).queueAsset(d, asset(L2_DAI, { perDepositCap: E("2000") }));
+      await expect(portal.connect(guardian).lowerCaps(d, E("10"), E("10"), E("10"))).to.emit(portal, "AssetQueueCancelled").withArgs(d);
+      await time.increase(TIMELOCK);
+      await expect(portal.connect(admin).executeAsset(d)).to.be.revertedWithCustomError(portal, "NothingQueued");
+      expect((await portal.assets(d)).perDepositCap).to.equal(E("10"));
+    });
+
+    it("IR-02: with nothing queued, disable and lowerCaps emit no cancellation", async function () {
+      const { portal, dai, guardian } = await deploy();
+      const d = await dai.getAddress();
+      await expect(portal.connect(guardian).lowerCaps(d, E("10"), E("10"), E("10"))).to.not.emit(portal, "AssetQueueCancelled");
+      await expect(portal.connect(guardian).disableAsset(d)).to.not.emit(portal, "AssetQueueCancelled");
+    });
   });
 
   describe("roles and timelock (I3, I4)", function () {

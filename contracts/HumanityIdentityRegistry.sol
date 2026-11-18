@@ -69,6 +69,8 @@ contract HumanityIdentityRegistry is Ownable {
     }
 
     function updateProfile(string calldata _displayName, string calldata _avatarUrl, string calldata _bio) external {
+        // Slither incorrect-equality: createdAt 0 is the "no identity" sentinel, not a balance.
+        // slither-disable-next-line incorrect-equality
         if (identities[msg.sender].createdAt == 0) revert IdentityDoesNotExist();
         
         identities[msg.sender].displayName = _displayName;

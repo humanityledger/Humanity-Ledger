@@ -256,3 +256,40 @@ unconstrained fn no_claim_before_a_root_is_set() {
     let s = deploy_with_root(0);
     claim(s, 1, SPAIN, s.expiry, sanction_list(250));
 }
+
+// Internal security review (18 November 2026): one negative test per assert.
+#[test(should_fail_with = "empty root rejected")]
+unconstrained fn the_issuer_cannot_set_an_empty_root() {
+    let s = setup(SPAIN, 250);
+    s.env.call_public(s.issuer, IdentityCredential::at(s.credential).update_root(0));
+}
+
+#[test(should_fail_with = "no pending issuer")]
+unconstrained fn accept_without_a_proposal_fails() {
+    let s = setup(SPAIN, 250);
+    s.env.call_public(s.user, IdentityCredential::at(s.credential).accept_issuer());
+}
+
+#[test(should_fail_with = "OFAC/FATF sanctioned jurisdiction [IR]")]
+unconstrained fn fixed_sanction_floor_rejects_ir() {
+    let s = setup(364, 250);
+    claim(s, 1, 364, s.expiry, sanction_list(250));
+}
+
+#[test(should_fail_with = "OFAC/FATF sanctioned jurisdiction [SY]")]
+unconstrained fn fixed_sanction_floor_rejects_sy() {
+    let s = setup(760, 250);
+    claim(s, 1, 760, s.expiry, sanction_list(250));
+}
+
+#[test(should_fail_with = "OFAC/FATF sanctioned jurisdiction [CU]")]
+unconstrained fn fixed_sanction_floor_rejects_cu() {
+    let s = setup(192, 250);
+    claim(s, 1, 192, s.expiry, sanction_list(250));
+}
+
+#[test(should_fail_with = "invalid null jurisdiction")]
+unconstrained fn a_null_jurisdiction_fails() {
+    let s = setup(0, 250);
+    claim(s, 1, 0, s.expiry, sanction_list(250));
+}
