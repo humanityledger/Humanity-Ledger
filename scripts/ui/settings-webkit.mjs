@@ -28,6 +28,9 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
     await page.goto(`${base}/chat?e2e=settings`, { waitUntil: 'networkidle', timeout: 60000 }).catch((e) => errors.push('goto: ' + e.message));
     await page.waitForSelector('[data-testid="settings-root"]', { timeout: 20000 }).catch(() => errors.push('no settings-root'));
     await page.waitForTimeout(800);
+    // Does requestAnimationFrame run in this browser and device? Playwright's "stable" check and
+    // framer-motion both depend on it.
+    const raf = await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 3 ? r(true) : requestAnimationFrame(f)); requestAnimationFrame(f); setTimeout(() => r(false), 1500); }));
     const ids = await page.$$eval('[data-settings-item]', (els) => els.map((e) => e.getAttribute('data-settings-item')));
     if (ids.length === 0) {
       // Settings never mounted: that is a failure, never a vacuous pass. Show where the page went.
@@ -40,6 +43,7 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
       await page.goto(`${base}/chat?e2e=settings`, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => undefined);
       await page.waitForSelector(`[data-settings-item="${id}"]`, { timeout: 20000 }).catch(() => undefined);
       await page.waitForTimeout(700);
+      let forced = false;
       await page.click(`[data-settings-item="${id}"]`, { timeout: 10000 }).catch(async (e) => {
         // Keep Playwright's reason (not stable, not visible, another element intercepts) and what
         // sits on top of the button's centre.
@@ -49,7 +53,10 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
           const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
           return `button at ${Math.round(b.x)},${Math.round(b.y)} ${Math.round(b.width)}x${Math.round(b.height)}; on top: ${hit?.tagName}.${String(hit?.className).slice(0, 80)} ${hit?.closest('[data-testid]')?.getAttribute('data-testid') ?? ''}`;
         }, `[data-settings-item="${id}"]`).catch(() => '');
-        errors.push(`click ${id}: ${e.message.split('\n').filter((l) => /intercepts|not stable|not visible|outside|retrying|scroll/.test(l)).slice(-3).join(' | ')} || ${over}`);
+        errors.push(`click ${id}: ${e.message.split('\n').filter((l) => /intercepts|stable|visible|outside|retrying|scroll/.test(l)).slice(-2).join(' | ')} || ${over}`);
+        // Without animation frames the "stable" wait never ends; tap anyway, and say so in the report.
+        forced = true;
+        await page.click(`[data-settings-item="${id}"]`, { force: true, timeout: 5000 }).catch((e2) => errors.push(`forced click ${id}: ${e2.message.slice(0, 160)}`));
       });
       await page.waitForTimeout(700);
       const probe = await page.evaluate(() => {
@@ -76,7 +83,7 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
         return { ok: inView && !!hit && c.contains(hit), why: !inView ? 'outside the viewport' : !hit || !c.contains(hit) ? `covered by ${hit?.tagName}.${String(hit?.className).slice(0, 60)}` : '', ...info };
       });
       if (!probe.ok) failed++;
-      results.push({ browser: bName, device: cName, section: id, ...probe });
+      results.push({ browser: bName, device: cName, section: id, raf, forced, ...probe });
       if (!probe.ok || id === ids[ids.length - 1]) await page.screenshot({ path: path.join(out, `${bName}-${cName}-${id}.png`) });
     }
     results.push({ browser: bName, device: cName, sections: ids.length, errors: [...new Set(errors)] });
