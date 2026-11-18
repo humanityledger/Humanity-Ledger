@@ -98,10 +98,12 @@ describe('composer and assertCanOpen use the same rule', () => {
     expect(agreements).toContain('deployRefusal({');
   });
 
-  it('a stream above TX_CAP is noted, not refused; escrow refuses what the contract refuses', () => {
+  it('the composer refuses what the alpha contracts refuse, for escrows and streams; the baseline formula is kept for later', () => {
+    expect(composer).toContain("quote.q.reason === 'above-alpha-maximum'");
+    expect(composer).toContain('No protocol fee during the closed alpha.');
+    expect(composer).toContain('(!!quote && !quote.q.ok)');
+    // D-1..D-5, option A: the baseline arithmetic stays as the technical base for after the alpha.
     expect(baselineFee(2_000_000_000n, BASELINE_STREAM_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-tx-cap' });
-    expect(composer).toContain('The stream can be created.');
-    expect(composer).toContain("(kind === 'escrow' && !!quote && !quote.q.ok)");
     expect(baselineFee(9_999n, BASELINE_ESCROW_SCHEDULE).ok).toBe(false);
     expect(baselineFee(1_000_000_000n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: true, fee: BASELINE_TX_CAP, net: 995_000_000n });
     expect(baselineFee(1_000_000_001n, BASELINE_ESCROW_SCHEDULE)).toEqual({ ok: false, reason: 'fee-exceeds-tx-cap' });

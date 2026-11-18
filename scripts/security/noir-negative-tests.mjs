@@ -17,10 +17,16 @@ const UNREACHABLE = {
     'refund pops notes from refunds.at(msg_sender); deposit inserts each refund note with sender = its owner.',
   'PaymentStream: only the sender can cancel':
     'cancel pops notes from sender_copies.at(msg_sender); create_stream inserts each copy with sender = its owner.',
+  // Closed alpha, wave 1 (OD-7, 18 November 2026): FEE_BPS and the minimum fee are 0, so every
+  // quote is fee 0 and these refusals cannot happen. The formula keeps them for the baseline.
+  'PrivateEscrow: fee exceeds tx cap': 'alpha class: FEE_BPS = 0 and MIN_FEE = 0 (OD-7), the fee is always 0.',
+  'PrivateEscrow: fee exceeds share': 'alpha class: FEE_BPS = 0 and MIN_FEE = 0 (OD-7), the fee is always 0.',
+  'PaymentStream: fee exceeds tx cap': 'alpha class: FEE_BPS = 0 and STREAM_MIN_FEE = 0 (OD-7), the fee is always 0.',
+  'PaymentStream: fee exceeds share': 'alpha class: FEE_BPS = 0 and STREAM_MIN_FEE = 0 (OD-7), the fee is always 0.',
 };
 // Asserts repeated in a second function where the first one already refused the same input
 // with the same constants (deposit refuses an amount whose claim fee would fail).
-const REPEATS_OK = new Set(['PrivateEscrow: fee exceeds tx cap', 'PrivateEscrow: fee exceeds share']);
+const REPEATS_OK = new Set();
 
 const ASSERT_RE = /\bassert(?:_eq)?\s*\(([\s\S]*?),\s*"([^"]+)"\s*\)\s*;/g;
 const FAIL_RE = /should_fail_with\s*=\s*"([^"]+)"/g;
@@ -40,7 +46,9 @@ for (const crate of readdirSync(ROOT).sort()) {
     const hits = expected.filter(e => msg.includes(e)).length;
     let status;
     // One negative test per occurrence, except a repeat that an earlier assert already decides.
-    if (UNREACHABLE[msg]) status = 'unreachable';
+    // A fee refusal is excused only while the class really has a zero fee.
+    const feeExcuse = /fee exceeds/.test(msg) && !src.includes('global FEE_BPS: u128 = 0;');
+    if (UNREACHABLE[msg] && !feeExcuse) status = 'unreachable';
     else if (hits === 0 || (hits < n && !REPEATS_OK.has(msg))) status = 'MISSING';
     else status = hits < n ? 'ok(repeat)' : 'ok';
     if (status === 'MISSING') missing++;

@@ -17,6 +17,8 @@ use aztec::{
 global TOTAL: u128 = 100;
 global RATE: u128 = 1;
 global MINTED: u128 = 1000;
+// OD-2: 100 HLC at 6 decimals, the same value as MAX_AMOUNT in main.nr. OD-7: no protocol fee.
+global MAX_AMOUNT: u128 = 100000000;
 
 struct Setup {
     env: TestEnvironment,
@@ -107,16 +109,17 @@ unconstrained fn partial_withdrawals_add_up_and_replace_the_note() {
     let start = open(s, 1, 11);
     s.env.mine_block_at(start + 30);
     withdraw(s, 1, 20);
-    // Fee 1 on 20, so the recipient's note is 19. The stream lost the gross 20.
-    assert(balance(s.env, s.token, s.recipient) == 19);
+    // No fee (OD-7): the recipient receives the whole 20.
+    assert(balance(s.env, s.token, s.recipient) == 20);
 
     // The replacement note carries withdrawn = 20: only 10 more have accrued.
     withdraw(s, 1, 10);
-    assert(balance(s.env, s.token, s.recipient) == 28);
+    assert(balance(s.env, s.token, s.recipient) == 30);
     assert(balance(s.env, s.token, s.streams) == TOTAL - 30);
+    // Conservation: nothing went to TREASURY.
     assert(
         balance(s.env, s.token, s.sender) + balance(s.env, s.token, s.recipient) + balance(s.env, s.token, s.streams)
-            == MINTED - 2,
+            == MINTED,
     );
 }
 
@@ -144,8 +147,8 @@ unconstrained fn accrual_is_capped_at_the_total_and_the_note_is_consumed() {
     let start = open(s, 1, 11);
     s.env.mine_block_at(start + 1000);
     withdraw(s, 1, TOTAL);
-    // Fee on 100 is 1. net + fee = the deposit.
-    assert(balance(s.env, s.token, s.recipient) == 99);
+    // No fee: the recipient receives the whole total.
+    assert(balance(s.env, s.token, s.recipient) == TOTAL);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
@@ -193,8 +196,8 @@ unconstrained fn start_in_the_future_fails() {
     );
 }
 
-// SEC-S11: with a rate so large that elapsed * rate overflows u128, the
-// stream is still withdrawable once fully accrued.
+// SEC-S11: with a rate so large that elapsed * rate overflows u128, the stream is still
+// withdrawable once fully accrued. The total is the alpha maximum (OD-2).
 #[test]
 unconstrained fn a_huge_rate_does_not_lock_the_stream() {
     let mut env = TestEnvironment::new();
@@ -206,41 +209,30 @@ unconstrained fn a_huge_rate_does_not_lock_the_stream() {
         PaymentStream::interface().constructor(token),
     );
     let big: u128 = 0x80000000000000000000000000000000; // 2^127
-    mint(env, token, sender, big);
+    mint(env, token, sender, MAX_AMOUNT);
     let start = env.last_block_timestamp();
-    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, big, 21));
-    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, big, big, start, 7, 21));
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, MAX_AMOUNT, 21));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, MAX_AMOUNT, big, start, 7, 21));
     env.mine_block_at(start + 10); // 10 * 2^127 > u128::MAX
-    // A slice under the cap. Fee on 200_000 at 50 bps is 1_000.
     env.call_private_opts(
         recipient,
         CallPrivateOptions::new().with_additional_scopes([streams]),
         PaymentStream::at(streams).withdraw(7, 200000),
     );
-    assert(balance(env, token, recipient) == 199000);
-    assert(balance(env, token, streams) == big - 200000);
+    assert(balance(env, token, recipient) == 200000);
+    assert(balance(env, token, streams) == MAX_AMOUNT - 200000);
 }
 
-#[test(should_fail_with = "fee exceeds tx cap")]
-unconstrained fn a_withdrawal_of_the_whole_huge_stream_is_refused() {
-    let mut env = TestEnvironment::new();
-    let sender = env.create_contract_account();
-    let recipient = env.create_contract_account();
-    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
-    let streams = env.deploy("PaymentStream").with_public_initializer(
-        sender,
-        PaymentStream::interface().constructor(token),
-    );
-    let big: u128 = 0x80000000000000000000000000000000;
-    mint(env, token, sender, big);
-    let start = env.last_block_timestamp();
-    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, big, 22));
-    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, big, big, start, 8, 22));
-    env.mine_block_at(start + 10);
-    env.call_private_opts(
-        recipient,
-        CallPrivateOptions::new().with_additional_scopes([streams]),
-        PaymentStream::at(streams).withdraw(8, big),
+// OD-2: a stream above the alpha maximum is refused before any token moves.
+#[test(should_fail_with = "above the alpha maximum")]
+unconstrained fn a_stream_above_the_alpha_maximum_is_refused() {
+    let s = setup();
+    mint(s.env, s.token, s.sender, MAX_AMOUNT + 1);
+    let start = s.env.last_block_timestamp();
+    add_private_authwit_from_call(s.env, s.sender, s.streams, transfer_call(s.token, s.sender, s.streams, MAX_AMOUNT + 1, 22));
+    s.env.call_private(
+        s.sender,
+        PaymentStream::at(s.streams).create_stream(s.recipient, MAX_AMOUNT + 1, RATE, start, 8, 22),
     );
 }
 
@@ -271,9 +263,9 @@ unconstrained fn cancel_mid_stream_splits_accrued_and_the_rest() {
     s.env.mine_block_at(start + 40);
     cancel(s, s.sender, 1);
     let paid = balance(s.env, s.token, s.recipient);
-    // Accrued 40 to 42, fee 1, so the recipient receives 39 to 41.
-    assert((paid >= 39) & (paid <= 41));
-    assert(balance(s.env, s.token, s.sender) == MINTED - paid - 1);
+    // Accrued 40 to 42, no fee: the recipient receives all of it.
+    assert((paid >= 40) & (paid <= 42));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
@@ -296,9 +288,8 @@ unconstrained fn cancel_before_any_accrual_returns_everything() {
     s.env.mine_block_at(start);
     cancel(s, s.sender, 1);
     let paid = balance(s.env, s.token, s.recipient);
-    assert((paid == 0) | (paid == 9) | (paid == 19));
-    let fee: u128 = if paid == 0 { 0 } else { 1 };
-    assert(balance(s.env, s.token, s.sender) == MINTED - paid - fee);
+    assert((paid == 0) | (paid == 10) | (paid == 20));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
@@ -312,9 +303,9 @@ unconstrained fn cancel_after_a_withdrawal_pays_only_what_is_left() {
     // The sender cancels from the copy the withdrawal delivered (index 1).
     cancel(s, s.sender, 1);
     let paid = balance(s.env, s.token, s.recipient);
-    // Withdrawal fee 1 plus cancel fee 1. Recipient net is 58 to 61.
-    assert((paid >= 58) & (paid <= 61));
-    assert(balance(s.env, s.token, s.sender) == MINTED - paid - 2);
+    // No fee on the withdrawal or the cancel: the recipient holds all that accrued, 60 to 63.
+    assert((paid >= 60) & (paid <= 63));
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
@@ -498,12 +489,9 @@ unconstrained fn section_1_vectors_and_stream_fee_quotes() {
     assert(!five.ok & (five.reason == 1));
 }
 
-// Baseline, not a bypass: create_stream does not quote `total`. A stream of
-// 2_000_000_000 is created even though one withdrawal of that total would
-// exceed TX_CAP. Two slices of 1_000_000_000 each pay fee == TX_CAP (5_000_000)
-// and net 995_000_000. Conservation: recipient == total - 2 * fee.
+// OD-2 and OD-7: a stream of exactly the alpha maximum settles in two slices, in full.
 #[test]
-unconstrained fn a_large_stream_settles_in_slices_each_at_the_tx_cap() {
+unconstrained fn the_alpha_maximum_streams_in_full_without_fee() {
     let mut env = TestEnvironment::new();
     let sender = env.create_contract_account();
     let recipient = env.create_contract_account();
@@ -512,62 +500,27 @@ unconstrained fn a_large_stream_settles_in_slices_each_at_the_tx_cap() {
         sender,
         PaymentStream::interface().constructor(token),
     );
-    let slice: u128 = 1000000000;
-    let total: u128 = slice * 2;
-    mint(env, token, sender, total);
+    let slice: u128 = MAX_AMOUNT / 2;
+    mint(env, token, sender, MAX_AMOUNT);
     let start = env.last_block_timestamp();
-    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, total, 61));
-    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, total, total, start, 61, 61));
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, MAX_AMOUNT, 61));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, MAX_AMOUNT, MAX_AMOUNT, start, 61, 61));
     env.mine_block_at(start + 10);
     env.call_private_opts(
         recipient,
         CallPrivateOptions::new().with_additional_scopes([streams]),
         PaymentStream::at(streams).withdraw(61, slice),
     );
-    assert(balance(env, token, recipient) == 995000000);
-    assert(balance(env, token, streams) == total - slice);
+    assert(balance(env, token, recipient) == slice);
     env.call_private_opts(
         recipient,
         CallPrivateOptions::new().with_additional_scopes([streams]),
-        PaymentStream::at(streams).withdraw(61, slice),
+        PaymentStream::at(streams).withdraw(61, MAX_AMOUNT - slice),
     );
-    assert(balance(env, token, recipient) == 1990000000);
+    assert(balance(env, token, recipient) == MAX_AMOUNT);
     assert(balance(env, token, streams) == 0);
     assert(balance(env, token, sender) == 0);
-    assert(balance(env, token, sender) + balance(env, token, recipient) + balance(env, token, streams) == total - 10000000);
 }
-
-// The same stream can pay a slice under the cap, then refuse one withdrawal
-// whose fee is 5_000_001.
-#[test(should_fail_with = "fee exceeds tx cap")]
-unconstrained fn a_slice_above_the_tx_cap_is_refused_after_a_smaller_slice() {
-    let mut env = TestEnvironment::new();
-    let sender = env.create_contract_account();
-    let recipient = env.create_contract_account();
-    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
-    let streams = env.deploy("PaymentStream").with_public_initializer(
-        sender,
-        PaymentStream::interface().constructor(token),
-    );
-    let total: u128 = 2000000001;
-    mint(env, token, sender, total);
-    let start = env.last_block_timestamp();
-    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, total, 62));
-    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, total, total, start, 62, 62));
-    env.mine_block_at(start + 10);
-    env.call_private_opts(
-        recipient,
-        CallPrivateOptions::new().with_additional_scopes([streams]),
-        PaymentStream::at(streams).withdraw(62, 200000),
-    );
-    env.call_private_opts(
-        recipient,
-        CallPrivateOptions::new().with_additional_scopes([streams]),
-        PaymentStream::at(streams).withdraw(62, 1000000001),
-    );
-}
-
-
 
 // IA-01 (internal audit, 18 November 2026): a cancel never fails because of the fee.
 #[test]
@@ -596,11 +549,10 @@ unconstrained fn cancel_with_dust_accrued_pays_it_without_fee() {
     assert(balance(s.env, s.token, s.streams) == 0);
 }
 
-// Before IA-01 a recipient who never withdrew could block the sender's cancel once the fee
-// on the accrued part exceeded TX_CAP (accrued above 1_000_000_000). Now the cancel pays the
-// recipient the accrued part minus TX_CAP and returns the rest to the sender.
+// IA-01 with the alpha class: cancelling a stream of the alpha maximum mid-way pays the
+// recipient everything accrued and returns the rest, with no fee (OD-7).
 #[test]
-unconstrained fn cancel_with_accrued_above_the_cap_charges_the_cap() {
+unconstrained fn cancel_of_a_maximum_stream_pays_all_accrued_without_fee() {
     let mut env = TestEnvironment::new();
     let sender = env.create_contract_account();
     let recipient = env.create_contract_account();
@@ -609,12 +561,11 @@ unconstrained fn cancel_with_accrued_above_the_cap_charges_the_cap() {
         sender,
         PaymentStream::interface().constructor(token),
     );
-    let total: u128 = 4000000000;
-    let rate: u128 = 100000000;
-    mint(env, token, sender, total);
+    let rate: u128 = 1000000;
+    mint(env, token, sender, MAX_AMOUNT);
     let start = env.last_block_timestamp();
-    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, total, 71));
-    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, total, rate, start, 71, 71));
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, MAX_AMOUNT, 71));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, MAX_AMOUNT, rate, start, 71, 71));
     env.mine_block_at(start + 20);
     env.call_private_opts(
         sender,
@@ -623,9 +574,9 @@ unconstrained fn cancel_with_accrued_above_the_cap_charges_the_cap() {
     );
     let paid = balance(env, token, recipient);
     let back = balance(env, token, sender);
-    // Accrued 2_000_000_000 to 2_200_000_000; the fee is TX_CAP.
-    assert(paid >= 2000000000 - 5000000);
-    assert(paid + back + 5000000 == total);
+    // Accrued 20_000_000 to 22_000_000.
+    assert((paid >= 20000000) & (paid <= 22000000));
+    assert(paid + back == MAX_AMOUNT);
     assert(balance(env, token, streams) == 0);
 }
 
@@ -656,11 +607,13 @@ unconstrained fn a_zero_withdrawal_fails() {
     withdraw(s, 1, 0);
 }
 
-// 1 unit: the fee rounds up to 1, above the 10% share of the amount.
-#[test(should_fail_with = "fee exceeds share")]
-unconstrained fn a_dust_withdrawal_is_refused_by_the_share() {
+// 1 unit: the 16 November baseline refused it (fee above the 10% share); the alpha class
+// charges no fee, so it is paid (OD-7).
+#[test]
+unconstrained fn a_dust_withdrawal_is_paid_without_fee() {
     let s = setup();
     let start = open(s, 1, 11);
     s.env.mine_block_at(start + 40);
     withdraw(s, 1, 1);
+    assert(balance(s.env, s.token, s.recipient) == 1);
 }

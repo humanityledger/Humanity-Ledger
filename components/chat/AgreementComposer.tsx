@@ -25,13 +25,7 @@ import { STREAM_START_SLACK, streamTerms } from '@/lib/aztec/stream-terms';
 import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
 import { useValueMode } from '@/lib/aztec/useValueMode';
 import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
-import {
-  BASELINE_ESCROW_SCHEDULE,
-  BASELINE_STREAM_SCHEDULE,
-  BASELINE_TX_CAP,
-  TREASURY_ADDRESS_SET,
-  baselineFee,
-} from '@/lib/protocol/fees';
+import { ALPHA_MAX_AMOUNT, TREASURY_ADDRESS_SET, contractQuote } from '@/lib/protocol/fees';
 import { deployRefusal } from '@/lib/protocol/agreement-gate';
 import mainnetRecord from '@/deployments/aztec-mainnet.json';
 import pendingRecompile from '@/deployments/aztec-pending-recompile.json';
@@ -138,8 +132,8 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
     if (!t || !amount.trim()) return null;
     try {
       const units = parseUnits(amount, t.decimals);
-      const schedule = kind === 'escrow' ? BASELINE_ESCROW_SCHEDULE : BASELINE_STREAM_SCHEDULE;
-      return { symbol: t.symbol, decimals: t.decimals, q: baselineFee(units, schedule) };
+      // The alpha classes (OD-2, OD-7): no protocol fee, at most 100 HLC per agreement.
+      return { symbol: t.symbol, decimals: t.decimals, q: contractQuote(units, kind) };
     } catch {
       return null;
     }
@@ -296,29 +290,14 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 })()}
                 {quote?.q.ok && (
                   <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">
-                    Protocol fee on settlement: {formatUnits(quote.q.fee, quote.decimals)} {quote.symbol}. Recipient: {formatUnits(quote.q.net, quote.decimals)} {quote.symbol}.
-                    {kind === 'escrow'
-                      ? ' Nothing is charged on deposit. A refund pays the full amount and no fee.'
-                      : ' This is the fee if the whole amount is withdrawn once. Each withdrawal is charged on its own, with no minimum. The unaccrued part of a cancel is not charged.'}
+                    No protocol fee during the closed alpha. {kind === 'escrow' ? 'Recipient' : 'The recipient can receive up to'}: {formatUnits(quote.q.net, quote.decimals)} {quote.symbol}. The network fee is paid separately, in Fee Juice.
                   </p>
                 )}
-                {quote && !quote.q.ok && kind === 'escrow' && (
+                {quote && !quote.q.ok && (
                   <p role="status" className="text-[12.5px] text-[#7a2e12] leading-snug">
-                    {quote.q.reason === 'fee-exceeds-tx-cap'
-                      ? `Refused: the fee would be above ${formatUnits(BASELINE_TX_CAP, quote.decimals)} ${quote.symbol}. The contract refuses it and does not reduce it.`
-                      : quote.q.reason === 'fee-exceeds-share'
-                        ? 'Refused: the fee would take more than 10% of this amount.'
-                        : 'Enter an amount above zero.'}
-                  </p>
-                )}
-                {quote && !quote.q.ok && kind === 'stream' && (
-                  // create_stream does not quote the total against TX_CAP: the stream is not refused.
-                  <p role="note" className="text-[12.5px] text-[#4a505c] leading-snug">
-                    {quote.q.reason === 'fee-exceeds-tx-cap'
-                      ? `The stream can be created. Withdrawing all of it at once would put the fee above ${formatUnits(BASELINE_TX_CAP, quote.decimals)} ${quote.symbol}, which the contract refuses, so ${peerName} withdraws it in parts. Each part pays its own fee. Creating the stream is not charged.`
-                      : quote.q.reason === 'fee-exceeds-share'
-                        ? `The stream can be created. A withdrawal this small would be refused, because its fee would take more than 10% of it. ${peerName} can withdraw once more has accrued.`
-                        : 'Enter an amount above zero.'}
+                    {quote.q.reason === 'above-alpha-maximum'
+                      ? `Refused: the closed alpha accepts at most ${formatUnits(ALPHA_MAX_AMOUNT, quote.decimals)} ${quote.symbol} per ${kind === 'escrow' ? 'escrow' : 'stream'}. The contract refuses more.`
+                      : 'Enter an amount above zero.'}
                   </p>
                 )}
                 <p className="text-[12.5px] text-[#727a88] leading-snug">
@@ -327,7 +306,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
                 {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !!refusalFor(kind) || (kind === 'escrow' && !!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !!refusalFor(kind) || (!!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
                 </button>
               </div>

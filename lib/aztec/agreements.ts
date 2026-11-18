@@ -43,7 +43,7 @@ import {
   type VerifyOptions,
   type AgreementInvite,
 } from './agreement-invite';
-import { baselineFee, BASELINE_ESCROW_SCHEDULE, TREASURY_ADDRESS_SET } from '../protocol/fees';
+import { contractQuote, TREASURY_ADDRESS_SET } from '../protocol/fees';
 import { buildNetwork, deployRefusal, type AgreementNetwork } from '../protocol/agreement-gate';
 
 type Artifact = ReturnType<typeof loadKeyedArtifact>;
@@ -89,14 +89,15 @@ function enforcePolicy(policy: AgreementPolicy | undefined, classId: string, tok
 
 const CLASS_REFUSED = 'This artifact is not the current agreement class.';
 const FEE_REFUSED = 'This amount is refused. The contract would not accept the fee.';
+const MAX_REFUSED = 'This amount is above the closed alpha maximum of 100 HLC per agreement.';
 
 /**
  * Gate for openEscrow and openStream, before any transaction is sent.
  * The class must be a current entry of deployments/aztec-testnet.json, so a
- * direct call cannot deploy the pre-fee artifact. An escrow amount the
- * contract would refuse is refused here with the same baselineFee arithmetic.
- * A stream total is not quoted against TX_CAP: create_stream allows it, and
- * each withdrawal pays its own fee. Then lib/protocol/agreement-gate.ts: on
+ * direct call cannot deploy an older artifact. An amount the contract would
+ * refuse is refused here with the same arithmetic (contractQuote): above the
+ * alpha maximum of 100 HLC (OD-2), for an escrow and for a stream total. The
+ * alpha classes charge no protocol fee (OD-7). Then lib/protocol/agreement-gate.ts: on
  * Alpha nothing is deployed while deployments/aztec-mainnet.json has no audit;
  * a crate whose source is ahead of its artifact (pending recompile with the
  * designated treasury) is not deployed; nothing is deployed without a treasury.
@@ -113,10 +114,8 @@ export async function assertCanOpen(
   if (!allowed.some((id) => id.toLowerCase() === classId.toLowerCase())) {
     throw new Error(CLASS_REFUSED);
   }
-  if (kind === 'escrow') {
-    const quoted = baselineFee(amount, BASELINE_ESCROW_SCHEDULE);
-    if (!quoted.ok) throw new Error(FEE_REFUSED);
-  }
+  const quoted = contractQuote(amount, kind);
+  if (!quoted.ok) throw new Error(quoted.reason === 'above-alpha-maximum' ? MAX_REFUSED : FEE_REFUSED);
   const mainnet = unwrap<{ audit?: unknown }>(await import('../../deployments/aztec-mainnet.json'));
   const pending = unwrap<{ pending?: Array<{ contract?: string }> }>(await import('../../deployments/aztec-pending-recompile.json'));
   const refusal = deployRefusal({

@@ -10,14 +10,14 @@ const ids = currentClassIds(record);
 const OTHER = `0x${'11'.repeat(32)}`;
 
 describe('direct agreement creation', () => {
-  it('refuses an escrow amount the contract would refuse, on the current class', async () => {
+  it('refuses what the alpha contracts refuse: more than 100 HLC (OD-2), for an escrow and a stream', async () => {
     expect(ids.escrow.length).toBeGreaterThan(0);
-    await expect(assertCanOpen('escrow', 9_999n, ids.escrow[0])).rejects.toThrow(
-      'This amount is refused. The contract would not accept the fee.',
-    );
-    await expect(assertCanOpen('escrow', 1_000_000_001n, ids.escrow[0])).rejects.toThrow(
-      'This amount is refused. The contract would not accept the fee.',
-    );
+    const max = 'This amount is above the closed alpha maximum of 100 HLC per agreement.';
+    await expect(assertCanOpen('escrow', 100_000_001n, ids.escrow[0], 'testnet')).rejects.toThrow(max);
+    await expect(assertCanOpen('streams', 100_000_001n, ids.streams[0], 'testnet')).rejects.toThrow(max);
+    // No protocol fee (OD-7): small amounts the baseline refused are accepted.
+    await expect(assertCanOpen('escrow', 9_999n, ids.escrow[0], 'testnet')).resolves.toBeUndefined();
+    await expect(assertCanOpen('escrow', 1n, ids.escrow[0], 'testnet')).resolves.toBeUndefined();
   });
 
   it('refuses a pre-fee class before it talks about the treasury', async () => {
@@ -40,15 +40,14 @@ describe('direct agreement creation', () => {
     await expect(assertCanOpen('streams', 2_000_000_000n, '0x2c22f32674231c50fe77c970d5f604f9a5bd60f9dd800bd575c1f6f89eba1ae3', 'testnet')).rejects.toThrow(refused);
   });
 
-  it('with nothing held for recompile, the test network accepts a valid escrow and a large stream on the current class', async () => {
-    await expect(assertCanOpen('escrow', 20_000n, ids.escrow[0], 'testnet')).resolves.toBeUndefined();
-    // A stream total over TX_CAP is not a fee refusal. create_stream allows it.
-    await expect(assertCanOpen('streams', 2_000_000_000n, ids.streams[0], 'testnet')).resolves.toBeUndefined();
+  it('with nothing held for recompile, the test network accepts the alpha maximum on the current class', async () => {
+    await expect(assertCanOpen('escrow', 100_000_000n, ids.escrow[0], 'testnet')).resolves.toBeUndefined();
+    await expect(assertCanOpen('streams', 100_000_000n, ids.streams[0], 'testnet')).resolves.toBeUndefined();
   });
 
   it('on Aztec Alpha refuses because there is no external audit, with the treasury designated', async () => {
     const noAudit = 'Escrows and streams cannot be opened on Aztec Alpha. The contracts have no external audit';
     await expect(assertCanOpen('escrow', 20_000n, ids.escrow[0], 'mainnet')).rejects.toThrow(noAudit);
-    await expect(assertCanOpen('streams', 2_000_000_000n, ids.streams[0], 'mainnet')).rejects.toThrow(noAudit);
+    await expect(assertCanOpen('streams', 50_000_000n, ids.streams[0], 'mainnet')).rejects.toThrow(noAudit);
   });
 });
