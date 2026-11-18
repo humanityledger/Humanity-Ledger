@@ -593,9 +593,10 @@ export async function sendMessage(
     try {
       if (!dm) {
         dm = await withTimeout(client.conversations.newDmWithIdentifier(identifier), 8000, 'newDm timeout');
-        // Not awaited: publishMessages() brings the group up to date itself. Waiting here
-        // added up to 3 s to the first message of every conversation.
-        Promise.resolve().then(() => dm.sync()).catch(() => {});
+        // Not awaited (it added up to 3 s to the first message), but queued in the same per-
+        // conversation order as the publishes: a sync racing the first publish of a new
+        // conversation is the kind of collision the serial queue exists to prevent.
+        { const fresh = dm; runSerial(cacheKey, () => withTimeout(fresh.sync(), 3000, 'sync timeout')).catch(() => {}); }
       }
       if (!sentId) {
         sentId = await withTimeout<string>(dm.sendOptimistic(content), 5000, 'prepare timeout');
@@ -654,16 +655,36 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 const PUBLISH_WAIT_MS = 20_000;
 const publishChain = new Map<string, Promise<void>>();
 
-/** Queue one publishMessages() for this conversation after any publish already in flight. */
-export function publishSerial(cacheKey: string, dm: any): Promise<void> {
+/**
+ * How long a publish waits for the one before it. publishMessages() is a WebAssembly call into
+ * the XMTP worker and can stay pending without ever settling (seen on 18 November 2026 after the
+ * serial queue went live: once one publish hung, every later message, typing signal and read
+ * receipt of that conversation queued behind it for good, and nothing reached the other person
+ * until the page was reloaded). After this wait the next publish runs anyway; publishMessages()
+ * only sends what is still unpublished, so overlapping one stuck call never duplicates a message.
+ */
+export const SERIAL_WAIT_MS = 15_000;
+
+/** Run `task` for this conversation after the task in flight, or after SERIAL_WAIT_MS at most. */
+export function runSerial(cacheKey: string, task: () => Promise<unknown>): Promise<void> {
   const prev = publishChain.get(cacheKey) ?? Promise.resolve();
-  const next: Promise<void> = prev.catch(() => {}).then(() => dm.publishMessages());
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const waitForPrev = Promise.race([
+    prev.catch(() => {}),
+    new Promise<void>((resolve) => { timer = setTimeout(resolve, SERIAL_WAIT_MS); }),
+  ]).finally(() => { if (timer) clearTimeout(timer); });
+  const next: Promise<void> = waitForPrev.then(() => task()).then(() => undefined);
   publishChain.set(cacheKey, next);
   next.then(
     () => { if (publishChain.get(cacheKey) === next) publishChain.delete(cacheKey); },
     () => { if (publishChain.get(cacheKey) === next) publishChain.delete(cacheKey); },
   );
   return next;
+}
+
+/** Queue one publishMessages() for this conversation after any publish already in flight. */
+export function publishSerial(cacheKey: string, dm: any): Promise<void> {
+  return runSerial(cacheKey, () => dm.publishMessages());
 }
 
 const publishRetries = new Map<string, { dm: any; attempt: number; timer: ReturnType<typeof setTimeout> | null }>();

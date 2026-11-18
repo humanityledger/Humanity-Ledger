@@ -77,6 +77,31 @@ describe('sendMessage sends exactly once', () => {
     expect(maxInFlight).toBe(1);
   });
 
+  it('a publish that never settles does not block the conversation: the next one runs after SERIAL_WAIT_MS', async () => {
+    vi.useFakeTimers();
+    try {
+      const { publishSerial, SERIAL_WAIT_MS } = await import('@/lib/xmtp/client');
+      let calls = 0;
+      const dm = {
+        publishMessages() {
+          calls++;
+          // The first call hangs for good (a stuck WebAssembly call); later ones succeed.
+          return calls === 1 ? new Promise<void>(() => {}) : Promise.resolve();
+        },
+      };
+      publishSerial('k', dm);
+      let second = false;
+      publishSerial('k', dm).then(() => { second = true; });
+      await vi.advanceTimersByTimeAsync(SERIAL_WAIT_MS - 1);
+      expect(second).toBe(false);
+      await vi.advanceTimersByTimeAsync(2);
+      expect(calls).toBe(2);
+      expect(second).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('flushPendingPublishes publishes waiting messages at once (network back, page visible again)', async () => {
     vi.useFakeTimers();
     try {
