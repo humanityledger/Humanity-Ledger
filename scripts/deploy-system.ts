@@ -1,9 +1,12 @@
 /**
  * deploy-system.ts
  *
- * Sovereign-grade deployment script for Ledger Alert system contracts:
- *   - LedgerDeadmanSwitch (security/LedgerDeadmanSwitch.sol)
- *   - HumanTimeLock (civilization/HumanTimeLock.sol)
+ * Deployment script for the system contract HumanTimeLock (civilization/HumanTimeLock.sol).
+ *
+ * LedgerDeadmanSwitch is no longer deployed by this script (operator decision B-3c,
+ * 18 November 2026, docs/alpha/OPERATOR_DECISIONS.md): no address of it is recorded anywhere,
+ * and its pause has no expiry (IR-13). The source stays, with its tests, until a version with a
+ * pause that expires is written and decided.
  *
  * Features:
  *   - ethers v6 API (formatEther, await getBalance, .waitForDeployment())
@@ -27,12 +30,6 @@ import path from "path";
 const CONFIRMATION_BLOCKS = network.name === "localhost" ? 1 : 3;
 const VERIFY_WAIT_MS      = 65_000; // Etherscan indexing delay
 
-// System contract constructor args
-// Loaded from env so CI/CD can inject without exposing in source
-const DEPLOYER_IS_OWNER   = true; // Owner = deployer by default
-const BACKUP_WALLET       = process.env.BACKUP_WALLET_ADDRESS
-    ?? "0x000000000000000000000000000000000000dEaD"; // Fallback for testnet only
-const TIMEOUT_DAYS        = Number(process.env.DEADMAN_TIMEOUT_DAYS ?? "90");
 
 //  Utilities 
 
@@ -97,25 +94,7 @@ async function main() {
         throw new Error("Deployer balance too low (<0.01 ETH). Fund the wallet first.");
     }
 
-    const ownerAddress  = deployer.address;
-    const backupAddress = BACKUP_WALLET;
-
-    //  1. LedgerDeadmanSwitch 
-    log("", "Deploying LedgerDeadmanSwitch...");
-    const DeadmanFactory  = await ethers.getContractFactory("LedgerDeadmanSwitch");
-    const deadmanArgs     = [ownerAddress, backupAddress, TIMEOUT_DAYS] as const;
-    const deadmanContract = await DeadmanFactory.deploy(...deadmanArgs);
-
-    log("", `Tx hash: ${deadmanContract.deploymentTransaction()?.hash}`);
-    await deadmanContract.waitForDeployment();
-    const deadmanAddress = await deadmanContract.getAddress();
-    await waitBlocks(provider, CONFIRMATION_BLOCKS);
-
-    // Confirm on-chain event was emitted
-    const filter = deadmanContract.filters["Ping(address,uint256)"]?.();
-    log("", `LedgerDeadmanSwitch @ ${deadmanAddress}`);
-
-    //  2. HumanTimeLock 
+    //  1. HumanTimeLock 
     log("", "Deploying HumanTimeLock...");
     const TimelockFactory  = await ethers.getContractFactory("HumanTimeLock");
     const timelockContract = await TimelockFactory.deploy();
@@ -127,21 +106,10 @@ async function main() {
 
     log("", `HumanTimeLock @ ${timelockAddress}`);
 
-    //  3. Post-deploy sanity checks 
+    //  2. Post-deploy sanity checks 
     separator();
     log("", "Running post-deploy sanity checks...");
 
-    const dmOwner  = await deadmanContract.owner();
-    const dmBackup = await deadmanContract.backupWallet();
-    const dmPeriod = await deadmanContract.timeoutPeriod();
-
-    if (dmOwner.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error("Owner mismatch!");
-    if (dmBackup.toLowerCase() !== backupAddress.toLowerCase()) throw new Error("Backup mismatch!");
-    if (Number(dmPeriod) !== TIMEOUT_DAYS * 86400) throw new Error("Timeout period mismatch!");
-
-    log("", `Owner:   ${dmOwner}`);
-    log("", `Backup:  ${dmBackup}`);
-    log("", `Timeout: ${Number(dmPeriod) / 86400} days`);
     log("", `HumanTimeLock has no constructor args  confirmed stateless.`);
 
     //  4. Save manifest 
@@ -151,11 +119,6 @@ async function main() {
         deployer:    deployer.address,
         timestamp:   new Date().toISOString(),
         contracts: {
-            LedgerDeadmanSwitch: {
-                address:          deadmanAddress,
-                deployTxHash:     deadmanContract.deploymentTransaction()?.hash,
-                constructorArgs:  deadmanArgs,
-            },
             HumanTimeLock: {
                 address:          timelockAddress,
                 deployTxHash:     timelockContract.deploymentTransaction()?.hash,
@@ -172,18 +135,15 @@ async function main() {
     //  5. Etherscan verification 
     separator();
     log("", "Submitting for explorer verification...");
-    await verifyContract(deadmanAddress,  [...deadmanArgs]);
     await verifyContract(timelockAddress, []);
 
     //  6. Summary 
     separator("");
     log("", "Private DEPLOYMENT COMPLETE");
     separator("");
-    log("", `LedgerDeadmanSwitch: ${deadmanAddress}`);
     log("", `HumanTimeLock:      ${timelockAddress}`);
     separator();
     log("", "Add to .env.production:");
-    console.log(`BASE_DEADMAN_ADDRESS="${deadmanAddress}"`);
     console.log(`BASE_TIMELOCK_ADDRESS="${timelockAddress}"`);
     separator("");
 }

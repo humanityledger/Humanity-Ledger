@@ -78,7 +78,7 @@ for EVM Cancun. The test suite demonstrates:
 
 1. The Dead Man's Switch (`HumanityTimeLockVault`) cannot execute before the grace period expires.
 2. There are no unilateral fund drainage paths accessible to the contract owner or administrator.
-3. Sovereign identity in `HumanityIdentityRegistry` is immutable and cannot be usurped by third parties.
+3. ~~Sovereign identity in `HumanityIdentityRegistry` is immutable and cannot be usurped by third parties.~~ Withdrawn 18 November 2026: the registry accepted a nullifier without a proof (IR-05) and was retired (B-3a).
 
 ### 2.5 Property Fuzzing and Audit Dossier (T9, T11, T12 / A6)
 

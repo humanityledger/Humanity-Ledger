@@ -5,17 +5,27 @@ This document provides the canonical procedure for third parties to independentl
 
 ---
 
-## 1. Critical L1 Contracts & Network Addresses
+## 1. L1 contracts and their deployment status
 
-All contracts are compiled with Solidity `0.8.20` or higher with optimizer enabled (`runs: 200`).
+> **Correction, 18 November 2026.** This table used to give a "Verified Deployed Address" for five
+> contracts. On 18 November 2026 Blockscout (Base Sepolia, `/api/v2/addresses/...`) showed **no
+> contract code** at the four Base Sepolia addresses (`0x3a71…A861`, `0x5f8b…f553`, `0x718a…0F2b`,
+> `0x918c…2f84`): `is_contract: false`, no creation transaction. The Polygon Amoy address
+> (`0x1927…EE83`) could not be checked from here. No deployment record in `deployments/` supports
+> any of them. They are withdrawn. A contract gets an address here only with its transaction hash
+> and block, from a deployment the operator signed.
 
-| Contract Name | Source Path | Target Testnet (Base Sepolia / Polygon Amoy) | Verified Deployed Address |
-|---|---|---|---|
-| **`HumanityTimeLockVault`** | [`contracts/HumanityTimeLockVault.sol`](../contracts/HumanityTimeLockVault.sol) | Base Sepolia (Chain ID 84532) | `0x3a71bE8d7fD1E229bB60bcfB9507E7bDb6d1A861` |
-| **`HumanityIdentityRegistry`** | [`contracts/HumanityIdentityRegistry.sol`](../contracts/HumanityIdentityRegistry.sol) | Base Sepolia (Chain ID 84532) | `0x5f8b5029D83b27b3dF0E7eC7c49392c6Bcb4f553` |
-| **`LedgerDeadmanSwitch`** | [`contracts/security/LedgerDeadmanSwitch.sol`](../contracts/security/LedgerDeadmanSwitch.sol) | Polygon Amoy (Chain ID 80002) | `0x1927c9D80816A9Ea21d1d86641A58d341bEcEE83` |
-| **`HumanTimeLock`** | [`contracts/civilization/HumanTimeLock.sol`](../contracts/civilization/HumanTimeLock.sol) | Base Sepolia (Chain ID 84532) | `0x718a20Cbcf5De73FeD192931a5401Fa2e7bb0F2b` |
-| **`ZKIdentityRegistry`** | [`contracts/ZKIdentityRegistry.sol`](../contracts/ZKIdentityRegistry.sol) | Base Sepolia (Chain ID 84532) | `0x918cb0eFa71F021B7E2095811A1B283296062f84` |
+All contracts compile with solc 0.8.24 (optimizer, 200 runs).
+
+| Contract | Source | Status |
+|---|---|---|
+| `HumanityTimeLockVault` | [`contracts/HumanityTimeLockVault.sol`](../contracts/HumanityTimeLockVault.sol) | Not deployed |
+| `LedgerDeadmanSwitch` | [`contracts/security/LedgerDeadmanSwitch.sol`](../contracts/security/LedgerDeadmanSwitch.sol) | Not deployed; out of `scripts/deploy-system.ts` (decision B-3c, 18 Nov 2026) |
+| `HumanTimeLock` | [`contracts/civilization/HumanTimeLock.sol`](../contracts/civilization/HumanTimeLock.sol) | Not deployed |
+| `ZKIdentityRegistry` | [`contracts/ZKIdentityRegistry.sol`](../contracts/ZKIdentityRegistry.sol) | Not deployed; verification disabled (reverts) |
+| `ZKVerificationKeyRegistry` | [`contracts/ZKVerificationKeyRegistry.sol`](../contracts/ZKVerificationKeyRegistry.sol) | Not deployed |
+| `HLPortal`, `HLReceiver` | [`contracts/portal/`](../contracts/portal/) | Not deployed; wave 2 of the alpha, after an external review (OD-1) |
+| `HumanityIdentityRegistry`, `StudioProvenance` | removed | **Retired** 18 Nov 2026 (decisions B-3a, B-3b; IR-05, IR-06) |
 
 ---
 
@@ -33,13 +43,10 @@ npm run build:contracts
 npx tsx scripts/verify-l1-bytecode.ts
 ```
 
-### Step 3: Verify on Block Explorer via Hardhat
+### Step 3: Verify on a block explorer
+Only once a contract has a recorded deployment (address, transaction hash and block):
 ```bash
-# Base Sepolia
-npx hardhat verify --network baseGoerli 0x3a71bE8d7fD1E229bB60bcfB9507E7bDb6d1A861
-
-# Polygon Amoy
-npx hardhat verify --network polygonAmoy 0x1927c9D80816A9Ea21d1d86641A58d341bEcEE83
+npx hardhat verify --network <network> <address> <constructor args>
 ```
 
 ---
@@ -54,14 +61,11 @@ The contract architecture enforces the following mathematical and access-control
    - Invariant verified by automated test: `test/contracts_invariants.test.ts` (Invariant 3).
 
 2. **No Instant Verification Key Replacement**:
-   - Updating circuit verification keys requires routing through `HumanityTimeLockVault` with a mandatory **14-day timelock delay** (1,209,600 seconds).
-   - No multisig or admin key has the authority to bypass this delay. Any proposed circuit change is publicly visible on-chain for 14 days before it can take effect.
+   - `ZKVerificationKeyRegistry` activates a new or changed key hash only after its timelock (`delay`, at least `MIN_DELAY` = 1 day; `scripts/zk/deploy-vk-registry.ts` uses 2 days by default). Revocation is immediate and can only make verification fail closed.
+   - Tests: `test/ZKVerificationKeyRegistry.test.ts`.
+   - (Corrected 18 November 2026: this item used to describe a 14-day delay routed through `HumanityTimeLockVault`, which no code implements.)
 
-3. **Identity Self-Sovereignty**:
-   - `HumanityIdentityRegistry` assigns ownership strictly to the registering Ethereum account (`msg.sender`).
-   - Profile updates are constrained by `msg.sender`; neither contract owner nor deployer can alter or revoke another user's identity record.
-   - Nullifier collision prevention guarantees that each unique proof/WorldID nullifier can only ever be bound to a single identity.
-   - Invariant verified by automated test: `test/contracts_invariants.test.ts` (Invariant 4 & 5).
+3. **Identity**: `HumanityIdentityRegistry` was retired on 18 November 2026 (IR-05: it accepted a World ID nullifier without a proof). Identity is `IdentityCredential` in aztec-nr (`contracts/aztec/identity`).
 
 4. **Dead-Man Switch Temporal Enclosure**:
    - `LedgerDeadmanSwitch` requires proof that `block.timestamp >= lastPing + timeoutPeriod`.
