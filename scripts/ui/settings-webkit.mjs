@@ -40,7 +40,17 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
       await page.goto(`${base}/chat?e2e=settings`, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => undefined);
       await page.waitForSelector(`[data-settings-item="${id}"]`, { timeout: 20000 }).catch(() => undefined);
       await page.waitForTimeout(700);
-      await page.click(`[data-settings-item="${id}"]`).catch((e) => errors.push(`click ${id}: ${e.message.slice(0, 120)}`));
+      await page.click(`[data-settings-item="${id}"]`, { timeout: 10000 }).catch(async (e) => {
+        // Keep Playwright's reason (not stable, not visible, another element intercepts) and what
+        // sits on top of the button's centre.
+        const over = await page.evaluate((sel) => {
+          const b = document.querySelector(sel)?.getBoundingClientRect();
+          if (!b) return 'button not found';
+          const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+          return `button at ${Math.round(b.x)},${Math.round(b.y)} ${Math.round(b.width)}x${Math.round(b.height)}; on top: ${hit?.tagName}.${String(hit?.className).slice(0, 80)} ${hit?.closest('[data-testid]')?.getAttribute('data-testid') ?? ''}`;
+        }, `[data-settings-item="${id}"]`).catch(() => '');
+        errors.push(`click ${id}: ${e.message.split('\n').filter((l) => /intercepts|not stable|not visible|outside|retrying|scroll/.test(l)).slice(-3).join(' | ')} || ${over}`);
+      });
       await page.waitForTimeout(700);
       const probe = await page.evaluate(() => {
         const root = document.querySelector('[data-testid="settings-root"]');
