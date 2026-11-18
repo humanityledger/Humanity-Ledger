@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, createAccessToken, createRefreshToken, setSessionCookies, generateFingerprint, validateFingerprint } from '@/lib/session';
 import { cookies } from 'next/headers';
+import { isSessionTokenRevoked, revokeSessionToken } from '@/lib/security/sessionRevocation';
 
 /**
  * POST /api/auth/refresh
@@ -16,6 +17,14 @@ export async function POST(request: NextRequest) {
                 { error: 'No refresh token found' },
                 { status: 401 }
             );
+        }
+
+        // IR-01 (internal security review, 18 Nov 2026): logout revokes the refresh token
+        // (lib/security/sessionCookies.ts), but this route never checked, so a copy taken before
+        // the logout kept minting fresh access tokens. A revoked refresh token is refused, and
+        // each one works once: rotation revokes the token it replaces.
+        if (await isSessionTokenRevoked(refreshToken)) {
+            return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 });
         }
 
         // Verify refresh token
@@ -44,7 +53,8 @@ export async function POST(request: NextRequest) {
         const newAccessToken = await createAccessToken(payload.userId, payload.email, currentFingerprint);
         const newRefreshToken = await createRefreshToken(payload.userId, payload.email, currentFingerprint);
 
-        // Set new cookies
+        // Set new cookies; the presented refresh token is spent.
+        await revokeSessionToken(refreshToken);
         await setSessionCookies(newAccessToken, newRefreshToken);
 
         return NextResponse.json({
