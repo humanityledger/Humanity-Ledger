@@ -27,6 +27,12 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "new", text: "Usernames. Choose a @username in Settings → Profile. Each one is unique in the world: a name someone else holds cannot be saved, in any capitalisation, and the app offers free endings like name.01. Only letters a to z, numbers and \"_\" are allowed, so no look-alike letters can imitate another person's name." },
+      { kind: "new", text: "Your QR code and link. Settings → QR code or link shows a code on a card you can recolour and save as an image, and a link you can copy. They open a chat with you without showing your wallet address, and Reset makes every old code and link stop working." },
+      { kind: "new", text: "Find people by username. Type an exact @username, paste a Ledger Chat link or scan a code to open a chat. Usernames match exactly: nobody can list them by typing the first letters." },
+      { kind: "improved", text: "Settings in two panes on computers and tablets, with your profile card at the top, as in Signal Desktop." },
+      { kind: "fixed", text: "Answering a video call while another chat, the chat list or Communities was open now shows both faces straight away. The call screen used to stay hidden until the caller's chat was opened." },
+      { kind: "fixed", text: "An empty conversation shows the Chit Chatting animation. Some browsers kept showing the previous one from their cache." },
       { kind: "new", text: "Passkeys for the private wallet: open it with Face ID, Touch ID, Windows Hello or a security key instead of your Ethereum wallet. A passkey opens the same account, and Ledger Chat keeps only an encrypted copy of the account key that the passkey alone can open. A passkey can spend like your wallet, and the wallet says so before you add one." },
       { kind: "new", text: "A Security section in the private wallet lists what protects your account right now (keys made on your device, the ways to open it, address checks bound to the network, whether new payments are allowed) and what does not yet (the public fee payer, no external audit). Passkeys are managed there." },
       { kind: "new", text: "Ethereum in the private wallet: receiver addresses, deposits and withdrawals through a portal to Aztec. The contracts are written and tested but deployed nowhere, so the wallet shows their status step by step and moves no money through them." },
