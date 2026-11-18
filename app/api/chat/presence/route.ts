@@ -41,16 +41,29 @@ export async function POST(req: NextRequest) {
       // Both sides must have the other as a contact. A one-sided check let
       // anyone add any address to their own list (POST /api/chat/contacts
       // needs no consent) and then watch when that person is online.
-      const mutual = await prisma.chatContact.count({
-        where: {
-          OR: [
-            { owner: callerAddress, peer: normalizedPeer },
-            { owner: normalizedPeer, peer: callerAddress },
-          ],
-        },
-      }).catch(() => 0);
+      // The answer is cached in Redis for a short while: every open chat asks every 10 s, and
+      // each ask was a Postgres query. Yes is kept 120 s, no 30 s, so a new contact shows up
+      // quickly and a removed one stops seeing presence within two minutes.
+      const pair = [callerAddress, normalizedPeer].sort().join(':');
+      const cacheKey = `presence:mutual:${pair}`;
+      const cached = await safeRedisGet(cacheKey);
+      let isMutual: boolean;
+      if (cached === '1' || cached === '0') {
+        isMutual = cached === '1';
+      } else {
+        const mutual = await prisma.chatContact.count({
+          where: {
+            OR: [
+              { owner: callerAddress, peer: normalizedPeer },
+              { owner: normalizedPeer, peer: callerAddress },
+            ],
+          },
+        }).catch(() => -1);
+        isMutual = mutual >= 2;
+        if (mutual >= 0) await safeRedisSet(cacheKey, isMutual ? '1' : '0', 'EX', isMutual ? 120 : 30);
+      }
 
-      if (mutual < 2) {
+      if (!isMutual) {
         return NextResponse.json(
           { error: 'Forbidden: Can only check presence of accepted contacts' },
           { status: 403 }

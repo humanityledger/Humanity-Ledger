@@ -191,6 +191,13 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
 }
 
 const shortAddr = (addr: string) => formatAddress(addr);
+/**
+ * Typing signals are real XMTP messages: each one is published, stored by the network and by both
+ * devices. One every 5 s (was 3 s) is 40 % fewer of them while someone types; the receiver keeps
+ * "typing…" for 7 s after the last one, so it stays on without flicker.
+ */
+const TYPING_SIGNAL_EVERY_MS = 5_000;
+const TYPING_SHOWN_MS = 7_000;
 
 export const isSystemSignal = (content: any): boolean => {
   if (typeof content !== 'string') return false;
@@ -4173,20 +4180,30 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [connectorUid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync contacts to backend debounced
+  const contactsSyncedRef = useRef('');
+  const contactsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistToLocal = useCallback((arr: ConversationMeta[]) => {
     if (!address) return;
     const stored = arr.map((c) => previewAfterClear(c, clearedAtMs(c.peerAddress, [address])));
     localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: stored.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
     
-    // Also backup to server — send x-web3-address so WalletConnect users are accepted
-    fetch('/api/chat/contacts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
-      body: JSON.stringify({
-        address,
-        peers: arr.map(c => c.peerAddress)
+    // Backup of the contact list to the server, debounced: this runs on every new message and
+    // used to post the whole list (up to 200 rows written) each time. Now at most once every 5 s,
+    // and only when the set of peers changed since the last successful post.
+    const peers = Array.from(new Set(arr.map((c) => (c.peerAddress || '').toLowerCase()).filter(Boolean))).sort();
+    const key = `${address.toLowerCase()}|${peers.join(',')}`;
+    if (key === contactsSyncedRef.current) return;
+    if (contactsTimerRef.current) clearTimeout(contactsTimerRef.current);
+    contactsTimerRef.current = setTimeout(() => {
+      contactsTimerRef.current = null;
+      fetch('/api/chat/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-web3-address': address },
+        body: JSON.stringify({ address, peers }),
       })
-    }).catch(console.error);
+        .then((r) => { if (r.ok) contactsSyncedRef.current = key; })
+        .catch(() => {});
+    }, 5_000);
   }, [address]);
 
   const syncToAddressBook = async (peerAddr: string) => {
@@ -4586,7 +4603,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               if (!fromPeer) continue;
               const sender = (msg.senderAddress || 'peer').toLowerCase();
               setTypingPeers(prev => (prev.has(sender) ? prev : new Set(prev).add(sender)));
-              // One timer per sender, restarted by each signal (they come every 3 s while typing):
+              // One timer per sender, restarted by each signal (one every TYPING_SIGNAL_EVERY_MS while typing):
               // an older timer must not clear a newer signal, or "typing…" flickers off and on.
               const timers = typingTimersRef.current;
               const old = timers.get(sender);
@@ -4599,7 +4616,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                   next.delete(sender);
                   return next;
                 });
-              }, 4500));
+              }, TYPING_SHOWN_MS));
               continue;
             }
 
@@ -7599,7 +7616,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                                 e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 44), 184)}px`;
                               }
                               const now = Date.now();
-                              if (now - lastTypingTimeRef.current > 3000 && val.trim().length > 0 && ledgerSettings?.typing_indicators !== false) {
+                              if (now - lastTypingTimeRef.current > TYPING_SIGNAL_EVERY_MS && val.trim().length > 0 && ledgerSettings?.typing_indicators !== false) {
                                 lastTypingTimeRef.current = now;
                                 if (client && activePeer) {
                                   sendMessage(client, activePeer, '__TYPING__').catch(() => {});

@@ -67,15 +67,12 @@ export async function POST(req: NextRequest) {
     const owner = callerAddress;
 
     try {
-      await prisma.$transaction(
-        clean.map((peer: string) => {
-          return prisma.chatContact.upsert({
-            where: { owner_peer: { owner, peer } },
-            update: { updatedAt: new Date() },
-            create: { owner, peer },
-          });
-        })
-      );
+      // One INSERT … ON CONFLICT DO NOTHING instead of up to 200 upserts in a transaction: the
+      // client posts its whole list, and nearly every row already exists.
+      await prisma.chatContact.createMany({
+        data: clean.map((peer: string) => ({ owner, peer })),
+        skipDuplicates: true,
+      });
     } catch (dbError: any) {
       console.warn('[Chat Contacts] Database offline, contact saved to client storage.');
     }

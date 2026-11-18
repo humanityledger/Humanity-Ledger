@@ -105,25 +105,8 @@ export function useSystemAccount() {
     const [isChecking, setIsChecking]             = useState(true);
     // Track auto-unlock so we don't run it twice
     const autoUnlockRan = useRef(false);
-    // Track QD daily login earn so it fires once per day per address
-    const qdEarnRan = useRef<string>('');
-
-    // [QD TOKENOMICS] Fire daily login earn event when wallet is connected
-    useEffect(() => {
-        const address = wagmiAccount.address || storeAddress;
-        if (!address || typeof address !== 'string' || address.startsWith('email_')) return;
-        const today = new Date().toDateString();
-        const key = `${address}_${today}`;
-        if (qdEarnRan.current === key) return;
-        qdEarnRan.current = key;
-        // Fire in background — non-blocking
-        fetch('/api/qds/earn', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ address: address.toLowerCase(), event: 'DAILY_LOGIN' }),
-        }).catch(() => {});
-    }, [wagmiAccount.address, storeAddress]);
+    // The QD daily-login call to /api/qds/earn was removed: that route is retired (410), and every
+    // component using this hook sent it again on each load (six requests per sign-in in the logs).
 
     // [CRITICAL FIX] Absolute Firewall for Logout Loops
     // Wagmi sometimes auto-reconnects on page load if IndexedDB clearing fails.
