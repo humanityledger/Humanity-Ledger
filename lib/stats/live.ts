@@ -38,6 +38,8 @@ export interface LiveStats {
   countedSince: string;
   regions: LiveRegion[];
   clones: { count: number; uniques: number; days: number } | null;
+  /** Latest Aztec block from the node of the build (node_getBlockNumber); null when the node did not answer. */
+  aztecBlock: number | null;
   updatedAt: number;
 }
 

@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis';
+import { readBlockNumber } from '@/lib/protocol/read';
 import { regionsFrom, utcDay, VISITS_COUNTED_SINCE, type LiveStats } from '@/lib/stats/live';
 
 export const dynamic = 'force-dynamic';
@@ -41,11 +42,12 @@ export async function GET() {
   }
   try {
     const today = utcDay();
-    const [accounts, usernames, rows, clones] = await Promise.all([
+    const [accounts, usernames, rows, clones, aztecBlock] = await Promise.all([
       prisma.user.count(),
       prisma.chatUsername.count().catch(() => 0),
       prisma.visitorTally.groupBy({ by: ['tz'], _sum: { count: true } }).catch(() => [] as any[]),
       githubClones(),
+      readBlockNumber(),
     ]);
     const todayRows = await prisma.visitorTally.aggregate({ where: { day: today }, _sum: { count: true } }).catch(() => null);
     const tallies = (rows as any[]).map((r) => ({ tz: r.tz as string, count: Number(r._sum?.count) || 0 }));
@@ -57,6 +59,7 @@ export async function GET() {
       countedSince: VISITS_COUNTED_SINCE,
       regions: regionsFrom(tallies),
       clones,
+      aztecBlock,
       updatedAt: Date.now(),
     };
     const json = JSON.stringify(stats);

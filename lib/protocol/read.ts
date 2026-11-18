@@ -135,6 +135,16 @@ async function readPublicField(url: string, block: number, contract: string, slo
   }
 }
 
+/** The node's latest block (node_getBlockNumber), or null when it does not answer in time. */
+export async function readBlockNumber(): Promise<number | null> {
+  try {
+    const v = parseSafeInt(await jsonRpc(nodeUrl(), 'node_getBlockNumber', []));
+    return v === undefined ? null : v;
+  } catch {
+    return null;
+  }
+}
+
 export async function readSnapshot(): Promise<Snapshot> {
   const url = nodeUrl();
   let nodeHost = 'unknown';
