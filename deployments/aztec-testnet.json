@@ -247,7 +247,7 @@
       "keyed": false,
       "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 (run 44287098692, committed on the branch by CI) from the source with FEE_BPS 0, STREAM_MIN_FEE 0 and MAX_AMOUNT 100_000_000 (OD-2, OD-7, signed by Stefan Antonio Cirisanu on 18 November 2026), with IA-01's cancel_fee (which pays 0 at a zero schedule). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44288052113. TXE: recorded with the run that follows the test fix on this branch. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
+      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 (run 44287098692, committed on the branch by CI) from the source with FEE_BPS 0, STREAM_MIN_FEE 0 and MAX_AMOUNT 100_000_000 (OD-2, OD-7, signed by Stefan Antonio Cirisanu on 18 November 2026), with IA-01's cancel_fee (which pays 0 at a zero schedule). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44288052113. TXE in contracts/aztec/streams (Security review run 44288737213, job 134748091139): 35 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
       "artifactSha256": "c154bcd8e3c0c6e2c82eef37a64b01ab5b36a8f2f3182cfc6c2fd033a4b3a304"
     }
   ],
