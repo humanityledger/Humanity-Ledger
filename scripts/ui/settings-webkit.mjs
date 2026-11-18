@@ -29,6 +29,13 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
     await page.waitForSelector('[data-testid="settings-root"]', { timeout: 20000 }).catch(() => errors.push('no settings-root'));
     await page.waitForTimeout(800);
     const ids = await page.$$eval('[data-settings-item]', (els) => els.map((e) => e.getAttribute('data-settings-item')));
+    if (ids.length === 0) {
+      // Settings never mounted: that is a failure, never a vacuous pass. Show where the page went.
+      failed++;
+      const where = await page.evaluate(() => ({ url: location.href, text: document.body.innerText.slice(0, 300), e2e: document.querySelector('[data-chat-page]') ? 'chat page' : 'none' }));
+      results.push({ browser: bName, device: cName, ok: false, why: 'Settings did not mount', ...where });
+      await page.screenshot({ path: path.join(out, `${bName}-${cName}-not-mounted.png`) });
+    }
     for (const id of ids) {
       await page.goto(`${base}/chat?e2e=settings`, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => undefined);
       await page.waitForSelector(`[data-settings-item="${id}"]`, { timeout: 20000 }).catch(() => undefined);
