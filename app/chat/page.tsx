@@ -30,23 +30,17 @@ export default function ChatPage() {
     <TuringShieldGate>
       <KeyboardViewport />
       <ChatEngineProvider>
-        {/* On desktop Ledger Chat floats as a rounded card on a plain, light background, with the
-            Aztec wordmark set small at the top of the page. On phones the chat fills the screen. */}
+        {/* On desktop Ledger Chat floats as a rounded card on a plain, light background; on phones it
+            fills the screen. The margin around the card follows the window (clamp on vw and vh), so
+            zooming in or out never squeezes the card or pushes it off screen: past 768 px of CSS width
+            (about 250 % zoom on a laptop) it becomes the full-screen phone layout. The card is wider
+            than before (up to 1680 px). The small Aztec wordmark above it was removed (18 November 2026). */}
         <div
           data-chat-page="true"
-          className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-[#f4f6fa] md:p-[50px] lg:p-[75px] xl:p-[95px] 2xl:p-[120px]"
+          className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-[#f4f6fa] md:[padding:clamp(12px,3vh,56px)_clamp(16px,3.2vw,72px)]"
           style={{ height: '100%', minHeight: '100%', flex: '1 1 0%' }}
         >
-          <a
-            href="https://aztec.network"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Private payments on Aztec Network"
-            className="hidden md:block absolute left-1/2 -translate-x-1/2 top-[18px] lg:top-[28px] z-[2] opacity-60 hover:opacity-90 transition-opacity rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black/40"
-          >
-            <img src="/brand/aztec/aztec-wordmark-ink.svg" alt="Built on Aztec" width={62} height={14} draggable={false} style={{ display: 'block', height: 14, width: 'auto' }} />
-          </a>
-          <div data-glyph-anchor className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0 max-w-[1360px] md:max-h-[calc(100vh-140px)] mx-auto md:my-auto md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22)]">
+          <div data-glyph-anchor className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0 max-w-[1680px] md:max-h-[min(1100px,100dvh)] mx-auto md:my-auto md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22)]">
             <LedgerChat forceAutoInit={true} />
           </div>
         </div>

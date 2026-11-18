@@ -330,7 +330,9 @@ export function ThemePickerSheet({
                 </div>
 
                 <div className="px-5 pb-3">
-                  <div role="tablist" aria-label="Appearance" className="grid p-1 rounded-full bg-[#f2f4f7]" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+                  {/* Layout by inline style: when the utility classes were missing the three tabs ran
+                      together ("Theme 40Wallpaper 59Bubbles 14", 18 November 2026). */}
+                  <div role="tablist" aria-label="Appearance" className="rounded-full bg-[#f2f4f7]" style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`, gap: 6, padding: 4, borderRadius: 999 }}>
                     {tabs.map(t => (
                       <button
                         key={t.id}
@@ -338,10 +340,14 @@ export function ThemePickerSheet({
                         role="tab"
                         aria-selected={tab === t.id}
                         onClick={() => setTab(t.id)}
-                        className={`relative h-9 rounded-full text-[13.5px] font-medium transition-colors ${FOCUS} ${tab === t.id ? "text-[#15171c]" : "text-[#5b6271] hover:text-[#15171c]"}`}
+                        className={`relative rounded-full text-[13.5px] font-medium transition-colors ${FOCUS} ${tab === t.id ? "text-[#15171c]" : "text-[#5b6271] hover:text-[#15171c]"}`}
+                        style={{ height: 38, minWidth: 0, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}
                       >
                         {tab === t.id && <motion.span layoutId="appearance-tab" className="absolute inset-0 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.14)]" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
-                        <span className="relative">{t.label} <span className="text-[#a3a9b4] font-normal">{t.count}</span></span>
+                        <span className="relative" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                          <span>{t.label}</span>
+                          <span aria-label={`${t.count} options`} style={{ fontSize: 11.5, fontWeight: 600, lineHeight: '18px', minWidth: 22, padding: '0 6px', borderRadius: 999, background: tab === t.id ? '#eef0f3' : 'rgba(255,255,255,0.7)', color: '#727a88', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>{t.count}</span>
+                        </span>
                       </button>
                     ))}
                   </div>

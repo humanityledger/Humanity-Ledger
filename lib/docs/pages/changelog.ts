@@ -27,6 +27,10 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "fixed", text: "Appearance: Theme, Wallpaper and Bubbles each have their own space in the bar, with the number of options beside each name. The same fix keeps every tab bar in the app laid out as designed." },
+      { kind: "improved", text: "Stickers: one pack, Spike the cactus. Stickers sent from earlier packs still show in your chats." },
+      { kind: "improved", text: "Ledger Chat on a computer is wider, and the space around it follows the window, so zooming in or out keeps it whole." },
+      { kind: "fixed", text: "Communities: the owner can always change every setting, and admins can reset the invite link so an old link stops working." },
       { kind: "fixed", text: "Your profile photo no longer appears on your contacts. Each contact shows their own photo, or their initials." },
       { kind: "fixed", text: "Settings on phones: tapping Account, Messages, Privacy and security or any other section opens it full screen in Safari and Chrome." },
       { kind: "improved", text: "Change your @username from Profile with one tap: the Change button sits next to it." },

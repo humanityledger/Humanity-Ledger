@@ -171,7 +171,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
   const title = view === 'rows' ? 'Manage' : rows.find((r) => r.view === view)?.label ?? 'Manage';
 
   return (
-    <section className="flex-1 flex flex-col h-full min-h-0 bg-white" aria-label={`Manage ${name}`}>
+    <section className="flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white" aria-label={`Manage ${name}`}>
       <header className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-[#d4d8de] bg-white">
         <button
           type="button"
@@ -189,8 +189,8 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-        <div className="max-w-[720px] mx-auto flex flex-col gap-4">
+      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 pb-[max(16px,env(safe-area-inset-bottom))]">
+        <div className="w-full max-w-[720px] mx-auto flex flex-col gap-4 min-w-0">
           {note && (
             <p
               role={note.kind === 'error' ? 'alert' : 'status'}
@@ -239,7 +239,18 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
             <Members base={base} f={f} headers={headers} me={me} nameFor={nameFor} isAdmin={isAdmin} owner={String(community.ownerAddress || '').toLowerCase()} />
           )}
 
-          {community && view === 'invite' && <Invite joinCode={community.joinCode} />}
+          {community && view === 'invite' && (
+            <Invite
+              joinCode={community.joinCode}
+              canReset={isAdmin}
+              onReset={async () => {
+                const r = await patch('/api/chat/communities', { action: 'REVOKE_LINK', communityId });
+                if (!r.ok) return fail(r.data, 'The link was not reset. Try again.');
+                setCommunity((c: any) => ({ ...c, joinCode: r.data?.joinCode ?? c?.joinCode }));
+                setNote({ kind: 'ok', text: 'New link ready. The old link no longer works.' });
+              }}
+            />
+          )}
 
           {community && view === 'profile' && isAdmin && (
             <Profile
@@ -548,9 +559,12 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
 
 // ─── Invite ──────────────────────────────────────────────────────────────────
 
-function Invite({ joinCode }: { joinCode?: string | null }) {
+function Invite({ joinCode, canReset, onReset }: { joinCode?: string | null; canReset?: boolean; onReset?: () => Promise<void> }) {
   const link = communityInviteUrl(joinCode);
   const [copied, setCopied] = useState<'' | 'yes' | 'no'>('');
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setCopied(''); }, [link]);
   if (!link) return <p className={`${card} px-4 py-3 text-[18px]`} style={{ color: INK }}>This community has no invite link yet.</p>;
   return (
     <div className={`${card} px-4 py-4 flex flex-col gap-3`}>
@@ -567,6 +581,25 @@ function Invite({ joinCode }: { joinCode?: string | null }) {
         {copied === 'yes' && <span role="status" className="text-[18px]" style={{ color: INK }}>Copied.</span>}
         {copied === 'no' && <span role="alert" className="text-[18px]" style={{ color: DANGER }}>Not copied. Select the link and copy it.</span>}
       </div>
+      {canReset && onReset && (
+        <div className="border-t border-[#d4d8de] pt-3 flex flex-col gap-2">
+          {!confirmReset ? (
+            <button type="button" className={`${btn} px-4 self-start hover:bg-[#eff1f4]`} style={{ color: DANGER }} onClick={() => setConfirmReset(true)} data-testid="invite-reset">
+              Reset the link
+            </button>
+          ) : (
+            <>
+              <p className="text-[16px] leading-snug" style={{ color: INK }}>Anyone with the old link will not be able to join with it. People already in stay.</p>
+              <div className="flex flex-wrap gap-3">
+                <button type="button" disabled={busy} className={primary} onClick={async () => { setBusy(true); try { await onReset(); } finally { setBusy(false); setConfirmReset(false); } }}>
+                  {busy ? 'Resetting…' : 'Reset now'}
+                </button>
+                <button type="button" className={`${btn} px-4 hover:bg-[#eff1f4]`} style={{ color: INK }} onClick={() => setConfirmReset(false)}>Cancel</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
