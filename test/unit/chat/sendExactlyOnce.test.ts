@@ -31,13 +31,66 @@ function fakeClient(dm: any) {
 describe('sendMessage sends exactly once', () => {
   beforeEach(() => vi.resetModules());
 
-  it('a failed publish is retried without creating a second copy, and returns the real id', async () => {
+  it('a failed publish returns the real id at once and keeps publishing in the background, never creating a second copy', async () => {
+    vi.useFakeTimers();
+    try {
+      const { sendMessage } = await import('@/lib/xmtp/client');
+      const dm = fakeDm(['fail', 'fail', 'ok']);
+      const id = await sendMessage(fakeClient(dm), PEER, 'hola');
+      expect(id).toBe('msg-1');
+      expect(dm.created).toEqual(['hola']); // ONE message, whatever the retries
+      expect(dm.publishCalls).toBe(1); // the chat's queue is not held for more attempts
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(dm.publishCalls).toBe(2);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(dm.publishCalls).toBe(3);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(dm.publishCalls).toBe(3); // confirmed: no more publishes
+      expect(dm.created).toEqual(['hola']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never runs two publishes of one conversation at once (message, typing and receipts together)', async () => {
     const { sendMessage } = await import('@/lib/xmtp/client');
-    const dm = fakeDm(['fail', 'fail', 'ok']);
-    const id = await sendMessage(fakeClient(dm), PEER, 'hola');
-    expect(dm.created).toEqual(['hola']);    // ONE message, whatever the retries
-    expect(dm.publishCalls).toBe(3);
-    expect(id).toBe('msg-1');
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const created: string[] = [];
+    const dm = {
+      async sync() {},
+      async sendOptimistic(c: string) { created.push(c); return 'm' + created.length; },
+      async publishMessages() {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 20));
+        inFlight--;
+      },
+    };
+    const client = fakeClient(dm);
+    await Promise.all([
+      sendMessage(client, PEER, 'hola'),
+      sendMessage(client, PEER, '__TYPING__'),
+      sendMessage(client, PEER, '__READ__x'),
+    ]);
+    expect(created).toHaveLength(3);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it('flushPendingPublishes publishes waiting messages at once (network back, page visible again)', async () => {
+    vi.useFakeTimers();
+    try {
+      const { sendMessage, flushPendingPublishes } = await import('@/lib/xmtp/client');
+      const dm = fakeDm(['fail', 'ok']);
+      await sendMessage(fakeClient(dm), PEER, 'offline');
+      expect(dm.publishCalls).toBe(1);
+      expect(await flushPendingPublishes()).toBe(1);
+      expect(dm.publishCalls).toBe(2);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(dm.publishCalls).toBe(2); // the scheduled retry was cancelled by the flush
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a clean send creates one message and publishes once', async () => {

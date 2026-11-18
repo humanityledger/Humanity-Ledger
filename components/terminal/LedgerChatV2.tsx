@@ -13,7 +13,7 @@ import { useSignMessage, useReconnect } from 'wagmi';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -4035,6 +4035,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         //  Step 1: Use standard wagmi signer (defined above, outside try)
 
         //  Step 2: Initialize client (Direct Execution) 
+        // Messages not yet confirmed by the network are published again when the connection
+        // returns or the page comes back (Safari restores tabs without reloading them).
+        installPublishFlushListeners();
         const realClient = await getXMTPClient(wagmiSigner, {
           onDbKeyRequest: () =>
             toast.message('Unlock your messages on this device', {
