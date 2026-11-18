@@ -1600,10 +1600,15 @@ nav > div[class*="max-w-"] {
   margin-right: auto;
 }
 
-/* Tab navigation perfect centering for all doc/app tab rows */
+/* Tab navigation perfect centering for all doc/app tab rows.
+   `:not(.hidden):not([hidden])`: a nav whose classes contain "flex" (flex-col, md:flex) but that
+   is hidden must stay hidden. Without it this rule (0,1,1) beat Tailwind's .hidden (0,1,0), so
+   Settings kept its section list on screen on phones and tablets and squeezed the opened
+   section to 0 px (WebKit and Chromium, scripts/ui/settings-webkit.mjs, 18 November 2026), and
+   the chat's `hidden md:flex` rail showed on phones. */
 .tab-row,
 [role="tablist"],
-nav[class*="flex"] {
+nav[class*="flex"]:not(.hidden):not([hidden]) {
   display: flex;
   align-items: center;
 }
