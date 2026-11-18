@@ -133,19 +133,29 @@ export interface LedgerChatProps {
 }
 
 function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: boolean; size?: number }) {
+  // Your own photo only on your own avatar (18 November 2026: setting a profile photo showed it
+  // on every contact, because every Avatar started from `ledger_avatar` and every one listened
+  // to your settings updates). A contact starts from their cached photo, or initials.
   const [savedAvatar, setSavedAvatar] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
-    return localStorage.getItem('ledger_avatar') || '';
+    try {
+      return isMe
+        ? localStorage.getItem('ledger_avatar') || ''
+        : (address && localStorage.getItem('peer_avatar_' + address.toLowerCase())) || '';
+    } catch {
+      return '';
+    }
   });
 
   useEffect(() => {
+    if (!isMe) return;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.avatarUrl !== undefined) setSavedAvatar(detail.avatarUrl);
     };
     window.addEventListener('ledger_settings_update', handler);
     return () => window.removeEventListener('ledger_settings_update', handler);
-  }, []);
+  }, [isMe]);
 
   useEffect(() => {
     if (!isMe && address && typeof window !== 'undefined') {
@@ -153,7 +163,7 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
       const cacheKey = 'peer_avatar_' + address.toLowerCase();
       let cached = '';
       try { cached = localStorage.getItem(cacheKey) || ''; } catch {}
-      if (cached) setSavedAvatar(cached);
+      setSavedAvatar(cached);
       let live = true;
       fetch(`/api/user/search?q=${encodeURIComponent(address)}`).then(res => res.json()).then(data => {
         if (!live) return;

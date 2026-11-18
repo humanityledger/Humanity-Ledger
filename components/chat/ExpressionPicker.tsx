@@ -18,6 +18,7 @@ import { Loader2, Search } from 'lucide-react';
 // bundle; it is loaded with next/dynamic when the picker opens.
 import type { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react';
 import { STICKER_PACKS, stickerFile, stickerMessage } from '@/lib/chat/stickers';
+import { supportedEmojiVersion } from '@/lib/chat/emojiSupport';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false, loading: () => <Spinner /> });
 
@@ -159,6 +160,30 @@ export function ExpressionPicker({
   }, [setTab]);
 
   const progress = drag === null ? index : index - drag / widthOf();
+  // The indicator follows the real buttons, measured, instead of a percentage formula: when the
+  // three tabs did not lay out as three equal columns the white pill sat on the wrong word and
+  // the tabs looked broken (18 November 2026). Each tab now has a third of the bar, by inline grid.
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [slots, setSlots] = useState<Array<{ left: number; width: number }>>([]);
+  useEffect(() => {
+    const bar = tabsRef.current;
+    if (!bar) return;
+    const measure = () => {
+      const buttons = Array.from(bar.querySelectorAll<HTMLElement>('[data-tab]'));
+      setSlots(buttons.map((b) => ({ left: b.offsetLeft, width: b.offsetWidth })));
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(bar);
+    return () => ro?.disconnect();
+  }, []);
+  const pill = (() => {
+    if (slots.length !== TABS.length) return null;
+    const p = Math.max(0, Math.min(TABS.length - 1, progress));
+    const i = Math.floor(p), f = p - i;
+    const a = slots[i], b = slots[Math.min(TABS.length - 1, i + 1)];
+    return { left: a.left + (b.left - a.left) * f, width: a.width + (b.width - a.width) * f };
+  })();
 
   return (
     <div
@@ -170,7 +195,9 @@ export function ExpressionPicker({
       <div className="px-3.5 pt-3.5 pb-3 shrink-0">
         {/* Segmented tabs: 8 px between tabs, one white indicator that follows the finger. */}
         <div
-          className="relative grid grid-cols-3 gap-2 p-1.5 rounded-full bg-[#f2f4f7]"
+          ref={tabsRef}
+          className="relative p-1.5 rounded-full bg-[#f2f4f7]"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: 8 }}
           role="tablist"
           aria-label="Emojis, stickers and GIFs"
           onKeyDown={(e) => {
@@ -183,8 +210,8 @@ export function ExpressionPicker({
         >
           <span
             aria-hidden="true"
-            className={`absolute top-1.5 bottom-1.5 left-1.5 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)] motion-reduce:transition-none ${drag === null ? 'transition-transform duration-[260ms] ease-[cubic-bezier(0.22,0.8,0.24,1)]' : ''}`}
-            style={{ width: 'calc((100% - 28px) / 3)', transform: `translateX(calc(${Math.max(0, Math.min(TABS.length - 1, progress))} * (100% + 8px)))` }}
+            className={`absolute top-1.5 bottom-1.5 left-0 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)] motion-reduce:transition-none ${drag === null ? 'transition-[transform,width] duration-[260ms] ease-[cubic-bezier(0.22,0.8,0.24,1)]' : ''}`}
+            style={pill ? { width: pill.width, transform: `translateX(${pill.left}px)` } : { opacity: 0 }}
           />
           {TABS.map(([id, label]) => (
             <button
@@ -197,7 +224,7 @@ export function ExpressionPicker({
               aria-controls={`expr-pane-${id}`}
               tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
-              className={`relative z-[1] h-10 rounded-full text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${tab === id ? 'text-[#15171c]' : 'text-[#475061] hover:text-[#15171c]'}`}
+              className={`relative z-[1] w-full min-w-0 h-10 rounded-full text-center text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${tab === id ? 'text-[#15171c]' : 'text-[#475061] hover:text-[#15171c]'}`}
             >
               {label}
             </button>
@@ -251,6 +278,8 @@ export function ExpressionPicker({
 const TABS = [['emoji', 'Emojis'], ['sticker', 'Stickers'], ['gif', 'GIF']] as const;
 
 function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
+  // Only emojis this device can draw: newer ones showed as empty boxes (lib/chat/emojiSupport).
+  const emojiVersion = useMemo(() => supportedEmojiVersion(), []);
   return (
     <div className="ledger-emoji flex-1 min-h-0 px-2.5 pb-2.5">
       <EmojiPicker
@@ -260,6 +289,7 @@ function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
         width="100%"
         height="100%"
         lazyLoadEmojis
+        emojiVersion={emojiVersion}
         // No keyboard popping up over the panel on a phone the moment it opens.
         autoFocusSearch={false}
         searchPlaceholder="Search emojis"
