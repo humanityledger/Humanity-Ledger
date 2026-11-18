@@ -196,7 +196,10 @@
 .eth .caption { --a: 0.4; --b: 0.7; }
 
 /* 7. Calls */
-.callPhone { position: absolute; right: 6vw; top: 50%; width: min(70vw, 340px); height: min(72svh, 700px); margin-top: max(-36svh, -350px); --a: 0; --b: 0.4; opacity: var(--k); transform: translate3d(0, calc((1 - var(--e)) * 60px), 0); }
+.callPhone { position: absolute; right: 5vw; top: calc(50% + 38px); width: min(46vw, calc(min(80svh, 700px) * 0.62)); aspect-ratio: 800 / 1290; translate: 0 -50%;
+  --a: 0; --b: 0.4; opacity: var(--k); transform: translate3d(0, calc((1 - var(--e)) * 60px), 0); }
+.callPhone picture, .callImg { display: block; width: 100%; height: 100%; }
+.callImg { object-fit: contain; }
 .phoneHold { width: 100%; height: 100%; }
 
 /* Mobile: the phone takes 78% of the width, captions sit at the top */
@@ -204,7 +207,8 @@
   /* Caption on top, the object below it, never on top of each other. */
   .caption { top: 84px; bottom: auto; }
   .heroCopy { top: 96px; }
-  .payPhone, .hiPhone, .callPhone { right: 11vw; width: 78vw; top: auto; bottom: 2svh; height: 54svh; margin-top: 0; }
+  .payPhone, .hiPhone { right: 11vw; width: 78vw; top: auto; bottom: 2svh; height: 54svh; margin-top: 0; }
+  .callPhone { right: auto; left: 50%; top: auto; bottom: 1svh; width: auto; height: 60svh; translate: -50% 0; }
   .layers { top: 64%; }
   .nameRow { top: 66%; }
   .note { top: 40%; }

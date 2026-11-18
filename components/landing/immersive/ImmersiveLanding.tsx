@@ -272,7 +272,13 @@ export function ImmersiveLanding() {
 
         {/* 7. Calls. */}
         <Scene run={140} label="Calls" className={s.calls}>
-          <div className={s.callPhone}><ScenePhone id="voice" screen="voice" /></div>
+          <div className={s.callPhone}>
+            <picture>
+              <source srcSet={C.MEDIA.call.webp} type="image/webp" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={C.MEDIA.call.png} alt="A group video call on a phone." width={800} height={1290} decoding="async" loading="lazy" className={s.callImg} />
+            </picture>
+          </div>
           <div className={s.caption}>
             <Title parts={C.CALLS.title} />
             <p className={s.line}>{C.CALLS.line}</p>

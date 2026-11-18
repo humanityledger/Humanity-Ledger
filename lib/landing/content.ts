@@ -218,6 +218,8 @@ export const SETTLES = 'Private payments on Aztec Network. Aztec settles on Ethe
 export const MEDIA = {
   hand: { play: '/media/landing/hand-phone-1920.mp4', scrub: '/media/landing/hand-phone-scrub-1280.mp4', poster: '/media/landing/hand-phone-poster.jpg' },
   typing: { play: '/media/landing/typing-1920.mp4', scrub: '/media/landing/typing-scrub-1280.mp4', poster: '/media/landing/typing-poster.jpg' },
+  /** Video-call image supplied by Stefan (18/11/2026), shown at its native 800 × 1290 with its own shadow. */
+  call: { webp: '/media/landing/call-phone.webp', png: '/media/landing/call-phone.png' },
 };
 
 /**
