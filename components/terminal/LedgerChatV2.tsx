@@ -1,4 +1,5 @@
 "use client";
+import { walletAddressFromQr } from '@/lib/chat/wallet-qr';
 import { BootMark } from '@/components/layout/BootMark';
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -8172,7 +8173,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                    </button>
                </div>
                <p className="text-[15px] text-[#727a88] leading-relaxed mb-6">
-                 Scan a contact&apos;s code to start a conversation, or the code shown on your computer to sign in there.
+                 Scan a Ledger Chat code or any wallet&apos;s address code to start a chat and save the contact, or the code shown on your computer to sign in there.
                </p>
                <QrScanner mode="scan" onScanSuccess={async (text) => {
                   if (text.includes('?s=') || text.includes('?uuid=') || text.includes('ledgerchat.org/connect') || text.includes('ledgerchat.org/connect') || text.includes('session=')) {
@@ -8192,7 +8193,24 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       toast.error(result.message || 'Could not sign in on your computer. Try a new code.');
                     }
                   } else {
-                    handleStartConversationWithPeer(text);
+                    // A Ledger Chat link or @username goes through as it is; any other wallet's
+                    // code (bare address, EIP-681 ethereum: URI, wallet or explorer link) is reduced
+                    // to the address. Then the new chat opens with "Save contact" ready, so a
+                    // person met at a meeting is one scan and one name away.
+                    const isLedgerLink = /ledgerchat\.org\/u|^@/i.test(text.trim());
+                    const wallet = isLedgerLink ? null : walletAddressFromQr(text);
+                    if (!isLedgerLink && !wallet && !looksLikeUsername(text.trim())) {
+                      toast.error('This code holds no wallet address or Ledger Chat link.');
+                      return;
+                    }
+                    const peer = wallet ?? text;
+                    if (!client) { toast.error('Ledger Chat is still connecting. Try again in a moment.'); return; }
+                    await handleStartConversationWithPeer(peer);
+                    if (wallet && client) {
+                      const known = getDisplayName(wallet);
+                      setSaveContactName(/^0x[0-9a-f]{4}/i.test(known) ? '' : known);
+                      setShowSaveContactModal(true);
+                    }
                   }
                 }} />
            </div>

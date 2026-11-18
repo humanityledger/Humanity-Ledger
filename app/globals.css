@@ -2025,3 +2025,26 @@ html.hl-kb-open [data-chat-root] {
 @media (prefers-reduced-motion: reduce) {
   .hl-boot, .hl-boot-arc { animation: none; }
 }
+
+/* Emoji panel (components/chat/ExpressionPicker.tsx), 18 November 2026: one continuous grid with
+   search. No category icon bar (it also fought the sideways swipe between Emojis, Stickers and
+   GIF) and no category titles. */
+.ledger-emoji .epr-category-nav,
+.ledger-emoji .epr-emoji-category-label {
+  display: none !important;
+}
+.ledger-emoji .epr-body { padding-top: 4px; }
+
+/* Ledger Chat on phones (18 November 2026): the chat fills the screen edge to edge, white under
+   the status bar and the home indicator. body's own safe-area padding (meant for the landing
+   pages) added a second bottom inset under the composer, which already pads itself, so the
+   bottom of the chat was cut off on iPhone; and the grey page colour showed in the strips. */
+@media (max-width: 767px) {
+  html:has([data-chat-page]),
+  body:has([data-chat-page]) {
+    background-color: #ffffff !important;
+  }
+  body:has([data-chat-page]) {
+    padding-bottom: 0;
+  }
+}
