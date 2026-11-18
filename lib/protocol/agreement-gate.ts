@@ -37,6 +37,12 @@ export interface GateInput {
   /** deployments/aztec-pending-recompile.json → pending[].contract */
   pendingContracts: ReadonlyArray<string>;
   treasurySet: boolean;
+  /**
+   * The closed alpha decision for this account and class (lib/alpha/gate.ts). Only an `ok`
+   * result lets an unaudited class be opened on Alpha; absent or refused, the audit rule stands.
+   * It never counts as an audit.
+   */
+  closedAlpha?: { ok: true } | { ok: false; reasons: string[] };
 }
 
 export function hasAudit(audit: unknown): boolean {
@@ -44,7 +50,10 @@ export function hasAudit(audit: unknown): boolean {
 }
 
 export function deployRefusal(i: GateInput): string | null {
-  if (i.network === 'mainnet' && !hasAudit(i.audit)) return AUDIT_REFUSED;
+  if (i.network === 'mainnet' && !hasAudit(i.audit)) {
+    if (!i.closedAlpha) return AUDIT_REFUSED;
+    if (!i.closedAlpha.ok) return i.closedAlpha.reasons[0] ?? AUDIT_REFUSED;
+  }
   if (i.pendingContracts.includes(CONTRACT_NAME[i.kind])) return RECOMPILE_REFUSED;
   if (!i.treasurySet) return TREASURY_REFUSED;
   return null;

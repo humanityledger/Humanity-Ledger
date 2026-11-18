@@ -53,3 +53,7 @@ Fee Juice per tester: in the last measurement, creating an account reserved abou
 5. The lawyer's note (OD-8).
 6. IA-08.
 7. The four questions Q1, Q2, Q4 and Q5 sent to Aztec Labs.
+
+## Reported by Stefan (18/11/2026, in the chat)
+
+Stefan reported that between two different phones, calls, video calls, chat and sending money work. No accounts, network or transaction hashes were given, so this record holds no figure. R8 (a G7 session and a payment between two different people, `docs/MAINNET_READINESS.md`) is marked done only with those details.

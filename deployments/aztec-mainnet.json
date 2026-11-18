@@ -15,6 +15,17 @@
     "baseCommit": "6251a73",
     "workflow": "Security review (.github/workflows/security-review.yml)"
   },
+  "$closedAlphaComment": "Closed alpha, wave 1 (operator decisions OD-1 to OD-10, 18 November 2026, docs/alpha/OPERATOR_DECISIONS.md). lib/alpha/gate.ts lets an agreement be opened on Alpha only when enabled is true, before until, for a class listed here that is also a recorded deployment in contracts, for an AlphaMember who acknowledged the risk. Off until Stefan deploys the classes and records them; until is set then (8 weeks, OD-9). This is not an audit: audit stays null.",
+  "closedAlpha": {
+    "enabled": false,
+    "until": null,
+    "scope": "value",
+    "maxTesters": 20,
+    "classes": [
+      "0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143",
+      "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3"
+    ]
+  },
   "contracts": [],
   "$tokensComment": "Private tokens the wallet may list on Alpha (NEXT_PUBLIC_AZTEC_TOKENS must match these: scripts/aztec/check-alpha-config.mjs). key is the wallet's internal slot, never shown to users; symbol is what users see. deployBlock 0 (status pending-preflight) means not yet confirmed: the preflight (test/live/aztec-mainnet-preflight.live.test.ts) reads the block of deployTx from the node and prints it, together with the instance's class ID; both are then written here. Nothing is invented. HLC is issued by Humanity Ledger, is not backed by and has no relation to USDC.",
   "tokens": [
