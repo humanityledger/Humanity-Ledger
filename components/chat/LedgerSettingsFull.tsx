@@ -831,7 +831,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {activeTab !== 'home' && (
       <div className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
-          <h2 className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5">
+          <h2 className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5`}>
             {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
           </h2>
 
