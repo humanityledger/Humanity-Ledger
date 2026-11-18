@@ -10,10 +10,11 @@ import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { canonicalUsername, usernameProblem } from '@/lib/chat/usernames';
+import { guardUsernameStore } from '@/lib/chat/usernameRouteGuard';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const who = (await getVerifiedCaller(req))?.toLowerCase();
   if (!who) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 });
   const rl = await checkRateLimit(who, { max: 30, windowSec: 60, prefix: 'rl:username-lookup' });
@@ -29,3 +30,5 @@ export async function GET(req: NextRequest) {
   const name = user?.chatName && user.chatName !== 'Ledger User' ? user.chatName : user?.displayName ?? null;
   return NextResponse.json({ found: true, address: row.walletAddress, username: row.username, name }, { headers: { 'Cache-Control': 'no-store' } });
 }
+
+export const GET = guardUsernameStore('api/chat/username/lookup GET', handleGET);

@@ -17,7 +17,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { QRCodeSVG } from 'qrcode.react';
+import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { usePublicClient } from 'wagmi';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Circle, Clock, Plus } from 'lucide-react';
 import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
@@ -257,7 +257,7 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
                 {current.address && (
                   <>
                     <div className="rounded-2xl border border-[#e4e7ec] bg-white p-5 flex flex-col items-center">
-                      <QRCodeSVG value={`ethereum:${current.address}@${cfg.l1ChainId}`} size={176} level="M" includeMargin={false} fgColor={INK} bgColor="#ffffff" />
+                      <BrandedQr value={`ethereum:${current.address}@${cfg.l1ChainId}`} title={`QR code for ${l1Name} address`} style={{ width: 196 }} />
                       <span className="mt-3 text-[12.5px] font-medium" style={{ color: INK_3 }}>
                         {l1Name} · {cfg.assets.map((a) => a.symbol).join(' · ')}
                       </span>

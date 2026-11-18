@@ -607,7 +607,8 @@
   /* Large enough for a phone camera at arm's length, like WhatsApp Web's code. */
   width: min(256px, 72vw);
   height: min(256px, 72vw);
-  padding: 14px;
+  /* The branded code carries its own three-module quiet zone (components/chat/profile/BrandedQr). */
+  padding: 4px;
   border-radius: 20px;
   background: #ffffff;
   box-shadow: 0 18px 40px -24px rgba(16, 24, 40, 0.35);

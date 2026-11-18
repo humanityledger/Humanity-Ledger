@@ -14,7 +14,8 @@
  */
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { QRCodeSVG } from 'qrcode.react';
+import { BrandedQr, loadQrLogo } from './BrandedQr';
+import { drawBrandedQr } from '@/lib/chat/brandedQr';
 import { AtSign, Check, ChevronRight, Copy, Download, LoaderCircle, MoreHorizontal, Palette, Pencil, QrCode, Trash2, User } from 'lucide-react';
 import { PeerAvatar } from '@/components/chat/ui/kit';
 import { QR_COLORS, USERNAME_MAX, USERNAME_PROBLEM_TEXT, canonicalUsername, qrColor, usernameProblem, type QrColorId } from '@/lib/chat/usernames';
@@ -145,6 +146,10 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
           <Row icon={<LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" style={{ color: INK_3 }} />}>
             <span style={{ color: INK_3 }}>Loading</span>
           </Row>
+        ) : u.error && !u.username ? (
+          <Row icon={<AtSign size={18} strokeWidth={1.8} style={{ color: INK }} />} trailing={<RetryButton onRetry={u.reload} />}>
+            <span className="text-[14px] leading-snug" style={{ color: '#B42318' }} role="alert">{u.error}</span>
+          </Row>
         ) : u.username ? (
           <div className="relative" ref={menuRef}>
             {confirmDelete ? (
@@ -203,6 +208,28 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
         </Row>
       </Group>
     </div>
+  );
+}
+
+function RetryButton({ onRetry }: { onRetry: () => Promise<void> | void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await onRetry();
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className={`h-9 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13.5px] font-semibold shrink-0 disabled:opacity-50 ${FOCUS}`}
+      style={{ color: INK }}
+    >
+      {busy ? 'Trying…' : 'Try again'}
+    </button>
   );
 }
 
@@ -366,9 +393,9 @@ const colorKey = (a: string) => `hl.qr.color.${a.toLowerCase()}`;
 
 /** The coloured card as a PNG, drawn on a canvas: the same layout as on screen. */
 async function qrCardPng(link: string, handle: string, colorId: QrColorId): Promise<Blob> {
-  const QR = (await import('qrcode')).default as any;
+  const logo = await loadQrLogo();
   const c = qrColor(colorId);
-  const W = 1080, H = 1260, pad = 120, qrBox = W - pad * 2, qrInner = qrBox - 96;
+  const W = 1080, H = 1260, pad = 120, qrBox = W - pad * 2;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -385,12 +412,7 @@ async function qrCardPng(link: string, handle: string, colorId: QrColorId): Prom
   ctx.fillStyle = c.card;
   round(0, 0, W, H, 72);
   ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
-  round(pad, pad, qrBox, qrBox, 48);
-  ctx.fill();
-  const qrCanvas = document.createElement('canvas');
-  await QR.toCanvas(qrCanvas, link, { errorCorrectionLevel: 'M', margin: 0, width: qrInner, color: { dark: INK, light: '#FFFFFF' } });
-  ctx.drawImage(qrCanvas, pad + 48, pad + 48, qrInner, qrInner);
+  drawBrandedQr(ctx, link, pad, pad, qrBox, logo, 48);
   ctx.fillStyle = c.text;
   ctx.font = '600 56px Inter, "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
@@ -430,6 +452,20 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
   if (!u.loaded) {
     return <div className="h-[420px] rounded-3xl bg-white border border-[#e6e8ec] animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Loading your QR code" />;
   }
+  if (u.error && !u.username) {
+    return (
+      <div className="bg-white rounded-2xl border border-[#e6e8ec] p-6 text-center" role="alert">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-[#fff1f0] grid place-items-center">
+          <QrCode size={24} strokeWidth={1.8} style={{ color: '#B42318' }} aria-hidden="true" />
+        </div>
+        <p className="mt-4 text-[17px] font-semibold" style={{ color: INK }}>Your QR code could not load</p>
+        <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>{u.error}</p>
+        <div className="mt-5 flex justify-center">
+          <RetryButton onRetry={u.reload} />
+        </div>
+      </div>
+    );
+  }
   if (!u.username || !u.link) {
     return (
       <div className="bg-white rounded-2xl border border-[#e6e8ec] p-6 text-center">
@@ -453,8 +489,8 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
   return (
     <div className="flex flex-col items-center">
       <div className="w-[248px] rounded-[28px] p-5 pb-4 shadow-[0_18px_40px_-20px_rgba(16,24,40,0.45)]" style={{ background: c.card }}>
-        <div className="bg-white rounded-[20px] p-4">
-          <QRCodeSVG value={link} size={176} level="M" fgColor={INK} bgColor="#FFFFFF" title={`QR code for @${handle}`} style={{ width: '100%', height: 'auto' }} />
+        <div className="bg-white rounded-[20px] overflow-hidden">
+          <BrandedQr value={link} title={`QR code for @${handle}`} />
         </div>
         <button
           type="button"

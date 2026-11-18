@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, Camera, Loader, RefreshCcw } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { QRCodeSVG } from 'qrcode.react';
+import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 
 
 
@@ -247,15 +247,8 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                         <Loader size={36} className="animate-spin text-black/20" />
                     </div>
                 ) : projectData ? (
-                    <div className="p-6 bg-white rounded-3xl border border-black/10 shadow-xl">
-                        <QRCodeSVG
-                            value={projectData.linkUrl}
-                            size={220}
-                            fgColor="#000000"
-                            bgColor="#FFFFFF"
-                            level="H"
-                            includeMargin={false}
-                        />
+                    <div className="p-3 bg-white rounded-3xl border border-black/10 shadow-xl overflow-hidden">
+                        <BrandedQr value={projectData.linkUrl} title="Link QR code" style={{ width: 244 }} />
                     </div>
                 ) : (
                     <button onClick={generateQr} className="px-6 py-3 bg-black text-white font-semibold text-[12.5px] rounded-xl active:scale-95 transition-all">

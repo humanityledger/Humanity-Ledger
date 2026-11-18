@@ -17,6 +17,7 @@ import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { canonicalUsername, newLinkToken, usernameProblem, usernameSuggestions, USERNAME_PROBLEM_TEXT } from '@/lib/chat/usernames';
+import { guardUsernameStore } from '@/lib/chat/usernameRouteGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,14 +38,14 @@ function isUniqueViolation(e: unknown, field?: string): boolean {
   return Array.isArray(t) ? t.includes(field) : typeof t === 'string' ? t.includes(field) : true;
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const who = await caller(req);
   if (!who) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401 });
   const row = await prisma.chatUsername.findUnique({ where: { walletAddress: who } });
   return NextResponse.json(row ? { username: row.username, linkToken: row.linkToken } : { username: null, linkToken: null }, { headers: NO_STORE });
 }
 
-export async function PUT(req: NextRequest) {
+async function handlePUT(req: NextRequest) {
   const who = await caller(req);
   if (!who) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401 });
   const rl = await checkRateLimit(who, { max: 10, windowSec: 3600, prefix: 'rl:username-set' });
@@ -84,7 +85,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const who = await caller(req);
   if (!who) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401 });
   let body: { action?: unknown };
@@ -102,9 +103,14 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ username: row.username, linkToken: row.linkToken }, { headers: NO_STORE });
 }
 
-export async function DELETE(req: NextRequest) {
+async function handleDELETE(req: NextRequest) {
   const who = await caller(req);
   if (!who) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401 });
   await prisma.chatUsername.deleteMany({ where: { walletAddress: who } });
   return NextResponse.json({ username: null, linkToken: null }, { headers: NO_STORE });
 }
+
+export const GET = guardUsernameStore('api/chat/username GET', handleGET);
+export const PUT = guardUsernameStore('api/chat/username PUT', handlePUT);
+export const POST = guardUsernameStore('api/chat/username POST', handlePOST);
+export const DELETE = guardUsernameStore('api/chat/username DELETE', handleDELETE);

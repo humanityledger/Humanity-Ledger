@@ -151,4 +151,22 @@ describe('/api/chat/username', () => {
     as(B);
     expect((await PUT(req('PUT', { username: 'leaving' }))).status).toBe(200);
   });
+
+  it('a missing table (P2021, the 18 Nov 2026 deploy) answers 503 with a sentence, never a bare 500', async () => {
+    as(A);
+    const missing = () => Promise.reject(Object.assign(new Error('The table `public.ChatUsername` does not exist'), { code: 'P2021' }));
+    const spy = vi.spyOn(db.prisma.chatUsername, 'findUnique').mockImplementation(missing as any);
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      for (const res of [await GET(req('GET')), await PUT(req('PUT', { username: 'stefan' })), await LOOKUP(req('GET', undefined, 'https://ledgerchat.org/api/chat/username/lookup?u=stefan'))]) {
+        expect(res.status).toBe(503);
+        const body = await res.json();
+        expect(body.problem).toBe('unavailable');
+        expect(body.error).toMatch(/not available right now/);
+      }
+    } finally {
+      spy.mockRestore();
+      err.mockRestore();
+    }
+  });
 });

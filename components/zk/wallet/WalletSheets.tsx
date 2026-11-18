@@ -18,7 +18,7 @@
 
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { QRCodeSVG } from 'qrcode.react';
+import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { toast } from 'sonner';
 import { ArrowDown, ClipboardPaste, Lock, ScanLine, Share2, LockOpen, UserPlus } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
@@ -318,8 +318,8 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
   return (
     <div className="space-y-4">
       <div className="rounded-[24px] border border-[#e4e7ec] bg-[#f7f8fa] p-5 flex flex-col items-center gap-3">
-        <div className="rounded-[20px] bg-white p-4 border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)]" data-testid="receive-qr">
-          <QRCodeSVG value={request} size={196} level="M" includeMargin={false} fgColor={INK} bgColor="#ffffff" />
+        <div className="rounded-[20px] bg-white p-1.5 border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)] overflow-hidden" data-testid="receive-qr">
+          <BrandedQr value={request} title="Payment request QR code" style={{ width: 224 }} />
         </div>
         <p className="text-center text-[14px] leading-snug max-w-[280px]" style={{ color: INK_2 }}>
           Show this code to the person paying you. It contains your Aztec address{amountOk ? `, ${symbolOf(token)} and ${amount}` : ''}.

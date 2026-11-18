@@ -12,9 +12,11 @@ export interface UsernameState {
   loaded: boolean;
   username: string | null;
   linkToken: string | null;
+  /** Why the last load failed (shown with a Try again button), or null. */
+  error: string | null;
 }
 
-let state: UsernameState = { loaded: false, username: null, linkToken: null };
+let state: UsernameState = { loaded: false, username: null, linkToken: null, error: null };
 let loading: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 const set = (next: UsernameState) => {
@@ -37,15 +39,15 @@ async function call(method: 'GET' | 'PUT' | 'POST' | 'DELETE', body?: unknown) {
     cache: 'no-store',
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new UsernameError(data.error || 'Could not save. Try again.', data.problem, Array.isArray(data.suggestions) ? data.suggestions : []);
+  if (!res.ok) throw new UsernameError(data.error || (method === 'GET' ? 'Could not load your username. Check your connection and try again.' : 'Could not save. Try again.'), data.problem, Array.isArray(data.suggestions) ? data.suggestions : []);
   return { username: (data.username as string | null) ?? null, linkToken: (data.linkToken as string | null) ?? null };
 }
 
 function load(force = false) {
   if (loading && !force) return loading;
   loading = call('GET')
-    .then((d) => set({ loaded: true, ...d }))
-    .catch(() => set({ ...state, loaded: true }))
+    .then((d) => set({ loaded: true, error: null, ...d }))
+    .catch((e) => set({ ...state, loaded: true, error: e instanceof Error ? e.message : 'Could not load your username. Try again.' }))
     .finally(() => {
       loading = null;
     });
@@ -65,9 +67,9 @@ export function useUsername(enabled = true) {
     if (enabled && !state.loaded) void load();
   }, [enabled]);
 
-  const save = useCallback(async (name: string) => set({ loaded: true, ...(await call('PUT', { username: canonicalUsername(name) })) }), []);
-  const resetLink = useCallback(async () => set({ loaded: true, ...(await call('POST', { action: 'reset-link' })) }), []);
-  const remove = useCallback(async () => set({ loaded: true, ...(await call('DELETE')) }), []);
+  const save = useCallback(async (name: string) => set({ loaded: true, error: null, ...(await call('PUT', { username: canonicalUsername(name) })) }), []);
+  const resetLink = useCallback(async () => set({ loaded: true, error: null, ...(await call('POST', { action: 'reset-link' })) }), []);
+  const remove = useCallback(async () => set({ loaded: true, error: null, ...(await call('DELETE')) }), []);
 
   const link = snap.linkToken && LINK_TOKEN_RE.test(snap.linkToken) && typeof window !== 'undefined' ? profileLink(window.location.origin, snap.linkToken) : null;
   return { ...snap, link, save, resetLink, remove, reload: () => load(true) };
@@ -81,6 +83,7 @@ export async function usernameAvailable(name: string, mine: string | null): Prom
     const res = await fetch(`/api/chat/username/lookup?u=${encodeURIComponent(u)}`, { cache: 'no-store' });
     if (res.status === 404) return true;
     if (res.ok) return false;
+    // 503: the store is down, so availability is unknown (Save will say why).
     return null;
   } catch {
     return null;
