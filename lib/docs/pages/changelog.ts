@@ -27,6 +27,9 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "new", text: "A live map on the home page: a lit globe with the real number of accounts, @usernames reserved and visitors, refreshed every 15 seconds. Visitors are counted once a day per browser and placed by time zone; no IP address is stored. Counting started on 18 November 2026." },
+      { kind: "fixed", text: "Creating a group no longer shows \"synced 1 messages, 0 failed…\" as an error. That text means the network confirmed the group late; the group exists and opens." },
+      { kind: "improved", text: "A cleaner start screen: only New chat and New group." },
       { kind: "improved", text: "Lighter on the network for every open window: the online status check, the contact list backup, the search for new conversations and the typing signal now do work only when something changed, so the app stays fast as more people use it." },
       { kind: "fixed", text: "Messages reach the other person again. Since the morning of 18 November, one stuck send could hold every later message, typing signal and read receipt of that conversation until the page was reloaded. A stuck send now waits at most 15 seconds before the next one goes out, and nothing is sent twice." },
       { kind: "new", text: "Usernames. Choose a @username in Settings → Profile. Each one is unique in the world: a name someone else holds cannot be saved, in any capitalisation, and the app offers free endings like name.01. Only letters a to z, numbers and \"_\" are allowed, so no look-alike letters can imitate another person's name." },

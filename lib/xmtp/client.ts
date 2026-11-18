@@ -30,6 +30,7 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
 import { resolveDbKey, browserKeyStore, checkName, wrappedKeyName, legacyKeyName, XmtpDbKeyError } from './db-key';
 import { loadDeviceDbKey, saveDeviceDbKey, randomDbKey } from './device-key-vault';
+import { isSyncWaitError, redactXmtpError } from './syncErrors';
 
 //  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
@@ -614,6 +615,17 @@ export async function sendMessage(
         // more attempts (that delayed every following message): publish in the background.
         break;
       }
+      if (isSyncWaitError(sendErr)) {
+        // "synced N messages … from cursor": the DM was created and its commit published; only
+        // the wait for the network's receipt ran out. Use that DM instead of creating another
+        // handle, so the welcome that lets the other person see the chat is not left behind.
+        const existing = await findDmFor(client, identifier).catch(() => null);
+        if (existing) {
+          dm = existing;
+          activeDmCache.set(cacheKey, dm);
+          continue;
+        }
+      }
       // Nothing was created yet: a fresh conversation handle is safe.
       activeDmCache.delete(cacheKey);
       dm = null;
@@ -626,10 +638,50 @@ export async function sendMessage(
     // publishing in the background; it will not be duplicated, and the chat
     // already shows it with its real id.
     schedulePublishRetry(cacheKey, dm);
+    if (!isSignal(content)) reportDelivery('publish_pending', lastError);
     return sentId;
   }
 
+  reportDelivery('send_failed', lastError);
   throw new Error(`Message delivery failed via XMTP: ${lastError?.message || 'Network error'}`);
+}
+
+/** Typing, read receipts and similar control messages: not worth a delivery report each. */
+function isSignal(content: string): boolean {
+  return typeof content === 'string' && /^__(TYPING|READ|DELIVERED|REACT)__/.test(content);
+}
+
+/** The DM with this identifier from the local database, without creating one. */
+async function findDmFor(client: Client, identifier: XmtpIdentifier): Promise<any | null> {
+  try { await client.conversations.sync(); } catch { /* the local list may already have it */ }
+  const inboxId = await client.findInboxIdByIdentifier(identifier);
+  if (!inboxId) return null;
+  return (await client.conversations.getDmByInboxId(inboxId)) ?? null;
+}
+
+/**
+ * A delivery problem, reported to /api/chat/delivery-report so it shows in the server log.
+ * 18 November 2026: messages did not arrive and nothing anywhere said so. The report holds the
+ * kind of event, the error text without ids (redactXmtpError) and the browser family: never a
+ * message, an address or an inbox id. At most one report per kind every 60 s per page.
+ */
+const lastReport = new Map<string, number>();
+export function reportDelivery(kind: string, err: unknown): void {
+  if (typeof window === 'undefined' || typeof fetch !== 'function') return;
+  const now = Date.now();
+  if (now - (lastReport.get(kind) ?? 0) < 60_000) return;
+  lastReport.set(kind, now);
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const browser = /Edg\//.test(ua) ? 'edge' : /Firefox\//.test(ua) ? 'firefox' : /Chrome\//.test(ua) ? 'chrome' : /Safari\//.test(ua) ? 'safari' : 'other';
+  const mobile = /Mobi|iPhone|Android/.test(ua);
+  try {
+    fetch('/api/chat/delivery-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({ kind, error: redactXmtpError(err), browser, mobile, env: XMTP_ENV }),
+    }).catch(() => {});
+  } catch { /* never let reporting break sending */ }
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
@@ -694,7 +746,8 @@ const MAX_PUBLISH_RETRIES = 60; // about 25 minutes at the 30 s cap, plus every 
 function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
   const existing = publishRetries.get(cacheKey);
   if (attempt === 0 && existing) { existing.dm = dm; return; } // already retrying
-  if (attempt >= MAX_PUBLISH_RETRIES) { publishRetries.delete(cacheKey); return; }
+  if (attempt >= MAX_PUBLISH_RETRIES) { publishRetries.delete(cacheKey); reportDelivery('publish_gave_up', 'retries exhausted'); return; }
+  if (attempt === 4) reportDelivery('publish_retrying', `attempt ${attempt}`);
   const entry = { dm, attempt, timer: null as ReturnType<typeof setTimeout> | null };
   publishRetries.set(cacheKey, entry);
   entry.timer = setTimeout(() => {

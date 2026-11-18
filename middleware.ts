@@ -98,6 +98,7 @@ const PUBLIC_PREFIXES = [
   '/api/aztec/value-mode', // exits-only switch; public, only ever restricts
   '/api/status',
   '/api/protocol/', // Public, read-only, cached aggregate metrics (app/api/protocol/metrics)
+  '/api/stats/', // Landing page live map: aggregate counts, and a once-a-day visit counter (lib/stats)
   '/api/registry/',
   // '/api/chat/', (Removed from public routes for security)
   '/api/provenance/',    // Provenance log API called on XMTP connect
