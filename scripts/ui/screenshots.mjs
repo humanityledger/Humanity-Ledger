@@ -94,15 +94,14 @@ for (const [vpName, viewport] of VIEWPORTS) {
     }
     // Immersive landing: every pinned scene at 0, 50 and 100 % of its run, with the progress the
     // page computed, so a scene that does not advance shows up in the report.
-    const scenes = name === 'home' ? await page.$$eval('[data-scene]', (els) => els.map((e) => {
-      const r = e.getBoundingClientRect();
-      return { top: r.top + window.scrollY, height: r.height, label: e.getAttribute('aria-label') || '' };
-    })) : [];
+    // The page may scroll inside an element (on "/" the layout scrolls <main>): find it once.
+    const SCROLLER = `(() => { for (let n = document.querySelector('[data-scene]')?.parentElement; n && n !== document.body; n = n.parentElement) { const o = getComputedStyle(n).overflowY; if (o === 'auto' || o === 'scroll') return n; } return document.scrollingElement; })()`;
+    const scenes = name === 'home' ? await page.evaluate(`(() => { const sc = ${SCROLLER}; const o = sc.getBoundingClientRect().top; return { vh: sc.clientHeight, list: [...document.querySelectorAll('[data-scene]')].map((e) => { const r = e.getBoundingClientRect(); return { top: r.top - o + sc.scrollTop, height: r.height, label: e.getAttribute('aria-label') || '' }; }) }; })()`) : { vh: 0, list: [] };
     const sceneReport = [];
-    for (const [i, sc] of scenes.entries()) {
+    for (const [i, sc] of scenes.list.entries()) {
       for (const f of [0, 0.5, 1]) {
-        const y = Math.round(sc.top + Math.max(0, sc.height - viewport.height) * f);
-        await page.evaluate((yy) => window.scrollTo(0, yy), y);
+        const y = Math.round(sc.top + Math.max(0, sc.height - scenes.vh) * f);
+        await page.evaluate(`(${SCROLLER}).scrollTop = ${y}`);
         await page.waitForTimeout(500);
         const p = await page.$$eval('[data-scene]', (els, k) => els[k]?.style.getPropertyValue('--p') ?? '', i);
         sceneReport.push({ scene: sc.label, f, p });

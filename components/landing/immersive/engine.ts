@@ -17,26 +17,38 @@ interface Scene { el: HTMLElement; top: number; height: number; p: number; near:
 const scenes: Scene[] = [];
 const listeners = new Map<HTMLElement, Set<Listener>>();
 let root: HTMLElement | null = null;
+/** The element that scrolls the page: on "/" the layout scrolls inside <main>, elsewhere the window. */
+let scroller: HTMLElement | null = null;
+const scrollTop = () => (scroller ? scroller.scrollTop : window.scrollY);
+
+function findScroller(el: HTMLElement): HTMLElement | null {
+  for (let n = el.parentElement; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+    const oy = getComputedStyle(n).overflowY;
+    if (oy === 'auto' || oy === 'scroll') return n;
+  }
+  return null;
+}
 let vh = 0;
 let docRun = 1;
 let frame = 0;
 let lastPage = -1;
 
 function measure() {
-  vh = window.innerHeight;
-  const y = window.scrollY;
+  vh = scroller ? scroller.clientHeight : window.innerHeight;
+  const y = scrollTop();
+  const origin = scroller ? scroller.getBoundingClientRect().top : 0;
   for (const s of scenes) {
     const r = s.el.getBoundingClientRect();
-    s.top = r.top + y;
+    s.top = r.top - origin + y;
     s.height = r.height;
   }
-  docRun = Math.max(1, document.documentElement.scrollHeight - vh);
+  docRun = Math.max(1, (scroller ? scroller.scrollHeight : document.documentElement.scrollHeight) - vh);
   request();
 }
 
 function tick() {
   frame = 0;
-  const y = window.scrollY;
+  const y = scrollTop();
   for (const s of scenes) {
     const p = sceneProgress(y, s.top, s.height, vh);
     const near = y + vh * 1.5 > s.top && y < s.top + s.height + vh * 0.5;
@@ -72,20 +84,24 @@ export function startScenes(el: HTMLElement): () => void {
     for (const s of scenes) s.el.style.setProperty('--p', '1');
     return () => undefined;
   }
+  scroller = findScroller(el);
+  const target: HTMLElement | Window = scroller ?? window;
   const ro = new ResizeObserver(measure);
   ro.observe(el);
-  window.addEventListener('scroll', request, { passive: true });
+  if (scroller) ro.observe(scroller);
+  target.addEventListener('scroll', request, { passive: true });
   window.addEventListener('resize', measure, { passive: true });
   document.fonts?.ready.then(measure).catch(() => undefined);
   measure();
   return () => {
     ro.disconnect();
-    window.removeEventListener('scroll', request);
+    target.removeEventListener('scroll', request);
     window.removeEventListener('resize', measure);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     scenes.length = 0;
     root = null;
+    scroller = null;
   };
 }
 
