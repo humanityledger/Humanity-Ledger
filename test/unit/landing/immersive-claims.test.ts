@@ -72,3 +72,20 @@ describe('the immersive landing says only what the code and the record back', ()
     expect(C.TRADEMARKS).toBe('Aztec and Ethereum are trademarks of their respective owners. Ledger Chat is an independent project.');
   });
 });
+
+describe('nothing competes with the scroll on the landing', () => {
+  it('no progress line on "/", and decorative loops pause while scrolling', () => {
+    expect(read('components/ui/ScrollProgressBar.tsx')).toMatch(/usePathname\(\) === "\/"/);
+    expect(read('components/landing/v2/LiveGlobe.tsx')).toMatch(/isScrolling\(\)/);
+    expect(read('components/landing/v2/PhoneShowcase.tsx')).toMatch(/isScrolling\(\)/);
+    expect(read(`${DIR}/engine.ts`)).not.toMatch(/--page/);
+  });
+  it('--p is a registered, non-inherited number, so a frame restyles only what reads it', () => {
+    expect(read(`${DIR}/Immersive.module.css`)).toMatch(/@property --p \{ syntax: '<number>'; inherits: false;/);
+  });
+  it('the record is two events with full hashes behind a copy button, not a numbered list', () => {
+    const page = read(`${DIR}/ImmersiveLanding.tsx`);
+    expect(page).not.toMatch(/<ol className=\{s\.ticks\}/);
+    expect(page).toMatch(/<CopyHash label="Transaction" hash=\{C\.FIRST_PAYMENT\.tx\}/);
+  });
+});

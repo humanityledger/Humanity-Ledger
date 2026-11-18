@@ -4,6 +4,13 @@
  * reverses exactly when scrolling up. Local ranges use --a/--b → --k, eased to --e.
  */
 
+/* Registered and non-inherited: changing --p restyles only the elements that read it, never the
+   LivePhone, globe or text underneath them. Elements that need it say `--p: inherit`. */
+@property --p { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --k { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --e { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --s { syntax: '<number>'; inherits: false; initial-value: 1; }
+
 .page {
   --ink: #15171c;
   --violet: #5200ff;
@@ -30,27 +37,26 @@
 
 /* ── Navigation ─────────────────────────────────────────── */
 .nav {
-  position: fixed; z-index: 50; inset: 0 0 auto 0; height: 64px;
-  display: flex; align-items: center; gap: 20px; padding: 0 clamp(16px, 4vw, 40px);
+  position: fixed; z-index: 50; inset: 0 0 auto 0; height: 76px;
+  display: flex; align-items: center; gap: 24px; padding: 0 clamp(16px, 4vw, 48px);
   background: rgba(255, 255, 255, 0.86); border-bottom: 1px solid var(--line);
 }
-.bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--violet); transform-origin: 0 50%; transform: scaleX(var(--page, 0)); }
 .home { display: flex; align-items: center; text-decoration: none; }
-.anchors { display: none; gap: 22px; margin: 0 auto; font-size: 14px; }
+.anchors { display: none; gap: 28px; margin: 0 auto; font-size: 15px; }
 .anchors a { text-decoration: none; color: #475467; }
 .anchors a:hover, .anchors a:focus-visible { color: var(--ink); }
-.status { display: none; align-items: center; gap: 8px; font-size: 13px; color: #475467; margin-left: auto; }
+.status { display: none; align-items: center; gap: 8px; font-size: 14px; color: #475467; margin-left: auto; }
 .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 .cta, .ctaBig {
-  margin-left: auto; display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px;
-  background: var(--ink); color: #fff !important; font-weight: 600; font-size: 14px; text-decoration: none; white-space: nowrap;
+  margin-left: auto; display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: 999px;
+  background: var(--ink); color: #fff !important; font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap;
 }
 .status + .cta { margin-left: 0; }
 .ctaBig { height: 56px; padding: 0 28px; font-size: 17px; margin: 28px auto 0; }
-.notice { position: fixed; z-index: 49; top: 64px; inset-inline: 0; margin: 0; padding: 6px 16px; font-size: 13px; text-align: center; background: var(--soft); border-bottom: 1px solid var(--line); }
+.notice { position: fixed; z-index: 49; top: 76px; inset-inline: 0; margin: 0; padding: 6px 16px; font-size: 13px; text-align: center; background: var(--soft); border-bottom: 1px solid var(--line); }
 @media (min-width: 900px) {
   .anchors, .status { display: flex; }
-  .anchors { margin: 0 0 0 32px; }
+  .anchors { margin: 0 0 0 40px; }
 }
 
 /* ── Type ───────────────────────────────────────────────── */
@@ -69,21 +75,26 @@
 }
 
 /* ── Scenes ─────────────────────────────────────────────── */
-.scene { position: relative; height: calc(var(--run) * 0.65svh); contain: layout style; }
+/* Mobile runs are ~65% of desktop, and always longer than one screen so the scene pins. */
+.scene { position: relative; height: calc(100svh + (var(--run) - 100) * 0.65svh); contain: layout style; }
 .pin { position: sticky; top: 0; height: 100svh; overflow: hidden; contain: layout paint style; }
 @media (min-width: 900px) { .scene { height: calc(var(--run) * 1svh); } }
 .scene:not([data-near]) .pin { content-visibility: auto; contain-intrinsic-size: auto 100svh; }
 .scene[data-near] .pin > * { will-change: transform, opacity; }
+/* nested elements that read the scene's progress */
+.composer, .typed, .typed span, .packet, .packet b, .packet i, .field, .available, .note > span,
+.rail, .rail i, .points, .points > article { --p: inherit; }
 
 /* local range helper: set --a and --b on an element to get --k (0..1) and --e (eased) */
-.pin > *, .pin * { --k: clamp(0, calc((var(--p, 0) - var(--a, 0)) / (var(--b, 1) - var(--a, 0))), 1); --e: calc(1 - (1 - var(--k)) * (1 - var(--k)) * (1 - var(--k))); }
+.pin { --p: inherit; }
+.pin > *, .qrBox, .railFill { --p: inherit; --k: clamp(0, calc((var(--p, 0) - var(--a, 0)) / (var(--b, 1) - var(--a, 0))), 1); --e: calc(1 - (1 - var(--k)) * (1 - var(--k)) * (1 - var(--k))); }
 
 .caption { position: absolute; left: clamp(20px, 6vw, 96px); bottom: clamp(28px, 8svh, 96px); max-width: min(640px, 88vw); --a: 0.05; --b: 0.3; opacity: var(--e); transform: translate3d(0, calc((1 - var(--e)) * 40px), 0); }
 
 /* 1. Hero: the hand video, then the LivePhone */
-.frame { position: absolute; inset: 76px 12px 12px; border-radius: 32px; overflow: hidden; background: #eef0f3; --a: 0.58; --b: 0.8;
+.frame { position: absolute; inset: 88px 12px 12px; border-radius: 32px; overflow: hidden; background: #eef0f3; --a: 0.58; --b: 0.8;
   opacity: calc(1 - var(--e)); transform: scale(calc(1 + var(--e) * 0.5)); transform-origin: 63% 32%; }
-@media (min-width: 900px) { .frame { inset: 80px 24px 24px; } }
+@media (min-width: 900px) { .frame { inset: 92px 24px 24px; } }
 .video, .video img, .video video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .heroCopy { position: absolute; left: clamp(20px, 6vw, 96px); top: clamp(110px, 18svh, 200px); max-width: min(720px, 90vw); --a: 0.04; --b: 0.42;
   opacity: calc(1 - var(--k)); transform: translate3d(0, calc(var(--e) * -90px), 0); }
@@ -93,11 +104,16 @@
 
 /* 2. Say hi: the cinema window grows from a card to 92% */
 .cinema { position: absolute; left: 4vw; right: 4vw; top: 12svh; height: 58svh; border-radius: 32px; overflow: hidden; background: #0b0820;
-  --a: 0; --b: 0.35; --s: calc(0.5 + var(--e) * 0.5); transform: scale(var(--s)); }
-.cinemaInner { position: absolute; inset: 0; transform: scale(calc(1 / var(--s))); }
-.typing { position: absolute; left: 8%; top: 10%; margin: 0; font-size: clamp(22px, 3vw, 40px); font-weight: 600; color: #fff; }
+  --a: 0; --b: 0.35; --s: calc(0.5 + var(--e) * 0.5); transform: scale(var(--s));
+  opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.64) * 6), 1)); }
+.cinemaInner { position: absolute; inset: 0; --s: inherit; transform: scale(calc(1 / var(--s))); }
+.composer { position: absolute; left: 50%; bottom: 7%; width: min(560px, 84%); height: 60px; margin: 0; transform: translate3d(-50%, 0, 0);
+  display: flex; align-items: center; gap: 2px; padding: 0 10px 0 24px; border-radius: 999px; background: #fff; color: var(--ink); font-size: 19px; font-weight: 500; }
+.caret { width: 2px; height: 24px; margin-left: 2px; background: var(--violet); }
+.send { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; background: var(--violet); opacity: calc(0.35 + 0.65 * clamp(0, calc((var(--p, 0) - 0.54) * 20), 1)); }
+.composer .send { --p: inherit; }
 .typed span { opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 60), 1); }
-.bubble { position: absolute; left: 50%; top: 32svh; padding: 12px 18px; border-radius: 22px 22px 6px 22px; background: var(--violet); color: #fff; font-weight: 500; white-space: nowrap;
+.bubble { position: absolute; left: 50%; top: 58svh; padding: 12px 18px; border-radius: 22px 22px 6px 22px; background: var(--violet); color: #fff; font-weight: 500; white-space: nowrap;
   --a: 0.58; --b: 0.86; opacity: clamp(0, calc((var(--p, 0) - 0.56) * 30), 1);
   transform: translate3d(calc(-50% + var(--e) * 22vw), calc(var(--e) * 14svh), 0) scale(calc(1 - var(--e) * 0.35)); }
 .hiPhone { position: absolute; right: 4vw; top: 50%; width: min(70vw, 340px); height: min(72svh, 700px); margin-top: max(-36svh, -350px);
@@ -137,22 +153,31 @@
 .brand { height: 28px; width: auto; display: block; }
 .brandText { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: #475467; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; }
 
-/* 5.1 The record line */
-.record .caption { top: 120px; bottom: auto; --a: 0; --b: 0.15; }
-.record > .pin > .small, .record .pin > .small { position: absolute; left: clamp(20px, 6vw, 96px); bottom: 28px; max-width: min(760px, 88vw); }
-.timeline { position: absolute; left: 6vw; right: 6vw; top: 52%; }
-.track { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--line); }
-.track span { position: absolute; inset: 0; background: var(--violet); transform-origin: 0 50%; --a: 0.15; --b: 0.75; transform: scaleX(var(--k)); }
-.ticks { position: absolute; left: 0; right: 0; top: -5px; display: flex; justify-content: space-between; margin: 0; padding: 0; list-style: none; }
-.ticks li { width: 12px; height: 12px; border-radius: 50%; background: var(--violet); opacity: calc(0.15 + 0.85 * clamp(0, calc((var(--p, 0) - 0.15 - var(--t) * 0.6) * 40), 1)); }
-.points { display: grid; grid-template-columns: 1fr; gap: 20px; padding-top: 32px; }
-.points > div:last-child { opacity: calc(0.35 + 0.65 * clamp(0, calc((var(--p, 0) - 0.72) * 20), 1)); }
-@media (min-width: 900px) { .points { grid-template-columns: 1fr 1fr; } .points > div:last-child { text-align: right; } }
-.k { margin: 0; font-size: 13px; color: #667085; }
-.v { margin: 4px 0 8px; font-weight: 600; }
-.hash { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; }
-.hash code, .hash a { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
-.hash button { flex: none; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 12px; cursor: pointer; }
+/* 5.1 The record: two events, twenty blocks apart */
+.recordHead { position: absolute; left: clamp(20px, 6vw, 96px); top: 120px; max-width: min(900px, 88vw); --a: 0; --b: 0.14; opacity: var(--e); transform: translate3d(0, calc((1 - var(--e)) * 30px), 0); }
+.eyebrow { margin: 0 0 14px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #667085; }
+.timeline { position: absolute; left: clamp(20px, 6vw, 96px); right: clamp(20px, 6vw, 96px); top: 46%; }
+.rail { position: relative; height: 12px; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+.rail::before { content: ''; position: absolute; left: 0; right: 0; top: 5px; height: 2px; background: var(--line); }
+.railFill { position: absolute; left: 0; right: 0; top: 5px; height: 2px; background: var(--violet); transform-origin: 0 50%; --a: 0.16; --b: 0.72; transform: scaleX(var(--k)); }
+.rail i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--violet); opacity: calc(0.18 + 0.82 * clamp(0, calc((var(--p, 0) - 0.16 - var(--t) * 0.56) * 40), 1)); }
+.rail i:first-child, .rail i:last-child { width: 12px; height: 12px; box-shadow: 0 0 0 4px #fff; }
+.ends { display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; color: #667085; font-variant-numeric: tabular-nums; user-select: none; }
+.points { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 28px; }
+.points > article { padding: 22px 24px; border-radius: 28px; border: 1px solid var(--line); background: #fff; }
+.points > article:first-child { opacity: calc(0.3 + 0.7 * clamp(0, calc((var(--p, 0) - 0.12) * 12), 1)); }
+.points > article:last-child { opacity: calc(0.3 + 0.7 * clamp(0, calc((var(--p, 0) - 0.68) * 12), 1)); }
+.points h3 { margin: 4px 0 0; font-size: 20px; letter-spacing: -0.01em; }
+@media (min-width: 900px) { .points { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.k { margin: 0; font-size: 13px; color: #667085; font-variant-numeric: tabular-nums; }
+.v { margin: 6px 0 16px; color: #475467; font-size: 15px; }
+.hash { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hashLabel { font-size: 12px; color: #667085; }
+.hash code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 6px 10px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); }
+.hash button, .hash a { height: 30px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; color: var(--ink); }
+.hash button:focus-visible, .hash a:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+.recordNote { position: absolute; left: clamp(20px, 6vw, 96px); bottom: 28px; max-width: min(820px, 88vw); margin: 0; font-size: 13px; color: #667085; --a: 0.7; --b: 0.86; opacity: var(--k); }
+.recordNote a { text-decoration: underline; text-underline-offset: 3px; }
 
 /* 6. Ethereum */
 .band { position: absolute; left: 6vw; right: 6vw; display: flex; align-items: center; gap: 16px; height: 72px; padding: 0 24px; border-radius: 28px; border: 1px solid var(--line); background: #fff; font-size: 14px; color: #475467; }
@@ -167,9 +192,23 @@
 
 /* Mobile: the phone takes 78% of the width, captions sit at the top */
 @media (max-width: 899px) {
-  .payPhone, .hiPhone, .callPhone { right: 11vw; width: 78vw; opacity: calc(var(--k) * 0.9); }
+  /* Caption on top, the object below it, never on top of each other. */
   .caption { top: 84px; bottom: auto; }
   .heroCopy { top: 96px; }
+  .payPhone, .hiPhone, .callPhone { right: 11vw; width: 78vw; top: auto; bottom: 2svh; height: 54svh; margin-top: 0; }
+  .layers { top: 64%; }
+  .nameRow { top: 66%; }
+  .note { top: 40%; }
+  .band:first-child { top: 40svh; }
+  .bandEth { top: 74svh; }
+  .proof { top: 48svh; }
+  .cinema { top: 30svh; height: 44svh; }
+  .bubble { top: 50svh; }
+  .recordHead { top: 92px; }
+  .timeline { top: 34%; }
+  .points > article { padding: 16px 18px; }
+  .points h3 { font-size: 17px; }
+  .recordNote { bottom: 14px; font-size: 12px; }
 }
 
 /* ── Static sections ─────────────────────────────────────── */
@@ -208,7 +247,7 @@
 @media (prefers-reduced-motion: reduce) {
   .scene { height: auto; }
   .pin { position: relative; height: auto; min-height: 100svh; }
-  .page { --p: 1; }
+  .scene { --p: 1; }
   .frame { opacity: 1; transform: none; }
   .heroCopy { opacity: 1; transform: none; }
 }

@@ -11,10 +11,9 @@ export function ZoomWrapper({ children }: { children: React.ReactNode }) {
         // This used to overwrite it with maximum-scale=1 and user-scalable=0,
         // which blocks pinch zoom (WCAG 1.4.4) on every page.
 
-        const isZoomTarget =
-            pathname === '/' ||
-            pathname === '/connect' ||
-            pathname?.startsWith('/connect');
+        // The landing ("/") is laid out at 100% in small-viewport units; zoom would shrink every
+        // pinned scene and skew its scroll measurements. /connect keeps the 67% layout.
+        const isZoomTarget = pathname === '/connect' || pathname?.startsWith('/connect');
 
         const updateZoom = () => {
             const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;

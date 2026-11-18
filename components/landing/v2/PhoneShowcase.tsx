@@ -18,6 +18,7 @@
  * Copy rule: every sentence here must be true of the product today.
  */
 
+import { isScrolling } from "@/lib/landing/scrollActivity";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   InvoiceChatScreen,
@@ -464,7 +465,11 @@ export function LivePhone({
     const HOLD = 3000;
     let start = performance.now();
     const timer = window.setInterval(() => {
-      if (document.hidden) return;
+      // Paused while hidden or while the visitor scrolls: no React render competes with the scroll.
+      if (document.hidden || isScrolling()) {
+        start += 120;
+        return;
+      }
       const t = performance.now() - start;
       if (t > PLAY + HOLD) {
         start = performance.now();
