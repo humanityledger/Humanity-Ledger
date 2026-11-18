@@ -431,6 +431,7 @@ export function LivePhone({
   fill,
   className,
   bare = false,
+  settled = false,
 }: {
   /** Which step's island and timing to use. */
   id?: string;
@@ -443,11 +444,13 @@ export function LivePhone({
   className?: string;
   /** No card behind the device (the landing's scenes draw their own white page). */
   bare?: boolean;
+  /** Show the screen complete and still: no loop, no re-render (the landing's scenes move instead). */
+  settled?: boolean;
 }) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
   const ScreenOverride = screen ? SCREENS[screen] : undefined;
   const ref = useRef<HTMLDivElement>(null);
-  const [p, setP] = useState(0);
+  const [p, setP] = useState(settled ? 1 : 0);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -459,7 +462,7 @@ export function LivePhone({
   }, []);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (settled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setP(1);
       return;
     }
@@ -482,7 +485,7 @@ export function LivePhone({
       setP(Math.round(clamp(t / PLAY) * 50) / 50);
     }, 120);
     return () => window.clearInterval(timer);
-  }, [visible]);
+  }, [visible, settled]);
 
   const fit = fill ?? (zoom && zoom <= 1 ? zoom : 0.9);
   return (

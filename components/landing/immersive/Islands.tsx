@@ -196,7 +196,7 @@ const LivePhoneLazy = dynamic(() => import('@/components/landing/v2/PhoneShowcas
 export function ScenePhone({ id, screen, fill = 0.86 }: { id: string; screen?: string; fill?: number }) {
   return (
     <WhenNear fallback={<div className={s.phoneHold} />}>
-      <LivePhoneLazy id={id} screen={screen} fill={fill} bare />
+      <LivePhoneLazy id={id} screen={screen} fill={fill} bare settled />
     </WhenNear>
   );
 }
