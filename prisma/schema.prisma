@@ -1875,3 +1875,26 @@ model ChatUsername {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+/// Closed alpha, wave 1 (master prompt Phase 2; OD-4). Only the HMAC of a code is stored
+/// (ALPHA_INVITE_PEPPER). No IP, user agent or other tracking data.
+model AlphaInvite {
+  id         String    @id @default(cuid())
+  codeHash   String    @unique
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  redeemedBy String?   @unique
+  redeemedAt DateTime?
+  revokedAt  DateTime?
+}
+
+/// A tester: an Ethereum wallet that redeemed an invitation. Revoking keeps exits only
+/// (claim, refund, withdraw, cancel); opening new agreements is refused (lib/alpha/gate.ts).
+model AlphaMember {
+  walletAddress  String    @id
+  inviteId       String    @unique
+  joinedAt       DateTime  @default(now())
+  riskAckAt      DateTime?
+  revokedAt      DateTime?
+}

@@ -36,6 +36,8 @@ const PURPOSE = {
   NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT: 'Path, served by the app, of the compiled PortalToken artifact (/....json).',
   NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK: 'First Ethereum block to scan for portal deposits (the portal deployment block).',
   NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: 'Per-token caps for payments and agreements on Alpha, in base units. A token without a cap is refused.',
+  ALPHA_INVITE_PEPPER: 'Server secret (at least 32 characters) for the HMAC of closed alpha invitation codes. Empty: /api/alpha/redeem answers 503.',
+  ALPHA_ADMINS: 'Comma-separated Ethereum addresses allowed to create invitations with scripts/alpha/invites.mjs (OD-4: Stefan only).',
   NEXT_PUBLIC_AZTEC_L1_FROM_BLOCK: 'L1 block where Fee Juice claim recovery starts scanning.',
   NEXT_PUBLIC_ZK_MODE: 'disabled | testnet | mainnet | demo. "demo" runs local simulations and is refused in production and on Alpha.',
   AZTEC_VALUE_MODE: '"exits-only" stops new value without a deploy (read at every value action). Empty or "open": normal.',
