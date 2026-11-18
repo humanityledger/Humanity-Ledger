@@ -369,3 +369,37 @@ unconstrained fn section_1_vectors_and_baseline_quotes() {
     assert(!over_cap.ok & (over_cap.reason == 2));
 }
 
+
+// Internal security review (18 November 2026): one negative test per reachable assert.
+#[test(should_fail_with = "zero amount")]
+unconstrained fn zero_amount_deposit_fails() {
+    let s = setup();
+    s.env.call_private(
+        s.sender,
+        PrivateEscrow::at(s.escrow).deposit(s.recipient, 0, s.env.last_block_timestamp() + LOCK, 5, 1, 1),
+    );
+}
+
+#[test(should_fail_with = "deadline in the past")]
+unconstrained fn deadline_in_the_past_fails() {
+    let s = setup();
+    s.env.call_private(
+        s.sender,
+        PrivateEscrow::at(s.escrow).deposit(s.recipient, AMOUNT, s.env.last_block_timestamp() - 1, 5, 1, 1),
+    );
+}
+
+#[test(should_fail_with = "zero escrow id")]
+unconstrained fn zero_escrow_id_fails() {
+    let s = setup();
+    s.env.call_private(
+        s.sender,
+        PrivateEscrow::at(s.escrow).deposit(s.recipient, AMOUNT, s.env.last_block_timestamp() + LOCK, 5, 0, 1),
+    );
+}
+
+#[test(should_fail_with = "escrow not found")]
+unconstrained fn refund_of_an_unknown_escrow_fails() {
+    let s = setup();
+    refund(s, 99);
+}
