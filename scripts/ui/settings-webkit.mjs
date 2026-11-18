@@ -51,6 +51,12 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
         const cr = c.getBoundingClientRect();
         const cs = getComputedStyle(c.parentElement);
         Object.assign(info, { content: [Math.round(cr.x), Math.round(cr.y), Math.round(cr.width), Math.round(cr.height)], colDisplay: cs.display, colH: cs.height });
+        // Every element of the row that holds the list and the content, with its box and display.
+        const row = c.parentElement?.parentElement;
+        info.row = row ? [...row.children].map((n) => { const r = n.getBoundingClientRect(); const s = getComputedStyle(n); return `${n.tagName.toLowerCase()} ${s.display} x${Math.round(r.x)} w${Math.round(r.width)} min-w:${s.minWidth} flex:${s.flex}`; }) : [];
+        const rr = row?.getBoundingClientRect();
+        info.rowBox = rr ? [Math.round(rr.x), Math.round(rr.width)] : null;
+        info.rootTransform = getComputedStyle(root).transform;
         const first = [...c.querySelectorAll('*')].find((n) => { const r = n.getBoundingClientRect(); return r.width > 4 && r.height > 4; });
         if (!first) return { ok: false, why: 'nothing with a size', ...info };
         const r = first.getBoundingClientRect();
