@@ -238,12 +238,18 @@ export async function PATCH(req: NextRequest) {
     }
 
     try {
-      const member = await (prisma as any).communityMember.findUnique({
-        where: { communityId_walletAddress: { communityId, walletAddress: caller.toLowerCase() } },
-      });
-
-      if (!member || member.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Only admins can modify settings' }, { status: 403 });
+      const [member, owned] = await Promise.all([
+        (prisma as any).communityMember.findUnique({
+          where: { communityId_walletAddress: { communityId, walletAddress: caller.toLowerCase() } },
+        }),
+        (prisma as any).community.findUnique({ where: { id: communityId }, select: { ownerAddress: true } }),
+      ]);
+      // The owner always manages their community, even without an ADMIN membership row (older
+      // communities, or one whose owner row was lost): the screen showed them every setting and the
+      // server answered 403 to channels, permissions and the invite link (18 November 2026).
+      const isOwner = !!owned?.ownerAddress && String(owned.ownerAddress).toLowerCase() === caller.toLowerCase();
+      if (!isOwner && (!member || member.role !== 'ADMIN')) {
+        return NextResponse.json({ error: 'Only admins can change these settings.' }, { status: 403 });
       }
 
       if (action === 'REVOKE_LINK') {

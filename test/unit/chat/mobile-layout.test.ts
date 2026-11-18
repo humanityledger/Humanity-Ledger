@@ -34,8 +34,13 @@ describe('chat on a phone', () => {
 
   it('the card frame is for wide screens only: on a phone the chat fills the screen', () => {
     const page = read('app/chat/page.tsx');
-    expect(page).toContain('md:max-h-[calc(100vh-140px)]');
-    expect(page).not.toMatch(/ max-h-\[calc\(100vh-140px\)\]/);
+    // The card's limits and margins apply from md up only; the margins follow the window, so zoom
+    // never pushes the card off screen.
+    expect(page).toContain('md:max-h-[min(1100px,100dvh)]');
+    expect(page).toContain('md:[padding:clamp(12px,3vh,56px)_clamp(16px,3.2vw,72px)]');
+    expect(page).toContain('max-w-[1680px]');
+    expect(page).not.toMatch(/ max-h-\[min\(1100px/);
+    expect(page).not.toContain('aztec-wordmark');
   });
 
   it('rows slide only on touch screens; with a mouse, right click has the same actions', () => {

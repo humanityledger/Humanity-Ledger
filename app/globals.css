@@ -1600,10 +1600,11 @@ nav > div[class*="max-w-"] {
   margin-right: auto;
 }
 
-/* Tab navigation perfect centering for all doc/app tab rows */
-.tab-row,
-[role="tablist"],
-nav[class*="flex"] {
+/* Tab navigation centering for doc/app tab rows. Inside :where() so it has zero specificity: as a
+   plain [role="tablist"] rule it came after the Tailwind utilities with the same specificity and
+   overrode `grid` on every tab bar, so equal-width tabs ran together ("Theme 40Wallpaper 59Bubbles
+   14", the Emojis / Stickers / GIF bar; 18 November 2026). A component's own classes now win. */
+:where(.tab-row, [role="tablist"], nav[class*="flex"]) {
   display: flex;
   align-items: center;
 }

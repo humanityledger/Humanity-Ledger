@@ -49,3 +49,14 @@ describe('username', () => {
     expect(profile).toMatch(/data-testid="change-username"/);
   });
 });
+
+describe('tab bars keep their own layout', () => {
+  it('the global tablist rule has zero specificity, so a grid tab bar stays a grid', () => {
+    const css = readFileSync('app/globals.css', 'utf8');
+    expect(css).toMatch(/:where\(\.tab-row, \[role="tablist"\], nav\[class\*="flex"\]\) \{/);
+    expect(css).not.toMatch(/^\[role="tablist"\],$/m);
+    const sheet = readFileSync('components/chat/ThemePickerSheet.tsx', 'utf8');
+    expect(sheet).toMatch(/display: 'grid', gridTemplateColumns: `repeat\(\$\{tabs\.length\}, minmax\(0, 1fr\)\)`, gap: 6/);
+  });
+});
+
