@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {Vm} from "forge-std/Vm.sol";
 import {PortalBase} from "./utils/PortalBase.sol";
 import {HLPortal} from "../../contracts/portal/HLPortal.sol";
 import {AztecMessaging} from "../../contracts/portal/AztecMessaging.sol";
@@ -121,6 +122,16 @@ contract HLPortalTest is PortalBase {
         portal.depositEthToAztecPrivate{value: amount}(SECRET_HASH);
         assertEq(weth.balanceOf(address(portal)), amount);
         assertEq(portal.totalLocked(address(weth)), amount);
+    }
+
+    /// Gambit survivor #20 (run 44275884943): the balance check must hold with WETH already held.
+    function test_second_eth_deposit_checks_the_difference() public {
+        vm.deal(alice, 5 ether);
+        vm.startPrank(alice);
+        portal.depositEthToAztecPrivate{value: 2 ether}(SECRET_HASH);
+        portal.depositEthToAztecPrivate{value: 3 ether}(SECRET_HASH);
+        vm.stopPrank();
+        assertEq(portal.totalLocked(address(weth)), 5 ether);
     }
 
     function test_eth_deposit_with_a_short_weth_is_refused() public {
@@ -294,7 +305,13 @@ contract HLPortalTest is PortalBase {
         portal.lowerCaps(address(dai), 1 ether, 2001 ether, 1 ether);
         vm.expectRevert(HLPortal.InvalidCaps.selector);
         portal.lowerCaps(address(dai), 1 ether, 1 ether, 5001 ether);
-        portal.lowerCaps(address(dai), 10 ether, 10 ether, 10 ether);
+        portal.lowerCaps(address(dai), 10 ether, 20 ether, 30 ether);
+        (, uint128 minD, uint128 perDep, uint128 perSender, uint128 global_, bool enabled) = portal.assets(address(dai));
+        assertEq(minD, 1 ether);
+        assertEq(perDep, 10 ether);
+        assertEq(perSender, 20 ether);
+        assertEq(global_, 30 ether);
+        assertTrue(enabled);
         portal.disableAsset(address(dai));
         vm.stopPrank();
         assertEq(portal.remainingToday(address(dai), alice), 0);
@@ -302,6 +319,31 @@ contract HLPortalTest is PortalBase {
         vm.prank(alice);
         vm.expectRevert(HLPortal.AssetNotEnabled.selector);
         portal.depositToAztecPrivate(address(dai), 1 ether, SECRET_HASH);
+    }
+
+    /// With nothing queued, a restriction emits no cancellation (Gambit survivor #112).
+    function test_restriction_without_a_queue_emits_no_cancellation() public {
+        vm.recordLogs();
+        vm.startPrank(guardian);
+        portal.lowerCaps(address(dai), 10 ether, 10 ether, 10 ether);
+        portal.disableAsset(address(dai));
+        vm.stopPrank();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) assertTrue(logs[i].topics[0] != HLPortal.AssetQueueCancelled.selector);
+    }
+
+    /// An executed change is spent: executing again finds nothing (Gambit survivor #132).
+    function test_executed_asset_change_is_spent() public {
+        vm.prank(admin);
+        portal.queueAsset(address(dai), asset(L2_DAI, 1 ether, 1500 ether, 2000 ether, 5000 ether));
+        vm.warp(block.timestamp + portal.TIMELOCK());
+        vm.startPrank(admin);
+        portal.executeAsset(address(dai));
+        (, uint64 eta) = portal.pendingAsset(address(dai));
+        assertEq(eta, 0);
+        vm.expectRevert(HLPortal.NothingQueued.selector);
+        portal.executeAsset(address(dai));
+        vm.stopPrank();
     }
 
     /// IR-02: a restriction drops a relaxation queued before it.
@@ -392,6 +434,7 @@ contract HLPortalTest is PortalBase {
         portal.acceptAdmin();
         assertEq(portal.admin(), bob);
         assertEq(portal.pendingAdmin(), address(0));
+        assertEq(portal.pendingAdminEta(), 0);
         // Nobody is pending any more: even the zero address cannot accept.
         vm.prank(address(0));
         vm.expectRevert(HLPortal.NotAdmin.selector);
@@ -411,6 +454,8 @@ contract HLPortalTest is PortalBase {
         portal.executeGuardian();
         vm.stopPrank();
         assertEq(portal.guardian(), bob);
+        assertEq(portal.pendingGuardian(), address(0));
+        assertEq(portal.pendingGuardianEta(), 0);
         vm.prank(guardian);
         vm.expectRevert(HLPortal.NotAdmin.selector);
         portal.queueGuardian(guardian);
@@ -427,6 +472,9 @@ contract HLPortalTest is PortalBase {
         vm.expectRevert(HLPortal.TooEarly.selector);
         portal.executeSunset();
         vm.warp(block.timestamp + portal.TIMELOCK());
+        portal.executeSunset();
+        assertEq(portal.pendingSuccessor(), address(0));
+        vm.expectRevert(HLPortal.NothingQueued.selector);
         portal.executeSunset();
         vm.stopPrank();
         assertEq(portal.successor(), bob);

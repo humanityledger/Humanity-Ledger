@@ -180,7 +180,7 @@ Final run ids are in §9. The intermediate runs that shaped the results:
 
 ### 5.3 Halmos
 
-These checks are proven for all inputs:
+These checks are proven for all inputs (run 44277468215, job 134709148737; 7 of 7 pass, the seventh being the layout check below):
 - `check_caps`
 - `check_two_deposits_same_day`
 - `check_timelock`
@@ -188,17 +188,17 @@ These checks are proven for all inputs:
 - `check_salt_binds_both_fields`
 - `check_timelock_unlock_never_decreases`
 
-Halmos cannot execute the sha256 precompile in this version (Z3 "Sort mismatch", runs 44275097419 and 44275884943). So:
+Halmos cannot execute the sha256 precompile in this version (Z3 "Sort mismatch", runs 44275097419 and 44275884943), so the sha256 property is covered in two weaker parts:
 - `check_sha256ToField_layout_is_a_field_element` proves the library's byte layout for any digest.
 - `testFuzz_sha256ToField_is_a_field_element` fuzzes the library end to end.
 - That is a weaker guarantee than a symbolic proof of the library call itself, and it is stated here as such.
 
 ### 5.4 Foundry, coverage and Gambit
 
-- **Tests:** 42 Foundry tests in 5 suites, green with the `ci` profile (run 44275884943, job 134703889301).
+- **Tests:** 43 Foundry tests in 5 suites, green with the `ci` profile (run 44277468215, job 134709148982; 42 in run 44275884943 before the sha256 fuzz test).
   - Invariants ran 10,000 runs × 20 calls (200,000 calls) per suite: `PortalInvariantsTest` and `VaultInvariantsTest`.
   - Fuzz tests ran 10,000 runs.
-- **Coverage** (`forge coverage`, `scripts/security/check-coverage.mjs`, same job):
+- **Coverage** (`forge coverage`, `scripts/security/check-coverage.mjs`, jobs 134703889301 and 134709148982):
 
   | File | Lines | Branches |
   |---|---|---|
@@ -208,7 +208,30 @@ Halmos cannot execute the sha256 precompile in this version (Z3 "Sort mismatch",
 
   - The one excused branch is the second `AssetAlreadyBound` check in `executeAsset`. No input can reach it: `queueAsset` already refuses another Aztec token for a bound asset, and only `executeAsset` of the same pending entry can bind it in between.
   - The script fails on any other uncovered line or branch.
-- **Gambit** (≥ 90 % killed): see §9.
+- **Gambit** (threshold 90 % killed), run 44275884943, job 134703889647, on commit `7a661f2`. The contract sources are identical at `a140569`, the head merged as PR #140.
+
+  | File | Mutants | Killed | Score |
+  |---|---|---|---|
+  | `HLPortal.sol` | 200 | 186 | 93.0 % |
+  | `HLReceiver.sol` | 54 | 50 | 92.6 % |
+  | `AztecMessaging.sol` | 0 | 0 | — (Gambit generated none) |
+  | **Total** | 254 | 236 | **92.9 %** |
+
+  The 18 survivors were triaged one by one:
+  - **Test gaps, now killed** by new tests in the follow-up commit:
+    - #20: ETH deposit with WETH already held.
+    - #105–#110: each field `lowerCaps` writes.
+    - #112: no cancellation event without a queue.
+    - #132: an executed change is spent.
+    - #146, #147, #162, #163: pending ETAs reset.
+    - #178: the pending successor is reset, and a second `executeSunset` reverts.
+    - HLReceiver #36: three rescues in a row.
+    - HLReceiver #47: the factory records its portal.
+  - **Equivalent mutants:**
+    - HLPortal #131 is the excused unreachable branch (§5.4).
+    - HLReceiver #20: without the receiver's `ZeroAmount`, the portal reverts with the same `ZeroAmount()` selector.
+    - HLReceiver #25: the portal pulls exactly the approved amount, so the allowance is already 0 when the reset runs.
+  - The follow-up run is in §9.
 
 ### 5.5 aztec-nr: `aztec test`, negative tests, mutation
 
@@ -398,7 +421,20 @@ None of the open items affects HLC payments on Alpha. HLC is Aztec's standard To
 
 ## 9. Final CI runs (head of `claude/security-review-phase0`)
 
-FINAL_RUNS
+Head `a140569` (merged by Stefan as PR #140 at 09:39 UTC):
+
+| Workflow | Run | Result |
+|---|---|---|
+| Security review | 44277468215 | Foundry, coverage, Halmos (7/7), Slither (7 low/info) and Noir (101 TXE tests, 42/42 asserts) green. Its Gambit job was still running when this was written. |
+| Security review, Gambit | 44275884943 (job 134703889647) | 92.9 %, green. Same contract sources. |
+| System Core: Contract Tests (Hardhat) | 44277467805 | green, including the two IR-02 tests |
+| CI: Typecheck, Lint & Secret Scan | 44277468022 | green |
+| Advanced Security Hardening Suite | 44277467827 | Adversarial Test Suite (full vitest) green. The two pre-existing failures remain: "Verify no personal names in tracked files" (IA-08, B-5) and npm audit. |
+| Invariant & Security CI | 44277467830 | green except the pre-existing npm audit |
+| IP Protection and Authorship Verification | 44277467791 | pre-existing failure (IA-08, B-5) |
+| Aztec contracts | 44273978152 | green; no artifact changed, so no class id changed |
+
+The Gambit follow-up tests and `docs/alpha/OPERATOR_DECISIONS.md` are on the same branch, after the merge, in a new PR.
 
 ## 10. What this review is not
 
