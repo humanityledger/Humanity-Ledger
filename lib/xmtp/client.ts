@@ -910,6 +910,9 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
  * Discover all DMs from the network and return new peer addresses
  * not yet present in the known set. Used by Ledger Chat global sync loop.
  */
+/** DM ids whose peer discoverNewPeers already resolved, per inbox. */
+const resolvedDmIds = new Map<string, Set<string>>();
+
 export async function discoverNewPeers(
   client: Client,
   selfAddress: string,
@@ -921,10 +924,17 @@ export async function discoverNewPeers(
     const dms: any[] = await client.conversations.listDms();
     const newPeers: string[] = [];
     const selfNorm = selfAddress.toLowerCase();
+    // Each DM's peer is resolved once per page (extractPeerAddress can go to the network). This
+    // runs every 10 s, and it used to resolve every DM of the account every time: the cost grew
+    // with the number of conversations, for every open window.
+    let seen = resolvedDmIds.get(selfInboxId);
+    if (!seen) { seen = new Set(); resolvedDmIds.set(selfInboxId, seen); }
 
     for (const dm of dms) {
+      if (dm?.id && seen.has(dm.id)) continue;
       try {
         const peerAddr = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress, client);
+        if (peerAddr && dm?.id) seen.add(dm.id);
         if (
           peerAddr &&
           /^0x[a-fA-F0-9]{40}$/i.test(peerAddr) &&
