@@ -51,7 +51,9 @@ describe('the immersive landing says only what the code and the record back', ()
     expect(all).not.toMatch(/LandingMode|data-landing-theme|hl_landing_mode/);
     expect(all).not.toMatch(/preventDefault\(\)/);
     expect(all).not.toMatch(/lenis|locomotive|framer-motion/i);
-    expect(read('app/page.tsx')).not.toMatch(/force-dynamic/);
+    // Per-request render only for the CSP nonce: the page itself never touches the database.
+    expect(read('app/page.tsx')).not.toMatch(/prisma|@\/lib\/db/);
+    expect(read(`${DIR}/ImmersiveLanding.tsx`)).not.toMatch(/prisma|fetch\(/);
     expect(read(`${DIR}/engine.ts`)).toMatch(/passive: true/);
     expect(read(`${DIR}/engine.ts`)).not.toMatch(/IntersectionObserver/);
   });

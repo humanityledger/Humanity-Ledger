@@ -60,8 +60,10 @@ function Scene({ id, run, label, children, className = '' }: { id?: string; run:
   );
 }
 
-/** Test files in the repository, counted when the page is built (0 when the folder is not in the build). */
+/** Test files in the repository, counted once per server process (0 when the folder is not deployed). */
+let TESTS: number | null = null;
 function countTests(): number {
+  if (TESTS !== null) return TESTS;
   let n = 0;
   const walk = (dir: string) => {
     let entries: fs.Dirent[] = [];
@@ -76,6 +78,7 @@ function countTests(): number {
     }
   };
   walk(path.join(process.cwd(), 'test'));
+  TESTS = n;
   return n;
 }
 
@@ -344,7 +347,7 @@ export function ImmersiveLanding() {
         </section>
       </main>
 
-      <SiteFooter />
+      <SiteFooter lead={false} />
       <div className={s.credits}>
         <p>{C.SETTLES}</p>
         <p className={s.marks}><Mark name="aztec" /><Mark name="ethereum" /></p>

@@ -3,10 +3,12 @@ import { ImmersiveLanding } from '@/components/landing/immersive/ImmersiveLandin
 import { ONE_LINE } from '@/lib/landing/content';
 
 /**
- * The landing is generated at build time and revalidated hourly. Live numbers arrive from the
- * client (GET /api/stats/live), so the HTML never waits on the database.
+ * Rendered per request because the site's CSP gives every response its own script nonce
+ * (middleware.ts): a page generated at build time carries no nonce and its scripts would be
+ * refused. The render touches no database: live numbers arrive from the client
+ * (GET /api/stats/live), and the repository figures are computed once per server process.
  */
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Ledger Chat: your wallet is your account',
@@ -27,7 +29,7 @@ const JSON_LD = {
 
 export default function Home() {
   return (
-    <div className="w-full flex-1 flex flex-col hl-zoom-67-target">
+    <div className="w-full flex-1 flex flex-col">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
       <ImmersiveLanding />
     </div>

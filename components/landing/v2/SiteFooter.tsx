@@ -175,7 +175,7 @@ export function SiteFooter({ lead = true }: { lead?: boolean }) {
             </nav>
           </div>
           <p className={s.fine}>
-            Ledger Chat is in early access. Our contracts have not been independently audited, and private payments run
+            Ledger Chat is in early access. Our contracts have had an internal security review, not an external audit, and private payments run
             {ALPHA_LIVE
               ? " on Aztec Alpha with real funds and a cap per payment. "
               : " only on the Aztec test network with tokens that have no value. "}
