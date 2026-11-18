@@ -10,6 +10,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { LiveStats, LiveRegion } from '@/lib/stats/live';
+import { networkLabel } from '@/lib/aztec/wallet/config';
 import { useVisitBeacon } from '@/lib/stats/useVisitBeacon';
 import s from './LiveGlobe.module.css';
 
@@ -299,6 +300,13 @@ export function LiveGlobe() {
                 <dt>Repository clones</dt>
                 <dd>{fmt(stats.clones.count)}</dd>
                 <p>{fmt(stats.clones.uniques)} unique, last {stats.clones.days} days (GitHub).</p>
+              </div>
+            )}
+            {stats && (
+              <div>
+                <dt>{networkLabel()} block</dt>
+                <dd data-testid="live-aztec-block">{stats.aztecBlock != null ? fmt(stats.aztecBlock) : '–'}</dd>
+                <p>{stats.aztecBlock != null ? 'Read from the node every 10 s.' : 'Aztec block unavailable'}</p>
               </div>
             )}
           </dl>
