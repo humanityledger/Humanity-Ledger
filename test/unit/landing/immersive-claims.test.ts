@@ -89,3 +89,31 @@ describe('nothing competes with the scroll on the landing', () => {
     expect(page).toMatch(/<CopyHash label="Transaction" hash=\{C\.FIRST_PAYMENT\.tx\}/);
   });
 });
+
+describe('the fuller landing stays true', () => {
+  it('features never present communities as end-to-end encrypted', () => {
+    const communities = C.FEATURES.flatMap((g) => g.items).find((f) => f.title === 'Communities');
+    expect(communities?.body).toMatch(/stored on our server and are not end-to-end encrypted/);
+    for (const g of C.FEATURES) for (const f of g.items) expect(`${f.title} ${f.body}`).not.toMatch(/audit|sponsor|partner/i);
+  });
+  it('the next wave states the signed limits (OD-2: 100 HLC, OD-4: 20 testers)', () => {
+    expect(C.NEXT_WAVE).toMatch(/at most 20 testers/);
+    expect(C.NEXT_WAVE).toMatch(/100 HLC per agreement/);
+  });
+  it('versions under the hood are read from the repository, not typed', () => {
+    const page = read(`${DIR}/ImmersiveLanding.tsx`);
+    expect(page).toMatch(/read\('package\.json'\)/);
+    expect(page).toMatch(/contracts\/aztec\/escrow\/Nargo\.toml/);
+    expect(page).not.toMatch(/5\.2\.0|v6\.0\.0/);
+  });
+  it('the call image is served at its native size, WebP first, with its source to confirm', () => {
+    expect(C.MEDIA.call).toEqual({ webp: '/media/landing/call-phone.webp', png: '/media/landing/call-phone.png' });
+    expect(read(`${DIR}/ImmersiveLanding.tsx`)).toMatch(/width=\{800\} height=\{1290\}/);
+    expect(read('public/media/landing/README.md')).toMatch(/Confirm its source and licence/);
+  });
+  it('no stickers and nothing pulsing on the landing', () => {
+    const page = read(`${DIR}/ImmersiveLanding.tsx`);
+    expect(page).not.toMatch(/screen="stickers"/);
+    expect(read('components/landing/v2/LiveGlobe.module.css')).not.toMatch(/animation: live/);
+  });
+});

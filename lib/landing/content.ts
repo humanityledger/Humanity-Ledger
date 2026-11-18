@@ -58,6 +58,7 @@ export const WAVE1_CLASSES = classes.map((id) => {
 /* ── Copy ─────────────────────────────────────────────────────────────── */
 
 export const ONE_LINE = 'A messenger where your wallet is your account, with private payments on Aztec Network.';
+export const EYEBROW = 'Private messaging and payments on Aztec Network';
 
 export const NAV = [
   { id: 'messages', label: 'Messages' },
@@ -104,6 +105,55 @@ export const LIVE = {
   title: ['People on Ledger Chat. ', 'Right now', '.'],
   method: 'Visitors are counted once per browser per day by time zone, with no IP address stored, since 18 November 2026.',
 };
+
+/**
+ * What the app does today, grouped. Each line rests on the code: lib/xmtp (MLS through XMTP),
+ * components/chat (groups, communities, burn timer, voice notes, payment requests, @usernames,
+ * QR), components/zk/wallet (send, shield, unshield, Fee Juice), lib/calls (WebRTC).
+ */
+export const FEATURES: { group: string; items: { title: string; body: string }[] }[] = [
+  {
+    group: 'Messages',
+    items: [
+      { title: 'Direct messages', body: 'End-to-end encrypted with MLS, through XMTP. Only the people in the chat can read them.' },
+      { title: 'Groups', body: 'Group chats on the same MLS protocol, with the same encryption.' },
+      { title: 'Disappearing messages', body: 'Set a timer and messages delete themselves.' },
+      { title: 'Voice messages', body: 'Record and send audio in any conversation.' },
+    ],
+  },
+  {
+    group: 'Payments',
+    items: [
+      { title: 'Private payments', body: 'Send HLC on Aztec Alpha. The amount and the parties stay private.' },
+      { title: 'Requests in the chat', body: 'Ask for a payment inside the conversation and get paid in one tap.' },
+      { title: 'Shield and unshield', body: 'Move tokens between your public and private balances.' },
+      { title: 'Your own fees', body: 'Network fees are paid in Fee Juice from your wallet. Ledger Chat pays no one’s fees.' },
+    ],
+  },
+  {
+    group: 'Identity',
+    items: [
+      { title: 'Your wallet is your account', body: 'No phone number to give. Sign in with an Ethereum wallet.' },
+      { title: '@usernames', body: 'Each name exists once, so people find you without your address.' },
+      { title: 'QR codes', body: 'Scan a code to open a chat or save a contact.' },
+    ],
+  },
+  {
+    group: 'Calls and communities',
+    items: [
+      { title: 'Voice and video calls', body: 'Peer to peer over WebRTC, with media encrypted in transit.' },
+      { title: 'Communities', body: 'Spaces you join with an invite. Their posts are stored on our server and are not end-to-end encrypted.' },
+    ],
+  },
+];
+
+export const NEXT_WAVE = 'Escrow and payment streams come next, to a closed alpha of at most 20 testers, with a cap of 100 HLC per agreement.';
+
+export const DEVICES = [
+  { name: 'iPhone', how: 'Safari or Chrome. Add it to your Home Screen.' },
+  { name: 'Android', how: 'Chrome. Install it from the menu.' },
+  { name: 'Mac, Windows and Linux', how: 'Any modern browser, installable as an app.' },
+];
 
 export const PROTECTS = {
   yes: [
@@ -158,6 +208,7 @@ export const FACT_SOURCES = {
   license: blob('LICENSE'),
   scale: blob('docs/MAINNET_READINESS.md'),
   classes: blob('deployments/aztec-testnet.json'),
+  calls: blob('lib/calls/media.ts'),
 };
 
 export const TRADEMARKS = 'Aztec and Ethereum are trademarks of their respective owners. Ledger Chat is an independent project.';
@@ -167,6 +218,8 @@ export const SETTLES = 'Private payments on Aztec Network. Aztec settles on Ethe
 export const MEDIA = {
   hand: { play: '/media/landing/hand-phone-1920.mp4', scrub: '/media/landing/hand-phone-scrub-1280.mp4', poster: '/media/landing/hand-phone-poster.jpg' },
   typing: { play: '/media/landing/typing-1920.mp4', scrub: '/media/landing/typing-scrub-1280.mp4', poster: '/media/landing/typing-poster.jpg' },
+  /** Video-call image supplied by Stefan (18/11/2026), shown at its native 800 × 1290 with its own shadow. */
+  call: { webp: '/media/landing/call-phone.webp', png: '/media/landing/call-phone.png' },
 };
 
 /**

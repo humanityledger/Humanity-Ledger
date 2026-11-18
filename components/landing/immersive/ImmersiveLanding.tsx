@@ -14,7 +14,6 @@ import React from 'react';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel } from '@/lib/aztec/wallet/config';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { SiteFooter } from '@/components/landing/v2/SiteFooter';
-import { DevicesSection } from '@/components/landing/v2/ProtocolSections';
 import * as C from '@/lib/landing/content';
 import { CopyHash, SceneGlobe, ScenePhone, SceneVideo, ScrollRoot, SessionHeal, SiteQr } from './Islands';
 import s from './Immersive.module.css';
@@ -89,8 +88,29 @@ const Mark = ({ name }: { name: 'aztec' | 'ethereum' }) => {
   return file ? <img src={file} alt={label} className={s.brand} /> : <span className={s.brandText}>{label}</span>;
 };
 
+/** Versions read from the repository once per process, never typed by hand. */
+let VERSIONS: { xmtp: string; aztecNr: string } | null = null;
+function versions() {
+  if (VERSIONS) return VERSIONS;
+  const read = (p: string) => { try { return fs.readFileSync(path.join(process.cwd(), p), 'utf8'); } catch { return ''; } };
+  const xmtp = (JSON.parse(read('package.json') || '{}').dependencies ?? {})['@xmtp/browser-sdk'] ?? '';
+  const aztecNr = /aztec-nr", tag = "(v[\d.]+)"/.exec(read('contracts/aztec/escrow/Nargo.toml'))?.[1] ?? '';
+  VERSIONS = { xmtp, aztecNr };
+  return VERSIONS;
+}
+
 export function ImmersiveLanding() {
   const tests = countTests();
+  const ver = versions();
+  const spec = [
+    { k: 'Messages', v: `XMTP with MLS${ver.xmtp ? `, browser SDK ${ver.xmtp}` : ''}`, href: C.FACT_SOURCES.messages },
+    { k: 'Payments', v: `${NETWORK}, private notes, proofs made on your device (PXE in the browser)`, href: C.FACT_SOURCES.payments },
+    { k: 'Contracts', v: `Noir with aztec-nr${ver.aztecNr ? ` ${ver.aztecNr}` : ''}`, href: C.FACT_SOURCES.classes },
+    { k: 'Network fees', v: 'Fee Juice, paid by your own account', href: C.FACT_SOURCES.payments },
+    { k: 'Settlement', v: `Ethereum, L1 chain ${AZTEC_WALLET_CONFIG.l1ChainId}`, href: C.FACT_SOURCES.payments },
+    { k: 'Calls', v: 'WebRTC, DTLS-SRTP in transit', href: C.FACT_SOURCES.calls },
+    { k: 'Licence', v: 'MIT or Apache-2.0', href: C.FACT_SOURCES.license },
+  ];
   const firstTxUrl = explorerTxUrl(C.FIRST_PAYMENT.tx) || undefined;
   const ticks = C.FIRST_PAYMENT.block - C.FIRST_PAYMENT.tokenBlock;
 
@@ -108,10 +128,7 @@ export function ImmersiveLanding() {
             <a key={n.id} href={`#${n.id}`}>{n.label}</a>
           ))}
         </nav>
-        <span className={s.status}>
-          <i aria-hidden="true" />
-          {ALPHA ? `Live on ${NETWORK}` : `On the ${NETWORK}`}
-        </span>
+        <span className={s.status}>{ALPHA ? `Live on ${NETWORK}` : `On the ${NETWORK}`}</span>
         <Link href="/chat" className={s.cta} prefetch>Open Ledger Chat</Link>
       </header>
       {NOTICE && <p className={s.notice} role="status">{NOTICE}</p>}
@@ -123,31 +140,35 @@ export function ImmersiveLanding() {
             <SceneVideo {...C.MEDIA.hand} a={0} b={0.72} priority label="A hand holding a phone." />
           </div>
           <div className={s.heroCopy}>
-            <p className={s.lead}>{C.ONE_LINE}</p>
+            <p className={s.eyebrow}>{C.EYEBROW}</p>
             <Title as="h1" parts={C.HERO.title} />
             <p className={s.line}>{C.HERO.line}</p>
+            <p className={s.lead}>{C.ONE_LINE}</p>
           </div>
           <div className={s.heroPhone}>
             <ScenePhone id="messages" screen="messages" />
           </div>
         </Scene>
 
-        {/* 2. Say hi: a dark cinema window grows; the typed line becomes a real bubble. */}
-        <Scene id="messages" run={200} label="Say hi" className={s.hi}>
-          <div className={s.cinema}>
-            <div className={s.cinemaInner}>
-              <SceneVideo {...C.MEDIA.typing} a={0} b={0.6} label="A thumb typing Hi how are you on a phone keyboard." />
+        {/* 2. Say hi: the whole typing film in a cinema window, the line typed in a Ledger Chat
+            composer under it, then the window steps aside and the message flies to the phone. */}
+        <Scene id="messages" run={230} label="Say hi" className={s.hi}>
+          <div className={s.cinemaMove}>
+            <div className={s.cinema}>
+              <div className={s.cinemaInner}>
+                <SceneVideo {...C.MEDIA.typing} a={0.02} b={0.6} label="A thumb typing Hi how are you on a phone keyboard." />
+              </div>
             </div>
             <p className={s.composer}>
-              <Typed text={C.SAY_HI.typed} from={0.12} step={0.03} />
+              <Typed text={C.SAY_HI.typed} from={0.1} step={0.03} />
               <span className={s.caret} aria-hidden="true" />
               <span className={s.send} aria-hidden="true" />
             </p>
           </div>
-          <span className={s.bubble} aria-hidden="true">{C.SAY_HI.typed}</span>
           <div className={s.hiPhone}>
             <ScenePhone id="chat" screen="chat" />
           </div>
+          <span className={s.bubble} aria-hidden="true">{C.SAY_HI.typed}</span>
           <div className={s.caption}><Title parts={C.SAY_HI.title} /></div>
         </Scene>
 
@@ -251,7 +272,13 @@ export function ImmersiveLanding() {
 
         {/* 7. Calls. */}
         <Scene run={140} label="Calls" className={s.calls}>
-          <div className={s.callPhone}><ScenePhone id="video" screen="video" /></div>
+          <div className={s.callPhone}>
+            <picture>
+              <source srcSet={C.MEDIA.call.webp} type="image/webp" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={C.MEDIA.call.png} alt="A group video call on a phone." width={800} height={1290} decoding="async" loading="lazy" className={s.callImg} />
+            </picture>
+          </div>
           <div className={s.caption}>
             <Title parts={C.CALLS.title} />
             <p className={s.line}>{C.CALLS.line}</p>
@@ -263,6 +290,36 @@ export function ImmersiveLanding() {
           <Title id="live-title" parts={C.LIVE.title} />
           <p className={s.small}>{C.LIVE.method}</p>
           <SceneGlobe />
+        </section>
+
+        {/* Everything in one app: what it does today. */}
+        <section className={s.section} aria-labelledby="features-title">
+          <h2 id="features-title" className={s.h2}>Everything in <em>one app</em>.</h2>
+          <div className={s.features}>
+            {C.FEATURES.map((g) => (
+              <div key={g.group} className={s.featureGroup}>
+                <h3>{g.group}</h3>
+                <dl>
+                  {g.items.map((f) => (
+                    <div key={f.title}><dt>{f.title}</dt><dd>{f.body}</dd></div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+          <p className={s.small}>{C.NEXT_WAVE}</p>
+        </section>
+
+        {/* Under the hood: the stack, with versions read from the repository. */}
+        <section className={s.section} aria-labelledby="spec-title">
+          <h2 id="spec-title" className={s.h2}>Under the <em>hood</em>.</h2>
+          <table className={s.spec}>
+            <tbody>
+              {spec.map((r) => (
+                <tr key={r.k}><th scope="row">{r.k}</th><td>{r.v}</td><td><a href={r.href} target="_blank" rel="noopener noreferrer">Source</a></td></tr>
+              ))}
+            </tbody>
+          </table>
         </section>
 
         {/* What it protects, and what not yet. */}
@@ -345,12 +402,18 @@ export function ImmersiveLanding() {
         </section>
 
         {/* 10. Devices and close. */}
-        <section id="devices" className={s.devices}>
-          <DevicesSection />
+        <section id="devices" className={s.section} aria-labelledby="devices-title">
+          <h2 id="devices-title" className={s.h2}>The same account on <em>every screen</em>.</h2>
+          <p className={s.line}>Sign in with the same wallet and your conversations follow you. Proofs for private payments are made on the device you hold.</p>
+          <ul className={s.deviceList}>
+            {C.DEVICES.map((d) => (
+              <li key={d.name}><b>{d.name}</b><p>{d.how}</p></li>
+            ))}
+          </ul>
         </section>
 
         <section className={s.close} aria-labelledby="close-title">
-          <div className={s.closePhone}><ScenePhone id="stickers" screen="stickers" fill={0.9} /></div>
+          <div className={s.closePhone}><ScenePhone id="chat" screen="invoice" fill={0.9} /></div>
           <h2 id="close-title" className={s.h2}>Say hi to <em>anyone</em>.</h2>
           <Link href="/chat" className={s.ctaBig} prefetch>Open Ledger Chat</Link>
         </section>

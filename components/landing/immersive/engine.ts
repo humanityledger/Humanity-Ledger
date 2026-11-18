@@ -66,6 +66,12 @@ function request() {
   if (!frame) frame = requestAnimationFrame(tick);
 }
 
+/** When a scroll ends (a jump with Home or End included), write the final state right away. */
+function settle() {
+  if (frame) cancelAnimationFrame(frame);
+  tick();
+}
+
 /** Starts the loop for every [data-scene] under el. Returns the cleanup. */
 export function startScenes(el: HTMLElement): () => void {
   scenes.length = 0;
@@ -76,19 +82,31 @@ export function startScenes(el: HTMLElement): () => void {
     return () => undefined;
   }
   scroller = findScroller(el);
-  const target: HTMLElement | Window = scroller ?? window;
   const ro = new ResizeObserver(measure);
   ro.observe(el);
   if (scroller) ro.observe(scroller);
-  target.addEventListener('scroll', request, { passive: true });
-  target.addEventListener('scrollend', request, { passive: true });
+  // Which element scrolls the page depends on the layout and the device (on phones the document
+  // may scroll instead of <main>). Listen in the capture phase, where every scroll arrives, and
+  // follow the element that actually moved.
+  const onScroll = (e: Event) => {
+    const t = e.target;
+    const sc = t instanceof HTMLElement && t !== document.documentElement && t !== document.body ? t : null;
+    if (sc !== scroller && (sc === null || sc.contains(el))) {
+      scroller = sc;
+      measure();
+    }
+    request();
+  };
+  const onEnd = () => settle();
+  window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+  window.addEventListener('scrollend', onEnd, { passive: true, capture: true });
   window.addEventListener('resize', measure, { passive: true });
   document.fonts?.ready.then(measure).catch(() => undefined);
   measure();
   return () => {
     ro.disconnect();
-    target.removeEventListener('scroll', request);
-    target.removeEventListener('scrollend', request);
+    window.removeEventListener('scroll', onScroll, { capture: true });
+    window.removeEventListener('scrollend', onEnd, { capture: true });
     window.removeEventListener('resize', measure);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;

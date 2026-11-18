@@ -43,9 +43,10 @@ export function WhenNear({ children, fallback = null, fill = true }: { children:
 type Mode = 'poster' | 'play' | 'scrub';
 function pickMode(): Mode {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'poster';
+  // Scroll-scrubbing everywhere, phones included (the -scrub files are all-intra, 3 to 5 MB);
+  // looped playback only with Save-Data or a slow link.
   const c = (navigator as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  const coarse = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900;
-  if (coarse || c?.saveData || (c?.effectiveType && c.effectiveType !== '4g')) return 'play';
+  if (c?.saveData || (c?.effectiveType && c.effectiveType !== '4g')) return 'play';
   return 'scrub';
 }
 
@@ -80,6 +81,8 @@ export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false
     v.muted = true;
     v.defaultMuted = true;
     v.setAttribute('muted', '');
+    // iOS loads only metadata until a video has played once: prime it, then seek freely.
+    if (mode === 'scrub') v.play().then(() => v.pause()).catch(() => undefined);
     let progress = 0;
     let target = 0;
     let cur = Number.NaN;
@@ -193,7 +196,7 @@ const LivePhoneLazy = dynamic(() => import('@/components/landing/v2/PhoneShowcas
 export function ScenePhone({ id, screen, fill = 0.86 }: { id: string; screen?: string; fill?: number }) {
   return (
     <WhenNear fallback={<div className={s.phoneHold} />}>
-      <LivePhoneLazy id={id} screen={screen} fill={fill} />
+      <LivePhoneLazy id={id} screen={screen} fill={fill} bare settled />
     </WhenNear>
   );
 }

@@ -104,9 +104,18 @@ for (const [vpName, viewport] of VIEWPORTS) {
         await page.evaluate(`(${SCROLLER}).scrollTop = ${y}`);
         await page.waitForTimeout(500);
         const p = await page.$$eval('[data-scene]', (els, k) => els[k]?.style.getPropertyValue('--p') ?? '', i);
-        sceneReport.push({ scene: sc.label, f, p });
+        const at = await page.evaluate(`Math.round((${SCROLLER}).scrollTop)`);
+        sceneReport.push({ scene: sc.label, f, p, y, at });
         await page.screenshot({ path: path.join(out, `scene-${String(i + 1).padStart(2, '0')}-${Math.round(f * 100)}-${vpName}.png`) });
       }
+    }
+    // The landing's static sections, each from its heading.
+    for (const id of name === 'home' ? ['features-title', 'spec-title', 'protects-title', 'open-title', 'devices-title'] : []) {
+      const h = await page.$(`#${id}`);
+      if (!h) continue;
+      await page.evaluate(`document.getElementById('${id}').scrollIntoView({ block: 'start' })`);
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: path.join(out, `section-${id.replace('-title', '')}-${vpName}.png`) });
     }
     const started = name === 'home' ? await page.evaluate(() => document.querySelector('[data-scenes]')?.getAttribute('data-scenes') ?? 'not started') : undefined;
     report.push({ page: name, viewport: vpName, finalUrl: page.url(), errors, ...(sceneReport.length ? { started, scenes: sceneReport } : {}) });

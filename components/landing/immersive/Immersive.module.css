@@ -45,8 +45,7 @@
 .anchors { display: none; gap: 28px; margin: 0 auto; font-size: 15px; }
 .anchors a { text-decoration: none; color: #475467; }
 .anchors a:hover, .anchors a:focus-visible { color: var(--ink); }
-.status { display: none; align-items: center; gap: 8px; font-size: 14px; color: #475467; margin-left: auto; }
-.status i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.status { display: none; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; font-weight: 500; color: #344054; margin-left: auto; }
 .cta, .ctaBig {
   margin-left: auto; display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: 999px;
   background: var(--ink); color: #fff !important; font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap;
@@ -61,7 +60,7 @@
 
 /* ── Type ───────────────────────────────────────────────── */
 .title, .h2 {
-  font-family: var(--display); font-weight: 600; letter-spacing: -0.035em; line-height: 1.02;
+  font-family: var(--display); font-weight: 600; letter-spacing: -0.018em; line-height: 1.04;
   font-size: clamp(40px, 9vw, 56px); margin: 0; text-wrap: balance;
 }
 .title em, .h2 em { font-style: normal; color: var(--violet); }
@@ -87,7 +86,7 @@
 
 /* local range helper: set --a and --b on an element to get --k (0..1) and --e (eased) */
 .pin { --p: inherit; }
-.pin > *, .qrBox, .railFill { --p: inherit; --k: clamp(0, calc((var(--p, 0) - var(--a, 0)) / (var(--b, 1) - var(--a, 0))), 1); --e: calc(1 - (1 - var(--k)) * (1 - var(--k)) * (1 - var(--k))); }
+.pin > *, .qrBox, .railFill, .cinema { --p: inherit; --k: clamp(0, calc((var(--p, 0) - var(--a, 0)) / (var(--b, 1) - var(--a, 0))), 1); --e: calc(1 - (1 - var(--k)) * (1 - var(--k)) * (1 - var(--k))); }
 
 .caption { position: absolute; left: clamp(20px, 6vw, 96px); bottom: clamp(28px, 8svh, 96px); max-width: min(640px, 88vw); --a: 0.05; --b: 0.3; opacity: var(--e); transform: translate3d(0, calc((1 - var(--e)) * 40px), 0); }
 
@@ -98,33 +97,36 @@
 .video, .video img, .video video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .heroCopy { position: absolute; left: clamp(20px, 6vw, 96px); top: clamp(110px, 18svh, 200px); max-width: min(720px, 90vw); --a: 0.04; --b: 0.42;
   opacity: calc(1 - var(--k)); transform: translate3d(0, calc(var(--e) * -90px), 0); }
-.heroPhone { position: absolute; left: 50%; top: 50%; width: min(78vw, 380px); height: min(78svh, 760px); margin: max(-39svh, -380px) 0 0 min(-39vw, -190px);
+.heroPhone { position: absolute; inset: 76px 0 0 0; margin: auto; width: min(78vw, 380px); height: min(78svh, 740px);
   --a: 0.6; --b: 0.86; opacity: var(--k);
   transform: translate3d(calc((1 - var(--e)) * 12vw), calc((1 - var(--e)) * -16svh), 0) rotate(calc((1 - var(--e)) * 20deg)) scale(calc(0.42 + var(--e) * 0.58)); }
 
-/* 2. Say hi: the cinema window grows from a card to 92% */
-.cinema { position: absolute; left: 4vw; right: 4vw; top: 12svh; height: 58svh; border-radius: 32px; overflow: hidden; background: #0b0820;
-  --a: 0; --b: 0.35; --s: calc(0.5 + var(--e) * 0.5); transform: scale(var(--s));
-  opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.64) * 6), 1)); }
+/* 2. Say hi: the whole film in a window of its own aspect ratio, a composer under it */
+.cinemaMove { position: absolute; left: 50%; top: calc(50% + 38px); width: min(88vw, calc(60svh * 1.897)); --a: 0.6; --b: 0.86;
+  transform: translate3d(calc(-50% - var(--e) * 22vw), calc(-50% - var(--e) * 10svh), 0) scale(calc(1 - var(--e) * 0.4)); }
+.cinema { position: relative; width: 100%; aspect-ratio: 1920 / 1012; border-radius: 32px; overflow: hidden; background: #0b0820;
+  --a: 0; --b: 0.3; --s: calc(0.55 + var(--e) * 0.45); transform: scale(var(--s)); }
 .cinemaInner { position: absolute; inset: 0; --s: inherit; transform: scale(calc(1 / var(--s))); }
-.composer { position: absolute; left: 50%; bottom: 7%; width: min(560px, 84%); height: 60px; margin: 0; transform: translate3d(-50%, 0, 0);
-  display: flex; align-items: center; gap: 2px; padding: 0 10px 0 24px; border-radius: 999px; background: #fff; color: var(--ink); font-size: 19px; font-weight: 500; }
+.composer { display: flex; align-items: center; gap: 2px; width: min(560px, 84%); height: 60px; margin: 18px auto 0; padding: 0 10px 0 24px;
+  border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 19px; font-weight: 500;
+  opacity: clamp(0, calc((var(--p, 0) - 0.06) * 12), 1); }
 .caret { width: 2px; height: 24px; margin-left: 2px; background: var(--violet); }
 .send { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; background: var(--violet); opacity: calc(0.35 + 0.65 * clamp(0, calc((var(--p, 0) - 0.54) * 20), 1)); }
 .composer .send { --p: inherit; }
 .typed span { opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 60), 1); }
-.bubble { position: absolute; left: 50%; top: 58svh; padding: 12px 18px; border-radius: 22px 22px 6px 22px; background: var(--violet); color: #fff; font-weight: 500; white-space: nowrap;
-  --a: 0.58; --b: 0.86; opacity: clamp(0, calc((var(--p, 0) - 0.56) * 30), 1);
-  transform: translate3d(calc(-50% + var(--e) * 22vw), calc(var(--e) * 14svh), 0) scale(calc(1 - var(--e) * 0.35)); }
+.bubble { position: absolute; left: 50%; top: 78svh; padding: 12px 18px; border-radius: 22px 22px 6px 22px; background: var(--violet); color: #fff; font-weight: 500; white-space: nowrap;
+  z-index: 2; --a: 0.58; --b: 0.86; opacity: calc(clamp(0, calc((var(--p, 0) - 0.56) * 30), 1) - clamp(0, calc((var(--p, 0) - 0.84) * 14), 1));
+  /* from the composer onto the LivePhone's screen (right, 4vw in, 340px wide) */
+  transform: translate3d(calc(-50% + var(--e) * (46vw - 170px)), calc(var(--e) * -14svh), 0) scale(calc(1 - var(--e) * 0.3)); }
 .hiPhone { position: absolute; right: 4vw; top: 50%; width: min(70vw, 340px); height: min(72svh, 700px); margin-top: max(-36svh, -350px);
   --a: 0.5; --b: 0.78; opacity: var(--k); transform: translate3d(calc((1 - var(--e)) * 60vw), 0, 0); }
 .hi .caption { --a: 0.7; --b: 0.92; }
 
 /* 3. Encryption: three layers in perspective */
 .layers { position: absolute; left: 50%; top: 42%; width: min(86vw, 560px); height: 320px; margin: -160px 0 0 max(-43vw, -280px); perspective: 1200px; }
-.layer { position: absolute; inset: 0; height: 88px; top: calc(var(--i) * 110px); border-radius: 28px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.92);
-  transform: rotateX(52deg); display: flex; align-items: center; padding: 0 24px; font-size: 14px; color: #475467; }
-.layer:nth-child(2) { border-color: rgba(82, 0, 255, 0.35); color: var(--violet); }
+.layer { position: absolute; inset: 0; height: 92px; top: calc(var(--i) * 112px); border-radius: 28px; border: 1px solid #d0d5dd; background: linear-gradient(180deg, #ffffff, #f7f8fa);
+  box-shadow: 0 18px 40px -24px rgba(21, 23, 28, 0.18); transform: rotateX(46deg); display: flex; align-items: center; padding: 0 28px; font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.layer:nth-child(2) { border-color: rgba(82, 0, 255, 0.45); background: linear-gradient(180deg, #ffffff, #f4efff); color: var(--violet); }
 .packet { position: absolute; left: 50%; top: 10px; padding: 10px 16px; border-radius: 18px; background: var(--violet); color: #fff; font-size: 15px; white-space: nowrap;
   transform: translate3d(-50%, calc(var(--p, 0) * 250px), 0); }
 .packet b, .packet i { font-style: normal; font-weight: 500; }
@@ -151,7 +153,7 @@
 .sealed { position: absolute; left: 0; top: 0; color: var(--violet); border-color: rgba(82, 0, 255, 0.3); letter-spacing: 0.02em; opacity: clamp(0, calc((var(--p, 0) - 0.4) * 8), 1); }
 .corner { position: absolute; top: 88px; right: clamp(20px, 4vw, 48px); }
 .brand { height: 28px; width: auto; display: block; }
-.brandText { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: #475467; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; }
+.brandText { white-space: nowrap; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: #475467; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; }
 
 /* 5.1 The record: two events, twenty blocks apart */
 .recordHead { position: absolute; left: clamp(20px, 6vw, 96px); top: 120px; max-width: min(900px, 88vw); --a: 0; --b: 0.14; opacity: var(--e); transform: translate3d(0, calc((1 - var(--e)) * 30px), 0); }
@@ -169,6 +171,11 @@
 .points > article:last-child { opacity: calc(0.3 + 0.7 * clamp(0, calc((var(--p, 0) - 0.68) * 12), 1)); }
 .points h3 { margin: 4px 0 0; font-size: 20px; letter-spacing: -0.01em; }
 @media (min-width: 900px) { .points { grid-template-columns: 1fr 1fr; gap: 20px; } }
+@media (min-width: 900px) {
+  .enc .layers { left: auto; right: 8vw; width: min(44vw, 620px); margin: -170px 0 0 0; top: 46%; }
+  .eth .band { left: 46vw; right: 6vw; }
+  .eth .proof { left: 73vw; }
+}
 .k { margin: 0; font-size: 13px; color: #667085; font-variant-numeric: tabular-nums; }
 .v { margin: 6px 0 16px; color: #475467; font-size: 15px; }
 .hash { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -180,14 +187,19 @@
 .recordNote a { text-decoration: underline; text-underline-offset: 3px; }
 
 /* 6. Ethereum */
-.band { position: absolute; left: 6vw; right: 6vw; display: flex; align-items: center; gap: 16px; height: 72px; padding: 0 24px; border-radius: 28px; border: 1px solid var(--line); background: #fff; font-size: 14px; color: #475467; }
+.band { position: absolute; left: 6vw; right: 6vw; display: flex; align-items: center; gap: 16px; height: 80px; padding: 0 28px; border-radius: 28px; border: 1px solid #d0d5dd; background: #fff;
+  box-shadow: 0 18px 40px -26px rgba(21, 23, 28, 0.2); font-size: 15px; font-weight: 500; color: var(--ink); }
+.bandEth { border-color: rgba(82, 0, 255, 0.4); background: linear-gradient(180deg, #ffffff, #f6f2ff); }
 .band:first-child { top: 22svh; }
 .bandEth { top: 56svh; --a: 0.1; --b: 0.4; opacity: var(--k); }
-.proof { position: absolute; left: 50%; top: 30svh; padding: 8px 14px; border-radius: 16px; background: var(--violet); color: #fff; font-size: 13px; --a: 0.25; --b: 0.7; transform: translate3d(-50%, calc(var(--e) * 26svh), 0); opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.72) * 10), 1)); }
+.proof { position: absolute; left: 50%; top: 30svh; padding: 10px 18px; border-radius: 18px; background: var(--violet); color: #fff; font-size: 14px; font-weight: 600; --a: 0.25; --b: 0.7; transform: translate3d(-50%, calc(var(--e) * 26svh), 0); opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.72) * 10), 1)); }
 .eth .caption { --a: 0.4; --b: 0.7; }
 
 /* 7. Calls */
-.callPhone { position: absolute; right: 6vw; top: 50%; width: min(70vw, 340px); height: min(72svh, 700px); margin-top: max(-36svh, -350px); --a: 0; --b: 0.4; opacity: var(--k); transform: translate3d(0, calc((1 - var(--e)) * 60px), 0); }
+.callPhone { position: absolute; right: 5vw; top: calc(50% + 38px); width: min(46vw, calc(min(80svh, 700px) * 0.62)); aspect-ratio: 800 / 1290; translate: 0 -50%;
+  --a: 0; --b: 0.4; opacity: var(--k); transform: translate3d(0, calc((1 - var(--e)) * 60px), 0); }
+.callPhone picture, .callImg { display: block; width: 100%; height: 100%; }
+.callImg { object-fit: contain; }
 .phoneHold { width: 100%; height: 100%; }
 
 /* Mobile: the phone takes 78% of the width, captions sit at the top */
@@ -195,20 +207,26 @@
   /* Caption on top, the object below it, never on top of each other. */
   .caption { top: 84px; bottom: auto; }
   .heroCopy { top: 96px; }
-  .payPhone, .hiPhone, .callPhone { right: 11vw; width: 78vw; top: auto; bottom: 2svh; height: 54svh; margin-top: 0; }
+  .payPhone, .hiPhone { right: 11vw; width: 78vw; top: auto; bottom: 2svh; height: 54svh; margin-top: 0; }
+  .callPhone { right: auto; left: 50%; top: auto; bottom: 1svh; width: auto; height: 60svh; translate: -50% 0; }
   .layers { top: 64%; }
   .nameRow { top: 66%; }
   .note { top: 40%; }
   .band:first-child { top: 40svh; }
   .bandEth { top: 74svh; }
   .proof { top: 48svh; }
-  .cinema { top: 30svh; height: 44svh; }
-  .bubble { top: 50svh; }
+  .cinemaMove { width: 92vw; top: 50%; transform: translate3d(-50%, -50%, 0) scale(calc(1 - var(--e) * 0.15)); opacity: calc(1 - var(--k)); }
+  .composer { height: 52px; font-size: 17px; width: 100%; }
+  .bubble { top: 60svh; transform: translate3d(-50%, calc(var(--e) * 16svh), 0) scale(calc(1 - var(--e) * 0.3)); }
   .recordHead { top: 92px; }
   .timeline { top: 34%; }
   .points > article { padding: 16px 18px; }
   .points h3 { font-size: 17px; }
-  .recordNote { bottom: 14px; font-size: 12px; }
+  .recordNote { bottom: 12px; font-size: 11.5px; }
+  .points { gap: 10px; margin-top: 20px; }
+  .points .v { display: none; }
+  .note { top: 45%; left: 62%; }
+  .pay .payPhone { height: 44svh; }
 }
 
 /* ── Static sections ─────────────────────────────────────── */
@@ -242,6 +260,28 @@
 .closePhone { position: relative; width: min(78vw, 340px); height: min(70svh, 680px); margin: 0 auto 32px; }
 .credits { padding: 24px clamp(20px, 6vw, 96px) 48px; text-align: center; font-size: 14px; color: #475467; }
 .marks { display: flex; justify-content: center; gap: 12px; margin: 10px 0; }
+
+/* Everything in one app */
+.features { display: grid; gap: 16px; margin-top: 36px; }
+@media (min-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
+.featureGroup { border: 1px solid var(--line); border-radius: 28px; padding: 28px; background: #fff; }
+.featureGroup h3 { margin: 0 0 18px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--violet); }
+.featureGroup dl { margin: 0; display: grid; gap: 16px; }
+.featureGroup dt { font-weight: 600; font-size: 17px; }
+.featureGroup dd { margin: 4px 0 0; color: #475467; font-size: 15px; }
+/* Under the hood */
+.spec { width: 100%; margin-top: 32px; border-collapse: separate; border-spacing: 0; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: #fff; font-size: 15px; }
+.spec th, .spec td { text-align: left; padding: 16px 20px; border-top: 1px solid var(--line); vertical-align: top; }
+.spec tr:first-child th, .spec tr:first-child td { border-top: 0; }
+.spec th { width: 28%; font-weight: 600; color: #344054; }
+.spec td:last-child { width: 1%; white-space: nowrap; }
+.spec a { color: var(--violet); font-size: 13px; }
+@media (max-width: 899px) { .spec th { width: 34%; } .spec th, .spec td { padding: 12px 14px; font-size: 14px; } }
+/* Devices */
+.deviceList { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 12px; }
+@media (min-width: 900px) { .deviceList { grid-template-columns: repeat(3, 1fr); } }
+.deviceList li { border: 1px solid var(--line); border-radius: 20px; padding: 22px 24px; background: #fff; }
+.deviceList p { margin: 6px 0 0; color: #475467; font-size: 15px; }
 
 /* Reduced motion: every scene is a still section with its final state */
 @media (prefers-reduced-motion: reduce) {
