@@ -37,7 +37,7 @@ import { SiweMessage } from "siwe";
 import { useAppKit } from "@reown/appkit/react";
 import { allowAutoRedirect, clearLocalSessionMarkers, hasServerSession } from "@/lib/auth/session-check";
 import { toast } from "sonner";
-import { QRCodeSVG } from "qrcode.react";
+import { BrandedQr } from "@/components/chat/profile/BrandedQr";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useSystemSignOut } from "@/hooks/useSystemSignOut";
 import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
@@ -891,7 +891,7 @@ export default function ConnectPage() {
         mobileDeepLink={mobileDeepLink}
         signLink={signLink}
         signReady={signReady}
-        qr={qrData ? <QRCodeSVG value={qrData} size={204} level="M" bgColor="#ffffff" fgColor="#15171c" /> : null}
+        qr={qrData ? <BrandedQr value={qrData} title="Sign-in QR code" /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}

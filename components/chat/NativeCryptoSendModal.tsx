@@ -25,7 +25,7 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { X, Lock, AlertTriangle, Copy, Check, Send, QrCode, ChevronDown } from 'lucide-react';
 import { useSendTransaction, useWriteContract, useAccount, useChainId, useSwitchChain, usePublicClient, useBalance, useReadContract } from 'wagmi';
 import { isAddress, encodeFunctionData, formatUnits, type Address } from 'viem';
-import { QRCodeSVG } from 'qrcode.react';
+import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { toast } from 'sonner';
 import { checkEvmSend, parseAmount } from '@/lib/payments/rails';
 
@@ -434,7 +434,9 @@ export function NativeCryptoSendModal({
 
           {showQR && (
             <div className="flex flex-col items-center gap-3 bg-[#F7F8FA] border border-[#E4E7EC] rounded-2xl p-5">
-              <QRCodeSVG value={qrUri} size={160} bgColor="#F7F8FA" fgColor="#15171C" level="M" />
+              <div className="rounded-2xl bg-white border border-[#E4E7EC] overflow-hidden">
+                <BrandedQr value={qrUri} title="Payment QR code" style={{ width: 200 }} />
+              </div>
               <p className="text-[12.5px] text-[#475467] text-center leading-relaxed max-w-[260px]">
                 Scan with another Ethereum wallet to pay {amount || '?'} {selectedToken.symbol} on Ethereum mainnet to this address.
               </p>

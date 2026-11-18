@@ -190,6 +190,58 @@ async function pickMigrationConnection() {
   console.warn('[pre-deploy] The migration URL is PgBouncer and no direct host answered; migrating without the advisory lock (one pre-deploy at a time). Set DATABASE_URL_UNPOOLED to ${{Postgres.DATABASE_URL}} in Railway.');
 }
 
+/**
+ * Prisma's migrate lock is pg_advisory_lock(72707369). When another session holds it, migrate
+ * deploy times out after 10 s with P1002 and nothing is applied: on 17 and 18 Nov 2026 the app
+ * then started without the ChatUsername table (P2021 on every /api/chat/username call).
+ * Returns who holds the lock, with how long that session has been idle, or null when nobody does.
+ */
+async function migrateLockHolder(databaseUrl) {
+  try {
+    return await withClient(databaseUrl, async (c) => {
+      const { rows } = await c.query(
+        `SELECT l.pid, a.application_name, a.state, a.backend_start, a.state_change,
+                EXTRACT(EPOCH FROM (now() - a.state_change))::int AS idle_s
+           FROM pg_locks l LEFT JOIN pg_stat_activity a ON a.pid = l.pid
+          WHERE l.locktype = 'advisory' AND l.granted AND l.objid = 72707369`,
+      );
+      return rows[0] || null;
+    });
+  } catch {
+    return null;
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * A session that holds the migrate lock while idle for minutes is not migrating: Prisma runs its
+ * statements back to back and releases the lock when it finishes. It is a leaked lock, typically a
+ * server connection kept open by PgBouncer after a migrate that went through it in transaction
+ * mode (12 Nov 2026), which keeps every later deploy from migrating until PgBouncer recycles it.
+ * Only that session is ended (pg_terminate_backend; PgBouncer opens a new one on demand), and only
+ * when it is idle (not running a query, not inside a transaction) for at least LEAKED_IDLE_S.
+ */
+const LEAKED_IDLE_S = 120;
+async function releaseLeakedLock(databaseUrl, holder) {
+  if (!holder || holder.state !== 'idle' || !(holder.idle_s >= LEAKED_IDLE_S)) return false;
+  try {
+    return await withClient(databaseUrl, async (c) => {
+      const { rows } = await c.query(
+        `SELECT pg_terminate_backend(a.pid) AS ended
+           FROM pg_stat_activity a
+          WHERE a.pid = $1 AND a.state = 'idle' AND now() - a.state_change >= make_interval(secs => $2)
+            AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'advisory' AND l.granted AND l.objid = 72707369)`,
+        [holder.pid, LEAKED_IDLE_S],
+      );
+      return Boolean(rows[0] && rows[0].ended);
+    });
+  } catch (e) {
+    console.warn(`[pre-deploy] Could not end the session holding the migrate lock: ${e && e.message ? e.message : e}`);
+    return false;
+  }
+}
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl || databaseUrl.includes('dummy') || databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
@@ -200,13 +252,15 @@ async function main() {
   console.log('[pre-deploy] Starting migrations.');
   await pickMigrationConnection();
   const seen = new Set();
+  let lockWaits = 0;
+  let lockWaited = false;
   // Each round: resolve what failed from the real schema, then deploy. A migration that fails is
   // inspected in the next round; one that fails twice, or is partly applied, stops the deploy.
   for (let round = 1; round <= 30; round++) {
     const url = process.env.DATABASE_URL_UNPOOLED || databaseUrl;
     const settled = await settleSupersededMigrations(url);
     const resolved = await resolveFailedMigrations(url, seen);
-    if (round > 1 && settled.length + resolved.length === 0) {
+    if (round > 1 && settled.length + resolved.length === 0 && !lockWaited) {
       // deploy failed but recorded no failed migration (connection, permissions, P1xxx): retrying would only repeat it.
       console.error('[pre-deploy] FATAL: migrate deploy failed without a failed migration to recover; see the Prisma error above.');
       process.exit(1);
@@ -216,6 +270,23 @@ async function main() {
       console.log('[pre-deploy] Prisma migrations deployed successfully.');
       process.exit(0);
     } catch (deployErr) {
+      // Another session holds Prisma's migrate lock. A leaked one (idle for minutes) is released;
+      // a live one is waited for (up to ~4 min) instead of starting the app on an old schema.
+      const holder = await migrateLockHolder(url);
+      lockWaited = false;
+      if (holder && lockWaits < 12) {
+        lockWaits += 1;
+        lockWaited = true;
+        const who = `pid ${holder.pid} (${holder.application_name || 'no application name'}, ${holder.state || 'unknown state'}, idle ${holder.idle_s ?? '?'} s)`;
+        if (await releaseLeakedLock(url, holder)) {
+          console.warn(`[pre-deploy] The migrate lock was leaked by ${who}; that session was ended. Retrying now.`);
+          await sleep(1000);
+        } else {
+          console.warn(`[pre-deploy] The migrate lock is held by ${who}; waiting 20 s (${lockWaits}/12).`);
+          await sleep(20000);
+        }
+        continue;
+      }
       // A-017: never --accept-data-loss. The failed migration is inspected in the next round.
       console.warn(`[pre-deploy] migrate deploy failed (round ${round}); inspecting the failed migration.`);
     }
