@@ -104,7 +104,8 @@ for (const [vpName, viewport] of VIEWPORTS) {
         await page.evaluate(`(${SCROLLER}).scrollTop = ${y}`);
         await page.waitForTimeout(500);
         const p = await page.$$eval('[data-scene]', (els, k) => els[k]?.style.getPropertyValue('--p') ?? '', i);
-        sceneReport.push({ scene: sc.label, f, p });
+        const at = await page.evaluate(`Math.round((${SCROLLER}).scrollTop)`);
+        sceneReport.push({ scene: sc.label, f, p, y, at });
         await page.screenshot({ path: path.join(out, `scene-${String(i + 1).padStart(2, '0')}-${Math.round(f * 100)}-${vpName}.png`) });
       }
     }
