@@ -763,11 +763,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   );
 
   return (
+    // On screen from its first frame. It used to slide in from x: 100% with a spring; in WebKit on
+    // iPad that animation sometimes never finished, leaving the panel one screen to the right
+    // (buttons at x = 912 on an 834 px screen) and "nothing opened" (scripts/ui/settings-webkit.mjs,
+    // 18 November 2026). Settings must never depend on an animation finishing to be visible.
     <motion.div
-      initial={{ x: '100%', opacity: 0 }}
+      initial={false}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '100%', opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 340, damping: 36 }}
       ref={rootRef}
       data-testid="settings-root"
       data-layout={phone ? 'phone' : wide ? 'two-panes' : 'one-pane'}

@@ -13,6 +13,11 @@ describe('Settings opens its sections on phones and tablets (cause found 18/11/2
     expect(settings).toMatch(/\{\(wide \|\| activeTab === 'home'\) && \(\s*<nav aria-label="Settings sections"/);
     expect(settings).not.toMatch(/\? 'flex' : 'hidden'\} flex-col overflow-y-auto/);
   });
+  it('the panel is on screen from its first frame, never waiting for a slide-in to finish', () => {
+    const root = settings.slice(settings.indexOf('<motion.div\n      initial={false}'), settings.indexOf('ref={rootRef}'));
+    expect(root).toMatch(/initial=\{false\}/);
+    expect(root).not.toMatch(/x: '100%'/);
+  });
   it('opening a section focuses its heading, and Escape returns to the list on one pane', () => {
     expect(settings).toMatch(/sectionTitleRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
     expect(settings).toMatch(/e\.key === 'Escape'\) setActiveTab\('home'\)/);
