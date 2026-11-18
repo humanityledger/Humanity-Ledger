@@ -287,6 +287,7 @@ contract HLPortal is ReentrancyGuard {
 
     function disableAsset(address token) external onlyGuardianOrAdmin {
         assets[token].enabled = false;
+        _dropQueuedAsset(token);
         emit AssetDisabled(token, msg.sender);
     }
 
@@ -302,7 +303,20 @@ contract HLPortal is ReentrancyGuard {
         a.perDepositCap = perDepositCap;
         a.perSenderDailyCap = perSenderDailyCap;
         a.globalDailyCap = globalDailyCap;
+        _dropQueuedAsset(token);
         emit CapsLowered(token, perDepositCap, perSenderDailyCap, globalDailyCap, msg.sender);
+    }
+
+    /// IR-02 (internal security review, 18 Nov 2026): an emergency restriction also drops any
+    /// relaxation queued before it. Otherwise a change queued earlier (higher caps, enabled = true)
+    /// could still be executed after the guardian disabled the asset or lowered its caps, undoing the
+    /// restriction without a new, public TIMELOCK. Grants no new power: the guardian could already
+    /// call cancelAsset. The admin can queue again, in public, and wait the full delay.
+    function _dropQueuedAsset(address token) private {
+        if (pendingAsset[token].eta != 0) {
+            delete pendingAsset[token];
+            emit AssetQueueCancelled(token);
+        }
     }
 
     /* ---------------------------------------------- delayed relaxations (I4) */
