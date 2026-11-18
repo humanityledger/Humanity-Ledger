@@ -535,10 +535,10 @@ In order, from [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md):
 | R3 | TURN relay for calls across networks: keys set in Railway on 14 November; **a call between two different networks still to be confirmed** |
 | R4 | Onboarding for accounts with no Fee Juice: **done without sponsorship**. Gas estimation lowered the Fee Juice an account must hold from about 42 to about 15 AZTEC; a contact can pay it through a fee link (run once, section 3). Ledger Chat sponsors no fee, by product decision (15 Nov 2026) |
 | R5 | A dollar-denominated token: **open**, after R4 and R7 |
-| R6 | Escrow and streams on Alpha: **open**. The fee source with the designated treasury is compiled and TXE-tested, and its class ids are recorded; nothing is deployed on Alpha without an external audit (R7) |
+| R6 | Escrow and streams on Alpha: **closed alpha, wave 1, decided 18 Nov 2026** (`docs/alpha/OPERATOR_DECISIONS.md`): at most 20 testers, HLC only, no protocol fee, at most 100 HLC per agreement, unaudited by written decision (OD-10). Classes recompiled in CI. Not deployed: the invitation gate, monitoring and a testnet rehearsal come first, and Stefan signs each deployment |
 | R7 | External audit: **open** |
 | R8 | G7 and a payment between two different people: **open**. The full path has run between two accounts of the operator |
-| M3 | Private fee payment, so a claim or a withdrawal no longer names the account as fee payer: **next**. Ledger Chat still sponsors no fee |
+| M3 | Private fee payment, so a claim or a withdrawal no longer names the account as fee payer: **waiting on Aztec** (Q8). Only through an FPC operated by Aztec or the community, never one of ours, which would make us a custodian (`docs/AZTEC_DECISIONS.md`). Ledger Chat still sponsors no fee |
 | M2 | Ethereum portal and receiver addresses: **written and tested, not deployed**. Before deployment: R7, a two-account run on Sepolia, a multisig admin, and the wallet's own L1 payout step |
 | R9 | Direct database URL for migrations: the pre-deploy settles migrations that cannot run on `0_init` (#99); `DATABASE_URL_UNPOOLED` must point at Postgres, not PgBouncer: **to be confirmed in the deploy log** |
 
