@@ -21,7 +21,7 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
   for (const [cName, cfg] of CONFIGS) {
     const { defaultBrowserType, ...opts } = cfg; // eslint-disable-line no-unused-vars
     const ctx = await browser.newContext(opts);
-    const page = await ctx.newPage();
+    let page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e.message).slice(0, 200)));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text().slice(0, 200)));
@@ -30,7 +30,8 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
     await page.waitForTimeout(800);
     // Does requestAnimationFrame run in this browser and device? Playwright's "stable" check and
     // framer-motion both depend on it.
-    const raf = await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 3 ? r(true) : requestAnimationFrame(f)); requestAnimationFrame(f); setTimeout(() => r(false), 1500); }));
+    const raf = await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 3 ? r(true) : requestAnimationFrame(f)); requestAnimationFrame(f); setTimeout(() => r(false), 1500); })).catch((e) => `probe failed: ${e.message.slice(0, 60)}`);
+    if (page.isClosed() || String(raf).includes('crashed')) page = await ctx.newPage();
     const ids = await page.$$eval('[data-settings-item]', (els) => els.map((e) => e.getAttribute('data-settings-item')));
     if (ids.length === 0) {
       // Settings never mounted: that is a failure, never a vacuous pass. Show where the page went.
@@ -40,6 +41,8 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
       await page.screenshot({ path: path.join(out, `${bName}-${cName}-not-mounted.png`) });
     }
     for (const id of ids) {
+      // A crashed page (WebKit 'Target crashed') is counted as a failure of that section and replaced.
+      if (page.isClosed()) page = await ctx.newPage();
       await page.goto(`${base}/chat?e2e=settings`, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => undefined);
       await page.waitForSelector(`[data-settings-item="${id}"]`, { timeout: 20000 }).catch(() => undefined);
       await page.waitForTimeout(700);
@@ -81,10 +84,10 @@ for (const [bName, engine] of [['webkit', webkit], ['chromium', chromium]]) {
         const inView = x >= 0 && x <= vw && y >= 0 && y <= vh;
         const hit = inView ? document.elementFromPoint(x, y) : null;
         return { ok: inView && !!hit && c.contains(hit), why: !inView ? 'outside the viewport' : !hit || !c.contains(hit) ? `covered by ${hit?.tagName}.${String(hit?.className).slice(0, 60)}` : '', ...info };
-      });
+      }).catch((e) => ({ ok: false, why: `page crashed: ${e.message.slice(0, 80)}` }));
       if (!probe.ok) failed++;
       results.push({ browser: bName, device: cName, section: id, raf, forced, ...probe });
-      if (!probe.ok || id === ids[ids.length - 1]) await page.screenshot({ path: path.join(out, `${bName}-${cName}-${id}.png`) });
+      if (!probe.ok || id === ids[ids.length - 1]) await page.screenshot({ path: path.join(out, `${bName}-${cName}-${id}.png`) }).catch(() => undefined);
     }
     results.push({ browser: bName, device: cName, sections: ids.length, errors: [...new Set(errors)] });
     await ctx.close();
