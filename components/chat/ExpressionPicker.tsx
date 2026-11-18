@@ -338,7 +338,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
   };
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div data-no-swipe className="flex gap-2.5 px-3.5 pb-3 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ touchAction: 'pan-x' }} role="tablist" aria-label="Sticker packs">
+      <div data-no-swipe className={`${STICKER_PACKS.length < 2 ? 'hidden' : 'flex'} gap-2.5 px-3.5 pb-3 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`} style={{ touchAction: 'pan-x' }} role="tablist" aria-label="Sticker packs">
         {STICKER_PACKS.map(p => {
           const on = p.id === pack.id;
           return (

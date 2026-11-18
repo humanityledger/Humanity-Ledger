@@ -6,6 +6,7 @@ describe('/chat has no Aztec wordmark above the card', () => {
     const page = readFileSync('app/chat/page.tsx', 'utf8');
     expect(page).not.toMatch(/aztec-wordmark/);
     expect(page).not.toMatch(/href="https:\/\/aztec\.network"/);
-    expect(page).toMatch(/md:p-\[50px\] lg:p-\[75px\] xl:p-\[95px\] 2xl:p-\[120px\]/);
+    // The margin is symmetrical and follows the window, so zoom keeps the card whole (18 November 2026).
+    expect(page).toMatch(/md:\[padding:clamp\(12px,3vh,56px\)_clamp\(16px,3\.2vw,72px\)\]/);
   });
 });

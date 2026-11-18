@@ -47,7 +47,11 @@ export const LEDGER_STICKERS: Sticker[] = [
   { id: 'sad', label: 'Oh no', scene: 'rain' }, { id: 'gn', label: 'Good night', scene: 'night' },
 ];
 
-export const STICKER_PACKS: readonly StickerPack[] = [
+/**
+ * Every pack Ledger Chat has ever shipped. Stickers already sent keep rendering from here, so an
+ * old message never turns into raw text; only STICKER_PACKS is offered in the picker.
+ */
+export const ALL_STICKER_PACKS: readonly StickerPack[] = [
   {
     id: 'nubi-sol',
     name: 'Nubi & Sol',
@@ -127,7 +131,14 @@ export const STICKER_PACKS: readonly StickerPack[] = [
   },
 ];
 
-const PACKS: Record<string, StickerPack> = Object.fromEntries(STICKER_PACKS.map(p => [p.id, p]));
+/**
+ * The packs offered in the picker: only Spike, the cactus (decided 18 November 2026). The other
+ * packs stay in ALL_STICKER_PACKS so stickers already sent still show.
+ */
+export const OFFERED_STICKER_PACK_IDS = ['spike'] as const;
+export const STICKER_PACKS: readonly StickerPack[] = ALL_STICKER_PACKS.filter(p => (OFFERED_STICKER_PACK_IDS as readonly string[]).includes(p.id));
+
+const PACKS: Record<string, StickerPack> = Object.fromEntries(ALL_STICKER_PACKS.map(p => [p.id, p]));
 
 export const stickerMessage = (pack: string, id: string) => `__STICKER__img:${pack}/${id}`;
 

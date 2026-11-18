@@ -89,7 +89,7 @@ describe('pins', () => {
     const route = read('app/api/chat/communities/route.ts');
     expect(route).toMatch(/action === 'PIN_MESSAGE' \|\| action === 'UNPIN_MESSAGE'/);
     expect(route).toMatch(/data: pin \? \{ pinnedAt: new Date\(\), pinnedBy: me \} : \{ pinnedAt: null, pinnedBy: null \}/);
-    const pinBlock = route.slice(route.indexOf("action === 'PIN_MESSAGE' ||"), route.indexOf("const member = await (prisma as any).communityMember.findUnique"));
+    const pinBlock = route.slice(route.indexOf("action === 'PIN_MESSAGE' ||"), route.indexOf("const [member, owned] = await Promise.all(["));
     expect(pinBlock).not.toMatch(/communityPost\.delete/);
     expect(pinBlock).toMatch(/where: \{ id: messageId, communityId \}/);
   });
@@ -137,5 +137,14 @@ describe('opening a community', () => {
     expect(route).not.toMatch(/_count: \{ select: \{[^}]*posts/);
     expect(route).toMatch(/communityPost\s*\.count\(\{ where: \{ communityId: community\.id \} \}\)/);
     expect(route).toMatch(/community\._count\?\.members \?\?/);
+  });
+
+  it('the owner manages settings even without an ADMIN row; admins can reset the invite link', () => {
+    const route = read('app/api/chat/communities/route.ts');
+    expect(route).toMatch(/if \(!isOwner && \(!member \|\| member\.role !== 'ADMIN'\)\)/);
+    const manage = read('components/communities/CommunityManage.tsx');
+    expect(manage).toMatch(/action: 'REVOKE_LINK', communityId/);
+    expect(manage).toMatch(/data-testid="invite-reset"/);
+    expect(manage).toMatch(/flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white/);
   });
 });

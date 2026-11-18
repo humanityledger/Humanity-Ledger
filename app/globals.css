@@ -1600,6 +1600,7 @@ nav > div[class*="max-w-"] {
   margin-right: auto;
 }
 
+<<<<<<< HEAD
 /* Tab navigation perfect centering for all doc/app tab rows.
    `:not(.hidden):not([hidden])`: a nav whose classes contain "flex" (flex-col, md:flex) but that
    is hidden must stay hidden. Without it this rule (0,1,1) beat Tailwind's .hidden (0,1,0), so
@@ -1609,6 +1610,13 @@ nav > div[class*="max-w-"] {
 .tab-row,
 [role="tablist"],
 nav[class*="flex"]:not(.hidden):not([hidden]) {
+=======
+/* Tab navigation centering for doc/app tab rows. Inside :where() so it has zero specificity: as a
+   plain [role="tablist"] rule it came after the Tailwind utilities with the same specificity and
+   overrode `grid` on every tab bar, so equal-width tabs ran together ("Theme 40Wallpaper 59Bubbles
+   14", the Emojis / Stickers / GIF bar; 18 November 2026). A component's own classes now win. */
+:where(.tab-row, [role="tablist"], nav[class*="flex"]) {
+>>>>>>> origin/main
   display: flex;
   align-items: center;
 }
