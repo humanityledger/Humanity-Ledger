@@ -170,8 +170,8 @@ unconstrained fn streams_are_isolated_by_salt() {
     withdraw(s, 1, TOTAL);
     // Stream 2 is untouched by draining stream 1.
     withdraw(s, 2, 50);
-    // 99 from stream 1 and 49 from stream 2.
-    assert(balance(s.env, s.token, s.recipient) == 148);
+    // No fee (OD-7): 100 from stream 1 and 50 from stream 2.
+    assert(balance(s.env, s.token, s.recipient) == 150);
 }
 
 #[test(should_fail_with = "no active stream note found")]

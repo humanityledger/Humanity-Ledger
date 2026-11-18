@@ -149,7 +149,7 @@ No row below is an Aztec decision. There is no transaction here between two peop
 | Studio closed | `app/studio/page.tsx`, `middleware.ts` | Same file: the page does not import the studio; `/api/studio/` returns `STUDIO_LOCKED` |
 | Payment card: failed step and Fee Juice text | `components/zk/PaymentProgress.tsx` | Same file: `feeJuiceGuidance` for an insufficient-fee error. Not a live payment |
 | Settings copy (HLC, Fee Juice, local handle, TURN not assumed) | `components/chat/LedgerSettingsFull.tsx` | Reading the strings. No separate test |
-| Fee baseline compiled, class ids recorded, not deployed | `contracts/aztec/escrow`, `contracts/aztec/streams`, `deployments/aztec-testnet.json` | TXE 17 November 2026 with the designated treasury: escrow 19 passed, streams 29 passed. Current classes `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6` and `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`, status `not-deployed`, address null. Not an audit |
+| Fee baseline compiled, class ids recorded, not deployed | `contracts/aztec/escrow`, `contracts/aztec/streams`, `deployments/aztec-testnet.json` | TXE 17 November 2026 with the designated treasury: escrow 19 passed, streams 29 passed. Classes then `0x2ade…04c6` and `0x0251…777b`; current since 18 Nov 2026 (closed alpha, no fee, at most 100 HLC): `0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143` and `0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3`, status `not-deployed`, address null. Not an audit |
 | R-17 stays off | `test/communities/r17-acceptance.test.ts` guard; `docs/communities/R17_ACCEPTANCE.md` checklist | The guard fails if `app/`, `components/` or `lib/` writes `communityMls` true. Schema default remains false |
 
 Commands that reproduce the rows which are unit tests:
@@ -314,7 +314,7 @@ Same day. No production contract was added. No Alpha payment. Not an external au
 
 ## Estado de completitud — 16 noviembre 2026
 
-Nothing in this file is an external audit. The fee is in the escrow and stream source. TXE on 17 November 2026 passed with the designated treasury: PrivateEscrow 19, PaymentStream 29. The current class ids are recorded and not deployed: PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`, PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`. Sections 6 and 8 are the authorized fee baseline (16 November 2026). Q1–Q10 stay OPEN. R8 has no hash. `communityMls` stays false. TREASURY is the designated address above, not the 4-of-7.
+Nothing in this file is an external audit. The fee is in the escrow and stream source. TXE on 17 November 2026 passed with the designated treasury: PrivateEscrow 19, PaymentStream 29. The current class ids, not deployed, are the closed-alpha ones of 18 November 2026: PrivateEscrow `0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143`, PaymentStream `0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3` (no protocol fee, at most 100 HLC). Sections 6 and 8 are the fee base for after the alpha (option A). Q1–Q10 stay OPEN. R8 has no hash. `communityMls` stays false. TREASURY is the designated address above, not the 4-of-7.
 
 | Bucket | What |
 |---|---|

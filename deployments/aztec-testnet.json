@@ -179,16 +179,28 @@
       "supersededBy": "0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6"
     },
     {
-      "name": "PrivateEscrow with the designated treasury (not deployed)",
+      "name": "PrivateEscrow with the designated treasury and the 16 November fee baseline (superseded, never deployed)",
       "address": null,
       "classId": "0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6",
       "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
       "holdsPrivateBalance": true,
       "keyed": false,
       "status": "not-deployed",
+      "tracksCurrentArtifact": false,
+      "note": "Superseded on 18 November 2026 by the closed-alpha class (operator decisions OD-2 and OD-7: no protocol fee, at most 100 HLC). Never deployed, no address. Kept as history; it is not a current class.",
+      "supersededBy": "0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143"
+    },
+    {
+      "name": "PrivateEscrow, closed alpha wave 1: no protocol fee, at most 100 HLC (not deployed)",
+      "address": null,
+      "classId": "0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143",
+      "artifact": "contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 from the current source (TREASURY = 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed, the designated treasury, not the 4-of-7). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44063139479. TXE in contracts/aztec/escrow on 17 November 2026 (run 44061471400): 19 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
-      "artifactSha256": "6fb5e48c8d0ded456aa34ffdc3986c2aa7f1b4fb6eafbe28666c0ee2a90d3270"
+      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 (run 44287098692, committed on the branch by CI) from the source with FEE_BPS 0, MIN_FEE 0 and MAX_AMOUNT 100_000_000 (OD-2, OD-7, signed by Stefan Antonio Cirisanu on 18 November 2026). TREASURY in the source is the designated 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed; with no fee it receives nothing. Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44288052113. TXE in contracts/aztec/escrow (run 44287098692): 24 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
+      "artifactSha256": "645211d00d4b6f4e4ca9342b29f068d4e6cc7e4974c781261ba073bba514221f"
     },
     {
       "name": "PaymentStream fee baseline, zero treasury (superseded, never deployed)",
@@ -215,16 +227,28 @@
       "supersededBy": "0x07e2947d207b8980d5375c893bbe2de3bd535e1fd9e688e1119416f463dacca7"
     },
     {
-      "name": "PaymentStream with the designated treasury and IA-01 cancel fee (not deployed)",
+      "name": "PaymentStream with the designated treasury and IA-01 cancel fee (superseded, never deployed)",
       "address": null,
       "classId": "0x07e2947d207b8980d5375c893bbe2de3bd535e1fd9e688e1119416f463dacca7",
       "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
       "holdsPrivateBalance": true,
       "keyed": false,
       "status": "not-deployed",
+      "tracksCurrentArtifact": false,
+      "note": "Superseded on 18 November 2026 by the closed-alpha class (operator decisions OD-2 and OD-7: no protocol fee, at most 100 HLC). Never deployed, no address. Kept as history; it is not a current class.",
+      "supersededBy": "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3"
+    },
+    {
+      "name": "PaymentStream, closed alpha wave 1: no protocol fee, at most 100 HLC (not deployed)",
+      "address": null,
+      "classId": "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3",
+      "artifact": "contracts/aztec/streams/target/payment_stream-PaymentStream.json",
+      "holdsPrivateBalance": true,
+      "keyed": false,
+      "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 from the current source: TREASURY = 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed (the designated treasury, not the 4-of-7), and cancel_fee (IA-01): a cancel pays no fee on dust and at most TX_CAP, so it never fails because of the fee. Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44199682089. TXE in contracts/aztec/streams on 18 November 2026 (run 44198227688): 32 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
-      "artifactSha256": "06db43f055715e47f4353b5a3f7dc02052612143bdaf425dd44f44d46c1755b9"
+      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 (run 44287098692, committed on the branch by CI) from the source with FEE_BPS 0, STREAM_MIN_FEE 0 and MAX_AMOUNT 100_000_000 (OD-2, OD-7, signed by Stefan Antonio Cirisanu on 18 November 2026), with IA-01's cancel_fee (which pays 0 at a zero schedule). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44288052113. TXE: recorded with the run that follows the test fix on this branch. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
+      "artifactSha256": "c154bcd8e3c0c6e2c82eef37a64b01ab5b36a8f2f3182cfc6c2fd033a4b3a304"
     }
   ],
   "e2eRuns": [

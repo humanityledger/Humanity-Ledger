@@ -29,9 +29,10 @@ describe('direct agreement creation', () => {
     );
   });
 
-  it('the current classes are the ones recompiled with the designated treasury (streams: with the IA-01 cancel fee), one each', () => {
-    expect(ids.escrow).toEqual(['0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6']);
-    expect(ids.streams).toEqual(['0x07e2947d207b8980d5375c893bbe2de3bd535e1fd9e688e1119416f463dacca7']);
+  it('the current classes are the closed-alpha ones, one each', () => {
+    // Closed alpha, wave 1 (OD-2, OD-7): class ids from print-class-ids, run 44288052113.
+    expect(ids.escrow).toEqual(['0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143']);
+    expect(ids.streams).toEqual(['0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3']);
   });
 
   it('refuses the classes compiled with a zero treasury', async () => {
