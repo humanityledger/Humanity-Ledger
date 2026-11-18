@@ -26,8 +26,12 @@ describe('direct entry', () => {
 
 describe('one loading mark', () => {
   it('the PIN check, the chat bundle and the account load all draw BootMark', () => {
-    expect(read('components/auth/TuringShieldGate.tsx')).toContain('<BootMark />');
-    expect(read('components/auth/TuringShieldGate.tsx')).not.toContain('linear-gradient(160deg, #f7f8fa 0%, #f2f4f7 100%)');
+    const gate = read('components/auth/TuringShieldGate.tsx');
+    // The loading branch (before the PIN screen itself, which keeps its own background).
+    const loading = gate.slice(gate.indexOf('if (!mounted || (!cleared'), gate.indexOf('FIRST-TIME SETUP OVERLAY'));
+    expect(loading).toContain('<BootMark />');
+    expect(loading).toContain('bg-white md:bg-[#f4f6fa]');
+    expect(loading).not.toContain('linear-gradient');
     expect(read('app/chat/page.tsx')).toContain('<BootMark />');
     expect(read('components/terminal/LedgerChatV2.tsx')).toContain('<BootMark label="Loading your account" />');
     expect(read('components/terminal/PadlockLoader.tsx')).toContain('/boot-mark.webp');
