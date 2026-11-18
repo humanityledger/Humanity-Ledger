@@ -114,8 +114,9 @@
 .composer .send { --p: inherit; }
 .typed span { opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 60), 1); }
 .bubble { position: absolute; left: 50%; top: 58svh; padding: 12px 18px; border-radius: 22px 22px 6px 22px; background: var(--violet); color: #fff; font-weight: 500; white-space: nowrap;
-  --a: 0.58; --b: 0.86; opacity: clamp(0, calc((var(--p, 0) - 0.56) * 30), 1);
-  transform: translate3d(calc(-50% + var(--e) * 22vw), calc(var(--e) * 14svh), 0) scale(calc(1 - var(--e) * 0.35)); }
+  z-index: 2; --a: 0.58; --b: 0.86; opacity: calc(clamp(0, calc((var(--p, 0) - 0.56) * 30), 1) - clamp(0, calc((var(--p, 0) - 0.84) * 14), 1));
+  /* lands on the LivePhone's screen (right, 4vw in, 340px wide) */
+  transform: translate3d(calc(-50% + var(--e) * (46vw - 170px)), calc(var(--e) * 6svh), 0) scale(calc(1 - var(--e) * 0.3)); }
 .hiPhone { position: absolute; right: 4vw; top: 50%; width: min(70vw, 340px); height: min(72svh, 700px); margin-top: max(-36svh, -350px);
   --a: 0.5; --b: 0.78; opacity: var(--k); transform: translate3d(calc((1 - var(--e)) * 60vw), 0, 0); }
 .hi .caption { --a: 0.7; --b: 0.92; }
@@ -203,7 +204,7 @@
   .bandEth { top: 74svh; }
   .proof { top: 48svh; }
   .cinema { top: 30svh; height: 44svh; }
-  .bubble { top: 50svh; }
+  .bubble { top: 50svh; transform: translate3d(-50%, calc(var(--e) * 24svh), 0) scale(calc(1 - var(--e) * 0.3)); }
   .recordHead { top: 92px; }
   .timeline { top: 34%; }
   .points > article { padding: 16px 18px; }

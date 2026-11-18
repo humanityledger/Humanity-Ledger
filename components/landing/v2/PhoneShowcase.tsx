@@ -430,6 +430,7 @@ export function LivePhone({
   zoom,
   fill,
   className,
+  bare = false,
 }: {
   /** Which step's island and timing to use. */
   id?: string;
@@ -440,6 +441,8 @@ export function LivePhone({
   /** Share of the box's limiting side the phone takes (e.g. 0.85). */
   fill?: number;
   className?: string;
+  /** No card behind the device (the landing's scenes draw their own white page). */
+  bare?: boolean;
 }) {
   const i = Math.max(0, PHONES.findIndex((ph) => ph.id === id));
   const ScreenOverride = screen ? SCREENS[screen] : undefined;
@@ -483,7 +486,7 @@ export function LivePhone({
 
   const fit = fill ?? (zoom && zoom <= 1 ? zoom : 0.9);
   return (
-    <div ref={ref} className={`${s.live} ${className ?? ""}`}>
+    <div ref={ref} className={`${s.live} ${bare ? s.bare : ""} ${className ?? ""}`}>
       <PhoneTile ph={PHONES[i]} i={i} progress={p} active={visible} screen={ScreenOverride} fit={fit} />
     </div>
   );

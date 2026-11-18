@@ -66,6 +66,12 @@ function request() {
   if (!frame) frame = requestAnimationFrame(tick);
 }
 
+/** When a scroll ends (a jump with Home or End included), write the final state right away. */
+function settle() {
+  if (frame) cancelAnimationFrame(frame);
+  tick();
+}
+
 /** Starts the loop for every [data-scene] under el. Returns the cleanup. */
 export function startScenes(el: HTMLElement): () => void {
   scenes.length = 0;
@@ -81,14 +87,14 @@ export function startScenes(el: HTMLElement): () => void {
   ro.observe(el);
   if (scroller) ro.observe(scroller);
   target.addEventListener('scroll', request, { passive: true });
-  target.addEventListener('scrollend', request, { passive: true });
+  target.addEventListener('scrollend', settle, { passive: true });
   window.addEventListener('resize', measure, { passive: true });
   document.fonts?.ready.then(measure).catch(() => undefined);
   measure();
   return () => {
     ro.disconnect();
     target.removeEventListener('scroll', request);
-    target.removeEventListener('scrollend', request);
+    target.removeEventListener('scrollend', settle);
     window.removeEventListener('resize', measure);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
