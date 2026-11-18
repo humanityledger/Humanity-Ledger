@@ -348,10 +348,32 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const push = usePushNotifications(myAddress);
 
   const [activeTab, setActiveTab] = useState<string>('home');
-  // Wide screens show the list and a section side by side: start on Profile, as Signal does.
+  // Two panes (list and section side by side, as Signal Desktop) only when the Settings panel
+  // itself is wide enough, measured on the panel, not on the viewport (18 November 2026). On
+  // phones whose browser reports a desktop-sized viewport (Chrome's "Desktop site", Safari's
+  // "Request Desktop Website", a large Android in landscape) the md: breakpoint showed the
+  // desktop layout squeezed into the phone, and tapping a section seemed to do nothing.
+  // A touch screen below 1024 px always gets one screen at a time.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(false);
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches) setActiveTab((t) => (t === 'home' ? 'profile' : t));
+    const el = rootRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
+    const update = () => {
+      const w = el.clientWidth;
+      setWide(w >= 768 && !(coarse && w < 1024));
+    };
+    update();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    window.addEventListener('orientationchange', update);
+    return () => { ro?.disconnect(); window.removeEventListener('orientationchange', update); };
   }, []);
+  // Wide: start on Profile, as Signal does. Narrow: the list first.
+  useEffect(() => {
+    if (wide) setActiveTab((t) => (t === 'home' ? 'profile' : t));
+  }, [wide]);
   const [modal, setModal] = useState<string | null>(null);
   // The Appearance studio (theme, wallpaper, bubbles), opened on one of its tabs.
   const [studio, setStudio] = useState<AppearanceTab | null>(null);
@@ -726,6 +748,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', stiffness: 340, damping: 36 }}
+      ref={rootRef}
       className="absolute inset-0 z-[200] bg-[#f4f5f7] flex flex-col overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]"
     >
       {/* ── Header ── */}
@@ -745,7 +768,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {/* Two panes from 768 px, as in Signal Desktop: the list on the left stays, the section
           opens on the right. Phones keep one screen at a time with a back link. */}
       <div className="flex-1 flex min-h-0">
-      <nav aria-label="Settings sections" className={`${activeTab === 'home' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[340px] lg:w-[360px] md:shrink-0 md:border-r md:border-[#e6e8ec] md:bg-[#f7f8fa] overflow-y-auto`}>
+      <nav aria-label="Settings sections" className={`${wide || activeTab === 'home' ? 'flex' : 'hidden'} flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-[#f7f8fa]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
             {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
             <ProfileHeaderCard
@@ -785,10 +808,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           </div>
       </nav>
 
-      <div className={`${activeTab === 'home' ? 'hidden' : 'flex'} md:flex flex-1 flex-col min-w-0 min-h-0`}>
+      <div className={`${!wide && activeTab === 'home' ? 'hidden' : 'flex'} flex-1 flex-col min-w-0 min-h-0`}>
       {/* ── Section sub-header breadcrumb (phones: the list is not beside it) ── */}
-      {activeTab !== 'home' && (
-        <div className="md:hidden shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
+      {!wide && activeTab !== 'home' && (
+        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
           <button
             type="button"
             onClick={() => setActiveTab('home')}
@@ -806,9 +829,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
       {/* ── Content (shown when a section is selected) ── */}
       {activeTab !== 'home' && (
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
-          <h2 className="hidden md:block text-center text-[15px] font-semibold text-[#15171c] mb-5">
+          <h2 className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5">
             {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
           </h2>
 

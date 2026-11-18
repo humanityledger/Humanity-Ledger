@@ -265,10 +265,11 @@ function Island({
       style={{ width, paddingLeft: side === "right" ? EDGE : 0, paddingRight: side === "left" ? EDGE : 0, opacity, pointerEvents: interactive ? "auto" : "none" }}
       aria-hidden={!interactive}
     >
+      {/* No black capsule behind the actions (18 Nov 2026): only the buttons, on the row background. */}
       <motion.div
         role="toolbar"
         aria-label={`Actions for ${name}`}
-        className={`h-[46px] rounded-full bg-[#111216] ring-1 ring-white/10 shadow-[0_6px_18px_-6px_rgba(16,24,40,0.45)] overflow-hidden flex items-center ${side === "right" ? "justify-start" : "justify-end"}`}
+        className={`h-[46px] flex items-center ${side === "right" ? "justify-start" : "justify-end"}`}
         style={{ width: capsuleWidth, paddingLeft: PAD, paddingRight: PAD }}
       >
         <div className="flex items-center" style={{ gap: GAP }}>
@@ -313,7 +314,7 @@ function IslandButton({
       }}
       title={a.label}
       aria-label={a.label}
-      className="shrink-0 rounded-full flex items-center justify-center text-white outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:brightness-90"
+      className="shrink-0 rounded-full flex items-center justify-center text-white outline-none shadow-[0_4px_12px_-4px_rgba(16,24,40,0.35)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#15171c] active:brightness-90"
       style={{ width: BTN, height: BTN, background: a.color, scale, opacity }}
     >
       <a.Icon size={16} strokeWidth={2.2} aria-hidden="true" />
