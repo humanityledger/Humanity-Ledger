@@ -137,6 +137,24 @@ contract HLReceiverTest is PortalBase {
         r.rescue(address(fot), to, amount, deadline, s);
     }
 
+    /// Each rescue moves the nonce by one (Gambit survivor #36): three in a row all work.
+    function test_rescue_nonce_counts_up() public {
+        dai.mint(address(r), 3 ether);
+        uint256 deadline = block.timestamp + 1 hours;
+        for (uint256 n; n < 3; ++n) {
+            bytes memory s = sig(r, pk, address(dai), bob, 1 ether, n, deadline);
+            r.rescue(address(dai), bob, 1 ether, deadline, s);
+            assertEq(r.rescueNonce(), n + 1);
+        }
+        assertEq(dai.balanceOf(bob), 3 ether);
+    }
+
+    function test_factory_records_its_portal() public view {
+        assertEq(factory.portal(), address(portal));
+        assertEq(address(HLReceiver(payable(factory.implementation())).portal()), address(portal));
+        assertEq(r.factory(), address(factory));
+    }
+
     function test_rescue_refusals() public {
         dai.mint(address(r), 10 ether);
         uint256 deadline = block.timestamp + 1 hours;
