@@ -236,6 +236,8 @@ contract HLPortal is ReentrancyGuard {
         emit Withdrawal(token, recipient, amount, caller, proof.epoch, proof.leafIndex);
         if (unwrap && token == address(weth)) {
             weth.withdraw(amount);
+            // Slither arbitrary-send-eth: the recipient is fixed by the Outbox-proven message.
+            // slither-disable-next-line arbitrary-send-eth
             (bool ok,) = recipient.call{value: amount}("");
             if (!ok) revert EthTransferFailed();
         } else {

@@ -144,12 +144,15 @@ contract HLReceiverTest is PortalBase {
         r.rescue(address(dai), alice, 1 ether, deadline, good);
         vm.expectRevert(HLReceiver.BadSignature.selector);
         r.rescue(address(dai), bob, 2 ether, deadline, good);
+        // (Signatures are built before expectRevert: domainSeparator() is a call too.)
+        bytes memory wrongKey = sig(r, pk + 1, address(dai), bob, 1 ether, 0, deadline);
         vm.expectRevert(HLReceiver.BadSignature.selector);
-        r.rescue(address(dai), bob, 1 ether, deadline, sig(r, pk + 1, address(dai), bob, 1 ether, 0, deadline));
+        r.rescue(address(dai), bob, 1 ether, deadline, wrongKey);
         // A signature for another receiver (verifyingContract) does not work here.
         HLReceiver other = HLReceiver(payable(factory.deploy(bytes32(uint256(5)), signer)));
+        bytes memory otherDomain = sig(other, pk, address(dai), bob, 1 ether, 0, deadline);
         vm.expectRevert(HLReceiver.BadSignature.selector);
-        r.rescue(address(dai), bob, 1 ether, deadline, sig(other, pk, address(dai), bob, 1 ether, 0, deadline));
+        r.rescue(address(dai), bob, 1 ether, deadline, otherDomain);
         vm.warp(deadline + 1);
         vm.expectRevert(HLReceiver.Expired.selector);
         r.rescue(address(dai), bob, 1 ether, deadline, good);

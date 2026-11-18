@@ -145,6 +145,8 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
         uint256 before = token.balanceOf(address(this));
         token.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 received = token.balanceOf(address(this)) - before;
+        // Slither incorrect-equality: zero received is refused; any other value is recorded exactly.
+        // slither-disable-next-line incorrect-equality
         if (received == 0) revert InvalidAmount();
         vaultBalances[msg.sender][_tokenAddress] += received;
 
@@ -205,6 +207,8 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
      * @dev    CEI: the trigger and each balance are written before the external call. A token
      *         whose transfer fails keeps its balance, so one bad token cannot block the others.
      */
+    // Slither reentrancy-no-eth: nonReentrant, and every function that writes vaultBalances is nonReentrant too.
+    // slither-disable-next-line reentrancy-no-eth
     function executeDeadManSwitch(address _vaultOwner) external nonReentrant {
         VaultConfig storage config = vaults[_vaultOwner];
         if (config.lastHeartbeat == 0) revert NoVault();

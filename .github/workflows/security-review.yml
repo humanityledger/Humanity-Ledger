@@ -57,10 +57,16 @@ jobs:
           pip install slither-analyzer==0.10.4 solc-select
           solc-select install "$SOLC_VERSION" && solc-select use "$SOLC_VERSION"
       - name: Slither (fails on medium or higher; exclusions justified in slither.config.json)
-        run: slither . --config-file slither.config.json --compile-force-framework foundry --json slither.json --checklist > slither.md
+        run: |
+          set -o pipefail
+          slither . --config-file slither.config.json --compile-force-framework foundry --json slither.json --checklist > slither.md || rc=$?
+          python3 -c "import json;d=json.load(open('slither.json'));[print(r['id'][:12], r['impact'], r['check'], r['description'].splitlines()[0][:160]) for r in d['results'].get('detectors', [])]" | tee -a "$GITHUB_STEP_SUMMARY"
+          exit ${rc:-0}
       - name: Install Aderyn
         if: always()
-        run: npm install -g @cyfrin/aderyn
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/cyfrin/aderyn/releases/latest/download/aderyn-installer.sh | bash
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Aderyn
         if: always()
         run: |
@@ -134,7 +140,7 @@ jobs:
           python-version: '3.12'
       - run: pip install halmos
       - name: halmos
-        run: halmos --contract PortalHalmos --function check_ --solver-timeout-assertion 600000
+        run: halmos --forge-build-out out-foundry --contract PortalHalmos --function check_ --solver-timeout-assertion 600000
 
   gambit:
     name: Gambit mutation testing (>= 90% killed)
