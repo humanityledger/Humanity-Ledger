@@ -9,7 +9,8 @@ describe('mobile polish', () => {
     const s = read('components/chat/LedgerSettingsFull.tsx');
     expect(s).toContain('const [wide, setWide] = useState(false);');
     expect(s).toContain('new ResizeObserver(update)');
-    expect(s).toContain("setWide(w >= 768 && !(coarse && w < 1024));");
+    // The visible width decides (the panel can sit in a container wider than a phone's screen).
+    expect(s).toContain("setWide(w >= 768 && !(coarse && screenW < 1024));");
     expect(s).not.toMatch(/'hidden'\} md:flex/);
     expect(s).not.toContain('md:hidden shrink-0 flex items-center gap-2');
   });

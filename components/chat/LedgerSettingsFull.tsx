@@ -356,19 +356,28 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   // A touch screen below 1024 px always gets one screen at a time.
   const rootRef = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(false);
+  // On a phone the panel is pinned to the screen itself (position: fixed), not to the chat's
+  // container: on phones that container can be wider than the screen (the list and the chat side
+  // by side, one of them off screen), so the panel measured itself as wide, opened the section in
+  // a right-hand pane outside the screen, and a tapped section seemed to do nothing (18 November
+  // 2026, Safari and Chrome on phones). The width that counts is what is visible.
+  const [phone, setPhone] = useState(false);
   useEffect(() => {
     const el = rootRef.current;
     if (!el || typeof window === 'undefined') return;
     const coarse = !!window.matchMedia?.('(pointer: coarse)').matches;
     const update = () => {
-      const w = el.clientWidth;
-      setWide(w >= 768 && !(coarse && w < 1024));
+      const screenW = Math.min(window.innerWidth || Infinity, window.visualViewport?.width || Infinity, document.documentElement.clientWidth || Infinity);
+      const w = Math.min(el.clientWidth, screenW);
+      setPhone(coarse && screenW < 1024);
+      setWide(w >= 768 && !(coarse && screenW < 1024));
     };
     update();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
     ro?.observe(el);
     window.addEventListener('orientationchange', update);
-    return () => { ro?.disconnect(); window.removeEventListener('orientationchange', update); };
+    window.addEventListener('resize', update);
+    return () => { ro?.disconnect(); window.removeEventListener('orientationchange', update); window.removeEventListener('resize', update); };
   }, []);
   // Wide: start on Profile, as Signal does. Narrow: the list first.
   useEffect(() => {
@@ -749,7 +758,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', stiffness: 340, damping: 36 }}
       ref={rootRef}
-      className="absolute inset-0 z-[200] bg-[#f4f5f7] flex flex-col overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]"
+      data-testid="settings-root"
+      data-layout={phone ? 'phone' : wide ? 'two-panes' : 'one-pane'}
+      className={`${phone ? 'fixed inset-0 z-[1000] w-screen h-[100dvh]' : 'absolute inset-0 z-[200] md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]'} bg-[#f4f5f7] flex flex-col overflow-hidden`}
     >
       {/* ── Header ── */}
       <div

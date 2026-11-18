@@ -118,11 +118,11 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!menu) return;
-    const close = (e: MouseEvent) => {
+    const close = (e: PointerEvent) => {
       if (!menuRef.current?.contains(e.target as Node)) setMenu(false);
     };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
   }, [menu]);
 
   return (
@@ -195,12 +195,19 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
               <Row
                 icon={<AtSign size={18} strokeWidth={1.8} style={{ color: INK }} />}
                 trailing={
-                  <button type="button" onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} aria-label="Username options" className={`w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}>
-                    <MoreHorizontal size={18} strokeWidth={1.9} style={{ color: INK }} />
-                  </button>
+                  <span className="flex items-center gap-1 shrink-0">
+                    {/* Changing the username is one tap, in plain sight (18 November 2026: it was
+                        only inside the ⋯ menu and people could not find it). */}
+                    <button type="button" onClick={onEditUsername} className={`h-9 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13.5px] font-semibold ${FOCUS}`} style={{ color: INK }} data-testid="change-username">
+                      Change
+                    </button>
+                    <button type="button" onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} aria-label="Username options" className={`w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}>
+                      <MoreHorizontal size={18} strokeWidth={1.9} style={{ color: INK }} />
+                    </button>
+                  </span>
                 }
               >
-                {u.username}
+                @{u.username}
               </Row>
             )}
             {menu && (

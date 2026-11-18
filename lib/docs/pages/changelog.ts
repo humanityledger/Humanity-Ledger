@@ -27,6 +27,10 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "fixed", text: "Your profile photo no longer appears on your contacts. Each contact shows their own photo, or their initials." },
+      { kind: "fixed", text: "Settings on phones: tapping Account, Messages, Privacy and security or any other section opens it full screen in Safari and Chrome." },
+      { kind: "improved", text: "Change your @username from Profile with one tap: the Change button sits next to it." },
+      { kind: "fixed", text: "The Emojis, Stickers and GIF tabs each take a third of the bar and the switch follows the one you pick. Emojis your device cannot draw are no longer shown as empty boxes." },
       { kind: "new", text: "A live map on the home page: a lit globe with the real number of accounts, @usernames reserved and visitors, refreshed every 15 seconds. Visitors are counted once a day per browser and placed by time zone; no IP address is stored. Counting started on 18 November 2026." },
       { kind: "fixed", text: "Creating a group no longer shows \"synced 1 messages, 0 failed…\" as an error. That text means the network confirmed the group late; the group exists and opens." },
       { kind: "improved", text: "A cleaner start screen: only New chat and New group." },
