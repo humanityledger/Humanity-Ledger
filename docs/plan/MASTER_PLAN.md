@@ -14,9 +14,9 @@ Update only your own row after each PR. Status values: `todo`, `open`, `merged`,
 
 | # | PR | From | Depends on | Gate | Status | Branch | PR | Date |
 |---|---|---|---|---|---|---|---|---|
-| 0 | This plan and the four prompts in the repository | Master | — | — | open | claude/master-plan | | 2026-11-18 |
-| 1 | Settings in Safari: portal and WebKit test | P1 · T1 | — | Test green on Mac, iPhone and iPad | todo | claude/settings-safari | | |
-| 2 | Remove the Aztec wordmark from /chat | P1 · T2 | — | ui-shots green | open | claude/chat-no-aztec-wordmark | | 2026-11-18 |
+| 0 | This plan and the four prompts in the repository | Master | — | — | merged | claude/master-plan | #162 | 2026-11-18 |
+| 1 | Settings in Safari: portal and WebKit test | P1 · T1 | — | Test green on Mac, iPhone and iPad | open | claude/settings-safari | #164 | 2026-11-19 |
+| 2 | Remove the Aztec wordmark from /chat | P1 · T2 | — | ui-shots green | merged | claude/chat-no-aztec-wordmark | #163 | 2026-11-18 |
 | 3 | Phase 0: cause of the lost messages, hourly delivery test, truthful delivery indicator | P3 · F0 | — | Cause written down with logs; hourly test active | blocked: needs the `[delivery]` logs from Railway and two test accounts (Stefan) | | | |
 | 4 | Foundations: `lib/facts.ts`, `tokens.css`, shared Playwright config, claims test, scale test, link checker | Master | 1 | Four required checks green, no visible change | todo | | | |
 | 5 | Landing: system, scenes and details | P1 · T3 | 4 | Coherence audit resolved, with screenshots | todo | | | |
@@ -68,3 +68,4 @@ Update only your own row after each PR. Status values: `todo`, `open`, `merged`,
 - [ ] **Aztec ecosystem directory.** Ask for Ledger Chat to be listed.
 - [ ] **`GITHUB_TRAFFIC_TOKEN`.** Add it in Railway to show repository clones on the globe.
 - [ ] Close PR #161: it is superseded by #160.
+- [ ] Check Settings on a real iPhone, iPad and Mac in Safari once #164 is deployed (headless WebKit at iPad size runs no animation frames, so that case is tapped with force in the test).

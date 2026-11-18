@@ -1,0 +1,64 @@
+# Settings must open every section in Safari's engine (WebKit) and in Chromium, on a desktop, an
+# iPhone 15 and an iPad Pro 11 (docs/plan/prompts/01-landing.md, task 1).
+
+name: Settings in WebKit
+
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'components/chat/**'
+      - 'components/terminal/LedgerChatV2.tsx'
+      - 'app/chat/**'
+      - 'scripts/ui/settings-webkit.mjs'
+      - '.github/workflows/settings-webkit.yml'
+  pull_request:
+    paths:
+      - 'components/chat/**'
+      - 'app/chat/**'
+      - 'scripts/ui/settings-webkit.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: settings-webkit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  settings:
+    # Playwright 1.49's WebKit system packages install on 22.04 (apt exits 100 on 24.04).
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --legacy-peer-deps
+      - name: Build (test harness on)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_E2E_HARNESS: '1'
+          NEXT_PUBLIC_ZK_MODE: testnet
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+      - name: Playwright (WebKit and Chromium)
+        run: npm install --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps webkit chromium
+      - name: Open every section
+        env:
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+        run: |
+          npx next start -p 3100 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
+          node scripts/ui/settings-webkit.mjs http://localhost:3100 settings-shots
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: settings-webkit
+          path: settings-shots

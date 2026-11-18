@@ -383,6 +383,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   useEffect(() => {
     if (wide) setActiveTab((t) => (t === 'home' ? 'profile' : t));
   }, [wide]);
+  // Opening a section moves focus to its heading; on one screen at a time, Escape goes back to the list.
+  const sectionTitleRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (activeTab !== 'home') sectionTitleRef.current?.focus({ preventScroll: true });
+  }, [activeTab]);
+  useEffect(() => {
+    if (wide || activeTab === 'home') return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActiveTab('home'); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [wide, activeTab]);
   const [modal, setModal] = useState<string | null>(null);
   // The Appearance studio (theme, wallpaper, bubbles), opened on one of its tabs.
   const [studio, setStudio] = useState<AppearanceTab | null>(null);
@@ -752,11 +763,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   );
 
   return (
+    // On screen from its first frame. It used to slide in from x: 100% with a spring; in WebKit on
+    // iPad that animation sometimes never finished, leaving the panel one screen to the right
+    // (buttons at x = 912 on an 834 px screen) and "nothing opened" (scripts/ui/settings-webkit.mjs,
+    // 18 November 2026). Settings must never depend on an animation finishing to be visible.
     <motion.div
-      initial={{ x: '100%', opacity: 0 }}
+      initial={false}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '100%', opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 340, damping: 36 }}
       ref={rootRef}
       data-testid="settings-root"
       data-layout={phone ? 'phone' : wide ? 'two-panes' : 'one-pane'}
@@ -779,7 +792,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {/* Two panes from 768 px, as in Signal Desktop: the list on the left stays, the section
           opens on the right. Phones keep one screen at a time with a back link. */}
       <div className="flex-1 flex min-h-0">
-      <nav aria-label="Settings sections" className={`${wide || activeTab === 'home' ? 'flex' : 'hidden'} flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-[#f7f8fa]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Rendered only when it is to be seen (both panes, or the list screen): never hidden by a
+          display class that a global rule could override (see app/globals.css, nav centering). */}
+      {(wide || activeTab === 'home') && (
+      <nav aria-label="Settings sections" className={`flex flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-[#f7f8fa]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)', alignItems: 'stretch' }}>
           <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
             {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
             <ProfileHeaderCard
@@ -798,6 +814,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab(item.id)}
+                      data-settings-item={item.id}
                       aria-current={activeTab === item.id ? 'page' : undefined}
                       className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-[#eef0f3]' : 'hover:bg-[#f7f8fa]'} ${
                         idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
@@ -818,6 +835,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             ))}
           </div>
       </nav>
+      )}
 
       <div className={`${!wide && activeTab === 'home' ? 'hidden' : 'flex'} flex-1 flex-col min-w-0 min-h-0`}>
       {/* ── Section sub-header breadcrumb (phones: the list is not beside it) ── */}
@@ -832,7 +850,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             Settings
           </button>
           <span className="text-[#c9ced6]">/</span>
-          <span className="text-[14px] text-[#727a88] font-medium">
+          <span className="text-[14px] text-[#727a88] font-medium outline-none" ref={!wide ? (el) => { sectionTitleRef.current = el; } : undefined} tabIndex={-1}>
             {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
           </span>
         </div>
@@ -840,9 +858,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
       {/* ── Content (shown when a section is selected) ── */}
       {activeTab !== 'home' && (
-      <div className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div data-testid="settings-content" className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
-          <h2 className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5`}>
+          <h2 ref={wide ? (el) => { sectionTitleRef.current = el; } : undefined} tabIndex={-1} className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5 outline-none`}>
             {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
           </h2>
 
