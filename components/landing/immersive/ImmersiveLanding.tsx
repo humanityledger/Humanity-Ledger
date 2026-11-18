@@ -100,9 +100,8 @@ export function ImmersiveLanding() {
       <a href="#main-content" className={s.skip}>Skip to content</a>
 
       <header className={s.nav}>
-        <span className={s.bar} aria-hidden="true" />
         <Link href="/" aria-label="Ledger Chat home" className={s.home}>
-          <HLLogo size={30} label="Ledger Chat" />
+          <HLLogo size={40} label="Ledger Chat" />
         </Link>
         <nav aria-label="Sections" className={s.anchors}>
           {C.NAV.map((n) => (
@@ -139,7 +138,11 @@ export function ImmersiveLanding() {
             <div className={s.cinemaInner}>
               <SceneVideo {...C.MEDIA.typing} a={0} b={0.6} label="A thumb typing Hi how are you on a phone keyboard." />
             </div>
-            <p className={s.typing}><Typed text={C.SAY_HI.typed} from={0.12} step={0.03} /></p>
+            <p className={s.composer}>
+              <Typed text={C.SAY_HI.typed} from={0.12} step={0.03} />
+              <span className={s.caret} aria-hidden="true" />
+              <span className={s.send} aria-hidden="true" />
+            </p>
           </div>
           <span className={s.bubble} aria-hidden="true">{C.SAY_HI.typed}</span>
           <div className={s.hiPhone}>
@@ -196,38 +199,44 @@ export function ImmersiveLanding() {
           </div>
         </Scene>
 
-        {/* 5.1 The first private payment, on chain. */}
-        {ALPHA && (
-          <Scene id="record" run={180} label="The first private payment on chain" className={s.record}>
-            <div className={s.caption}>
-              <Title parts={C.RECORD.title} />
+        {/* 5.1 The first private payment, on chain: two recorded events, twenty blocks apart. */}
+        <Scene id="record" run={180} label="The first private payment on chain" className={s.record}>
+          <div className={s.recordHead}>
+            <p className={s.eyebrow}>On chain · Aztec Alpha · {C.FIRST_PAYMENT.date}</p>
+            <Title parts={C.RECORD.title} />
+          </div>
+          <div className={s.timeline}>
+            <div className={s.rail} aria-hidden="true">
+              <span className={s.railFill} />
+              {Array.from({ length: ticks + 1 }, (_, i) => (
+                <i key={i} style={v({ t: (i / ticks).toFixed(4) })} />
+              ))}
             </div>
-            <div className={s.timeline}>
-              <span className={s.track} aria-hidden="true"><span /></span>
-              <ol className={s.ticks} aria-hidden="true">
-                {Array.from({ length: ticks + 1 }, (_, i) => (
-                  <li key={i} style={v({ t: (i / ticks).toFixed(4) })} />
-                ))}
-              </ol>
-              <div className={s.points}>
-                <div>
-                  <p className={s.k}>L2 block {C.FIRST_PAYMENT.tokenBlock.toLocaleString('en-US')} · {C.FIRST_PAYMENT.date}</p>
-                  <p className={s.v}>HLC deployed, {C.FIRST_PAYMENT.tokenDecimals} decimals</p>
-                  <CopyHash hash={C.FIRST_PAYMENT.token} />
-                </div>
-                <div>
-                  <p className={s.k}>L2 block {C.FIRST_PAYMENT.block.toLocaleString('en-US')} · {C.FIRST_PAYMENT.date}</p>
-                  <p className={s.v}>First private payment from Ledger Chat, {C.FIRST_PAYMENT.amount}</p>
-                  <CopyHash hash={C.FIRST_PAYMENT.tx} href={firstTxUrl} />
-                </div>
-              </div>
+            <div className={s.ends} aria-hidden="true">
+              <span>Block {C.FIRST_PAYMENT.tokenBlock.toLocaleString('en-US')}</span>
+              <span>{ticks} blocks later</span>
+              <span>Block {C.FIRST_PAYMENT.block.toLocaleString('en-US')}</span>
             </div>
-            <p className={s.small}>
-              {C.RECORD.note} Checked by the public CI:{' '}
-              <a href={C.FIRST_PAYMENT.preflightUrl} target="_blank" rel="noopener noreferrer">run {C.FIRST_PAYMENT.preflightRun}</a>.
-            </p>
-          </Scene>
-        )}
+            <div className={s.points}>
+              <article>
+                <p className={s.k}>L2 block {C.FIRST_PAYMENT.tokenBlock.toLocaleString('en-US')}</p>
+                <h3>HLC deployed</h3>
+                <p className={s.v}>Test token, {C.FIRST_PAYMENT.tokenDecimals} decimals, no monetary value.</p>
+                <CopyHash label="Contract" hash={C.FIRST_PAYMENT.token} />
+              </article>
+              <article>
+                <p className={s.k}>L2 block {C.FIRST_PAYMENT.block.toLocaleString('en-US')}</p>
+                <h3>First private payment from Ledger Chat</h3>
+                <p className={s.v}>{C.FIRST_PAYMENT.amount}, sent privately on Aztec Alpha.</p>
+                <CopyHash label="Transaction" hash={C.FIRST_PAYMENT.tx} href={firstTxUrl} />
+              </article>
+            </div>
+          </div>
+          <p className={s.recordNote}>
+            {C.RECORD.note} Verified by the public CI,{' '}
+            <a href={C.FIRST_PAYMENT.preflightUrl} target="_blank" rel="noopener noreferrer">run {C.FIRST_PAYMENT.preflightRun}</a>.
+          </p>
+        </Scene>
 
         {/* 6. Aztec settles on Ethereum. */}
         <Scene id="network" run={160} label="Aztec settles on Ethereum" className={s.eth}>

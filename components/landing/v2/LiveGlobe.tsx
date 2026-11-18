@@ -11,6 +11,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { LiveStats, LiveRegion } from '@/lib/stats/live';
 import { networkLabel } from '@/lib/aztec/wallet/config';
+import { isScrolling } from '@/lib/landing/scrollActivity';
 import { useVisitBeacon } from '@/lib/stats/useVisitBeacon';
 import s from './LiveGlobe.module.css';
 
@@ -138,9 +139,13 @@ export function LiveGlobe() {
       return [c + x1 * R, c - y2 * R, z2] as const;
     };
 
+    let lastDraw = 0;
     const draw = (t: number) => {
       raf = requestAnimationFrame(draw);
       if (!visibleRef.current) return;
+      // Canvas 2D: nothing drawn while the visitor scrolls, and at most 60 frames a second.
+      if (isScrolling() || t - lastDraw < 16) return;
+      lastDraw = t;
       if (!dragging) spin += velocity;
       const W = canvas.width;
       const c = W / 2;

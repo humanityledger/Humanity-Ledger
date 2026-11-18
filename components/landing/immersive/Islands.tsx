@@ -53,6 +53,7 @@ function pickMode(): Mode {
  * A decorative video tied to its scene. Desktop on a good connection: the all-intra file, its
  * currentTime eased toward the scene's progress with one seek in flight. Phones, Save-Data and
  * slow links: the playback file, looping while the scene is on screen. Reduced motion: the poster.
+ * Once created, the video stays mounted, so scrolling back up never re-buffers or flashes.
  */
 export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false, label }: {
   play: string; scrub: string; poster: string; a?: number; b?: number; priority?: boolean; label: string;
@@ -60,26 +61,42 @@ export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false
   const box = useRef<HTMLDivElement>(null);
   const vid = useRef<HTMLVideoElement>(null);
   const [mode, setMode] = useState<Mode>('poster');
-  const [near, setNear] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMode(pickMode()), []);
 
+  // Mount the video the first time its scene comes near.
   useEffect(() => {
-    if (!box.current || mode === 'poster') return;
+    if (!box.current || mode === 'poster' || mounted) return;
+    return onScene(box.current, (_p, near) => {
+      if (near) setMounted(true);
+    });
+  }, [mode, mounted]);
+
+  useEffect(() => {
+    const v = vid.current;
+    if (!box.current || !v || mode === 'poster' || !mounted) return;
+    // iOS autoplays only a video that is muted as an attribute, not just as a property.
+    v.muted = true;
+    v.defaultMuted = true;
+    v.setAttribute('muted', '');
+    let progress = 0;
     let target = 0;
     let cur = Number.NaN;
     let inflight = false;
     let raf = 0;
     let last = 0;
     let isNear = false;
+    const kick = () => {
+      if (!raf && isNear && mode === 'scrub') raf = requestAnimationFrame(step);
+    };
     const settle = () => {
       inflight = false;
-      if (!raf && isNear) raf = requestAnimationFrame(step);
+      kick();
     };
     const step = (t: number) => {
       raf = 0;
-      const v = vid.current;
-      if (!v || !isNear || mode !== 'scrub') return;
+      if (!isNear) return;
       const dt = last ? t - last : 16;
       last = t;
       cur = approach(cur, target, dt, 45);
@@ -92,30 +109,29 @@ export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false
       if (cur !== target || inflight) raf = requestAnimationFrame(step);
       else last = 0;
     };
-    const onSeeked = () => settle();
+    const retarget = () => {
+      target = videoTime(progress, v.duration, a, b);
+      kick();
+    };
     const off = onScene(box.current, (p, n) => {
+      progress = p;
       if (n !== isNear) {
         isNear = n;
-        setNear(n);
-        const v = vid.current;
-        if (v && mode === 'play') (n ? v.play().catch(() => undefined) : v.pause());
+        if (mode === 'play') (n ? v.play().catch(() => undefined) : v.pause());
       }
-      const v = vid.current;
-      if (mode === 'scrub' && v) {
-        target = videoTime(p, v.duration, a, b);
-        if (!raf && isNear) raf = requestAnimationFrame(step);
-      }
+      if (mode === 'scrub') retarget();
     });
-    const v = vid.current;
-    v?.addEventListener('seeked', onSeeked);
+    v.addEventListener('seeked', settle);
+    v.addEventListener('loadedmetadata', retarget);
     return () => {
       off();
       if (raf) cancelAnimationFrame(raf);
-      v?.removeEventListener('seeked', onSeeked);
+      v.removeEventListener('seeked', settle);
+      v.removeEventListener('loadedmetadata', retarget);
     };
-  }, [mode, a, b, near]);
+  }, [mode, mounted, a, b]);
 
-  const show = mode !== 'poster' && near;
+  const show = mode !== 'poster' && mounted;
   return (
     <div ref={box} className={s.video} aria-hidden="true">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -132,6 +148,7 @@ export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false
           autoPlay={mode === 'play'}
           preload={mode === 'scrub' ? 'auto' : 'metadata'}
           disablePictureInPicture
+          disableRemotePlayback
           tabIndex={-1}
         />
       )}
@@ -140,8 +157,10 @@ export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false
   );
 }
 
-/** A full hash in monospace that copies on click; links to the explorer when one is configured. */
-export function CopyHash({ hash, href }: { hash: string; href?: string }) {
+const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-8)}`;
+
+/** A hash shortened for reading, copied in full on click, linked to the explorer when one is configured. */
+export function CopyHash({ hash, label, href }: { hash: string; label: string; href?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard?.writeText(hash).then(() => {
@@ -150,10 +169,14 @@ export function CopyHash({ hash, href }: { hash: string; href?: string }) {
     }).catch(() => undefined);
   };
   return (
-    <span className={s.hash}>
-      {href ? <a href={href} target="_blank" rel="noopener noreferrer">{hash}</a> : <code>{hash}</code>}
-      <button type="button" onClick={copy} aria-label="Copy hash">{copied ? 'Copied' : 'Copy'}</button>
-    </span>
+    <div className={s.hash}>
+      <span className={s.hashLabel}>{label}</span>
+      <code title={hash}>{shortHash(hash)}</code>
+      <button type="button" onClick={copy} aria-label={`Copy the full ${label.toLowerCase()}`}>
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      {href && <a href={href} target="_blank" rel="noopener noreferrer">Explorer</a>}
+    </div>
   );
 }
 

@@ -2,8 +2,9 @@
 /**
  * The landing's one scroll loop. Native scroll, never hijacked: a passive listener only asks for
  * a frame; the frame reads scrollY once and writes one CSS variable (--p, the scene's progress)
- * per scene that changed, plus --page on the page root for the progress bar. Layout is measured
- * on load and in a ResizeObserver, never in the loop. No React state per frame.
+ * per scene that changed. Layout is measured
+ * on load and in a ResizeObserver, never in the loop. No React state per frame, and no page-wide
+ * variable: --p is a registered, non-inherited number, so only the elements that read it restyle.
  *
  * Why a loop and not `animation-timeline` driving --p: animating a custom property from a scroll
  * timeline is recomputed on the main thread too, and the loop gives one behaviour in every
@@ -16,7 +17,6 @@ interface Scene { el: HTMLElement; top: number; height: number; p: number; near:
 
 const scenes: Scene[] = [];
 const listeners = new Map<HTMLElement, Set<Listener>>();
-let root: HTMLElement | null = null;
 /** The element that scrolls the page: on "/" the layout scrolls inside <main>, elsewhere the window. */
 let scroller: HTMLElement | null = null;
 const scrollTop = () => (scroller ? scroller.scrollTop : window.scrollY);
@@ -29,9 +29,7 @@ function findScroller(el: HTMLElement): HTMLElement | null {
   return null;
 }
 let vh = 0;
-let docRun = 1;
 let frame = 0;
-let lastPage = -1;
 
 function measure() {
   vh = scroller ? scroller.clientHeight : window.innerHeight;
@@ -42,7 +40,6 @@ function measure() {
     s.top = r.top - origin + y;
     s.height = r.height;
   }
-  docRun = Math.max(1, (scroller ? scroller.scrollHeight : document.documentElement.scrollHeight) - vh);
   request();
 }
 
@@ -63,11 +60,6 @@ function tick() {
     const subs = listeners.get(s.el);
     if (subs) for (const f of subs) f(s.p, s.near);
   }
-  const page = Math.min(1, Math.max(0, y / docRun));
-  if (root && Math.abs(page - lastPage) > 1e-4) {
-    lastPage = page;
-    root.style.setProperty('--page', page.toFixed(4));
-  }
 }
 
 function request() {
@@ -76,7 +68,6 @@ function request() {
 
 /** Starts the loop for every [data-scene] under el. Returns the cleanup. */
 export function startScenes(el: HTMLElement): () => void {
-  root = el;
   scenes.length = 0;
   el.querySelectorAll<HTMLElement>('[data-scene]').forEach((s) => scenes.push({ el: s, top: 0, height: 0, p: -1, near: false }));
   el.setAttribute('data-scenes', String(scenes.length));
@@ -90,17 +81,18 @@ export function startScenes(el: HTMLElement): () => void {
   ro.observe(el);
   if (scroller) ro.observe(scroller);
   target.addEventListener('scroll', request, { passive: true });
+  target.addEventListener('scrollend', request, { passive: true });
   window.addEventListener('resize', measure, { passive: true });
   document.fonts?.ready.then(measure).catch(() => undefined);
   measure();
   return () => {
     ro.disconnect();
     target.removeEventListener('scroll', request);
+    target.removeEventListener('scrollend', request);
     window.removeEventListener('resize', measure);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     scenes.length = 0;
-    root = null;
     scroller = null;
   };
 }

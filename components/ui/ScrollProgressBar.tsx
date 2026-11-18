@@ -7,11 +7,15 @@
  */
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 export function ScrollProgressBar() {
   const barRef = useRef<HTMLDivElement>(null);
+  // The landing has no progress line: nothing may resize on every scroll frame there.
+  const off = usePathname() === "/";
 
   useEffect(() => {
+    if (off) return;
     let scrollTarget: HTMLElement = document.documentElement;
     let fallbackTimer: NodeJS.Timeout;
     let rafId: number;
@@ -63,8 +67,9 @@ export function ScrollProgressBar() {
       cancelAnimationFrame(rafId);
       clearInterval(fallbackTimer);
     };
-  }, []);
+  }, [off]);
 
+  if (off) return null;
   return (
     <div
       className="fixed top-0 left-0 right-0 z-[999] pointer-events-none"
