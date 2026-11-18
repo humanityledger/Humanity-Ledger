@@ -69,7 +69,8 @@
 }
 
 /* ── Scenes ─────────────────────────────────────────────── */
-.scene { position: relative; height: calc(var(--run) * 0.65svh); contain: layout style; }
+/* Mobile runs are ~65% of desktop, and always longer than one screen so the scene pins. */
+.scene { position: relative; height: calc(100svh + (var(--run) - 100) * 0.65svh); contain: layout style; }
 .pin { position: sticky; top: 0; height: 100svh; overflow: hidden; contain: layout paint style; }
 @media (min-width: 900px) { .scene { height: calc(var(--run) * 1svh); } }
 .scene:not([data-near]) .pin { content-visibility: auto; contain-intrinsic-size: auto 100svh; }
@@ -93,7 +94,8 @@
 
 /* 2. Say hi: the cinema window grows from a card to 92% */
 .cinema { position: absolute; left: 4vw; right: 4vw; top: 12svh; height: 58svh; border-radius: 32px; overflow: hidden; background: #0b0820;
-  --a: 0; --b: 0.35; --s: calc(0.5 + var(--e) * 0.5); transform: scale(var(--s)); }
+  --a: 0; --b: 0.35; --s: calc(0.5 + var(--e) * 0.5); transform: scale(var(--s));
+  opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.64) * 6), 1)); }
 .cinemaInner { position: absolute; inset: 0; transform: scale(calc(1 / var(--s))); }
 .typing { position: absolute; left: 8%; top: 10%; margin: 0; font-size: clamp(22px, 3vw, 40px); font-weight: 600; color: #fff; }
 .typed span { opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 60), 1); }
@@ -167,9 +169,18 @@
 
 /* Mobile: the phone takes 78% of the width, captions sit at the top */
 @media (max-width: 899px) {
-  .payPhone, .hiPhone, .callPhone { right: 11vw; width: 78vw; opacity: calc(var(--k) * 0.9); }
+  /* Caption on top, the object below it, never on top of each other. */
   .caption { top: 84px; bottom: auto; }
   .heroCopy { top: 96px; }
+  .payPhone, .hiPhone, .callPhone { right: 11vw; width: 78vw; top: auto; bottom: 2svh; height: 54svh; margin-top: 0; }
+  .layers { top: 64%; }
+  .nameRow { top: 66%; }
+  .note { top: 40%; }
+  .band:first-child { top: 40svh; }
+  .bandEth { top: 74svh; }
+  .proof { top: 48svh; }
+  .cinema { top: 30svh; height: 44svh; }
+  .bubble { top: 50svh; }
 }
 
 /* ── Static sections ─────────────────────────────────────── */
