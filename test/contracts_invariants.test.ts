@@ -82,8 +82,24 @@ describe('T8 / A4 — L1 Contract Invariants & Anti-Backdoor Controls', function
   });
 
   // HumanityIdentityRegistry was retired on 18 November 2026 (operator decision B-3a, IR-05).
-  it('the retired identity registry and StudioProvenance are no longer compiled', async function () {
-    const names = await hre.artifacts.getAllFullyQualifiedNames();
-    expect(names.some((n: string) => /HumanityIdentityRegistry|StudioProvenance/.test(n))).to.equal(false);
+  // Checked on the sources, not on artifacts/: a local artifacts folder can keep stale entries
+  // from an earlier compile (seen on Windows, 18 Nov 2026), which made this test depend on history.
+  it('the retired identity registry and StudioProvenance are gone from the sources', async function () {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const files: string[] = [];
+    const walk = (d: string) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (p.endsWith('.sol')) files.push(p);
+      }
+    };
+    walk(path.join(__dirname, '..', 'contracts'));
+    expect(files.length).to.be.greaterThan(0);
+    for (const f of files) {
+      expect(path.basename(f), f).to.not.match(/^(HumanityIdentityRegistry|StudioProvenance)\.sol$/);
+      expect(fs.readFileSync(f, 'utf8'), f).to.not.match(/HumanityIdentityRegistry|StudioProvenance/);
+    }
   });
 });
