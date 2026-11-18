@@ -593,24 +593,29 @@ export async function sendMessage(
     try {
       if (!dm) {
         dm = await withTimeout(client.conversations.newDmWithIdentifier(identifier), 8000, 'newDm timeout');
-        try { await withTimeout(dm.sync(), 3000, 'sync timeout'); } catch {}
+        // Not awaited: publishMessages() brings the group up to date itself. Waiting here
+        // added up to 3 s to the first message of every conversation.
+        Promise.resolve().then(() => dm.sync()).catch(() => {});
       }
       if (!sentId) {
         sentId = await withTimeout<string>(dm.sendOptimistic(content), 5000, 'prepare timeout');
       }
-      await withTimeout(dm.publishMessages(), 8000, 'publish timeout');
-
       activeDmCache.set(cacheKey, dm);
-      dm.sync().catch(() => {});
+      // Serialised per conversation (publishSerial). A timeout here only stops waiting: the
+      // publish keeps running, and the next attempt queues behind it instead of racing it.
+      await withTimeout(publishSerial(cacheKey, dm), PUBLISH_WAIT_MS, 'publish timeout');
       return sentId;
     } catch (sendErr: any) {
       lastError = sendErr;
       console.warn(`[XMTP] Attempt ${i + 1} for ${toAddress} did not complete:`, sendErr?.message || sendErr);
-      if (!sentId) {
-        // Nothing was created yet: a fresh conversation handle is safe.
-        activeDmCache.delete(cacheKey);
-        dm = null;
+      if (sentId) {
+        // The message exists locally with its real id. Do not hold the chat's send queue for
+        // more attempts (that delayed every following message): publish in the background.
+        break;
       }
+      // Nothing was created yet: a fresh conversation handle is safe.
+      activeDmCache.delete(cacheKey);
+      dm = null;
       if (i < 3) await new Promise(r => setTimeout(r, 300 * (i + 1)));
     }
   }
@@ -633,17 +638,82 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   ]);
 }
 
-const publishRetries = new Map<string, number>();
-/** Retry publishing a conversation's unpublished messages for up to ~2 minutes. */
+/**
+ * Messages that did not reach the network (18 November 2026, "messages sent from Safari do not
+ * arrive"). Three causes, all fixed here:
+ *  1. Concurrent publishes of one conversation. A message, its typing signal and its read
+ *     receipts each called publishMessages() at once, and each retry after an 8 s timeout started
+ *     another one while the first was still running. On a slower engine (Safari's WebAssembly)
+ *     they collided and failed together. Now one publish runs per conversation at a time.
+ *  2. Giving up. Background retries stopped after about 2 minutes, and nothing published again
+ *     when the tab came back or the network returned. Now retries continue with a 30 s cap,
+ *     and flushPendingPublishes() runs on `online` and when the page becomes visible.
+ *  3. A fixed 8 s wait for the first publish of a new conversation, which on a slow device
+ *     declared failure while the publish was about to succeed. The wait is 20 s.
+ */
+const PUBLISH_WAIT_MS = 20_000;
+const publishChain = new Map<string, Promise<void>>();
+
+/** Queue one publishMessages() for this conversation after any publish already in flight. */
+export function publishSerial(cacheKey: string, dm: any): Promise<void> {
+  const prev = publishChain.get(cacheKey) ?? Promise.resolve();
+  const next: Promise<void> = prev.catch(() => {}).then(() => dm.publishMessages());
+  publishChain.set(cacheKey, next);
+  next.then(
+    () => { if (publishChain.get(cacheKey) === next) publishChain.delete(cacheKey); },
+    () => { if (publishChain.get(cacheKey) === next) publishChain.delete(cacheKey); },
+  );
+  return next;
+}
+
+const publishRetries = new Map<string, { dm: any; attempt: number; timer: ReturnType<typeof setTimeout> | null }>();
+const MAX_PUBLISH_RETRIES = 60; // about 25 minutes at the 30 s cap, plus every online/visible flush
+
+/** Keep publishing a conversation's unpublished messages until the network confirms them. */
 function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
-  if (attempt >= 8) { publishRetries.delete(cacheKey); return; }
-  if (attempt === 0 && publishRetries.has(cacheKey)) return; // already retrying
-  publishRetries.set(cacheKey, attempt);
-  setTimeout(() => {
-    dm.publishMessages()
+  const existing = publishRetries.get(cacheKey);
+  if (attempt === 0 && existing) { existing.dm = dm; return; } // already retrying
+  if (attempt >= MAX_PUBLISH_RETRIES) { publishRetries.delete(cacheKey); return; }
+  const entry = { dm, attempt, timer: null as ReturnType<typeof setTimeout> | null };
+  publishRetries.set(cacheKey, entry);
+  entry.timer = setTimeout(() => {
+    publishSerial(cacheKey, entry.dm)
       .then(() => publishRetries.delete(cacheKey))
-      .catch(() => schedulePublishRetry(cacheKey, dm, attempt + 1));
-  }, Math.min(2000 * 2 ** attempt, 30_000));
+      .catch(() => schedulePublishRetry(cacheKey, entry.dm, attempt + 1));
+  }, Math.min(1000 * 2 ** attempt, 30_000));
+}
+
+/**
+ * Publish now every conversation that still has messages waiting (called when the network
+ * returns and when the page becomes visible again). Returns how many conversations it tried.
+ */
+export async function flushPendingPublishes(): Promise<number> {
+  const pending = [...publishRetries.entries()];
+  await Promise.all(
+    pending.map(async ([key, entry]) => {
+      if (entry.timer) clearTimeout(entry.timer);
+      try {
+        await publishSerial(key, entry.dm);
+        publishRetries.delete(key);
+      } catch {
+        publishRetries.delete(key);
+        schedulePublishRetry(key, entry.dm, Math.min(entry.attempt + 1, MAX_PUBLISH_RETRIES - 1));
+      }
+    }),
+  );
+  return pending.length;
+}
+
+let flushListenersInstalled = false;
+/** Install the online/visibility listeners once per page. */
+export function installPublishFlushListeners(): void {
+  if (flushListenersInstalled || typeof window === 'undefined') return;
+  flushListenersInstalled = true;
+  const flush = () => { flushPendingPublishes().catch(() => {}); };
+  window.addEventListener('online', flush);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') flush(); });
+  // Safari restores pages from the back/forward cache without a reload.
+  window.addEventListener('pageshow', flush);
 }
 
 /**
