@@ -95,7 +95,11 @@ contract HLReceiverTest is PortalBase {
     }
 
     function test_forward_eth_and_through_the_factory() public {
-        vm.deal(address(r), 3 ether);
+        // A plain ETH payment to the receiver address is accepted (receive()).
+        vm.deal(alice, 3 ether);
+        vm.prank(alice);
+        (bool ok,) = address(r).call{value: 3 ether}("");
+        assertTrue(ok);
         r.forward(address(0), 2 ether);
         assertEq(portal.totalLocked(address(weth)), 2 ether);
         // The factory deploys a new receiver and forwards in one call.

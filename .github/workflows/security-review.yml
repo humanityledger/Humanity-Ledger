@@ -64,11 +64,15 @@ jobs:
           exit ${rc:-0}
       - name: Install Aderyn
         if: always()
+        # Cyfrin retired Aderyn in 2026 and withdrew its installer (run 44275097419 printed
+        # "Aderyn has been retired and is no longer maintained"). The last crates.io release is
+        # still tried; when it cannot be installed the step says so and Aderyn is skipped.
+        id: aderyn_install
         run: |
-          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/cyfrin/aderyn/releases/latest/download/aderyn-installer.sh | bash
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          if cargo install aderyn --locked; then echo "ok=1" >> "$GITHUB_OUTPUT";
+          else echo "::warning::Aderyn could not be installed (retired upstream); skipped."; echo "### Aderyn: not available (retired upstream)" >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Aderyn
-        if: always()
+        if: always() && steps.aderyn_install.outputs.ok == '1'
         run: |
           aderyn . -o aderyn-report.md
           echo "### Aderyn" >> "$GITHUB_STEP_SUMMARY"

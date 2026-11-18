@@ -132,6 +132,8 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
     function depositToken(address _tokenAddress, uint256 _amount) external nonReentrant {
         if (_tokenAddress == address(0))                   revert InvalidToken();
         if (_amount == 0)                                  revert InvalidAmount();
+        // Slither incorrect-equality: a zero timestamp is the "does not exist" sentinel, not a clock comparison.
+        // slither-disable-next-line incorrect-equality
         if (vaults[msg.sender].lastHeartbeat == 0)         revert NoVault();
         if (vaults[msg.sender].isTriggered)                revert VaultAlreadyTriggered();
 
@@ -187,6 +189,8 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
      * @notice Prove liveness. Resets the inactivity clock for the caller's vault.
      */
     function pingHeartbeat() external {
+        // Slither incorrect-equality: a zero timestamp is the "does not exist" sentinel, not a clock comparison.
+        // slither-disable-next-line incorrect-equality
         if (vaults[msg.sender].lastHeartbeat == 0) revert NoVault();
         if (vaults[msg.sender].isTriggered)        revert VaultAlreadyTriggered();
         vaults[msg.sender].lastHeartbeat = block.timestamp;
@@ -211,6 +215,8 @@ contract HumanityTimeLockVault is Ownable, ReentrancyGuard {
     // slither-disable-next-line reentrancy-no-eth
     function executeDeadManSwitch(address _vaultOwner) external nonReentrant {
         VaultConfig storage config = vaults[_vaultOwner];
+        // Slither incorrect-equality: a zero timestamp is the "does not exist" sentinel, not a clock comparison.
+        // slither-disable-next-line incorrect-equality
         if (config.lastHeartbeat == 0) revert NoVault();
         bool firstTrigger = !config.isTriggered;
         if (firstTrigger) {

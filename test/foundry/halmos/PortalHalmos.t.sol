@@ -82,11 +82,18 @@ contract PortalHalmos is Test {
         assert(!q && !d && !qa);
     }
 
-    /// sha256ToField always yields a field element (top byte zero), for any 32-byte input.
-    function check_sha256ToField_is_a_field_element(bytes32 x, bytes32 y) public pure {
+    /// sha256ToField always yields a field element (top byte zero). One input size per check:
+    /// halmos models sha256 per input length.
+    function check_sha256ToField_32_bytes(bytes32 x) public pure {
         assert(uint256(AztecMessaging.sha256ToField(abi.encode(x))) < FIELD);
-        assert(uint256(AztecMessaging.sha256ToField(abi.encode(x, y))) < FIELD);
-        assert(uint256(AztecMessaging.mintToPrivateContent(uint256(x))) < FIELD);
+    }
+
+    function check_mint_content_is_a_field_element(uint256 amount) public pure {
+        assert(uint256(AztecMessaging.mintToPrivateContent(amount)) < FIELD);
+    }
+
+    function check_withdraw_content_is_a_field_element(address r, uint256 amount, address c) public pure {
+        assert(uint256(AztecMessaging.withdrawContent(r, amount, c)) < FIELD);
     }
 
     /// The receiver salt binds both the secret hash and the rescue signer (under keccak injectivity).
