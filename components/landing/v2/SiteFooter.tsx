@@ -64,7 +64,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Trust",
     links: [
-      { label: "Security audits", href: "/docs/audits" },
+      { label: "Security reviews", href: "/docs/audits" },
       { label: "Report a vulnerability", href: "/docs/bug-bounty" },
       { label: "Risk disclosure", href: "/docs/disclaimer" },
       { label: "Content policy", href: "/docs/content-policy" },
