@@ -6,8 +6,9 @@ const settings = readFileSync('components/chat/LedgerSettingsFull.tsx', 'utf8');
 
 describe('Settings opens its sections on phones and tablets (cause found 18/11/2026)', () => {
   it('the global nav centering rule never un-hides a hidden nav', () => {
-    expect(css).toMatch(/nav\[class\*="flex"\]:not\(\.hidden\):not\(\[hidden\]\) \{/);
-    expect(css).not.toMatch(/^nav\[class\*="flex"\] \{/m);
+    // Zero specificity (:where), so Tailwind's .hidden always wins over the centering rule.
+    expect(css).toMatch(/:where\(\.tab-row, \[role="tablist"\], nav\[class\*="flex"\]\) \{/);
+    expect(css).not.toMatch(/^nav\[class\*="flex"\]( |,)/m);
   });
   it('the section list is rendered only when it is to be seen, not hidden by a class', () => {
     expect(settings).toMatch(/\{\(wide \|\| activeTab === 'home'\) && \(\s*<nav aria-label="Settings sections"/);
