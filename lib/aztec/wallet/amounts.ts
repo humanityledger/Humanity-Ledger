@@ -7,7 +7,11 @@
 const AMOUNT_RE = /^(\d+)(?:\.(\d+))?$/;
 
 export function parseUnits(input: string, decimals: number): bigint {
-  const clean = input.trim().replace(/,/g, '');
+  const clean = input.trim();
+  // IR-03 (internal security review, 18 Nov 2026): commas used to be stripped as thousand
+  // separators, so "1,5" typed on a Spanish keyboard (meaning 1.5) became 15: ten times the
+  // payment. A comma is read differently in different locales, so it is refused, never guessed.
+  if (clean.includes(',')) throw new Error('Use a dot for decimals, such as 1.5, without thousand separators.');
   const m = AMOUNT_RE.exec(clean);
   if (!m) throw new Error('Enter an amount such as 10 or 0.5.');
   const whole = m[1];
