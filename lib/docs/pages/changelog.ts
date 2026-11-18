@@ -27,6 +27,7 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "fixed", text: "Messages reach the other person again. Since the morning of 18 November, one stuck send could hold every later message, typing signal and read receipt of that conversation until the page was reloaded. A stuck send now waits at most 15 seconds before the next one goes out, and nothing is sent twice." },
       { kind: "new", text: "Usernames. Choose a @username in Settings → Profile. Each one is unique in the world: a name someone else holds cannot be saved, in any capitalisation, and the app offers free endings like name.01. Only letters a to z, numbers and \"_\" are allowed, so no look-alike letters can imitate another person's name." },
       { kind: "new", text: "Your QR code and link. Settings → QR code or link shows a code on a card you can recolour and save as an image, and a link you can copy. They open a chat with you without showing your wallet address, and Reset makes every old code and link stop working." },
       { kind: "improved", text: "A new QR code design: round dots, rounded corner eyes and the Humanity Ledger globe in the centre. It uses the strongest error correction (up to 30 % of the code can be covered and it still scans) and is the same in the app, in the saved image, on the sign-in screen and in the wallet's receive codes." },
