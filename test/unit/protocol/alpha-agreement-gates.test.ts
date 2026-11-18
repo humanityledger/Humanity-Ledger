@@ -27,6 +27,17 @@ describe('designated treasury', () => {
     }
   });
 
+  it('the internal security review is recorded as such and never counts as an audit', () => {
+    expect(mainnet.audit).toBe(null);
+    expect(mainnet.internalReview).toMatchObject({ date: '2026-11-18', baseCommit: '6251a73' });
+    expect(fs.existsSync(mainnet.internalReview.report)).toBe(true);
+    // The gate reads only `audit`: an internal review leaves Alpha refused.
+    expect(hasAudit(mainnet.audit)).toBe(false);
+    expect(deployRefusal({ kind: 'escrow', network: 'mainnet', audit: mainnet.audit, pendingContracts: [], treasurySet: true })).toBe(AUDIT_REFUSED);
+    // The words of an audit do not describe it anywhere in the record.
+    expect(JSON.stringify(mainnet.internalReview)).not.toMatch(/audited|audit seal|certified/i);
+  });
+
   it('no audit is recorded, and no treasury field is invented in the deployment records', () => {
     expect(mainnet.audit).toBe(null);
     for (const f of ['deployments/aztec-mainnet.json', 'deployments/aztec-testnet.json']) {

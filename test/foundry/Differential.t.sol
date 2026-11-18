@@ -31,6 +31,10 @@ contract DifferentialTest is Test {
         assertEq(AztecMessaging.withdrawContent(r, amount, c), bytes32(uint256(h) >> 8));
     }
 
+    function testFuzz_sha256ToField_is_a_field_element(bytes memory data) public pure {
+        assertLt(uint256(AztecMessaging.sha256ToField(data)), 21888242871839275222246405745257275088548364400416034343698204186575808495617);
+    }
+
     function testFuzz_mint_content_is_the_abi_encoding(uint256 amount) public pure {
         bytes32 h = sha256(abi.encodeWithSignature("mint_to_private(uint256)", amount));
         assertEq(AztecMessaging.mintToPrivateContent(amount), bytes32(uint256(h) >> 8));

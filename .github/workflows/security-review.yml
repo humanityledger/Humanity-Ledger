@@ -24,9 +24,9 @@ on:
 permissions:
   contents: read
 
+# No cancel-in-progress: the Gambit job runs for hours and its result must survive new pushes.
 concurrency:
-  group: security-review-${{ github.ref }}
-  cancel-in-progress: true
+  group: security-review-${{ github.ref }}-${{ github.sha }}
 
 env:
   FORGE_STD_REF: v1.9.4
