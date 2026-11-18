@@ -1,0 +1,318 @@
+[
+  {
+    "page": "home",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NWQyZDg5ZDItZTU1OS00MWIxLTgyZDAtY2M4OTgzZDYyMjlm' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NzgzOTAzYmYtNmZiYy00MGE5LThjNmItZmRiMTFkMmZjYzQ3' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-OGRlNjIyZDgtOWRlZS00MWU3LTk1ZWUtYzIzY2JlMTMyMjQ3' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NTZhZDE4NDctNDFhYy00YTU4LThiNjEtMzVlZDNlZDY4MjEw' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-ecosystem",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/ecosystem",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZDU5MDUwODYtZmFiNi00M2ZkLTg3NWEtYTU5MWU3NzIxZjc2' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-whitepaper",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/whitepaper",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YWQ5ZTgyN2YtYmI4Yy00MGQ1LWIzNmEtNTZhM2FlMGUzOTMw' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NmM4YTdjMTQtNTMyZi00YWZjLWI2YjQtYzdkNjhkYTBhZjcz' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-Y2YzMTc4MTgtOWIzNi00ZGJlLTg3MzctOTViZTMwMGIwZjUy' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-Yzc1ZThiZTYtMGUyOC00ZWU3LTg2MzEtNTQwMDcxODcyMTM3' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "hub-redirect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MGFkOTZiNjItZmQ1Zi00YTk4LThjZDktYzA3NDlhYjY2ZmQw' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NTQxOTE1ODEtMzI0ZC00ODgyLWExMzUtZjZiYWM5NzI0MzMz' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "home",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MzliNWMxMTYtYmY2Ni00YzY2LTgxMGMtZTM5ZTc4MjY5ZTk4' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2U5NTc3NzgtNTQyZC00YTVlLWE2MDUtZmFiOGQ1ZmIyZjIw' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NmFkM2YyNDItMzFkOC00M2FjLTg0OTktNDQ1NDA5NDUwYTQx' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MGY2MjI4MmUtMGI1ZS00ZTUwLTlkYTEtMTRhNjJjMWVkMDU5' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-ecosystem",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/ecosystem",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZjAzODdmNzgtYmE4Zi00YTVmLThhMDQtYmQ0MjFjOTNiNTk4' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-whitepaper",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/whitepaper",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NTc0ODE0MGQtNDFlOS00YWY0LTgzMDctYjhlZWVjMGZmODlj' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZmZmZmQ5MWItMDk1My00MzFjLTlkZTUtOWFiMjdlZmU4M2Vj' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NzhkYTdlZDQtOTJmMS00ZjczLWE5MDEtNmM5YTI1Yzg0MTFh' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YzNhNjU5MjQtNGU2NS00NTkyLWEzZGEtOGM0OGM5OWIwOWJh' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "hub-redirect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2YwZjU0MTQtNDcxYS00MmY3LTg5NWEtMGU4ODRkNTc0ZmUy' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-OWM2ZWRlZWEtMjEzNy00NzhkLWI2ZmQtOTc0ZDFiNGNhYjAy' 'wasm-unsafe-eval' htt"
+    ]
+  }
+]
