@@ -33,6 +33,7 @@ import { resolveWallpaper } from '@/lib/chat/wallpapers';
 import { BUBBLE_STYLES } from '@/lib/chat/bubbleStyles';
 import { setStickerEffectsEnabled, stickerEffectsEnabled } from './StickerSceneHost';
 import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
+import { ProfileHeaderCard, ProfilePanel, ProfileSharePanel, UsernameEditor } from './profile/ProfileShare';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -193,6 +194,9 @@ const SETTINGS_SECTIONS = [
   },
 ];
 
+// Profile screens opened from the card at the top of Settings (not listed as sections).
+const PROFILE_TABS: Record<string, string> = { profile: 'Profile', username: 'Username', share: 'QR code or link' };
+
 const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [blocked, setBlocked] = useState<string[] | null>(null);
   useEffect(() => {
@@ -344,6 +348,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const push = usePushNotifications(myAddress);
 
   const [activeTab, setActiveTab] = useState<string>('home');
+  // Wide screens show the list and a section side by side: start on Profile, as Signal does.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches) setActiveTab((t) => (t === 'home' ? 'profile' : t));
+  }, []);
   const [modal, setModal] = useState<string | null>(null);
   // The Appearance studio (theme, wallpaper, bubbles), opened on one of its tabs.
   const [studio, setStudio] = useState<AppearanceTab | null>(null);
@@ -537,9 +545,19 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       </div>
 
       {/* ── Section Navigation: iOS grouped list when no section selected ── */}
-      {activeTab === 'home' && (
-        <div className="flex-1 overflow-y-auto">
+      {/* Two panes from 768 px, as in Signal Desktop: the list on the left stays, the section
+          opens on the right. Phones keep one screen at a time with a back link. */}
+      <div className="flex-1 flex min-h-0">
+      <nav aria-label="Settings sections" className={`${activeTab === 'home' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[340px] lg:w-[360px] md:shrink-0 md:border-r md:border-[#e6e8ec] md:bg-[#f7f8fa] overflow-y-auto`}>
           <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
+            {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
+            <ProfileHeaderCard
+              address={walletAddrForDevices}
+              name={myName || shortAddr(walletAddrForDevices)}
+              photo={avatarUrl || null}
+              onOpenProfile={() => setActiveTab('profile')}
+              onOpenShare={() => setActiveTab('share')}
+            />
             {SETTINGS_SECTIONS.map(section => (
               <div key={section.title}>
                 <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{section.title}</p>
@@ -549,7 +567,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-[#f7f8fa] transition-colors ${
+                      aria-current={activeTab === item.id ? 'page' : undefined}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-[#eef0f3]' : 'hover:bg-[#f7f8fa]'} ${
                         idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
                       }`}
                     >
@@ -567,12 +586,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </div>
             ))}
           </div>
-        </div>
-      )}
+      </nav>
 
-      {/* ── Section sub-header breadcrumb (when inside a section) ── */}
+      <div className={`${activeTab === 'home' ? 'hidden' : 'flex'} md:flex flex-1 flex-col min-w-0 min-h-0`}>
+      {/* ── Section sub-header breadcrumb (phones: the list is not beside it) ── */}
       {activeTab !== 'home' && (
-        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
+        <div className="md:hidden shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
           <button
             type="button"
             onClick={() => setActiveTab('home')}
@@ -583,7 +602,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           </button>
           <span className="text-[#c9ced6]">/</span>
           <span className="text-[14px] text-[#727a88] font-medium">
-            {SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
+            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
           </span>
         </div>
       )}
@@ -592,6 +611,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {activeTab !== 'home' && (
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
+          <h2 className="hidden md:block text-center text-[15px] font-semibold text-[#15171c] mb-5">
+            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
+          </h2>
+
+          {activeTab === 'profile' && (
+            <ProfilePanel
+              address={walletAddrForDevices}
+              name={myName || shortAddr(walletAddrForDevices)}
+              photo={avatarUrl || null}
+              onEditName={() => setActiveTab('account')}
+              onEditUsername={() => setActiveTab('username')}
+              onOpenShare={() => setActiveTab('share')}
+            />
+          )}
+          {activeTab === 'username' && <UsernameEditor onDone={() => setActiveTab('profile')} />}
+          {activeTab === 'share' && <ProfileSharePanel address={walletAddrForDevices} onEditUsername={() => setActiveTab('username')} />}
 
           {/* ════════════════════════════════════════════════════════════════════
               ACCOUNT TAB
@@ -1284,6 +1319,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         </div>
       </div>
       )}
+      </div>
+      </div>
 
       {/* ════════════════════════════════════════════════════════════════════════
           MODALS (Bottom Sheet)

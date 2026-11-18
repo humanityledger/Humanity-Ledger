@@ -47,6 +47,7 @@ const PUBLIC_PATHS = new Set([
   '/auth',
   '/connect',
   '/chat',       // LedgerChat handles its own auth internally (XMTP + MetaMask)
+  '/u',          // Profile links (/u#token): hands the token to /chat; the token never reaches the server
   '/studio',     // Ledger Studio handles its own wallet auth internally
   '/academy',    // Turing Shield — Academic Integrity Engine (handles own wallet auth internally)
   // Public documentation, company and legal pages. Anyone must be able to

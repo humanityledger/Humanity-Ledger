@@ -3,7 +3,7 @@
 /**
  * components/chat/ChatLottie.tsx — the four chat animations, each in one place.
  *
- *   NEW_CONVERSATION  public/lottie/new-conversation.json   an empty conversation, until its first message
+ *   NEW_CONVERSATION  public/lottie/new-conversation-chit-chatting.json   an empty conversation, until its first message
  *   PEER_TYPING       public/lottie/peer-typing.json        while the other person is writing
  *   SEND_CONFIRMATION public/lottie/send-confirmation.json  once, when a message is sent (phones: arrow)
  *   SEND_CONFIRMATION_WIDE public/lottie/send-confirmation-plane.json  the same on wide screens (paper plane)
@@ -19,7 +19,9 @@ import React, { useEffect, useState } from 'react';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
 
 export const LOTTIE = {
-  NEW_CONVERSATION: '/lottie/new-conversation.json',
+  // A new file name, not the old one: the cat that used to live at new-conversation.json stays in
+  // browser and CDN caches for up to a week (Cache-Control in next.config.js, fetch force-cache).
+  NEW_CONVERSATION: '/lottie/new-conversation-chit-chatting.json',
   PEER_TYPING: '/lottie/peer-typing.json',
   SEND_CONFIRMATION: '/lottie/send-confirmation.json',
   SEND_CONFIRMATION_WIDE: '/lottie/send-confirmation-plane.json',

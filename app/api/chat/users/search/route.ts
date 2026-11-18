@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { canonicalUsername, usernameProblem } from '@/lib/chat/usernames';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,21 +28,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ users: [] });
   }
 
-  const formatUser = (u: any) => {
+  // "@" is shown only for a real username (unique, lib/chat/usernames.ts). A display name is not
+  // unique, so it is never dressed up as a handle: two people can both be called "Stefan".
+  const usernames = new Map<string, string>();
+  const formatUser = (u: any, exact = false) => {
     const resolvedName =
       u.chatName && u.chatName !== 'Ledger User'
         ? u.chatName
         : u.displayName ?? null;
+    const handle = usernames.get(String(u.walletAddress).toLowerCase());
     return {
       address: u.walletAddress,
-      nickname: resolvedName
-        ? `@${resolvedName}`
-        : `@${(u.walletAddress ?? '').slice(2, 10)}`,
-      name: resolvedName ?? 'Unknown User',
+      nickname: handle ? `@${handle}` : '',
+      username: handle ?? null,
+      exact,
+      name: resolvedName ?? `${String(u.walletAddress).slice(0, 6)}…${String(u.walletAddress).slice(-4)}`,
       country: '',
       isVerified: !!u.isZkVerified,
       tier: u.tier ?? 'FREE',
     };
+  };
+  const loadUsernames = async (addresses: string[]) => {
+    if (!addresses.length) return;
+    const rows = await (prisma as any).chatUsername.findMany({ where: { walletAddress: { in: addresses.map((a) => a.toLowerCase()) } } });
+    for (const r of rows) usernames.set(r.walletAddress, r.username);
   };
 
   const SELECT = {
@@ -59,7 +69,20 @@ export async function GET(req: NextRequest) {
         where: { walletAddress: raw.toLowerCase() },
         select: SELECT,
       });
-      return NextResponse.json({ users: user ? [formatUser(user)] : [] });
+      if (user) await loadUsernames([user.walletAddress]);
+      return NextResponse.json({ users: user ? [formatUser(user, true)] : [] });
+    }
+
+    // Exact username first: the one result that is certainly the person the name belongs to.
+    let exact: any = null;
+    if (!usernameProblem(q)) {
+      const hit = await (prisma as any).chatUsername.findUnique({ where: { username: canonicalUsername(q) } });
+      if (hit) {
+        usernames.set(hit.walletAddress, hit.username);
+        exact = (await (prisma as any).user.findUnique({ where: { walletAddress: hit.walletAddress }, select: SELECT })) ?? {
+          walletAddress: hit.walletAddress, chatName: null, displayName: null, isZkVerified: false, tier: 'FREE',
+        };
+      }
     }
 
     // Partial match on chatName, displayName, or walletAddress
@@ -75,7 +98,9 @@ export async function GET(req: NextRequest) {
       take: 20,
     });
 
-    return NextResponse.json({ users: users.map(formatUser) });
+    await loadUsernames(users.map((u: any) => u.walletAddress));
+    const rest = users.filter((u: any) => !exact || String(u.walletAddress).toLowerCase() !== String(exact.walletAddress).toLowerCase());
+    return NextResponse.json({ users: [...(exact ? [formatUser(exact, true)] : []), ...rest.map((u: any) => formatUser(u))] });
   } catch (err: any) {
     console.error('[chat/users/search]', err);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
