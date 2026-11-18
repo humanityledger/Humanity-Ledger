@@ -798,6 +798,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab(item.id)}
+                      data-settings-item={item.id}
                       aria-current={activeTab === item.id ? 'page' : undefined}
                       className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-[#eef0f3]' : 'hover:bg-[#f7f8fa]'} ${
                         idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
@@ -840,7 +841,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
       {/* ── Content (shown when a section is selected) ── */}
       {activeTab !== 'home' && (
-      <div className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div data-testid="settings-content" className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
           <h2 className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5`}>
             {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}

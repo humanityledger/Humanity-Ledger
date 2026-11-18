@@ -6,6 +6,14 @@ import { ChatEngineProvider } from '@/context/ChatEngineProvider';
 import { KeyboardViewport } from '@/components/layout/KeyboardViewport';
 import { BootMark } from '@/components/layout/BootMark';
 
+// Test builds only (NEXT_PUBLIC_E2E_HARNESS=1, inlined at build): /chat?e2e=settings mounts Settings
+// alone for the WebKit and Chromium test (scripts/ui/settings-webkit.mjs). Absent from production.
+const E2E = process.env.NEXT_PUBLIC_E2E_HARNESS === '1';
+const SettingsHarness = E2E ? dynamic(() => import('@/components/chat/e2e/SettingsHarness'), { ssr: false }) : null;
+// Decided during render, not in an effect: TuringShieldGate's effect would run first and send a
+// visitor without a session to /connect before an effect here could switch.
+const harnessOn = () => E2E && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e2e') === 'settings';
+
 // The same mark as the PIN check before it and the channel screen after it (BootMark).
 function ChatLoading() {
   return (
@@ -26,6 +34,7 @@ const LedgerChat = dynamic(
 export default function ChatPage() {
   // Counts this browser once a day for the live map on the landing page (lib/stats).
   useVisitBeacon();
+  if (SettingsHarness && harnessOn()) return <SettingsHarness />;
   return (
     <TuringShieldGate>
       <KeyboardViewport />
