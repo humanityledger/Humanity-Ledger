@@ -176,7 +176,7 @@
       "status": "not-deployed",
       "tracksCurrentArtifact": false,
       "note": "Superseded on 17 November 2026. This class was compiled when TREASURY in the source was AztecAddress { inner: 0 }; the client refuses it. Never deployed, no address. Kept as history; it is not a current class.",
-      "supersededBy": "0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6"
+      "supersededBy": "0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143"
     },
     {
       "name": "PrivateEscrow with the designated treasury and the 16 November fee baseline (superseded, never deployed)",
@@ -212,7 +212,7 @@
       "status": "not-deployed",
       "tracksCurrentArtifact": false,
       "note": "Superseded on 17 November 2026. This class was compiled when TREASURY in the source was AztecAddress { inner: 0 }; the client refuses it. Never deployed, no address. Kept as history; it is not a current class.",
-      "supersededBy": "0x07e2947d207b8980d5375c893bbe2de3bd535e1fd9e688e1119416f463dacca7"
+      "supersededBy": "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3"
     },
     {
       "name": "PaymentStream with the designated treasury, before IA-01 (superseded, never deployed)",
@@ -224,7 +224,7 @@
       "status": "not-deployed",
       "tracksCurrentArtifact": false,
       "note": "Superseded on 18 November 2026 by the internal audit fix IA-01 (a cancel never fails because of the fee; docs/audit/INTERNAL_AUDIT_2026-11-18.md). Never deployed, no address. Kept as history; it is not a current class.",
-      "supersededBy": "0x07e2947d207b8980d5375c893bbe2de3bd535e1fd9e688e1119416f463dacca7"
+      "supersededBy": "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3"
     },
     {
       "name": "PaymentStream with the designated treasury and IA-01 cancel fee (superseded, never deployed)",
@@ -247,7 +247,7 @@
       "keyed": false,
       "status": "not-deployed",
       "tracksCurrentArtifact": true,
-      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 (run 44287098692, committed on the branch by CI) from the source with FEE_BPS 0, STREAM_MIN_FEE 0 and MAX_AMOUNT 100_000_000 (OD-2, OD-7, signed by Stefan Antonio Cirisanu on 18 November 2026), with IA-01's cancel_fee (which pays 0 at a zero schedule). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44288052113. TXE: recorded with the run that follows the test fix on this branch. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
+      "note": "Class of the artifact the \"Aztec contracts\" workflow compiled with Aztec 6.0.0 (run 44287098692, committed on the branch by CI) from the source with FEE_BPS 0, STREAM_MIN_FEE 0 and MAX_AMOUNT 100_000_000 (OD-2, OD-7, signed by Stefan Antonio Cirisanu on 18 November 2026), with IA-01's cancel_fee (which pays 0 at a zero schedule). Computed with getContractClassFromArtifact by scripts/aztec/print-class-ids.mjs in workflow run 44288052113. TXE in contracts/aztec/streams (Security review run 44288737213, job 134748091139): 35 tests passed. No instance and no address. Nothing was sent on Alpha. There is no external audit.",
       "artifactSha256": "c154bcd8e3c0c6e2c82eef37a64b01ab5b36a8f2f3182cfc6c2fd033a4b3a304"
     }
   ],
