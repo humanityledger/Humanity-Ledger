@@ -15,6 +15,10 @@ interface LedgerChatUserSearchProps {
 interface SearchUser {
   address: string;
   nickname: string;
+  /** The unique username, when the person has one (lib/chat/usernames.ts). */
+  username?: string | null;
+  /** True for the account that owns exactly the username or address typed. */
+  exact?: boolean;
   name: string;
   country: string;
   isVerified?: boolean;
@@ -241,7 +245,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
               >
                 {results.map(user => {
                   const tier = tierInfo(user.tier);
-                  const initials = user.nickname.replace('@', '').slice(0, 2).toUpperCase();
+                  const initials = (user.name || user.nickname || user.address.slice(2)).replace('@', '').slice(0, 2).toUpperCase();
                   const hue = parseInt(user.address.slice(2, 8), 16) % 360;
                   const addr = user.address.toLowerCase();
                   const reqStatus = requestStatuses[addr] ?? 'none';
@@ -261,7 +265,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                         </div>
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[15px] font-semibold text-black truncate">{user.nickname}</span>
+                            <span className="text-[15px] font-semibold text-black truncate">{user.name}</span>
                             {user.isVerified && (
                               <div title="ZK Verified">
                                 <ShieldCheck size={13} className="text-[#30d158] shrink-0" />
@@ -269,6 +273,11 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
+                            {user.username ? (
+                              <span className="text-[12.5px] text-[#5b606b] truncate">@{user.username}{user.exact ? ' · exact match' : ''}</span>
+                            ) : (
+                              <span className="text-[12.5px] text-[#8a8f98] tabular-nums">{user.address.slice(0, 6)}…{user.address.slice(-4)}</span>
+                            )}
                             {user.country && user.country !== 'Unknown' && (
                               <span className="flex items-center gap-0.5 text-[12.5px] text-black/40">
                                 <MapPin size={9} />

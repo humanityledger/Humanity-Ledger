@@ -1864,3 +1864,14 @@ model AztecPasskeyRecord {
 
   @@index([walletAddress, network])
 }
+
+// Ledger Chat usernames (lib/chat/usernames.ts). One per account, unique in the world:
+// `username` is the canonical lowercase form under a unique index, so two accounts can never
+// hold the same name. `linkToken` is the random part of the profile link and its QR code.
+model ChatUsername {
+  walletAddress String   @id
+  username      String   @unique
+  linkToken     String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

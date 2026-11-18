@@ -63,6 +63,8 @@ const LedgerSettingsFull = dynamic(() => import('@/components/chat/LedgerSetting
 const CreateGroupModal = dynamic(() => import('../chat/CreateGroupModal').then(m => m.CreateGroupModal), { ssr: false });
 const LedgerChatProfile = dynamic(() => import('@/components/chat/LedgerChatProfile').then(m => m.LedgerChatProfile), { ssr: false });
 const LedgerChatVaultManager = dynamic(() => import('@/components/chat/LedgerChatVaultManager').then(m => m.LedgerChatVaultManager), { ssr: false });
+const ProfileSharePanel = dynamic(() => import('@/components/chat/profile/ProfileShare').then(m => m.ProfileSharePanel), { ssr: false });
+const UsernameEditor = dynamic(() => import('@/components/chat/profile/ProfileShare').then(m => m.UsernameEditor), { ssr: false });
 const LedgerChatUserSearch = dynamic(() => import('@/components/chat/LedgerChatUserSearch').then(m => m.LedgerChatUserSearch), { ssr: false });
 const ContactRequestsPanel = dynamic(() => import('@/components/chat/ContactRequestsPanel').then(m => m.ContactRequestsPanel), { ssr: false });
 const ContactInfoPanel = dynamic(() => import('@/components/chat/ContactInfoPanel').then(m => m.ContactInfoPanel), { ssr: false });
@@ -357,10 +359,12 @@ function attachVideo(el: HTMLVideoElement | null, stream: MediaStream | null) {
   if (stream && el.paused) el.play().catch(() => {});
 }
 import { Archive, ArchiveRestore, ChevronLeft, ChevronUp, ChevronDown, MessageSquare, Plus, ArrowUp, WifiOff, Pin, Check, ScanQrCode, Camera, FileText, Sticker, ListChecks, CreditCard, Receipt, Waves, Navigation, Timer, Info, LoaderCircle, Minimize2, Mail, ShieldCheck, Reply, Forward, Pencil, Flag, MessagesSquare, Globe } from 'lucide-react';
-import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus, CircleDot, CheckCheck, PinOff } from 'lucide-react';
+import { Sparkles as StudioIcon, MoreHorizontal, SquarePen, Palette, BellOff, Keyboard, CalendarClock, CalendarPlus, CircleDot, CheckCheck, PinOff, QrCode, AtSign } from 'lucide-react';
 import { MEETING_JOIN_EVENT, MEETINGS_EVENT, loadMeetings, meetingPreview, parseMeeting, rememberMeeting, upcomingMeetings, type StoredMeeting } from '@/lib/chat/meeting';
 import { SCHEDULED_EVENT, addScheduled, describeSendTime, dueScheduled, loadScheduled, markAttempt, removeScheduled, scheduleTimeError, scheduledForPeer, type ScheduledMessage } from '@/lib/chat/scheduled';
 import { shortAddress as formatAddress } from '@/lib/ui/format';
+import { looksLikeUsername, parseProfileLink } from '@/lib/chat/usernames';
+import { lookupUsername, openProfileLink } from '@/lib/chat/useUsername';
 import { holdWalletConnectAutoOpen, isIOSBrowser, peerWalletLinks, signRequestLink, watchSentSignRequest, type WalletOpenLink } from '@/lib/auth/wc-sign-request';
 import { relayDidNotTakeRequest } from '@/lib/auth/wallet-sign';
 import { detectConnectedMobileWallet } from '@/lib/wallet/mobileWallet';
@@ -550,6 +554,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // [FEATURE] Auto-open chat from URL (simpler contact addition)
   useEffect(() => {
     if (!isMounted || !address || !client) return;
+    // A profile link (https://ledgerchat.org/u#token) arrives here as /chat#u=<token> (app/u).
+    const hashToken = window.location.hash.match(/^#u=([A-Za-z0-9_-]{22})$/)?.[1];
+    if (hashToken) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+      setSidebarTab('chats');
+      setActiveCommunity(null);
+      void handleStartConversationWithPeerRef.current?.(`/u#${hashToken}`);
+    }
     const params = new URLSearchParams(window.location.search);
     const to = params.get('to');
     if (to && !activePeerRef.current) {
@@ -839,6 +851,9 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   const [showList, setShowList] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [showMyQR, setShowMyQR] = useState(false);
+  // The "My code" sheet: the username QR code and link (default), choosing a username, or the
+  // wallet address code for someone who wants exactly that.
+  const [myCodeView, setMyCodeView] = useState<'share' | 'username' | 'address'>('share');
   const [isMobile, setIsMobile] = useState(false);
 
 
@@ -3073,6 +3088,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       // The call is with the caller, whatever chat was open when it rang: open theirs.
       const caller = callPeerAddrRef.current;
       if (caller && /^0x[0-9a-f]{40}$/i.test(caller) && caller !== activePeerRef.current?.toLowerCase()) setActivePeer(caller);
+      // And bring that chat forward, so hanging up lands in it rather than in a list or a community.
+      if (caller) { setSidebarTab('chats'); setShowList(false); }
 
       // ─── DETERMINISTIC ANSWER ARCHITECTURE ────────────────────────────────
       // PRIMARY PATH: If the Caller dialed us directly (deterministic architecture),
@@ -5513,20 +5530,40 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             peer = peer.substring(9).split('@')[0];
         }
 
-        // Resolve @username handle to wallet address via search API
-        if (!peer.startsWith('0x') || (peer.length !== 42 && peer.length !== 66)) {
+        // A profile link or QR code (https://ledgerchat.org/u#token), or an exact @username.
+        // Never "the first search result": a display name is not unique, so taking the first
+        // match could open a chat with someone who merely shares a name.
+        const linkToken = parseProfileLink(peer);
+        if (linkToken) {
           try {
-            const res = await fetch(`/api/chat/users/search?q=${encodeURIComponent(peer)}`);
-            const data = await res.json();
-            if (data.users && data.users.length > 0) {
-              peer = data.users[0].address;
-            } else {
-              toast.error(`No one found for ${peer}`);
+            const hit = await openProfileLink(linkToken);
+            if (!hit) {
+              toast.error('This link or QR code no longer works. Ask for a new one.');
               setIsStartingConversation(false);
               return;
             }
-          } catch {
-            toast.error('Search is unavailable right now. Paste a wallet address instead.');
+            peer = hit.address;
+          } catch (e) {
+            toast.error((e as Error).message);
+            setIsStartingConversation(false);
+            return;
+          }
+        } else if (!peer.startsWith('0x') || (peer.length !== 42 && peer.length !== 66)) {
+          if (!looksLikeUsername(peer)) {
+            toast.error('Enter an exact @username, a Ledger Chat link, or a wallet address that starts with 0x.');
+            setIsStartingConversation(false);
+            return;
+          }
+          try {
+            const hit = await lookupUsername(peer);
+            if (!hit) {
+              toast.error(`Nobody has the username @${peer.replace(/^@+/, '').toLowerCase()}. Check the spelling: usernames must match exactly.`);
+              setIsStartingConversation(false);
+              return;
+            }
+            peer = hit.address;
+          } catch (e) {
+            toast.error((e as Error).message);
             setIsStartingConversation(false);
             return;
           }
@@ -6522,6 +6559,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                       {[
                         { label: 'New chat', icon: <SquarePen size={16} strokeWidth={1.75} />, onClick: () => document.getElementById('ledger-new-chat-input')?.focus() },
                         { label: 'New group', icon: <Users size={16} strokeWidth={1.75} />, onClick: () => setShowCreateGroup(true) },
+                        { label: 'My QR code or link', icon: <QrCode size={16} strokeWidth={1.75} />, onClick: () => { setMyCodeView('share'); setShowMyQR(true); } },
+                        { label: 'Scan a code', icon: <ScanQrCode size={16} strokeWidth={1.75} />, onClick: () => setShowScanner(true) },
                         { label: AZTEC_WALLET_CONFIG.network === 'mainnet' ? 'Private wallet' : 'Private wallet (testnet)', icon: <Lock size={16} strokeWidth={1.75} />, onClick: () => setShowZkWallet(true) },
                         { label: 'Appearance', icon: <Palette size={16} strokeWidth={1.75} />, onClick: () => openAppearance() },
                         { label: 'Settings', icon: <Settings size={16} strokeWidth={1.75} />, onClick: () => setShowFullSettings(true) },
@@ -6561,6 +6600,33 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               className="w-full h-10 md:h-11 bg-[#f2f4f7] rounded-xl md:rounded-[14px] pl-9 pr-3 text-[15px] text-[#15171c] placeholder:text-[#8b909a] border border-transparent focus:outline-none focus:bg-white focus:border-[#d0d5dd] transition-colors"
             />
           </div>
+          {/* Find by username or link, as in Signal: an exact @username, a Ledger Chat link or an
+              address opens a chat; anything else just filters the list. */}
+          {(() => {
+            const q = peerInput.trim();
+            if (!q) return null;
+            const isLink = !!parseProfileLink(q);
+            const isAddr = /^0x[0-9a-fA-F]{40}$/.test(q);
+            const isName = !isLink && !isAddr && looksLikeUsername(q);
+            if (!isLink && !isAddr && !isName) return null;
+            const label = isLink ? 'Open this Ledger Chat link' : isAddr ? `Message ${formatAddress(q)}` : `Message @${q.replace(/^@+/, '').toLowerCase()}`;
+            return (
+              <button
+                type="button"
+                onClick={() => handleStartConversation()}
+                disabled={isStartingConversation}
+                className="w-full flex items-center gap-3 px-3 h-12 rounded-xl bg-white border border-[#e6e8ec] hover:bg-[#f7f8fa] text-left disabled:opacity-60"
+              >
+                <span className="w-8 h-8 rounded-full bg-[#15171c] text-white grid place-items-center shrink-0" aria-hidden="true">
+                  {isLink ? <QrCode size={15} strokeWidth={2} /> : isAddr ? <Wallet size={15} strokeWidth={2} /> : <AtSign size={15} strokeWidth={2} />}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14.5px] font-semibold text-[#15171c] truncate">{isStartingConversation ? 'Opening…' : label}</span>
+                  <span className="block text-[12px] text-[#727a88]">{isName ? 'Exact username, unique to one person' : isLink ? 'Opens the chat its owner shared' : 'Wallet address'}</span>
+                </span>
+              </button>
+            );
+          })()}
 
           {/* Filters for the chat list */}
           {(sidebarTab === 'chats' || sidebarTab === 'contacts') && conversations.length > 0 && (
@@ -7801,8 +7867,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             </button>
           ),
           document.body
-        ) : (
-          <div className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' && callState === 'active' ? 'bg-[#0f1115]' : 'bg-[#f7f8fa]'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
+        ) : createPortal(
+          // On document.body, like the ringing and minimised screens. Inside the chat area it was
+          // hidden whenever that area is (display: none below 1024 px while the chat list shows, and
+          // in Communities): answering from outside the caller's chat connected the call but showed
+          // neither face until that chat was opened.
+          <div data-testid="call-screen" className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' && callState === 'active' ? 'bg-[#0f1115]' : 'bg-[#f7f8fa]'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
 
             {/* Background: the other person's video, or their name and picture for a voice call */}
             <div className="absolute inset-0">
@@ -7961,7 +8031,8 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               />
             </div>
 
-          </div>
+          </div>,
+          document.body
         )
       )}
 
@@ -8145,17 +8216,32 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         <div className="fixed inset-0 z-[200000] bg-[#f7f8fa] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
            <div className="w-full max-w-sm">
                <div className="flex justify-between items-center mb-6">
-                   <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">My code</h3>
-                   <button type="button" onClick={() => setShowMyQR(false)} aria-label="Close" className="w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                   <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">{myCodeView === 'username' ? 'Username' : 'Share'}</h3>
+                   <button type="button" onClick={() => { setShowMyQR(false); setMyCodeView('share'); }} aria-label="Close" className="w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
                      <X size={18} strokeWidth={1.9} />
                    </button>
                </div>
-               <QrScanner 
-                   mode="project" 
-                   projectValue={address} 
-                   projectTitle={chatName || "Your Ledger Chat code"}
-                   projectDescription={chatBio || "Let someone scan this code to start a conversation with you."}
-               />
+               {myCodeView === 'username' ? (
+                 <UsernameEditor onDone={() => setMyCodeView('share')} />
+               ) : myCodeView === 'address' ? (
+                 <QrScanner
+                   mode="project"
+                   projectValue={address}
+                   projectTitle={chatName || "Your wallet address"}
+                   projectDescription="This code shows your wallet address. Your username code below does not."
+                 />
+               ) : (
+                 <ProfileSharePanel address={(address || '').toLowerCase()} onEditUsername={() => setMyCodeView('username')} />
+               )}
+               {myCodeView !== 'username' && (
+                 <button
+                   type="button"
+                   onClick={() => setMyCodeView(v => (v === 'address' ? 'share' : 'address'))}
+                   className="mt-4 mx-auto block h-10 px-4 rounded-full text-[14px] font-semibold text-[#15171c] hover:bg-[#eff1f4]"
+                 >
+                   {myCodeView === 'address' ? 'Show my username code' : 'Show my wallet address instead'}
+                 </button>
+               )}
            </div>
         </div>,
         document.body

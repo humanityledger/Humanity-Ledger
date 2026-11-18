@@ -8,7 +8,7 @@ import fs from 'node:fs';
 const read = (p: string) => fs.readFileSync(p, 'utf8');
 
 describe('chat animations', () => {
-  for (const f of ['new-conversation', 'peer-typing', 'send-confirmation', 'send-confirmation-plane', 'welcome-notification']) {
+  for (const f of ['new-conversation-chit-chatting', 'peer-typing', 'send-confirmation', 'send-confirmation-plane', 'welcome-notification']) {
     it(`${f}.json is a self-contained Lottie`, () => {
       const raw = read(`public/lottie/${f}.json`);
       const a = JSON.parse(raw);
@@ -31,7 +31,7 @@ describe('chat animations', () => {
     // It enters with an animation each time a chat is empty, including right after Clear chat.
     expect(chat).toMatch(/key=\{`new-\$\{activePeer\}`\}[^>]*data-testid="new-conversation"/);
     expect(chat).toContain('hl-empty-enter');
-    const art = JSON.parse(read('public/lottie/new-conversation.json'));
+    const art = JSON.parse(read('public/lottie/new-conversation-chit-chatting.json'));
     expect([art.w, art.h, art.fr, art.op]).toEqual([350, 230, 60, 156]);
   });
 
