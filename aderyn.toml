@@ -1,0 +1,5 @@
+# Aderyn (Cyfrin) static analysis, run in .github/workflows/security-review.yml.
+version = 1
+root = "."
+src = "contracts"
+exclude = ["contracts/mocks", "contracts/aztec"]

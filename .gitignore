@@ -177,3 +177,9 @@ _to_delete/
 
 # Generated, values empty (scripts/env-inventory.mjs): committed on purpose.
 !.env.example
+
+# Foundry (internal security review tooling; forge-std is fetched in CI)
+/out-foundry/
+/cache-foundry/
+/foundry-lib/
+/gambit_out/
