@@ -75,7 +75,7 @@ function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
     <div className={`${s.emblem} ${s[state] ?? ""}`} aria-hidden="true">
       <span className={s.arc} />
       <span className={s.mark}>
-        <img src="/worldmap.png" alt="" draggable={false} />
+        <img src="/boot-mark.webp" alt="" width={72} height={72} draggable={false} />
       </span>
     </div>
   );

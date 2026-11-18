@@ -32,7 +32,8 @@ describe('TuringShieldGate with the PIN screen off', () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
     const src = fs.readFileSync(path.resolve(__dirname, '../../../components/auth/TuringShieldGate.tsx'), 'utf8');
-    const loading = src.indexOf('aria-label="Loading"');
+    // Since 18 Nov 2026 the neutral screen is the shared BootMark (role="status", labelled inside).
+    const loading = src.indexOf('<BootMark />');
     const gate = src.indexOf('MAIN PIN GATE');
     expect(loading).toBeGreaterThan(0);
     expect(gate).toBeGreaterThan(loading);

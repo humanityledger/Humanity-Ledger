@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { BootMark } from '@/components/layout/BootMark';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Check, CircleHelp, Clock, Lock, Mail, X } from 'lucide-react';
@@ -675,20 +676,10 @@ export function TuringShieldGate({
   // clears the gate: the PIN pad must never appear, not even for the moment the check takes.
   if (!mounted || (!cleared && !settingPin && !pinLockEnabled())) {
     return (
-      <div
-        className="fixed inset-0 z-[99999] flex items-center justify-center"
-        style={{ background: 'linear-gradient(160deg, #f7f8fa 0%, #f2f4f7 100%)' }}
-        aria-label="Loading"
-      >
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className="w-2 h-2 rounded-full bg-[#15171c]/30 animate-pulse"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
+      // The same background as the chat page under it (white on phones, #f4f6fa on desktop)
+      // and the same mark as the next screens: no grey flash before the white chat appears.
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-white md:bg-[#f4f6fa]">
+        <BootMark />
       </div>
     );
   }

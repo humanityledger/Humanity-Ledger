@@ -223,7 +223,8 @@ function Choose(p: ConnectViewProps) {
 
       <p className={s.legal}>
         By continuing you confirm you are at least 16 years old and agree to the{" "}
-        <Link href="/docs/terms">Terms of Service</Link> and <Link href="/docs/privacy">Privacy Policy</Link>.
+        <Link href="/docs/terms">Terms of Service</Link>, the <Link href="/docs/community-guidelines">Community Guidelines</Link> and the{" "}
+        <Link href="/docs/privacy">Privacy Policy</Link>.
       </p>
     </>
   );

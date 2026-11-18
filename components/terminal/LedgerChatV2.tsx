@@ -1,4 +1,5 @@
 "use client";
+import { BootMark } from '@/components/layout/BootMark';
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -29,7 +30,6 @@ import { loadBlockList, saveBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/block
 import { deriveCallLog, callLogMessages, decodeCallEntry, callEntryLabel, isCallSignal, CALL_LOG_PREFIX, type CallSignal } from '@/lib/chat/callLog';
 import { startDeviceSync, stopDeviceSync, handleDeviceSyncMessage, setSynced, getSynced, getDeviceStore, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
 import { vault } from '@/lib/core/SecureVault';
-import { ChatCommunityGate } from '@/components/chat/ChatCommunityGate';
 import { getLocalContacts, saveLocalContact, resolveContactName, LocalContact } from '@/lib/wallet/localAddressBook';
 import { getCallHistory, saveCallRecord, CallRecord } from '@/lib/wallet/callHistory';
 import { LedgerChatOnboarding } from '@/components/chat/LedgerChatOnboarding';
@@ -1329,7 +1329,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
   // Offline Queue State
   const [isOffline, setIsOffline] = useState(false);
-  const [hasAcceptedEula, setHasAcceptedEula] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     try {
@@ -1375,8 +1374,6 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     const loadBlocked = async () => {
       try {
         setBlockedPeers(new Set(await loadBlockList()));
-        const eula = await vault.getItem('ledger_eula_accepted');
-        if (eula === 'true') setHasAcceptedEula(true);
         const perm = await vault.getItem('ledger_media_perm');
         if (perm === 'true') setHasMediaPermission(true);
 
@@ -6261,28 +6258,17 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       </TuringShieldGate>
     );
   }
-  if (!hasAcceptedEula) {
-    return (
-      <ChatCommunityGate
-        onAccept={() => {
-          vault.setItem('ledger_eula_accepted', 'true');
-          setHasAcceptedEula(true);
-        }}
-        onDecline={() => {
-          window.location.href = '/';
-        }}
-      />
-    );
-  }
+  // The community guidelines are accepted on the sign-in screen (components/connect/ConnectView.tsx,
+  // /docs/community-guidelines) since 18 November 2026: no full-screen gate between sign-in and the
+  // chat. The gate also flashed for returning users while their acceptance loaded from the vault.
 
   // Wait for PXE settings to load before deciding to show onboarding,
   // otherwise it briefly flickers for returning users while settings fetch.
   if (!isOnboarded) {
     if (!pxeLoaded || effectiveAddress === '0x0') {
       return (
-        <div className="flex-1 h-full bg-white flex flex-col items-center justify-center gap-3 text-[#727a88]" role="status">
-          <LoaderCircle size={22} strokeWidth={2} className="animate-spin" aria-hidden="true" />
-          <span className="text-[14px]">Loading your account</span>
+        <div className="flex-1 h-full bg-white flex flex-col items-center justify-center">
+          <BootMark label="Loading your account" />
         </div>
       );
     }

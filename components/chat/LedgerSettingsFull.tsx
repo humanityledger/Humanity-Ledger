@@ -157,7 +157,7 @@ const SETTINGS_SECTIONS = [
   {
     title: 'Account',
     items: [
-      { id: 'account', label: 'Profile and devices', sublabel: 'Name, photo, linked devices', icon: User },
+      { id: 'profile', label: 'Profile and devices', sublabel: 'Name, photo, username, linked devices', icon: User },
     ],
   },
   {
@@ -523,118 +523,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   // convenient way to open the sign in page there.
   const walletAddrForDevices = (myAddress || address || '') as string;
 
-  return (
-    <motion.div
-      initial={{ x: '100%', opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '100%', opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 340, damping: 36 }}
-      className="absolute inset-0 z-[200] bg-[#f4f5f7] flex flex-col overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]"
-    >
-      {/* ── Header ── */}
-      <div
-        className="shrink-0 bg-white border-b border-[#e6e8ec] flex items-center justify-between px-4"
-        style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))', paddingBottom: '12px' }}
-      >
-        <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#15171c] font-medium text-[16px]">
-          <ArrowLeft size={20} className="text-[#15171c]" />
-          Back
-        </button>
-        <span className="text-[17px] font-semibold text-[#15171c]">Settings</span>
-        <div className="w-16" />
-      </div>
-
-      {/* ── Section Navigation: iOS grouped list when no section selected ── */}
-      {/* Two panes from 768 px, as in Signal Desktop: the list on the left stays, the section
-          opens on the right. Phones keep one screen at a time with a back link. */}
-      <div className="flex-1 flex min-h-0">
-      <nav aria-label="Settings sections" className={`${activeTab === 'home' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[340px] lg:w-[360px] md:shrink-0 md:border-r md:border-[#e6e8ec] md:bg-[#f7f8fa] overflow-y-auto`}>
-          <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
-            {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
-            <ProfileHeaderCard
-              address={walletAddrForDevices}
-              name={myName || shortAddr(walletAddrForDevices)}
-              photo={avatarUrl || null}
-              onOpenProfile={() => setActiveTab('profile')}
-              onOpenShare={() => setActiveTab('share')}
-            />
-            {SETTINGS_SECTIONS.map(section => (
-              <div key={section.title}>
-                <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{section.title}</p>
-                <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">
-                  {section.items.map((item, idx) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setActiveTab(item.id)}
-                      aria-current={activeTab === item.id ? 'page' : undefined}
-                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-[#eef0f3]' : 'hover:bg-[#f7f8fa]'} ${
-                        idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
-                      }`}
-                    >
-                      <span className="w-9 h-9 rounded-xl bg-[#f4f5f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
-                        <item.icon size={17} strokeWidth={1.8} />
-                      </span>
-                      <div className="flex-1 min-w-0 pr-3">
-                        <p className="text-[15px] font-medium text-[#15171c] leading-tight">{item.label}</p>
-                        {item.sublabel && <p className="text-[12.5px] text-[#727a88] mt-1 leading-snug">{item.sublabel}</p>}
-                      </div>
-                      <ChevronRight size={16} className="text-[#c9ced6] shrink-0" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-      </nav>
-
-      <div className={`${activeTab === 'home' ? 'hidden' : 'flex'} md:flex flex-1 flex-col min-w-0 min-h-0`}>
-      {/* ── Section sub-header breadcrumb (phones: the list is not beside it) ── */}
-      {activeTab !== 'home' && (
-        <div className="md:hidden shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
-          <button
-            type="button"
-            onClick={() => setActiveTab('home')}
-            className="flex items-center gap-1 text-[#15171c] font-medium text-[14px] hover:opacity-70 transition-opacity"
-          >
-            <ChevronLeft size={18} />
-            Settings
-          </button>
-          <span className="text-[#c9ced6]">/</span>
-          <span className="text-[14px] text-[#727a88] font-medium">
-            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
-          </span>
-        </div>
-      )}
-
-      {/* ── Content (shown when a section is selected) ── */}
-      {activeTab !== 'home' && (
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
-          <h2 className="hidden md:block text-center text-[15px] font-semibold text-[#15171c] mb-5">
-            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
-          </h2>
-
-          {activeTab === 'profile' && (
-            <ProfilePanel
-              address={walletAddrForDevices}
-              name={myName || shortAddr(walletAddrForDevices)}
-              photo={avatarUrl || null}
-              onEditName={() => setActiveTab('account')}
-              onEditUsername={() => setActiveTab('username')}
-              onOpenShare={() => setActiveTab('share')}
-            />
-          )}
-          {activeTab === 'username' && <UsernameEditor onDone={() => setActiveTab('profile')} />}
-          {activeTab === 'share' && <ProfileSharePanel address={walletAddrForDevices} onEditUsername={() => setActiveTab('username')} />}
-
-          {/* ════════════════════════════════════════════════════════════════════
-              ACCOUNT TAB
-          ════════════════════════════════════════════════════════════════════ */}
-          {activeTab === 'account' && (
-            <>
-              {/* Profile card */}
-              <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden mb-6">
+  // The editable profile card and the account groups, shown together on the Profile page.
+  const profileCardBody = (
                 <div className="flex flex-col items-center py-8 px-6 gap-4">
                   {/* Avatar */}
                   <div className="relative">
@@ -753,8 +643,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     </div>
                   )}
                 </div>
-              </div>
+  );
 
+  const accountGroups = (
+    <>
               <Group title="Devices" footer="Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.">
                 <Row
                   icon={<Smartphone size={18} />}
@@ -825,8 +717,124 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   onTap={() => setModal('nuke')}
                 />
               </Group>
-            </>
+    </>
+  );
+
+  return (
+    <motion.div
+      initial={{ x: '100%', opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: '100%', opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 340, damping: 36 }}
+      className="absolute inset-0 z-[200] bg-[#f4f5f7] flex flex-col overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]"
+    >
+      {/* ── Header ── */}
+      <div
+        className="shrink-0 bg-white border-b border-[#e6e8ec] flex items-center justify-between px-4"
+        style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))', paddingBottom: '12px' }}
+      >
+        <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#15171c] font-medium text-[16px]">
+          <ArrowLeft size={20} className="text-[#15171c]" />
+          Back
+        </button>
+        <span className="text-[17px] font-semibold text-[#15171c]">Settings</span>
+        <div className="w-16" />
+      </div>
+
+      {/* ── Section Navigation: iOS grouped list when no section selected ── */}
+      {/* Two panes from 768 px, as in Signal Desktop: the list on the left stays, the section
+          opens on the right. Phones keep one screen at a time with a back link. */}
+      <div className="flex-1 flex min-h-0">
+      <nav aria-label="Settings sections" className={`${activeTab === 'home' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[340px] lg:w-[360px] md:shrink-0 md:border-r md:border-[#e6e8ec] md:bg-[#f7f8fa] overflow-y-auto`}>
+          <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
+            {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
+            <ProfileHeaderCard
+              address={walletAddrForDevices}
+              name={myName || shortAddr(walletAddrForDevices)}
+              photo={avatarUrl || null}
+              onOpenProfile={() => setActiveTab('profile')}
+              onOpenShare={() => setActiveTab('share')}
+            />
+            {SETTINGS_SECTIONS.map(section => (
+              <div key={section.title}>
+                <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{section.title}</p>
+                <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">
+                  {section.items.map((item, idx) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab(item.id)}
+                      aria-current={activeTab === item.id ? 'page' : undefined}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-[#eef0f3]' : 'hover:bg-[#f7f8fa]'} ${
+                        idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
+                      }`}
+                    >
+                      <span className="w-9 h-9 rounded-xl bg-[#f4f5f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                        <item.icon size={17} strokeWidth={1.8} />
+                      </span>
+                      <div className="flex-1 min-w-0 pr-3">
+                        <p className="text-[15px] font-medium text-[#15171c] leading-tight">{item.label}</p>
+                        {item.sublabel && <p className="text-[12.5px] text-[#727a88] mt-1 leading-snug">{item.sublabel}</p>}
+                      </div>
+                      <ChevronRight size={16} className="text-[#c9ced6] shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+      </nav>
+
+      <div className={`${activeTab === 'home' ? 'hidden' : 'flex'} md:flex flex-1 flex-col min-w-0 min-h-0`}>
+      {/* ── Section sub-header breadcrumb (phones: the list is not beside it) ── */}
+      {activeTab !== 'home' && (
+        <div className="md:hidden shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-[#e6e8ec]">
+          <button
+            type="button"
+            onClick={() => setActiveTab('home')}
+            className="flex items-center gap-1 text-[#15171c] font-medium text-[14px] hover:opacity-70 transition-opacity"
+          >
+            <ChevronLeft size={18} />
+            Settings
+          </button>
+          <span className="text-[#c9ced6]">/</span>
+          <span className="text-[14px] text-[#727a88] font-medium">
+            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
+          </span>
+        </div>
+      )}
+
+      {/* ── Content (shown when a section is selected) ── */}
+      {activeTab !== 'home' && (
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
+          <h2 className="hidden md:block text-center text-[15px] font-semibold text-[#15171c] mb-5">
+            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
+          </h2>
+
+          {/* Profile: one page with everything that used to be split between Profile and
+              "Profile and devices" (18 November 2026): photo, name, bio, address and balance,
+              username and QR, devices, profile visibility, data and backup, session. */}
+          {(activeTab === 'profile' || activeTab === 'account') && (
+            <ProfilePanel
+              address={walletAddrForDevices}
+              name={displayName || myName || shortAddr(walletAddrForDevices)}
+              photo={avatarUrl || null}
+              header={<div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">{profileCardBody}</div>}
+              onEditName={() => setEditingName(true)}
+              onEditUsername={() => setActiveTab('username')}
+              onOpenShare={() => setActiveTab('share')}
+            >
+              {accountGroups}
+            </ProfilePanel>
           )}
+          {activeTab === 'username' && <UsernameEditor onDone={() => setActiveTab('profile')} />}
+          {activeTab === 'share' && <ProfileSharePanel address={walletAddrForDevices} onEditUsername={() => setActiveTab('username')} />}
+
+          {/* ════════════════════════════════════════════════════════════════════
+              ACCOUNT TAB
+          ════════════════════════════════════════════════════════════════════ */}
+
 
           {/* ════════════════════════════════════════════════════════════════════
               PRIVACY TAB
