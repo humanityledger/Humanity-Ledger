@@ -107,7 +107,7 @@ export const LIVE = {
 };
 
 /**
- * What the app does today, grouped. Each line is backed by the code: lib/xmtp (MLS through XMTP),
+ * What the app does today, grouped. Each line rests on the code: lib/xmtp (MLS through XMTP),
  * components/chat (groups, communities, burn timer, voice notes, payment requests, @usernames,
  * QR), components/zk/wallet (send, shield, unshield, Fee Juice), lib/calls (WebRTC).
  */
