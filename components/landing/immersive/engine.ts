@@ -67,6 +67,7 @@ export function startScenes(el: HTMLElement): () => void {
   root = el;
   scenes.length = 0;
   el.querySelectorAll<HTMLElement>('[data-scene]').forEach((s) => scenes.push({ el: s, top: 0, height: 0, p: -1, near: false }));
+  el.setAttribute('data-scenes', String(scenes.length));
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     for (const s of scenes) s.el.style.setProperty('--p', '1');
     return () => undefined;

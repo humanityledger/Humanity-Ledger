@@ -92,7 +92,25 @@ for (const [vpName, viewport] of VIEWPORTS) {
         if (vpName !== 'desktop') break;
       }
     }
-    report.push({ page: name, viewport: vpName, finalUrl: page.url(), errors });
+    // Immersive landing: every pinned scene at 0, 50 and 100 % of its run, with the progress the
+    // page computed, so a scene that does not advance shows up in the report.
+    const scenes = name === 'home' ? await page.$$eval('[data-scene]', (els) => els.map((e) => {
+      const r = e.getBoundingClientRect();
+      return { top: r.top + window.scrollY, height: r.height, label: e.getAttribute('aria-label') || '' };
+    })) : [];
+    const sceneReport = [];
+    for (const [i, sc] of scenes.entries()) {
+      for (const f of [0, 0.5, 1]) {
+        const y = Math.round(sc.top + Math.max(0, sc.height - viewport.height) * f);
+        await page.evaluate((yy) => window.scrollTo(0, yy), y);
+        await page.waitForTimeout(500);
+        const p = await page.$$eval('[data-scene]', (els, k) => els[k]?.style.getPropertyValue('--p') ?? '', i);
+        sceneReport.push({ scene: sc.label, f, p });
+        await page.screenshot({ path: path.join(out, `scene-${String(i + 1).padStart(2, '0')}-${Math.round(f * 100)}-${vpName}.png`) });
+      }
+    }
+    const started = name === 'home' ? await page.evaluate(() => document.querySelector('[data-scenes]')?.getAttribute('data-scenes') ?? 'not started') : undefined;
+    report.push({ page: name, viewport: vpName, finalUrl: page.url(), errors, ...(sceneReport.length ? { started, scenes: sceneReport } : {}) });
     await page.close();
   }
   await ctx.close();

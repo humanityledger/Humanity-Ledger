@@ -20,23 +20,24 @@ export function ScrollRoot({ children, className }: { children: React.ReactNode;
   );
 }
 
-/** Mounts its children only once the scene that contains it comes near the screen. */
-export function WhenNear({ children, fallback = null }: { children: React.ReactNode; fallback?: React.ReactNode }) {
+/** Mounts its children once they come within one screen of the viewport (hydration only, never an animation). */
+export function WhenNear({ children, fallback = null, fill = true }: { children: React.ReactNode; fallback?: React.ReactNode; fill?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {
-    if (!ref.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return setNear(true);
-    let done = false;
-    const off = onScene(ref.current, (_p, n) => {
-      if (n && !done) {
-        done = true;
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') return setNear(true);
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) {
         setNear(true);
+        io.disconnect();
       }
-    });
-    return off;
+    }, { rootMargin: '100% 0px' });
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
-  return <div ref={ref} className={s.fill}>{near ? children : fallback}</div>;
+  return <div ref={ref} className={fill ? s.fill : undefined}>{near ? children : fallback}</div>;
 }
 
 type Mode = 'poster' | 'play' | 'scrub';
@@ -180,7 +181,7 @@ const GlobeLazy = dynamic(() => import('@/components/landing/v2/LiveGlobe').then
 });
 export function SceneGlobe() {
   return (
-    <WhenNear fallback={<p className={s.muted}>Live numbers unavailable without JavaScript.</p>}>
+    <WhenNear fill={false} fallback={<p className={s.muted}>Live numbers unavailable without JavaScript.</p>}>
       <GlobeLazy />
     </WhenNear>
   );
