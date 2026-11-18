@@ -123,9 +123,9 @@
 
 /* 3. Encryption: three layers in perspective */
 .layers { position: absolute; left: 50%; top: 42%; width: min(86vw, 560px); height: 320px; margin: -160px 0 0 max(-43vw, -280px); perspective: 1200px; }
-.layer { position: absolute; inset: 0; height: 88px; top: calc(var(--i) * 110px); border-radius: 28px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.92);
-  transform: rotateX(52deg); display: flex; align-items: center; padding: 0 24px; font-size: 14px; color: #475467; }
-.layer:nth-child(2) { border-color: rgba(82, 0, 255, 0.35); color: var(--violet); }
+.layer { position: absolute; inset: 0; height: 92px; top: calc(var(--i) * 112px); border-radius: 28px; border: 1px solid #d0d5dd; background: linear-gradient(180deg, #ffffff, #f7f8fa);
+  box-shadow: 0 18px 40px -24px rgba(21, 23, 28, 0.18); transform: rotateX(46deg); display: flex; align-items: center; padding: 0 28px; font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.layer:nth-child(2) { border-color: rgba(82, 0, 255, 0.45); background: linear-gradient(180deg, #ffffff, #f4efff); color: var(--violet); }
 .packet { position: absolute; left: 50%; top: 10px; padding: 10px 16px; border-radius: 18px; background: var(--violet); color: #fff; font-size: 15px; white-space: nowrap;
   transform: translate3d(-50%, calc(var(--p, 0) * 250px), 0); }
 .packet b, .packet i { font-style: normal; font-weight: 500; }
@@ -170,6 +170,11 @@
 .points > article:last-child { opacity: calc(0.3 + 0.7 * clamp(0, calc((var(--p, 0) - 0.68) * 12), 1)); }
 .points h3 { margin: 4px 0 0; font-size: 20px; letter-spacing: -0.01em; }
 @media (min-width: 900px) { .points { grid-template-columns: 1fr 1fr; gap: 20px; } }
+@media (min-width: 900px) {
+  .enc .layers { left: auto; right: 8vw; width: min(44vw, 620px); margin: -170px 0 0 0; top: 46%; }
+  .eth .band { left: 46vw; right: 6vw; }
+  .eth .proof { left: 73vw; }
+}
 .k { margin: 0; font-size: 13px; color: #667085; font-variant-numeric: tabular-nums; }
 .v { margin: 6px 0 16px; color: #475467; font-size: 15px; }
 .hash { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -181,10 +186,12 @@
 .recordNote a { text-decoration: underline; text-underline-offset: 3px; }
 
 /* 6. Ethereum */
-.band { position: absolute; left: 6vw; right: 6vw; display: flex; align-items: center; gap: 16px; height: 72px; padding: 0 24px; border-radius: 28px; border: 1px solid var(--line); background: #fff; font-size: 14px; color: #475467; }
+.band { position: absolute; left: 6vw; right: 6vw; display: flex; align-items: center; gap: 16px; height: 80px; padding: 0 28px; border-radius: 28px; border: 1px solid #d0d5dd; background: #fff;
+  box-shadow: 0 18px 40px -26px rgba(21, 23, 28, 0.2); font-size: 15px; font-weight: 500; color: var(--ink); }
+.bandEth { border-color: rgba(82, 0, 255, 0.4); background: linear-gradient(180deg, #ffffff, #f6f2ff); }
 .band:first-child { top: 22svh; }
 .bandEth { top: 56svh; --a: 0.1; --b: 0.4; opacity: var(--k); }
-.proof { position: absolute; left: 50%; top: 30svh; padding: 8px 14px; border-radius: 16px; background: var(--violet); color: #fff; font-size: 13px; --a: 0.25; --b: 0.7; transform: translate3d(-50%, calc(var(--e) * 26svh), 0); opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.72) * 10), 1)); }
+.proof { position: absolute; left: 50%; top: 30svh; padding: 10px 18px; border-radius: 18px; background: var(--violet); color: #fff; font-size: 14px; font-weight: 600; --a: 0.25; --b: 0.7; transform: translate3d(-50%, calc(var(--e) * 26svh), 0); opacity: calc(1 - clamp(0, calc((var(--p, 0) - 0.72) * 10), 1)); }
 .eth .caption { --a: 0.4; --b: 0.7; }
 
 /* 7. Calls */
@@ -209,7 +216,10 @@
   .timeline { top: 34%; }
   .points > article { padding: 16px 18px; }
   .points h3 { font-size: 17px; }
-  .recordNote { bottom: 14px; font-size: 12px; }
+  .recordNote { bottom: 12px; font-size: 11.5px; }
+  .points { gap: 10px; margin-top: 20px; }
+  .points .v { display: none; }
+  .note { top: 47%; }
 }
 
 /* ── Static sections ─────────────────────────────────────── */
