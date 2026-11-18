@@ -81,63 +81,9 @@ describe('T8 / A4 — L1 Contract Invariants & Anti-Backdoor Controls', function
     });
   });
 
-  describe('HumanityIdentityRegistry — Invariants', function () {
-    let registry: any;
-
-    beforeEach(async function () {
-      const Factory = await ethers.getContractFactory('HumanityIdentityRegistry');
-      registry = await Factory.deploy();
-      await registry.waitForDeployment();
-    });
-
-    it('Invariant 4: Self-sovereign identity registration cannot be overwritten or hijacked', async function () {
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes('user1_worldid_nullifier'));
-
-      // User1 registers identity
-      await registry.connect(user1).registerIdentity(
-        'Alice Sovereign',
-        'https://ledgerchat.org/avatar1.png',
-        'Humanity Ledger Core Member',
-        nullifier,
-      );
-
-      const identity = await registry.identities(user1.address);
-      expect(identity.displayName).to.equal('Alice Sovereign');
-      expect(identity.worldIdNullifierHash).to.equal(nullifier);
-
-      // User1 cannot be re-registered (IdentityAlreadyExists)
-      await expect(
-        registry.connect(user1).registerIdentity(
-          'Alice Malicious Duplicate',
-          '',
-          '',
-          nullifier,
-        ),
-      ).to.be.revertedWithCustomError(registry, 'IdentityAlreadyExists');
-
-      // Attacker cannot reuse User1's nullifier (NullifierAlreadyUsed)
-      await expect(
-        registry.connect(attacker).registerIdentity(
-          'Attacker Sybil',
-          '',
-          '',
-          nullifier,
-        ),
-      ).to.be.revertedWithCustomError(registry, 'NullifierAlreadyUsed');
-    });
-
-    it('Invariant 5: Identity profile can only be updated by its rightful owner', async function () {
-      const nullifier = ethers.keccak256(ethers.toUtf8Bytes('user2_nullifier'));
-      await registry.connect(user2).registerIdentity('Bob', '', '', nullifier);
-
-      // Attacker tries to update Bob's identity profile
-      // updateProfile operates on msg.sender, so attacker cannot alter Bob's state
-      await registry.connect(attacker).registerIdentity('Attacker', '', '', ethers.ZeroHash);
-      await registry.connect(attacker).updateProfile('Attacker New Name', '', '');
-
-      // Bob's profile remains untouched
-      const bobIdentity = await registry.identities(user2.address);
-      expect(bobIdentity.displayName).to.equal('Bob');
-    });
+  // HumanityIdentityRegistry was retired on 18 November 2026 (operator decision B-3a, IR-05).
+  it('the retired identity registry and StudioProvenance are no longer compiled', async function () {
+    const names = await hre.artifacts.getAllFullyQualifiedNames();
+    expect(names.some((n: string) => /HumanityIdentityRegistry|StudioProvenance/.test(n))).to.equal(false);
   });
 });

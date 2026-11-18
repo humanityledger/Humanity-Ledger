@@ -17,18 +17,14 @@ interface ContractVerificationTarget {
   expectedZeroBackdoors: string[];
 }
 
+// HumanityIdentityRegistry was retired on 18 November 2026 (operator decision B-3a, IR-05: it
+// accepted a World ID nullifier without a proof). Identity is IdentityCredential in aztec-nr.
 const TARGETS: ContractVerificationTarget[] = [
   {
     name: 'HumanityTimeLockVault',
     sourceFile: 'contracts/HumanityTimeLockVault.sol',
     artifactPath: 'artifacts/contracts/HumanityTimeLockVault.sol/HumanityTimeLockVault.json',
     expectedZeroBackdoors: ['adminWithdraw', 'emergencyDrain', 'migrateTo', 'selfdestruct'],
-  },
-  {
-    name: 'HumanityIdentityRegistry',
-    sourceFile: 'contracts/HumanityIdentityRegistry.sol',
-    artifactPath: 'artifacts/contracts/HumanityIdentityRegistry.sol/HumanityIdentityRegistry.json',
-    expectedZeroBackdoors: ['overrideIdentity', 'adminTransfer', 'drain'],
   },
   {
     name: 'LedgerDeadmanSwitch',

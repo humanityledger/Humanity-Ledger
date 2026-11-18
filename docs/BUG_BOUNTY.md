@@ -26,7 +26,6 @@ Security researchers are invited to inspect and analyze the following monorepo c
 | `circuits/identity/` | Noir Circuit | Membership proofs and anonymous sanction screening constraints |
 | `circuits/streams/` | Noir Circuit | Temporal monotonicity and continuous stream accrual constraints |
 | `contracts/HumanityTimeLockVault.sol` | Smart Contract | Non custodial vault timelock mechanisms and balance conservation |
-| `contracts/HumanityIdentityRegistry.sol` | Smart Contract | Identity state binding and ownership preservation |
 | `contracts/security/LedgerDeadmanSwitch.sol` | Smart Contract | Dead man switch threshold logic and backup transfer controls |
 | `lib/aztec/verifier.ts` | Protocol | Verification key lifecycle transitions and hash verification |
 | `lib/security/eaf-guard.ts` | Runtime | Ephemeral application sandbox egress prevention and payload bounds |

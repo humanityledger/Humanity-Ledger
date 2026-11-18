@@ -3,11 +3,11 @@
  *
  *   fee = max(minFee, ceil(amount × feeBps / 10,000))
  *
- * State: the same arithmetic is in PrivateEscrow and PaymentStream (settlement only),
- * compiled with Aztec 6.0.0 and recorded as the current classes in
- * deployments/aztec-testnet.json. Those classes were compiled with the zero treasury
- * placeholder; the source now carries the designated treasury and is pending recompile.
- * Nothing is deployed. There is no external audit.
+ * State: the same arithmetic is in PrivateEscrow and PaymentStream (settlement only).
+ * For the closed alpha, wave 1 (operator decisions OD-2 and OD-7, 18 November 2026), the source
+ * runs it with a zero schedule (ALPHA_* below): no protocol fee, and a maximum of 100 HLC per
+ * escrow and per stream fixed in bytecode. The BASELINE_* values are the D-1..D-5 technical base
+ * for after the alpha (option A); no class uses them now. There is no external audit.
  * Every function is pure and works in bigint base units of the token (HLC: 6 decimals).
  *
  * Two properties carried over to the contract:
@@ -119,7 +119,7 @@ export const BASELINE_STREAM_SCHEDULE: FeeSchedule = {
 
 export type BaselineQuote =
   | { ok: true; fee: bigint; net: bigint }
-  | { ok: false; reason: 'invalid-amount' | 'invalid-schedule' | 'fee-exceeds-share' | 'fee-exceeds-tx-cap' };
+  | { ok: false; reason: 'invalid-amount' | 'invalid-schedule' | 'fee-exceeds-share' | 'fee-exceeds-tx-cap' | 'above-alpha-maximum' };
 
 /** protocolFee, then the baseline cap. A fee above the cap is refused, not reduced. */
 export function baselineFee(amount: bigint, s: FeeSchedule): BaselineQuote {
@@ -127,4 +127,22 @@ export function baselineFee(amount: bigint, s: FeeSchedule): BaselineQuote {
   if (!q.ok) return q;
   if (q.fee > BASELINE_TX_CAP) return { ok: false, reason: 'fee-exceeds-tx-cap' };
   return q;
+}
+
+/**
+ * Closed alpha, wave 1 (operator decisions OD-2 and OD-7, Stefan Antonio Cirisanu, 18 November
+ * 2026, docs/alpha/OPERATOR_DECISIONS.md): what the current PrivateEscrow and PaymentStream
+ * source charges and accepts. FEE_BPS and the minimum fee are 0 in both, and MAX_AMOUNT is
+ * 100_000_000 base units (100 HLC, 6 decimals). test/unit/protocol/fee-baseline-source.test.ts
+ * checks these values against contracts/aztec/{escrow,streams}/src/main.nr.
+ */
+export const ALPHA_MAX_AMOUNT = 100_000_000n;
+
+export const ALPHA_ESCROW_SCHEDULE: FeeSchedule = { feeBps: 0n, minFee: 0n, maxFeeShareBps: BASELINE_MAX_FEE_SHARE_BPS };
+export const ALPHA_STREAM_SCHEDULE: FeeSchedule = { feeBps: 0n, minFee: 0n, maxFeeShareBps: BASELINE_MAX_FEE_SHARE_BPS };
+
+/** What the contract of `kind` does with `amount`: refused above the alpha maximum, otherwise fee 0. */
+export function contractQuote(amount: bigint, kind: 'escrow' | 'stream' | 'streams'): BaselineQuote {
+  if (amount > ALPHA_MAX_AMOUNT) return { ok: false, reason: 'above-alpha-maximum' };
+  return baselineFee(amount, kind === 'escrow' ? ALPHA_ESCROW_SCHEDULE : ALPHA_STREAM_SCHEDULE);
 }

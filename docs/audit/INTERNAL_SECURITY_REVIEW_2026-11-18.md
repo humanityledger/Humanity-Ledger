@@ -10,7 +10,9 @@
 
 ## 1. Scope and inventory
 
-Deployment status comes from `deployments/*.json` and from the files that use each contract (`grep` at `6251a73`). "Not deployed" means no address of ours appears anywhere in the repository.
+Deployment status comes from `deployments/*.json` and from the files that use each contract (`grep` at `6251a73`). "Not deployed" means no deployment record of ours exists.
+
+> **Correction, 18 November 2026.** This sentence first said that no address of ours appeared anywhere in the repository. That was wrong: `docs/L1_VERIFICATION.md` listed five "verified deployed addresses". On 18 November Blockscout showed no contract code at the four Base Sepolia ones; the Polygon Amoy one could not be checked. They were withdrawn on branch `claude/alpha-wave1-decisions`.
 
 ### 1.1 Solidity (`contracts/`, compiled with solc 0.8.24)
 
@@ -22,7 +24,7 @@ Deployment status comes from `deployments/*.json` and from the files that use ea
 | `HumanityTimeLockVault.sol` (249) | Per-owner token vault with a dead-man sweep to a backup wallet. | No address recorded. Referenced by `scripts/verify-l1-bytecode.ts`. Its route `/api/wallet/recovery/approve` is retired (410). | The tokens deposited. | Per-vault owner and backup. The inherited `Ownable` owner has no powers. | ERC-20 `transferFrom`/`transfer` (low-level for the sweep). | No. |
 | `security/LedgerDeadmanSwitch.sol` (328) | Allowance-based inheritance: after the timeout, it moves approved ERC-20/721 tokens from the owner to the backup. | No address recorded. `scripts/deploy-system.ts` deploys it. The `/api/wallet/deadman/*` routes are retired (410). | None: `receive` and `fallback` revert. It moves allowances only. | Owner (Ownable2Step) and backup. | ERC-20 `allowance`/`balanceOf`/`transferFrom`; ERC-721 `isApprovedForAll`/`getApproved`/`ownerOf`/`safeTransferFrom`. | No. |
 | `civilization/HumanTimeLock.sol` (56) | ETH time lock per user. | No address recorded. `scripts/deploy-system.ts` deploys it. | The ETH locked. | None. | ETH `call` to the depositor. | No. |
-| `HumanityIdentityRegistry.sol` (104) | Profile and World ID nullifier registry. | Not deployed. Used only by `scripts/verify-l1-bytecode.ts`. | None. | Owner. | None. | No. |
+| `HumanityIdentityRegistry.sol` (104) | Profile and World ID nullifier registry. **Retired 18 Nov 2026 (B-3a).** | Not deployed. Used only by `scripts/verify-l1-bytecode.ts`. | None. | Owner. | None. | No. |
 | `ZKIdentityRegistry.sol` (61) | ZK identity registry; verification is disabled (it reverts). | Not deployed. | None. | Owner. | None. | No. |
 | `ZKVerificationKeyRegistry.sol` (189) | Timelocked registry of UltraHonk VK hashes. | "Not deployed to any network yet" (its own NatSpec). `scripts/zk/deploy-vk-registry.ts` deploys it. | None. | Owner (Ownable2Step). | None. | No. |
 | `StudioProvenance.sol` (45) | Anchors document hashes. | Not deployed. Studio is `STUDIO_LOCKED`. | None. | None. | None. | No. |
@@ -329,7 +331,7 @@ function _dropQueuedAsset(address token) private {
 if (clean.includes(',')) throw new Error('Use a dot for decimals, such as 1.5, without thousand separators.');
 ```
 
-### IR-04 — The guardian cannot cancel a queued admin, guardian or sunset change · Medium · Open, decision for Stefan (B-1)
+### IR-04 — The guardian cannot cancel a queued admin, guardian or sunset change · Medium · Accepted with mitigations by Stefan, 18 Nov 2026 (B-1)
 
 - **File:** `HLPortal.sol`, `queueAdmin`, `queueGuardian` and `queueSunset`.
 - **Problem:** the `cancelAsset` comment says that a compromised admin "cannot push one through", but that holds for assets only.
@@ -340,13 +342,13 @@ if (clean.includes(',')) throw new Error('Use a dot for decimals, such as 1.5, w
   - A malicious guardian could then block admin rotation forever.
   - Not applied.
 
-### IR-05 — HumanityIdentityRegistry accepts a World ID nullifier without a proof · Medium · Open (B-3)
+### IR-05 — HumanityIdentityRegistry accepts a World ID nullifier without a proof · Medium · Retired, 18 Nov 2026 (B-3a)
 
 - **Problem:** anyone can register a nullifier that is not theirs, and that blocks its owner.
 - **Exposure:** the contract is not deployed. Only a bytecode script refers to it.
 - **Recommendation:** retire it, or add the World ID verifier before it is ever deployed.
 
-### IR-06 — StudioProvenance claims can be front-run · Medium · Open (B-3)
+### IR-06 — StudioProvenance claims can be front-run · Medium · Retired, 18 Nov 2026 (B-3b)
 
 - **Problem:** `anchorDocument(hash, …)` records the first sender. Someone who sees the transaction in the mempool can claim the document first.
 - **Exposure:** not deployed; Studio is `STUDIO_LOCKED`.
@@ -381,7 +383,7 @@ if (clean.includes(',')) throw new Error('Use a dot for decimals, such as 1.5, w
 - These are owner-only actions. An attacker holding the owner key could withdraw directly anyway.
 - Unlike LedgerDeadmanSwitch, there is no cooldown on the backup.
 
-### IR-13 — LedgerDeadmanSwitch: an owner who pauses and then becomes unreachable locks the inheritance · Low · Open (B-3)
+### IR-13 — LedgerDeadmanSwitch: an owner who pauses and then becomes unreachable locks the inheritance · Low · Out of the deploy script, 18 Nov 2026 (B-3c)
 
 - **Problem:** `pause()` has no expiry, and `triggerInheritance` is `whenNotPaused`.
 - **Possible fix:** a pause that expires. That changes when the backup can move funds, so it is a decision for Stefan.
@@ -402,10 +404,10 @@ None of the open items affects HLC payments on Alpha. HLC is Aztec's standard To
 | Criterion | Status |
 |---|---|
 | Zero open critical or high findings | Met. |
-| Every medium fixed or accepted by Stefan in writing | **Not met**: IR-04, IR-05 and IR-06 wait for Stefan (B-1, B-3). |
+| Every medium fixed or accepted by Stefan in writing | **Met on 18 Nov 2026** (`docs/alpha/OPERATOR_DECISIONS.md`): IR-02 confirmed (B-2), IR-04 accepted with mitigations (B-1), IR-05 and IR-06 retired (B-3a, B-3b). |
 | security-review.yml green, run ids here | §9. Aderyn is skipped because it was retired upstream (B-4). |
 | Hardhat, Aztec contracts, typecheck, unit tests green | §9. |
-| IA-08 resolved by Stefan or listed as the one blocker | **Listed (B-5).** The "IP Protection and Authorship Verification" and "Advanced Security Hardening Suite" checks keep failing on the personal name in LICENSE-MIT and other files. An agent may not change those guards. |
+| IA-08 resolved by Stefan or listed as the one blocker | **Listed: the one blocker.** IA-08 is `npm audit` (43 high), which Stefan clears on a machine with network access. (Corrected 18 Nov 2026: this row first described IA-09, the CI authorship check, as IA-08. IA-09 does not block Phase 0; Stefan decided to extend its exceptions, B-5.) |
 | `aztec-mainnet.json` keeps `"audit": null`; optional `internalReview` field; its test updated | Met. `internalReview` points here, and `test/unit/protocol/alpha-agreement-gates.test.ts` checks that the gate still refuses. |
 
 ## 8. Decisions only Stefan can take
@@ -416,8 +418,10 @@ None of the open items affects HLC payments on Alpha. HLC is Aztec's standard To
 | B-2 | IR-02 (applied): confirm it, or revert `d3890e0`. |
 | B-3 | IR-05, IR-06, IR-13: retire HumanityIdentityRegistry and StudioProvenance or fix them before any deploy, and decide on a pause that expires in LedgerDeadmanSwitch. |
 | B-4 | Replacement for the retired Aderyn, or accept Slither alone. |
-| B-5 | IA-08: the CI authorship checks (personal name in the licence files). |
-| B-6 | Phase 2 needs OD-1…OD-10, each with a value and a date. None is filled, so Phase 2 has not started. |
+| B-5 | IA-08 (`npm audit`) and IA-09 (the CI authorship check), mislabelled together here at first. Decided on 18 Nov 2026: IA-08 by Stefan with network access; IA-09 by extending the check's exceptions. |
+| B-6 | Phase 2 needs OD-1…OD-10, each with a value and a date. **Filled and signed on 18 Nov 2026** (`docs/alpha/OPERATOR_DECISIONS.md`). |
+
+All of B-1…B-6 were decided by Stefan Antonio Cirisanu on 18 November 2026 (signed in writing in the chat, transcribed by the agent).
 
 ## 9. Final CI runs (head of `claude/security-review-phase0`)
 
@@ -429,9 +433,9 @@ Head `a140569` (merged by Stefan as PR #140 at 09:39 UTC):
 | Security review, Gambit | 44275884943 (job 134703889647) | 92.9 %, green. Same contract sources. |
 | System Core: Contract Tests (Hardhat) | 44277467805 | green, including the two IR-02 tests |
 | CI: Typecheck, Lint & Secret Scan | 44277468022 | green |
-| Advanced Security Hardening Suite | 44277467827 | Adversarial Test Suite (full vitest) green. The two pre-existing failures remain: "Verify no personal names in tracked files" (IA-08, B-5) and npm audit. |
+| Advanced Security Hardening Suite | 44277467827 | Adversarial Test Suite (full vitest) green. The two pre-existing failures remain: "Verify no personal names in tracked files" (IA-09, B-5) and npm audit. |
 | Invariant & Security CI | 44277467830 | green except the pre-existing npm audit |
-| IP Protection and Authorship Verification | 44277467791 | pre-existing failure (IA-08, B-5) |
+| IP Protection and Authorship Verification | 44277467791 | pre-existing failure (IA-09, B-5) |
 | Aztec contracts | 44273978152 | green; no artifact changed, so no class id changed |
 
 The Gambit follow-up tests and `docs/alpha/OPERATOR_DECISIONS.md` are on the same branch, after the merge, in a new PR.

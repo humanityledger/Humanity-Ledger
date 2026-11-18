@@ -58,7 +58,6 @@ All open protocol and circuit gaps are tracked with **High for production** seve
 | Contract | Location | Role |
 |---|---|---|
 | `HumanityTimeLockVault` | `contracts/HumanityTimeLockVault.sol` | Per-user multi-token dead man's switch vault — sweeps all deposited ERC-20 tokens to a designated backup wallet after configurable inactivity timeout; vault reconfigurable by owner if alive |
-| `HumanityIdentityRegistry` | `contracts/HumanityIdentityRegistry.sol` | On-chain identity claim registry |
 | `LedgerDeadmanSwitch` | `contracts/security/LedgerDeadmanSwitch.sol` | Non-custodial inheritance protocol — forwards pre-approved ERC-20/ERC-721 allowances from owner to backup wallet; callable only by backupWallet or owner after inactivity timeout |
 
 **Audit focus**:
@@ -127,7 +126,7 @@ Nothing listed here has been audited by a third party. "Shipped" means reachable
 | Messaging | Agreement invitations (carry claim/contract secrets inside MLS) | `lib/aztec/agreement-invite.ts`, `chat-agreements.ts` | Yes | Legacy `__ZK_*` cards neutralised |
 | Multi-device | Chat preferences over XMTP | `lib/sync/*` | Yes | Aztec state is not synced: keys re-derive from the signature, notes resync from the network. Sender registrations and agreements come back only from re-exchanged addresses and chat invitations |
 | Own circuits | Noir circuits + `@aztec/bb.js` 5.3.0 prover | `circuits/*`, `lib/zk/*` | No (only the VK pin manifest is served) | bb.js 5.x status against the V5 proving-system disclosure is unknown: the disclosure names no component or version. Treat as affected until bumped |
-| L1 | `HumanityIdentityRegistry`, `HumanityTimeLockVault`, `LedgerDeadmanSwitch`, `ZKIdentityRegistry`, `ZKVerificationKeyRegistry`, `StudioProvenance` | `contracts/*.sol`, `contracts/security` | No UI; `/api/wallet/deadman` and `/api/wallet/recovery` are retired (410) | Hardhat suite (workflow "System Core") fails on `main` and did before this inventory. Decide: retire or fix, then audit |
+| L1 | `HumanityTimeLockVault`, `LedgerDeadmanSwitch`, `ZKIdentityRegistry`, `ZKVerificationKeyRegistry`, `contracts/portal/*` (HumanityIdentityRegistry and StudioProvenance retired 18 Nov 2026, B-3) | `contracts/*.sol`, `contracts/security` | No UI; `/api/wallet/deadman` and `/api/wallet/recovery` are retired (410) | Hardhat suite (workflow "System Core") fails on `main` and did before this inventory. Decide: retire or fix, then audit |
 | Server | Auth (SIWE, JWT), communities, settings, Studio proxy | `app/api/*`, `lib/jwt.ts` | Yes | Secrets no longer defaulted in the repository. Community posts are server-stored and not end-to-end encrypted |
 | Server | LiveKit token route | `app/api/call/token` | Route exists, no UI caller | Remove or wire and audit. 1:1 calls are browser-to-browser WebRTC |
 | Removed | SSE, market/portfolio/hub products, QD identity context | n/a | No | Deleted in #29/#30 |

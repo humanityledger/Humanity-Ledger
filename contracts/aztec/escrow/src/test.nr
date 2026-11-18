@@ -21,10 +21,12 @@ use aztec::{
 
 global DOM_SEP__CLAIM_SECRET: u32 = 718293041;
 global CLAIM_SECRET: Field = 0xc1a1;
-// 20_000 clears MIN_FEE 1000 at a 10% share: fee 1000, net 19_000.
+// Alpha classes charge no protocol fee (OD-7, 18 November 2026): the recipient gets it all.
 global AMOUNT: u128 = 20000;
-global FEE: u128 = 1000;
-global NET: u128 = 19000;
+global FEE: u128 = 0;
+global NET: u128 = 20000;
+// OD-2: 100 HLC at 6 decimals, the same value as MAX_AMOUNT in main.nr.
+global MAX_AMOUNT: u128 = 100000000;
 global MINTED: u128 = 100000;
 global LOCK: u64 = 600;
 
@@ -124,8 +126,9 @@ unconstrained fn deposit_then_claim_moves_the_funds() {
     claim(s, 1, CLAIM_SECRET);
     assert(balance(s.env, s.token, s.recipient) == NET);
     assert(balance(s.env, s.token, s.escrow) == 0);
-    // net + fee = deposit. The fee note is at the zero placeholder, which has no test key.
+    // No fee: sender and recipient together hold everything minted; nothing went to TREASURY.
     assert(balance(s.env, s.token, s.sender) + balance(s.env, s.token, s.recipient) == MINTED - FEE);
+    assert(balance(s.env, s.token, s.sender) + balance(s.env, s.token, s.recipient) == MINTED);
 }
 
 #[test]
@@ -307,24 +310,44 @@ unconstrained fn the_same_escrow_id_cannot_be_reused_after_settlement() {
 unconstrained fn deposit_amount(s: Setup, amount: u128, escrow_id: Field, nonce: Field) {
     let deadline = s.env.last_block_timestamp() + LOCK;
     add_private_authwit_from_call(s.env, s.sender, s.escrow, transfer_call(s.token, s.sender, s.escrow, amount, nonce));
+    let secret_hash = poseidon2_hash_with_separator([CLAIM_SECRET], DOM_SEP__CLAIM_SECRET);
     s.env.call_private(
         s.sender,
-        PrivateEscrow::at(s.escrow).deposit(s.recipient, amount, deadline, 5, escrow_id, nonce),
+        PrivateEscrow::at(s.escrow).deposit(s.recipient, amount, deadline, secret_hash, escrow_id, nonce),
     );
 }
 
-#[test(should_fail_with = "fee exceeds share")]
-unconstrained fn deposit_refused_when_fee_exceeds_share() {
+// OD-7: amounts the 16 November baseline refused for its fee (9_999 under the 10% share, 1 unit)
+// are accepted and paid in full: the alpha class charges no fee.
+#[test]
+unconstrained fn small_amounts_are_paid_in_full_without_fee() {
     let s = setup();
     deposit_amount(s, 9999, 1, 11);
+    claim(s, 1, CLAIM_SECRET);
+    deposit_amount(s, 1, 2, 12);
+    claim(s, 2, CLAIM_SECRET);
+    assert(balance(s.env, s.token, s.recipient) == 10000);
+    assert(balance(s.env, s.token, s.escrow) == 0);
+    assert(balance(s.env, s.token, s.sender) == MINTED - 10000);
 }
 
-#[test(should_fail_with = "fee exceeds tx cap")]
-unconstrained fn deposit_refused_when_fee_exceeds_tx_cap() {
+// OD-2: exactly the alpha maximum is accepted and claimed in full.
+#[test]
+unconstrained fn the_alpha_maximum_is_accepted_and_claimed_in_full() {
     let s = setup();
-    let amount: u128 = 1000000001;
-    mint(s.env, s.token, s.sender, amount);
-    deposit_amount(s, amount, 1, 11);
+    mint(s.env, s.token, s.sender, MAX_AMOUNT);
+    deposit_amount(s, MAX_AMOUNT, 1, 11);
+    claim(s, 1, CLAIM_SECRET);
+    assert(balance(s.env, s.token, s.recipient) == MAX_AMOUNT);
+    assert(balance(s.env, s.token, s.escrow) == 0);
+}
+
+// OD-2: one unit above the maximum is refused before any token moves.
+#[test(should_fail_with = "above the alpha maximum")]
+unconstrained fn above_the_alpha_maximum_is_refused() {
+    let s = setup();
+    mint(s.env, s.token, s.sender, MAX_AMOUNT + 1);
+    deposit_amount(s, MAX_AMOUNT + 1, 1, 11);
 }
 
 // Section 1 vectors. Schedule is the fixture (30 / 500 / 500), not the D5 globals.

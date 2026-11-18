@@ -63,6 +63,15 @@ describe('checkAgreementPolicy', () => {
     expect(checkAgreementPolicy({ ...base, amount: 0n })).toEqual({ ok: false, reasons: ['amount must be positive'] });
     expect(checkAgreementPolicy({ ...base, amount: -1n }).ok).toBe(false);
   });
+
+  it('OD-2: a configured cap above 100 HLC never allows more than 100 HLC during the closed alpha', () => {
+    const big = { [TOKEN]: 1_000_000_000n }; // 1000 HLC, the value set in Railway before 18 Nov 2026
+    expect(checkAgreementPolicy({ ...base, caps: big, amount: 100_000_000n })).toEqual({ ok: true });
+    expect(checkAgreementPolicy({ ...base, caps: big, amount: 100_000_001n })).toEqual({
+      ok: false,
+      reasons: ['amount exceeds the closed alpha maximum of 100000000 base units (100 HLC)'],
+    });
+  });
 });
 
 describe('checkAgreementContext', () => {

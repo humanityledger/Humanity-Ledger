@@ -187,11 +187,17 @@ pub contract PaymentStream {
 
     global TRANSFER_IN_PRIVATE_SELECTOR: FunctionSelector =
         FunctionSelector::from_signature("transfer_in_private((Field),(Field),u128,Field)");
-    // Authorized baseline, 16 November 2026. Bytecode, not public storage.
-    global FEE_BPS: u128 = 50;
+    // Closed alpha, wave 1 (operator decisions OD-2 and OD-7, Stefan Antonio Cirisanu,
+    // 18 November 2026, docs/alpha/OPERATOR_DECISIONS.md). Bytecode, not public storage.
+    // No protocol fee: FEE_BPS is 0 (STREAM_MIN_FEE already was), so withdrawals and cancels pay
+    // fee 0 and nothing goes to TREASURY. The D-1..D-5 baseline (FEE_BPS 50, share 10 %,
+    // TX_CAP 5,000,000) stays the technical base for after the alpha.
+    global FEE_BPS: u128 = 0;
     global STREAM_MIN_FEE: u128 = 0;
     global MAX_FEE_SHARE_BPS: u128 = 1000;
     global TX_CAP: u128 = 5000000;
+    // Largest stream total, in base units of the token: 100 HLC (6 decimals). Immutable in the class.
+    global MAX_AMOUNT: u128 = 100000000;
     // Designated treasury, 17 November 2026. Not the 4-of-7 multisig. Bytecode, not storage.
     global TREASURY: AztecAddress = AztecAddress { inner: 0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed };
 
@@ -266,6 +272,7 @@ pub contract PaymentStream {
 
         assert(sender != recipient, "PaymentStream: self-stream forbidden");
         assert(total > 0, "PaymentStream: zero total");
+        assert(total <= MAX_AMOUNT, "PaymentStream: above the alpha maximum");
         assert(rate > 0, "PaymentStream: zero rate");
         assert(start <= anchor_ts, "PaymentStream: start in future");
 

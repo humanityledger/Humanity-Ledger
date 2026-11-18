@@ -23,7 +23,9 @@ Production Ledger Chat runs on Aztec Alpha (Ethereum L1 chain 1) when the build 
 
 HLC on Alpha is `0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5`. The retired token `0x2cd0f377…e55d` is do-not-use. The recorded per-payment cap is 1000 HLC. Each account pays its own Fee Juice. `/api/aztec/sponsor` answers 410. Two old LedgerSponsor instances exist and nothing in the app calls them.
 
-The fee baseline (spec sections 6 and 8, authorized 16 November 2026) is in the escrow and stream source, with the designated treasury. Aztec 6.0.0 compiled it in CI on 17 November 2026 (run 44061471400). TXE from inside each crate: PrivateEscrow 19 passed, PaymentStream 29 passed. Current classes, `status: not-deployed`, `address: null`, `tracksCurrentArtifact: true`:
+> **18 November 2026.** The closed-alpha classes replace the ones below (OD-2 and OD-7, `docs/alpha/OPERATOR_DECISIONS.md`). They charge no protocol fee and accept at most 100 HLC per agreement. PrivateEscrow is `0x165090de…f143` and PaymentStream is `0x0f2ba459…c1e3` (print-class-ids, run 44288052113); neither is deployed. The per-payment maximum is also 100 HLC in the client (`ALPHA_MAX_AMOUNT`), even though `NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS` in Railway still says 1000 HLC; Stefan lowers it to `100000000`.
+
+The fee baseline (spec sections 6 and 8, 16 November 2026; since 18 November the base for after the alpha, option A) was in the escrow and stream source, with the designated treasury. Aztec 6.0.0 compiled it in CI on 17 November 2026 (run 44061471400). TXE from inside each crate: PrivateEscrow 19 passed, PaymentStream 29 passed. The classes were then (history, superseded):
 
 - PrivateEscrow `0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6`
 - PaymentStream `0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b`

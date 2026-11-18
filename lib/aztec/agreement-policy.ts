@@ -19,6 +19,7 @@
  * the list of reasons, never silently.
  */
 import type { FeeNetwork } from './fees';
+import { ALPHA_MAX_AMOUNT } from '../protocol/fees';
 
 export interface MainnetRecord {
   audit: null | { report: string; date: string };
@@ -133,6 +134,9 @@ export function checkAgreementPolicy(p: PolicyInput): PolicyResult {
   const cap = p.caps?.[p.token.toLowerCase()];
   if (cap === undefined) reasons.push('no amount cap configured for this token on mainnet');
   else if (p.amount > cap) reasons.push(`amount exceeds the mainnet cap of ${cap} base units`);
+  // OD-2 (18 November 2026): at most 100 HLC per payment, escrow and stream during the closed
+  // alpha, whatever the configured cap says (NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS may be higher).
+  if (p.amount > ALPHA_MAX_AMOUNT) reasons.push(`amount exceeds the closed alpha maximum of ${ALPHA_MAX_AMOUNT} base units (100 HLC)`);
   if (p.amount <= 0n) reasons.push('amount must be positive');
   return reasons.length ? { ok: false, reasons } : { ok: true };
 }

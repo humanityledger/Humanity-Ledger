@@ -23,7 +23,8 @@ The audit scope encompasses:
 - Noir circuit constraint completeness and soundness (`circuits/escrow/`, `circuits/streams/`,
   `circuits/identity/`).
 - L1 Solidity contract invariants (`contracts/HumanityTimeLockVault.sol`,
-  `contracts/LedgerDeadmanSwitch.sol`, `contracts/HumanityIdentityRegistry.sol`).
+  `contracts/security/LedgerDeadmanSwitch.sol`, `contracts/portal/*`). HumanityIdentityRegistry
+  was retired on 18 November 2026 (IR-05, decision B-3a).
 - EAF sandbox containment under adversarial payloads.
 - Authentication, session management, and cron scheduler security.
 - XMTP MLS key custody and forward secrecy properties.

@@ -2,6 +2,14 @@
 
 **Date:** 5 November 2026, updated 10, 11 and 14 November 2026. **16 November:** the paragraphs below still hold. This note only records the delta since 15 November.
 
+**Delta 18 November 2026 (operator decisions, signed by Stefan Antonio Cirisanu; `docs/alpha/OPERATOR_DECISIONS.md`).**
+
+- **Fees, option A.** D-1 to D-5 in `docs/protocol/FEE_CONTRACT_SPEC.md` are the technical base for after the alpha. They are not confirmed for charging. The spec now says the same as this file.
+- **Closed alpha.** It charges no protocol fee (OD-7). Its classes accept at most 100 HLC per escrow and per stream, fixed in bytecode (OD-2). Wave 1 is escrow and streams on Aztec Alpha with HLC, for at most 20 testers invited by Stefan. The Ethereum portal is wave 2, after an external review.
+- **Status of those classes.** They are recompiled by CI and not deployed. Agreements on Alpha stay refused until the `closedAlpha` gate and a recorded deployment exist. `"audit"` stays `null`.
+- **Retired** (B-3): HumanityIdentityRegistry and StudioProvenance. LedgerDeadmanSwitch is out of the deploy script.
+- **Q8 and M3.** Private fee payment, if it comes, uses an FPC operated by Aztec or the community, never one of ours.
+
 **Delta 16 November 2026.**
 
 - Fees: unchanged from the 15 November decision under "Network fees: no sponsorship". No fee contract. Phase 0 is `docs/protocol/FEE_CONTRACT_SPEC.md`. D-1 through D-5 are recommendations waiting on the operator. This file does not confirm them.
@@ -71,8 +79,8 @@ Not a blocker for any R item: no contract charges a fee, and none may until laun
 |---|---|---|
 | Phase 0 arithmetic, u128-safe, with the T-5 refusal | Real only in tests: `lib/protocol/fees.ts`, `test/unit/protocol/fees.test.ts` | Done |
 | Contract specification with test vectors and acceptance criteria | `docs/protocol/FEE_CONTRACT_SPEC.md` | Done |
-| Decisions D-1 to D-4 (where the fee is taken, the schedule, streams, the treasury's Aztec account) | Open | Operator |
-| Implementation in `PrivateEscrow` and `PaymentStream`, TXE tests, testnet e2e | Not implemented; after the decisions | Engineer |
+| Decisions D-1 to D-4 (where the fee is taken, the schedule, streams, the treasury's Aztec account) | Decided 18 Nov 2026: option A. They stay the base for after the alpha, and the alpha charges no fee (OD-7). D-4 (treasury = the 4-of-7 multisig's Aztec account) is decided again before any fee is charged | Operator |
+| Implementation in `PrivateEscrow` and `PaymentStream`, TXE tests, testnet e2e | Formula in the source since 16–17 Nov. Alpha classes run it with a zero schedule and `MAX_AMOUNT` 100 HLC (18 Nov); TXE in CI. Testnet e2e with the new classes pending | Engineer |
 | External audit, then Alpha | Not started | Operator |
 
 ### Runbook for R1 (one browser, smallest amounts)

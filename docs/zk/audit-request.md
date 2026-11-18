@@ -16,7 +16,7 @@
 ### 1.2 L1 Smart Contracts (`contracts/`)
 - **`contracts/HumanityTimeLockVault.sol`**: Timelock contract governing circuit verification key updates (mandatory 14-day delay) and backup asset recovery without administrative backdoor paths.
 - **`contracts/security/LedgerDeadmanSwitch.sol`**: Time-enclosed dead-man switch enforcing strict temporal constraints (`block.timestamp >= lastPing + timeoutPeriod`).
-- **`contracts/HumanityIdentityRegistry.sol`**: Sovereign identity registry binding WorldID and proof nullifiers with anti-usurpation guarantees.
+- ~~`contracts/HumanityIdentityRegistry.sol`~~: retired 18 November 2026 (IR-05, decision B-3a).
 
 ### 1.3 Client Proving and Isolation Boundary
 - **`public/workers/prover.worker.js`**: Dedicated Web Worker execution boundary ensuring private witness confidentiality under COOP/COEP isolation.

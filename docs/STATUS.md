@@ -2,6 +2,14 @@
 **Current status: live on Aztec Alpha (mainnet) with a cap per payment; no external audit.** The first private payment from Ledger Chat on Aztec Alpha, 14 November 2026: transfer `0x1eb2bb76…40a5` in L2 block 29012 (HLC `0x1f49571a…24e5` deployed in block 28992), confirmed by the mainnet preflight run 43583640304. Network fees: each account pays its own (Fee Juice it bridges, or a contact pays through a fee link); Ledger Chat sponsors no fee, by product decision of 15 November 2026. The code is open source, MIT OR Apache-2.0.
 **Last updated: 16 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
 
+**Delta 18 November 2026 (operator decisions, signed by Stefan Antonio Cirisanu; `docs/alpha/OPERATOR_DECISIONS.md`).**
+
+- **Fees, option A.** D-1 to D-5 in `docs/protocol/FEE_CONTRACT_SPEC.md` are the technical base for after the alpha. They are not confirmed for charging. The spec now says the same as this file.
+- **Closed alpha.** It charges no protocol fee (OD-7). Its classes accept at most 100 HLC per escrow and per stream, fixed in bytecode (OD-2). Wave 1 is escrow and streams on Aztec Alpha with HLC, for at most 20 testers invited by Stefan. The Ethereum portal is wave 2, after an external review.
+- **Status of those classes.** They are recompiled by CI and not deployed. Agreements on Alpha stay refused until the `closedAlpha` gate and a recorded deployment exist. `"audit"` stays `null`.
+- **Retired** (B-3): HumanityIdentityRegistry and StudioProvenance. LedgerDeadmanSwitch is out of the deploy script.
+- **Q8 and M3.** Private fee payment, if it comes, uses an FPC operated by Aztec or the community, never one of ours.
+
 **Delta 16 November 2026.** The fee sentence above is unchanged: no sponsorship, no fee contract (Phase 0 only; D-1–D-5 in `docs/protocol/FEE_CONTRACT_SPEC.md` are not confirmed). Questions Q1–Q10 in `docs/AZTEC_DECISIONS.md` stay OPEN. `communityMls` still defaults to false. A community with that flag set gets 410 from the post routes and no new post row; every existing community is unchanged and still server-readable. The package for Aztec Labs is `docs/AZTEC_FOUNDATION_DOSSIER.md` (section 0). On Safari and Chrome, `/connect` can offer a tap to `https://link.metamask.io/dapp/ledgerchat.org` (`docs/CONNECT.md`). That does not change SIWE or Aztec proving.
 
 > Earlier versions of this file described "full production circuits", "audited timelocked infrastructure" and RFC 9420 conformance proven by our own tests. Those statements were not supported by the code and were withdrawn on 3 November 2026.

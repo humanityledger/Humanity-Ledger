@@ -4,7 +4,7 @@ Agents cannot close these from the repository. Each line says who closes it and 
 
 | # | Item | Why it matters | Owner | How it is closed |
 | --- | --- | --- | --- | --- |
-| P-01 | ~~XMTP local database key in plaintext `localStorage`~~ | Closed on `feat/security-phase2`: derived from a wallet signature; legacy keys wrapped, not replaced | — | One extra signature per page load (and one phone approval on a linked computer); smart-contract wallets that do not return a 65-byte signature are refused with an explanation |
+| P-01 | ~~XMTP local database key in plaintext `localStorage`~~ | Closed on `feat/security-phase2`: derived from a wallet signature; legacy keys wrapped, not replaced | — | Since 17 November 2026 signing in takes one signature: the database key is kept on the device under a non-extractable browser key (README §7). Smart-contract wallets that do not return a 65-byte signature are refused with an explanation |
 | P-02 | Recompile and deploy PrivateEscrow, PaymentStream | Agreements stay refused on Alpha; no fee mechanism can exist without them | Stefan | `docs/CONTRACT_DEPLOY_CHECKLIST.md` §1–3 |
 | P-03 | ~~Deploy LedgerSponsor~~ | Closed 15 Nov 2026: no sponsorship, by product decision. Accounts pay their own fees | — | — |
 | P-04 | Provider keys moved to server variables (F-07) | Code reads `ALCHEMY_API_KEY`, `PIMLICO_API_KEY`, `COINGECKO_KEY`, `ONEINCH_API_KEY`, `NEWS_API_KEY` at run time; the `NEXT_PUBLIC_*` names are no longer read | Stefan | In Railway: add the five server variables, delete the `NEXT_PUBLIC_*` copies, rotate every key that was ever set under a public name, and restrict the PeerJS and MoonPay publishable keys to ledgerchat.org in their consoles |
