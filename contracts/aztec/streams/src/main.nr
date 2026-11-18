@@ -142,6 +142,22 @@ pub fn quote_protocol_fee(
     }
 }
 
+/// The fee on what a cancel pays the recipient (internal audit IA-01, 18 November 2026).
+/// The cancel amount is not chosen by anyone, so the fee must never make a cancel fail:
+/// a dust amount whose fee would exceed the share pays no fee, and an amount whose fee
+/// would exceed the tx cap pays the cap (which is then below the amount). A withdrawal is
+/// unchanged: the recipient chooses its amount, and the formula still refuses it.
+pub fn cancel_fee(amount: u128, fee_bps: u128, min_fee: u128, max_fee_share_bps: u128, tx_cap: u128) -> u128 {
+    let quoted = quote_protocol_fee(amount, fee_bps, min_fee, max_fee_share_bps, tx_cap);
+    if quoted.ok {
+        quoted.fee
+    } else if quoted.reason == 2 {
+        tx_cap
+    } else {
+        0
+    }
+}
+
 mod test;
 
 #[aztec]
@@ -422,25 +438,25 @@ pub contract PaymentStream {
         let to_sender = note.total - accrued;
 
         let token_addr = self.storage.token.read();
-        // Fee only on the accrued part. The sender's remainder is not charged.
+        // Fee only on the accrued part. The sender's remainder is not charged. A cancel never
+        // fails because of the fee (IA-01): before, the recipient could block the sender's
+        // cancel by not withdrawing once the accrued part's fee exceeded TX_CAP, and dust
+        // (fee above the 10% share) made the cancel revert too.
         if to_recipient > 0 {
-            let quoted = crate::quote_protocol_fee(to_recipient, FEE_BPS, STREAM_MIN_FEE, MAX_FEE_SHARE_BPS, TX_CAP);
-            if !quoted.ok {
-                assert(quoted.reason != 2, "PaymentStream: fee exceeds tx cap");
-                assert(false, "PaymentStream: fee exceeds share");
-            }
-            if quoted.net > 0 {
+            let fee = crate::cancel_fee(to_recipient, FEE_BPS, STREAM_MIN_FEE, MAX_FEE_SHARE_BPS, TX_CAP);
+            let net = to_recipient - fee;
+            if net > 0 {
                 let _ = self.context.call_private_function(
                     token_addr,
                     TRANSFER_IN_PRIVATE_SELECTOR,
-                    [self.context.this_address().to_field(), note.recipient.to_field(), quoted.net as Field, 0],
+                    [self.context.this_address().to_field(), note.recipient.to_field(), net as Field, 0],
                 );
             }
-            if quoted.fee > 0 {
+            if fee > 0 {
                 let _ = self.context.call_private_function(
                     token_addr,
                     TRANSFER_IN_PRIVATE_SELECTOR,
-                    [self.context.this_address().to_field(), TREASURY.to_field(), quoted.fee as Field, 0],
+                    [self.context.this_address().to_field(), TREASURY.to_field(), fee as Field, 0],
                 );
             }
         }

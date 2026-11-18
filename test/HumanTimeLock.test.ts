@@ -49,6 +49,15 @@ describe("HumanTimeLock", function () {
             expect(info.amount).to.equal(ethers.parseEther("2"));
         });
 
+        it("a later, shorter lock never shortens an earlier one (IA-05)", async function () {
+            await contract.connect(user).lock(ONE_YEAR, { value: ONE_ETH });
+            const before = (await contract.locks(user.address)).unlockTime;
+            await contract.connect(user).lock(1, { value: 1n });
+            const after = await contract.locks(user.address);
+            expect(after.unlockTime).to.equal(before);
+            await expect(contract.connect(user).withdraw()).to.be.revertedWith("Aun no es el tiempo de desbloqueo");
+        });
+
         it("reverts with zero value", async function () {
             await expect(
                 contract.connect(user).lock(ONE_YEAR, { value: 0 })

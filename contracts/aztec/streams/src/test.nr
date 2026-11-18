@@ -4,7 +4,7 @@
 // stream per salt; sender cancel (SEC-S12) splits accrued and unaccrued and
 // shares one state nullifier with withdrawals.
 
-use crate::{quote_protocol_fee, PaymentStream};
+use crate::{cancel_fee, quote_protocol_fee, PaymentStream};
 use aztec::{
     context::calls::{PrivateCall, UtilityCall},
     protocol::{abis::function_selector::FunctionSelector, address::AztecAddress, traits::ToField},
@@ -288,7 +288,7 @@ unconstrained fn open_rate(s: Setup, salt: Field, nonce: Field, rate: u128) -> u
 }
 
 // Rate 10 so a 1 or 2 second drift accrues 10 or 20, which clears the 10% share.
-// A rate of 1 would refuse that dust (fee 1 on 1 or 2 units).
+// Dust (rate 1) is covered by cancel_with_dust_accrued_pays_it_without_fee (IA-01).
 #[test]
 unconstrained fn cancel_before_any_accrual_returns_everything() {
     let s = setup();
@@ -567,3 +567,64 @@ unconstrained fn a_slice_above_the_tx_cap_is_refused_after_a_smaller_slice() {
     );
 }
 
+
+
+// IA-01 (internal audit, 18 November 2026): a cancel never fails because of the fee.
+#[test]
+unconstrained fn cancel_fee_never_refuses() {
+    // Dust under the 10% share: no fee.
+    assert(cancel_fee(1, 50, 0, 1000, 5000000) == 0);
+    assert(cancel_fee(9, 50, 0, 1000, 5000000) == 0);
+    // Ordinary amount: the quoted fee.
+    assert(cancel_fee(40, 50, 0, 1000, 5000000) == 1);
+    assert(cancel_fee(1000000000, 50, 0, 1000, 5000000) == 5000000);
+    // Above the cap: the cap, which is below the amount.
+    assert(cancel_fee(2000000000, 50, 0, 1000, 5000000) == 5000000);
+}
+
+// Rate 1, cancelled in the block it starts: 0 to 2 units accrued. Before IA-01 a dust
+// amount made the cancel revert (fee 1 above the 10% share). Now it is paid with no fee.
+#[test]
+unconstrained fn cancel_with_dust_accrued_pays_it_without_fee() {
+    let s = setup();
+    let start = open(s, 1, 11);
+    s.env.mine_block_at(start);
+    cancel(s, s.sender, 1);
+    let paid = balance(s.env, s.token, s.recipient);
+    assert(paid <= 2);
+    assert(balance(s.env, s.token, s.sender) == MINTED - paid);
+    assert(balance(s.env, s.token, s.streams) == 0);
+}
+
+// Before IA-01 a recipient who never withdrew could block the sender's cancel once the fee
+// on the accrued part exceeded TX_CAP (accrued above 1_000_000_000). Now the cancel pays the
+// recipient the accrued part minus TX_CAP and returns the rest to the sender.
+#[test]
+unconstrained fn cancel_with_accrued_above_the_cap_charges_the_cap() {
+    let mut env = TestEnvironment::new();
+    let sender = env.create_contract_account();
+    let recipient = env.create_contract_account();
+    let token = env.deploy("../test_token/@test_token/TestToken").without_initializer();
+    let streams = env.deploy("PaymentStream").with_public_initializer(
+        sender,
+        PaymentStream::interface().constructor(token),
+    );
+    let total: u128 = 4000000000;
+    let rate: u128 = 100000000;
+    mint(env, token, sender, total);
+    let start = env.last_block_timestamp();
+    add_private_authwit_from_call(env, sender, streams, transfer_call(token, sender, streams, total, 71));
+    env.call_private(sender, PaymentStream::at(streams).create_stream(recipient, total, rate, start, 71, 71));
+    env.mine_block_at(start + 20);
+    env.call_private_opts(
+        sender,
+        CallPrivateOptions::new().with_additional_scopes([streams]),
+        PaymentStream::at(streams).cancel(71),
+    );
+    let paid = balance(env, token, recipient);
+    let back = balance(env, token, sender);
+    // Accrued 2_000_000_000 to 2_200_000_000; the fee is TX_CAP.
+    assert(paid >= 2000000000 - 5000000);
+    assert(paid + back + 5000000 == total);
+    assert(balance(env, token, streams) == 0);
+}

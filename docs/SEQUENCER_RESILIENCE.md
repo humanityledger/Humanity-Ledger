@@ -1,4 +1,6 @@
 # Humanity Ledger — Sequencer Censorship Resilience
+
+> **Internal audit, 18 November 2026 (IA-10).** Design, not implemented. `lib/aztec/sequencer-resilience.ts` does not exist; the wallet has no RPC fallback list and no Resubmit button. The endpoints below are the test network's; Alpha uses `https://aztec-mainnet.drpc.org` (`deployments/aztec-mainnet.json`). See `docs/audit/INTERNAL_AUDIT_2026-11-18.md`.
 **Version 1.0 — 2026-10-31**  
 **Authority**: `docs/PROTOCOL_SPEC.md` §6 Threat Model P6 (Sequencer Censorship)
 

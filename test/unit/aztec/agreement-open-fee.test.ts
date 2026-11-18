@@ -29,9 +29,9 @@ describe('direct agreement creation', () => {
     );
   });
 
-  it('the current classes are the ones recompiled with the designated treasury, one each', () => {
+  it('the current classes are the ones recompiled with the designated treasury (streams: with the IA-01 cancel fee), one each', () => {
     expect(ids.escrow).toEqual(['0x2ade615cc7f4d8c2ceb1cca4dec6818abab1fb7b7c0a43e7f36d3369e39504c6']);
-    expect(ids.streams).toEqual(['0x0251d1760c1ddfdd8fe220c045f6e6c7f3197f4b2b278637eaa250f8cbc6777b']);
+    expect(ids.streams).toEqual(['0x07e2947d207b8980d5375c893bbe2de3bd535e1fd9e688e1119416f463dacca7']);
   });
 
   it('refuses the classes compiled with a zero treasury', async () => {
