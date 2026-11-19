@@ -20,7 +20,7 @@
     "enabled": false,
     "until": null,
     "scope": "value",
-    "maxTesters": 20,
+    "maxTesters": 50,
     "classes": [
       "0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143",
       "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3"

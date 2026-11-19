@@ -8,7 +8,7 @@
  *   node scripts/alpha/invites.mjs revoke-invite <id>
  *
  * `create` prints each code ONCE; only its HMAC is stored. --by must be in ALPHA_ADMINS (OD-4).
- * At most 20 members (OD-4), enforced again by /api/alpha/redeem.
+ * At most 50 members (OD-4, amended 19/11/2026), enforced again by /api/alpha/redeem.
  */
 import { randomBytes, createHmac } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
@@ -32,7 +32,7 @@ try {
     if (pepper.length < 32) throw new Error('ALPHA_INVITE_PEPPER must be set (at least 32 characters).');
     const by = String(arg('by', '')).toLowerCase();
     if (!admins.has(by)) throw new Error('--by must be one of ALPHA_ADMINS.');
-    const n = Math.min(20, Math.max(1, Number(arg('count', 1))));
+    const n = Math.min(50, Math.max(1, Number(arg('count', 1))));
     const days = Number(arg('days', 0));
     for (let i = 0; i < n; i++) {
       const c = code();
@@ -45,7 +45,7 @@ try {
     const members = await prisma.alphaMember.findMany({ orderBy: { joinedAt: 'asc' } });
     console.table(invites.map((x) => ({ id: x.id, createdAt: x.createdAt.toISOString(), redeemed: !!x.redeemedBy, revoked: !!x.revokedAt, expires: x.expiresAt?.toISOString() ?? '' })));
     console.table(members.map((m) => ({ wallet: m.walletAddress, joined: m.joinedAt.toISOString(), riskAck: !!m.riskAckAt, revoked: !!m.revokedAt })));
-    console.error(`${members.length} of 20 testers.`);
+    console.error(`${members.length} of 50 testers.`);
   } else if (cmd === 'revoke-member') {
     const w = String(target || '').toLowerCase();
     await prisma.alphaMember.update({ where: { walletAddress: w }, data: { revokedAt: new Date() } });

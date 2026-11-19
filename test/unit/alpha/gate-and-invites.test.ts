@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { CLOSED_ALPHA_REASONS as R, closedAlphaDecision } from '@/lib/alpha/gate';
 import { AUDIT_REFUSED, deployRefusal } from '@/lib/protocol/agreement-gate';
-import { CROCKFORD, hashInviteCode, newInviteCode, normalizeInviteCode, parseAlphaAdmins, sameHash } from '@/lib/alpha/invites';
+import { CROCKFORD, hashInviteCode, MAX_TESTERS, newInviteCode, normalizeInviteCode, parseAlphaAdmins, sameHash } from '@/lib/alpha/invites';
 
 const C = '0x' + 'ab'.repeat(32);
 const entry = { enabled: true, until: '2027-01-13T00:00:00Z', classes: [C] };
@@ -64,7 +64,8 @@ describe('registry', () => {
     expect(m.audit).toBeNull();
     expect(m.closedAlpha.enabled).toBe(false);
     expect(m.closedAlpha.until).toBeNull();
-    expect(m.closedAlpha.maxTesters).toBe(20);
+    expect(m.closedAlpha.maxTesters).toBe(50);
+    expect(m.closedAlpha.maxTesters).toBe(MAX_TESTERS);
     const t = JSON.parse(fs.readFileSync('deployments/aztec-testnet.json', 'utf8'));
     const current = t.contracts.filter((c: any) => c.tracksCurrentArtifact && /^(PrivateEscrow|PaymentStream)/.test(c.name)).map((c: any) => c.classId);
     expect([...m.closedAlpha.classes].sort()).toEqual([...current].sort());
