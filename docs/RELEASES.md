@@ -27,4 +27,4 @@ The `0.1.0` iteration was designed strictly to eradicate external proxy reliance
 
 ### Expected Rollouts
 - **v0.2.0**: Native Dark Pool OTC mapping via deterministic WebGL terrain.
-- **v1.0.0**: Fully audited ZK SNARK circuits deployed on Ethereum Mainnet.
+- **v1.0.0**: not scheduled. No external audit exists (`audit: null` in `deployments/aztec-mainnet.json`).

@@ -121,4 +121,4 @@ curl -s https://your-domain.com/api/db/health
 
 1. **Monthly Rotation**: Rotate `JWT_SECRET` and EdDSA signing keys monthly. Old tokens are invalidated at the Edge.
 2. **Immediate Rotation on Incident**: If any internal key is suspected of disclosure, execute the emergency rotation procedure in `docs/runbooks/secrets.md`.
-3. **Audited Log Retention**: Ensure all API logs are piped through `lib/logger.ts` for automated PII and key scrubbing before storage.
+3. **Reviewed log retention**: Ensure all API logs are piped through `lib/logger.ts` for automated PII and key scrubbing before storage.

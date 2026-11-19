@@ -48,7 +48,7 @@ export async function submitWithFallback(
 | Priority | Endpoint | Type | Notes |
 |---|---|---|---|
 | 1 | `https://aztec-testnet.drpc.org` | Primary (testnet) | Current default |
-| 2 | `https://api.aztec.network/aztec-testnet/node` | Official Aztec Labs | Backup |
+| 2 | `https://api.aztec.network/aztec-testnet/node` | Run by Aztec Labs | Backup |
 | 3 | Local Aztec sandbox | `localhost:8080` | Dev/testing only |
 
 **Mainnet fallback list** (to be populated at mainnet readiness):

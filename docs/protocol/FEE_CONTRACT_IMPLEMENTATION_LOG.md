@@ -1,5 +1,7 @@
 # Fee Contract — Implementation Log
 
+> **Historical record.** The buyback-and-burn design quoted below was withdrawn on 19/11/2026 with the HLC token model (PA-1). HLC is a test token with no monetary value; no fee buys or burns it.
+
 **Documento:** `docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md`
 **SPEC de referencia:** `docs/protocol/FEE_CONTRACT_SPEC.md` (única fuente de verdad)
 **Estado:** Baseline authorized — source written under these parameters — not compiled, not deployed

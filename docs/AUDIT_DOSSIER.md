@@ -7,7 +7,7 @@
 
 ## 1. Protocol Architecture & Invariant Scope
 
-The Humanity Ledger protocol couples client-side zero-knowledge state transitions (Aztec Noir UltraHonk) with post-compromise secure messaging (XMTP MLS RFC 9420), isolated multi-tenant execution frames (EAF), and audited L1 timelock vaults.
+The Humanity Ledger protocol couples client-side zero-knowledge state transitions (Aztec Noir UltraHonk) with post-compromise secure messaging (XMTP MLS RFC 9420), isolated multi-tenant execution frames (EAF), and L1 timelock vaults. None of it has an external audit.
 
 ### Invariant Summary (P1–P6)
 

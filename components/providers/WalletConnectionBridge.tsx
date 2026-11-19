@@ -21,7 +21,7 @@ export function WalletConnectionBridge() {
     // [REMOVED] 15s Force disconnect loop. It causes AppKit to freeze if the user takes longer than 15s to enter their password in MetaMask.
 
     useEffect(() => {
-        // [AUDITED] Extract handshake address from cookie with strict validation
+        // [REVIEWED] Extract handshake address from cookie with strict validation
         const cookies = document.cookie.split('; ');
         const handshakeCookie = cookies.find(row => row.trim().startsWith('system_handshake=0x'));
         const handshakeAddress = handshakeCookie ? handshakeCookie.split('=')[1]?.trim().toLowerCase() : null;
