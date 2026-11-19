@@ -122,6 +122,8 @@ for (const [vpName, viewport] of VIEWPORTS) {
       await page.evaluate(`document.querySelector('canvas[aria-label^="Map of the world"]').scrollIntoView({ block: 'center' })`);
       await page.waitForTimeout(1200);
       await page.screenshot({ path: path.join(out, `section-map-${vpName}.png`) });
+      const mapInfo = await page.evaluate(`(() => { const c = document.querySelector('canvas[aria-label^="Map of the world"]'); const r = c.getBoundingClientRect(); return { dots: c.dataset.dots ?? 'none', w: c.width, h: c.height, box: [Math.round(r.width), Math.round(r.height)] }; })()`);
+      console.log('[map]', vpName, JSON.stringify(mapInfo));
       const b = await page.evaluate(`(() => { const r = document.querySelector('canvas[aria-label^="Map of the world"]').getBoundingClientRect(); return { x: r.x + r.width * 0.52, y: r.y + r.height * 0.28 }; })()`);
       await page.mouse.move(b.x, b.y, { steps: 6 });
       await page.waitForTimeout(600);

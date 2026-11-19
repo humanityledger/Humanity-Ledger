@@ -24,31 +24,26 @@ export function DotWorld() {
   const [land, setLand] = useState<Land | null>(null);
   const [live, setLive] = useState<Array<{ lat: number; lon: number }>>([]);
 
-  // Load the land mask and the live places once the map comes within a screen of view.
+  // Load the land mask (6 KB) and the live places once, on mount.
   useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    let done = false;
     const load = () => {
-      if (done) return;
-      done = true;
-      fetch('/globe/flat-land.json').then((r) => r.json()).then(setLand).catch(() => undefined);
+      fetch('/globe/flat-land.json')
+        .then((r) => r.json())
+        .then((d: Land) => { if (Array.isArray(d?.rows) && d.cols > 0) setLand(d); })
+        .catch(() => undefined);
       fetch('/api/stats/live', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((d) => {
         const regions = Array.isArray(d?.regions) ? d.regions : [];
         setLive(regions.filter((x: { visitors?: number }) => (x.visitors ?? 0) > 0).map((x: { lat: number; lon: number }) => ({ lat: x.lat, lon: x.lon })));
       }).catch(() => undefined);
     };
-    if (typeof IntersectionObserver === 'undefined') return load();
-    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { load(); io.disconnect(); } }, { rootMargin: '150% 0px' });
-    io.observe(el);
-    return () => io.disconnect();
+    load();
   }, []);
 
   useEffect(() => {
     const el = box.current;
     const canvas = cvs.current;
     if (!el || !canvas || !land) return;
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let W = 0, H = 0, dpr = 1, pitch = 1, rBase = 1, R = 100;
@@ -92,6 +87,7 @@ export function DotWorld() {
         const b = buckets.get(k);
         if (b) b.push(i); else buckets.set(k, [i]);
       });
+      canvas.dataset.dots = String(dots.length);
       paint(0, 0, W, H, null, 0);
     };
 
