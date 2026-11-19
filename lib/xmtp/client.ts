@@ -21,6 +21,7 @@
  */
 
 
+import { diag, short } from './diag';
 import { Buffer } from 'buffer';
 
 if (typeof window !== 'undefined' && !window.Buffer) {
@@ -346,10 +347,12 @@ export async function getXMTPClient(
       }
       throw new Error(`XMTP_LIMIT_REACHED`);
     }
+    diag('client_failed', { env: XMTP_ENV, error: String(err?.message ?? err).slice(0, 120) });
     throw err;
   }
 
   clientRegistry.set(address, client);
+  diag('client_ready', { env: XMTP_ENV, inbox: short((client as any).inboxId), installation: short((client as any).installationId) });
 
   // Warm up the inboxId → address cache in the background
   warmInboxIdCache(client).catch(() => {});
@@ -606,9 +609,11 @@ export async function sendMessage(
       // Serialised per conversation (publishSerial). A timeout here only stops waiting: the
       // publish keeps running, and the next attempt queues behind it instead of racing it.
       await withTimeout(publishSerial(cacheKey, dm), PUBLISH_WAIT_MS, 'publish timeout');
+      diag('send_published', { conv: short(dm?.id), attempt: i + 1, signal: isSignal(content) });
       return sentId;
     } catch (sendErr: any) {
       lastError = sendErr;
+      diag('send_attempt_failed', { conv: short(dm?.id), attempt: i + 1, prepared: !!sentId, error: String(sendErr?.message ?? sendErr).slice(0, 120) });
       console.warn(`[XMTP] Attempt ${i + 1} for ${toAddress} did not complete:`, sendErr?.message || sendErr);
       if (sentId) {
         // The message exists locally with its real id. Do not hold the chat's send queue for
@@ -638,10 +643,12 @@ export async function sendMessage(
     // publishing in the background; it will not be duplicated, and the chat
     // already shows it with its real id.
     schedulePublishRetry(cacheKey, dm);
+    diag('send_pending', { conv: short(dm?.id) });
     if (!isSignal(content)) reportDelivery('publish_pending', lastError);
     return sentId;
   }
 
+  diag('send_failed', { error: String(lastError?.message ?? lastError).slice(0, 120) });
   reportDelivery('send_failed', lastError);
   throw new Error(`Message delivery failed via XMTP: ${lastError?.message || 'Network error'}`);
 }
@@ -1037,7 +1044,9 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
   let streamResult: any;
   try {
     streamResult = await (client.conversations as any).streamAllMessages();
-  } catch {}
+  } catch (e) {
+    diag('stream_open_failed', { path: 'iterable', error: String((e as Error)?.message ?? e).slice(0, 120) });
+  }
 
   // If streamResult is an async iterable (has [Symbol.asyncIterator]), use it directly
   if (streamResult && typeof streamResult[Symbol.asyncIterator] === 'function') {
@@ -1048,12 +1057,17 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
       };
       signal.addEventListener('abort', onAbort);
     }
+    diag('stream_open', { path: 'iterable' });
     try {
       for await (const message of streamResult) {
         if (signal?.aborted) break;
         if (_isXmtpSystemMsg(message)) continue; yield message;
       }
+    } catch (e) {
+      diag('stream_error', { path: 'iterable', error: String((e as Error)?.message ?? e).slice(0, 120) });
+      throw e;
     } finally {
+      diag('stream_closed', { path: 'iterable', aborted: !!signal?.aborted });
       if (signal && onAbort) signal.removeEventListener('abort', onAbort);
       try { if (typeof streamResult.return === 'function') streamResult.return(); } catch {}
     }
@@ -1092,12 +1106,15 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
   try {
     streamCloser = (client.conversations as any).streamAllMessages(
       (msg: any) => enqueue(msg),
-      () => close(), // onFail → close stream gracefully
+      () => { diag('stream_error', { path: 'callback' }); close(); }, // onFail → close stream gracefully
     );
   } catch (e) {
     console.warn('[XMTP] streamAllMessages callback API failed:', e);
+    diag('stream_open_failed', { path: 'callback', error: String((e as Error)?.message ?? e).slice(0, 120) });
+    reportDelivery('stream_failed', e);
     return;
   }
+  diag('stream_open', { path: 'callback' });
 
   const onAbort = () => close();
   if (signal) signal.addEventListener('abort', onAbort);
