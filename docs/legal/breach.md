@@ -4,7 +4,7 @@
 
 # GDPR Article 33 — 72-hour notification
 
-**Owner**: DPO (humanityledger@icloud.com)  
+**Owner**: Stefan Antonio Cirisanu (controller; no data protection officer), through the privacy contact in the legal notice  
 **Last updated**: October 2025
 
 ---
@@ -96,5 +96,5 @@ Contact: humanityledger@icloud.com
 
 | Role | Name | Contact |
 |------|------|---------|
-| DPO / Security | TBD | humanityledger@icloud.com |
+| Controller and security | Stefan Antonio Cirisanu | privacy contact in the legal notice |
 | On-call | TBD | (Slack #oncall) |

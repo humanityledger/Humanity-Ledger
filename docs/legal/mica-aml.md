@@ -29,7 +29,7 @@ Before enabling real (mainnet) token transfers on Humanity Ledger, an analysis u
 
 | Risk | Mitigation |
 |------|-----------|
-| Anonymous transfers | Aztec ZK provides privacy — transactions visible on-chain but amounts/recipients hidden |
+| Private transfers (not anonymous) | Aztec hides amounts and parties; the fee payer is visible on Alpha; cUSDC adds identity and sanctions screening at the bridge |
 | OFAC sanctions compliance | Sanctions check on L1 bridge transactions (N-009) |
 | KYC requirements | May be required depending on jurisdiction and volume |
 
