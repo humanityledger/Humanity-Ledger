@@ -551,9 +551,12 @@ export const config = {
     '/api/:path*',
     /*
      * Pages: everything except Next.js internals and static assets. The
-     * extension check is anchored to the end of the path.
+     * extension check is anchored to the end of the path. globe/ holds the
+     * public land masks of the landing's globe and world map (no personal
+     * data): as JSON they went through the session check, so a visitor
+     * without a session got a redirect instead of the data (19/11/2026).
      */
-    '/((?!api/|_next/static|_next/image|favicon.ico$|robots.txt$|sitemap.xml$|manifest.json$|manifest.webmanifest$|sw.js$|ledger-sw.js$|fonts/|images/|icons/)(?!.*\\.(?:jpg|jpeg|png|svg|webp|avif|gif|ico|woff2?|mp3|wav|mp4|webm)$).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico$|robots.txt$|sitemap.xml$|manifest.json$|manifest.webmanifest$|sw.js$|ledger-sw.js$|fonts/|images/|icons/|globe/)(?!.*\\.(?:jpg|jpeg|png|svg|webp|avif|gif|ico|woff2?|mp3|wav|mp4|webm)$).*)',
   ],
 };
 

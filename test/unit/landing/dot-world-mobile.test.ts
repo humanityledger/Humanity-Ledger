@@ -33,3 +33,12 @@ describe('mobile rendering and the world in dots (19/11/2026)', () => {
     expect(read('public/brand/aztec/README.md')).toMatch(/media-kit/);
   });
 });
+
+describe('the land masks reach visitors without a session', () => {
+  it('public/globe is outside the middleware, like fonts/ and images/', () => {
+    const mw = readFileSync('middleware.ts', 'utf8');
+    expect(mw).toMatch(/\|fonts\/\|images\/\|icons\/\|globe\/\)/);
+    // Only that folder: API routes and pages still go through the middleware.
+    expect(mw).toMatch(/'\/api\/:path\*'/);
+  });
+});
