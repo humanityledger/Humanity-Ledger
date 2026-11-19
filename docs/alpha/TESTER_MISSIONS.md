@@ -35,8 +35,8 @@ Targets are proposals for Stefan to sign before the first code; none is a result
 | --- | --- | --- |
 | Messages delivered between two testers | `/api/chat/delivery-report` (send and receive events) | ≥ 99% within 10 s |
 | Median delivery time | same | ≤ 2 s |
-| Private HLC payments mined / attempted | wallet events, explorer | ≥ 95% |
-| Proving time on the phone, per payment | wallet events | measured per device; no target until the first week |
+| Private HLC payments mined / attempted | `[payment]` log lines from `/api/wallet/payment-report` (`stage=attempted`, `stage=mined`), explorer | ≥ 95% |
+| Proving time on the phone, per payment | `ms` of `stage=sent` (proving and sending are one step in the SDK) | measured per device; no target until the first week |
 | Network fee per payment, in AZTEC | Aztecscan, as in `measuredFees` | recorded, compared with the OD-9 budget |
 | Reports per tester per week | the alpha channel | trend only |
 | Missions passed per tester | the table above | all of M1 to M8 |

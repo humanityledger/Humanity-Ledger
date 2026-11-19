@@ -1,0 +1,45 @@
+name: Alpha invitations rehearsal
+# Package 3: scripts/alpha/invites.mjs and purge.mjs against a throwaway Postgres in the runner.
+# Never touches Railway or any real database; the placeholder distributor lives only in the
+# runner's copy of the manifest (see scripts/alpha/rehearse-invites-ci.mjs).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/alpha/**'
+      - 'lib/alpha/rules.mjs'
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
+      - '.github/workflows/alpha-invites-rehearsal.yml'
+permissions:
+  contents: read
+concurrency:
+  group: alpha-invites-rehearsal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: alpha
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/alpha
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/alpha
+      ALPHA_REHEARSAL: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts --legacy-peer-deps
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: node scripts/alpha/rehearse-invites-ci.mjs

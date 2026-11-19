@@ -1,0 +1,11 @@
+# Config for a separate Railway cron service that runs scripts/alpha/purge.mjs once a day
+# (docs/alpha/PURGE_CRON.md). The web service keeps railway.toml; only a service whose config
+# file path is set to /railway.purge.toml reads this file. Times are UTC.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "./Dockerfile"
+
+[deploy]
+startCommand = "node scripts/alpha/purge.mjs"
+cronSchedule = "17 3 * * *"
+restartPolicyType = "NEVER"
