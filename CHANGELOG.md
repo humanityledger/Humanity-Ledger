@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Mature protocol, packages 0-10 (19 November 2026)
+
+- Landing: `/?debug=scroll` overlay; the browser test now checks pixels, real touch flicks (Android) and the browser bars (iPhone). Phones pass.
+- `/api/health` reports the running commit and whether the database has every migration of the build.
+- Wallet payment events (attempted, sent, mined, unconfirmed, failed with a reason) and a daily purge cron; the signed-terms procedure; an invitation rehearsal against a throwaway Postgres; a 10-line first-code checklist.
+- Wave 1 classes tied to the committed artifacts by a test; two new TXE exit tests; the deploy runbook in the order the gate enforces.
+- One statement of fee privacy on Alpha (`FEE_PRIVACY`) for the web and the wallet; one screen that said the sender was hidden is corrected; an FPC evaluation (no change, no sponsoring).
+- Alerts from measured data (payment failures, send failures, a stalled node), a `/status` page with measured data only, and the first incident drill.
+- Internal security review 2. The closed alpha gate is now enforced before an agreement is opened (R2-1); cap, budget, CSV and lock fixes. It is not an audit; `audit` stays `null`.
+- Aztec questions Q1, Q2, Q4, Q5 with repository evidence, and a forum draft for Stefan.
+- A cUSDC wallet slot behind its nine gates, without changing test-network readiness.
+
 ### Closed alpha gates and one source of truth (19 November 2026)
 
 - HLC is a test token with no monetary value (PA-1). The token model is withdrawn, and the wallet labels HLC a test token. A new instance named "HLC Test Token" is prepared for Stefan to deploy (`docs/alpha/HLC_REDEPLOY_RUNBOOK.md`). The read-only preflight checks the on-chain name.
