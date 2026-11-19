@@ -13,6 +13,14 @@ import s from './Immersive.module.css';
 export function ScrollRoot({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => (ref.current ? startScenes(ref.current) : undefined), []);
+  // Fetch the live phone's code while the hand film plays, so the phone that replaces the film is
+  // ready by the time the visitor scrolls there, even on a slow mobile network.
+  useEffect(() => {
+    const load = () => { void loadPhone(); };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(load, { timeout: 1500 });
+    else window.setTimeout(load, 600);
+  }, []);
   return (
     <div ref={ref} className={className}>
       {children}
@@ -20,7 +28,7 @@ export function ScrollRoot({ children, className }: { children: React.ReactNode;
   );
 }
 
-/** Mounts its children once they come within one screen of the viewport (hydration only, never an animation). */
+/** Mounts its children once they come within two screens of the viewport (hydration only, never an animation). */
 export function WhenNear({ children, fallback = null, fill = true }: { children: React.ReactNode; fallback?: React.ReactNode; fill?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
@@ -33,7 +41,7 @@ export function WhenNear({ children, fallback = null, fill = true }: { children:
         setNear(true);
         io.disconnect();
       }
-    }, { rootMargin: '100% 0px' });
+    }, { rootMargin: '200% 0px' });
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -192,7 +200,8 @@ export function SiteQr() {
   return <BrandedQr value="https://ledgerchat.org" title="Ledger Chat QR code for ledgerchat.org" className={s.qr} />;
 }
 
-const LivePhoneLazy = dynamic(() => import('@/components/landing/v2/PhoneShowcase').then((m) => m.LivePhone), {
+const loadPhone = () => import('@/components/landing/v2/PhoneShowcase');
+const LivePhoneLazy = dynamic(() => loadPhone().then((m) => m.LivePhone), {
   ssr: false,
   loading: () => <div className={s.phoneHold} />,
 });

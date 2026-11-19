@@ -375,7 +375,8 @@
   --a: 0; --b: 0.4; opacity: var(--k); transform: translate3d(0, calc((1 - var(--e)) * 48px), 0); }
 .callPhone picture, .callImg { display: block; width: 100%; height: 100%; }
 .callImg { object-fit: contain; }
-.phoneHold { width: 100%; height: 100%; }
+/* Until the live phone has loaded, an outline of the device holds its place, never a white box. */
+.phoneHold { width: auto; height: 100%; max-width: 100%; aspect-ratio: 9 / 19.5; margin: 0 auto; border-radius: var(--r-window); background: var(--soft); box-shadow: var(--sh2), inset 0 0 0 1px var(--line); }
 @media (min-width: 900px) {
   .callPhone { left: auto; right: 6vw; top: calc(50% + 32px); height: min(calc(100svh - var(--navh) - var(--s64)), 760px); translate: 0 -50%; }
 }
@@ -494,6 +495,20 @@
   .pin .line { font-size: var(--t14); }
   .callPhone { top: calc(var(--vis-top) + var(--s32)); height: calc(100svh - var(--vis-top) - var(--s48)); }
 }
+
+/* Phones and touch screens (iOS and Android, reported again 19/11/2026: white after the film).
+   The scenes no longer overlap: each pinned scene is opaque and scrolls away like a page while the
+   next one, already drawn at its start, comes up under it. What is on screen never depends on the
+   scroll loop having run a frame during a finger flick, and a stale --in can no longer leave a
+   transparent scene on top. The scenes still move with the scroll inside. */
+@media (max-width: 899px), (pointer: coarse) {
+  .scene + .scene { margin-top: 0; }
+  .pin { opacity: 1; }
+  .anchor { top: 0; }
+}
+/* The hand film stays until the live phone that replaces it has loaded (slow mobile networks). */
+.hero .pin:has(.heroPhone .phoneHold) .frame { opacity: 1; transform: none; }
+.hero .pin:has(.heroPhone .phoneHold) .heroPhone { opacity: 0; }
 
 /* Reduced motion: every scene is a still section with its final state */
 @media (prefers-reduced-motion: reduce) {
