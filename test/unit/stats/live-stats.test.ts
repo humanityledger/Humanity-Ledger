@@ -42,18 +42,26 @@ describe('live map numbers', () => {
     expect(r.map((x) => [x.tz, x.visitors])).toEqual([['Asia/Tokyo', 9], ['Europe/Madrid', 5]]);
   });
 
-  it('counts a browser once a day; a second browser counts again', async () => {
-    const a = 'A'.repeat(22), b = 'B'.repeat(22);
-    expect(await (await visit({ tz: 'Europe/Madrid', vid: a })).json()).toEqual({ counted: true });
-    expect(await (await visit({ tz: 'Europe/Madrid', vid: a })).json()).toEqual({ counted: false });
-    expect(await (await visit({ tz: 'Europe/Madrid', vid: b })).json()).toEqual({ counted: true });
-    expect([...h.rows.values()].reduce((n, v) => n + v, 0)).toBe(2);
+  it('counts every visit, from the time zone alone', async () => {
+    expect(await (await visit({ tz: 'Europe/Madrid' })).json()).toEqual({ counted: true });
+    expect(await (await visit({ tz: 'Europe/Madrid' })).json()).toEqual({ counted: true });
+    expect(h.rows.get([...h.rows.keys()][0])).toBe(2);
   });
 
-  it('refuses a request without a browser id, and files an unknown zone as unknown', async () => {
-    expect((await visit({ tz: 'Europe/Madrid' })).status).toBe(400);
-    await visit({ tz: '<script>', vid: 'C'.repeat(22) });
+  it('ignores an id an older client still sends, files an unknown zone as unknown, refuses a non-object body', async () => {
+    expect(await (await visit({ tz: 'Europe/Madrid', vid: 'A'.repeat(22) })).json()).toEqual({ counted: true });
+    await visit({ tz: '<script>' });
     expect([...h.rows.keys()].some((k) => k.endsWith('|unknown'))).toBe(true);
+    expect((await visit([1, 2])).status).toBe(400);
+  });
+
+  it('stores nothing in the browser and sends nothing but the time zone', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync('lib/stats/useVisitBeacon.ts', 'utf8').replace(/\/\*[^]*?\*\//g, '');
+    expect(src).not.toMatch(/setItem|document\.cookie|getRandomValues/);
+    expect(src).toMatch(/JSON\.stringify\(\{ tz \}\)/);
+    const route = fs.readFileSync('app/api/stats/visit/route.ts', 'utf8');
+    expect(route).not.toMatch(/getRedisClient|createHash/);
   });
 });
 

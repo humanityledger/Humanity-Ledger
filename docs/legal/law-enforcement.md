@@ -1,5 +1,7 @@
 # Law Enforcement Response Policy
 
+> **Status (19/11/2026): internal draft, not in force.** It has not been reviewed by a lawyer (OD-8). The live texts are the pages at /docs (lib/docs/pages/legal.ts). Facts that override anything below: the controller is Stefan Antonio Cirisanu, a private individual (no company exists yet); there is no data protection officer and no external consultancy; the visit counter stores nothing in the browser since 19/11/2026.
+
 **Last updated**: October 2025
 
 ---

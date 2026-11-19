@@ -6,26 +6,20 @@ const sections = code(read('components/landing/v2/ProtocolSections.tsx'));
 const landing = read('components/landing/v2/Landing.tsx');
 const css = read('components/landing/v2/Protocol.module.css');
 
-describe('landing: HLC and protocol sections', () => {
-  it('the sections exist on the page with the ids the navigation links to', () => {
-    for (const id of ['devices', 'hlc']) expect(landing).toMatch(new RegExp(`<section id="${id}"`));
+describe('landing: protocol sections, without a token model', () => {
+  it('the devices section stays; the HLC token section is gone (PA-1, 19/11/2026)', () => {
+    expect(landing).toMatch(/<section id="devices"/);
+    expect(landing).not.toMatch(/<section id="hlc"|TokenSection/);
     // The stack is the interactive explorer of the launch sections.
     expect(landing).toMatch(/<StackExplorer \/>/);
     expect(read('components/landing/v2/LaunchSections.tsx')).toMatch(/<section id="stack"/);
-    expect(read('components/immersive/SiteNav.tsx')).toMatch(/href: "\/#hlc"/);
+    expect(read('components/immersive/SiteNav.tsx')).not.toMatch(/#hlc/);
   });
 
-  it('token figures come from the tested model and the live endpoint, not from the page', () => {
-    expect(sections).toMatch(/from "@\/lib\/protocol\/tokenomics"/);
-    expect(sections).toMatch(/useProtocolReport\(\)/);
-    expect(sections).not.toMatch(/450,000,000|200,000,000|150,000,000|1,000,000,000/);
-  });
-
-  it('presents a plan, never an offer or an income', () => {
-    expect(sections).toMatch(/HLC is not on sale and nothing is being distributed/);
-    expect(sections).toMatch(/Staking lowers fees\. It pays nothing\./);
+  it('no token model on the page: no supply, allocations, airdrop, fair launch or buyback', () => {
+    expect(sections).not.toMatch(/lib\/protocol\/tokenomics/);
+    expect(sections).not.toMatch(/airdrop|fair launch|buy(ing)? (it )?back|burn|vesting|staking/i);
     expect(sections).not.toMatch(/\b(APY|APR|yield|dividend|passive income|guaranteed|to the moon)\b/i);
-    expect(sections).not.toMatch(/\bearn (ETH|USDC)\b/i);
   });
 
   it('never claims that senders are private on Alpha', () => {
