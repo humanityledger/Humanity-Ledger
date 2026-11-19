@@ -11,7 +11,9 @@
  * At most 50 members (OD-4, amended 19/11/2026), enforced again by /api/alpha/redeem.
  */
 import { randomBytes, createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
+import { distributorProblem } from '../../lib/alpha/rules.mjs';
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 function code() {
@@ -29,6 +31,10 @@ const prisma = new PrismaClient();
 
 try {
   if (cmd === 'create') {
+    // Package 3: no code while nobody is recorded as the distributor of HLC.
+    const record = JSON.parse(readFileSync(new URL('../../deployments/aztec-mainnet.json', import.meta.url), 'utf8'));
+    const problem = distributorProblem(record?.closedAlpha?.distributor ?? null);
+    if (problem) throw new Error(problem);
     if (pepper.length < 32) throw new Error('ALPHA_INVITE_PEPPER must be set (at least 32 characters).');
     const by = String(arg('by', '')).toLowerCase();
     if (!admins.has(by)) throw new Error('--by must be one of ALPHA_ADMINS.');

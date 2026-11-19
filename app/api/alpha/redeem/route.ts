@@ -10,6 +10,8 @@ import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { hashInviteCode, MAX_TESTERS, normalizeInviteCode } from '@/lib/alpha/invites';
+import { distributionDecision, type ClosedAlphaEntry } from '@/lib/alpha/gate';
+import record from '../../../../deployments/aztec-mainnet.json';
 
 export const dynamic = 'force-dynamic';
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -18,6 +20,10 @@ const BAD = 'This invitation code does not work. Check it, or ask for a new one.
 export async function POST(req: NextRequest) {
   const who = (await getVerifiedCaller(req))?.toLowerCase() ?? null;
   if (!who || !/^0x[0-9a-f]{40}$/.test(who)) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401, headers: NO_STORE });
+  // Package 3: no invitation is redeemed while nobody is recorded as the distributor of HLC.
+  if (!distributionDecision((record as { closedAlpha?: ClosedAlphaEntry }).closedAlpha).ok) {
+    return NextResponse.json({ error: 'The closed alpha is not open.' }, { status: 503, headers: NO_STORE });
+  }
   const pepper = process.env.ALPHA_INVITE_PEPPER || '';
   if (pepper.length < 32) return NextResponse.json({ error: 'The closed alpha is not open.' }, { status: 503, headers: NO_STORE });
   const rl = await checkRateLimit(who, { max: 5, windowSec: 3600, prefix: 'rl:alpha-redeem' });
