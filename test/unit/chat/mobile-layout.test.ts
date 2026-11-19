@@ -34,6 +34,9 @@ describe('chat on a phone', () => {
     expect(reading).toBeGreaterThan(rail);
     expect(reading).toBeLessThan(gear);
     expect(chat).toContain('<LiveLatency className="md:hidden mr-1" />');
+    const meter = read('components/chat/LiveLatency.tsx');
+    expect(meter).toContain('flex-col');
+    expect(meter).not.toContain('rounded-full');
     const src = read('lib/chat/liveRtt.ts');
     expect(src).not.toMatch(/navigator\.connection\b/);
     expect(src).toContain("credentials: 'omit'");

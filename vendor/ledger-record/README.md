@@ -6,7 +6,9 @@ The chat message carries a pointer. The object itself is ciphertext. Opening it 
 
 This package does not create accounts, does not talk to Aztec, and does not move money. A handoff record can name "open a private payment" or "open a private agreement". Ledger Chat is the only side that acts on that.
 
-`0.1.0 · not externally audited`
+`2.0.0 · not externally audited`
+
+Version 2 wraps each record to the MLS exporter secret of one epoch. The content key is not in the message. The browser SDK Ledger Chat ships does not expose that exporter yet, so sealing fails closed instead of using a weaker key. Read [SPEC.md](SPEC.md) and [SECURITY.md](SECURITY.md). Version 1 messages still open.
 
 ## What a record is
 

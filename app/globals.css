@@ -65,8 +65,51 @@
 }
 .hl-fade-in { animation: hlFadeIn 150ms cubic-bezier(0.22, 0.8, 0.24, 1) both; }
 
+/* Sealed note arriving: Telegram's delete dissolve, played backwards.
+   Opacity and translate3d only, so the compositor can hold 120 fps.
+   Twelve bubbles, fixed in CSS. Nothing is allocated per frame. */
+@keyframes hlSealBody {
+  from { opacity: 0.35; transform: translate3d(0, 10px, 0) scale(0.94); }
+  to   { opacity: 0.86; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes hlSealBubble {
+  0%   { opacity: 0; transform: translate3d(var(--x), var(--y), 0) scale(0.55); }
+  28%  { opacity: 0.95; }
+  100% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.15); }
+}
+.hl-seal-arrive {
+  position: relative;
+  animation: hlSealBody 640ms linear both;
+  will-change: transform, opacity;
+}
+.hl-seal-arrive > i {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(21, 23, 28, 0.08);
+  pointer-events: none;
+  animation: hlSealBubble 640ms linear both;
+}
+.hl-seal-arrive > i:nth-child(1)  { --x: -46px; --y: -28px; animation-delay: 0ms; }
+.hl-seal-arrive > i:nth-child(2)  { --x: -18px; --y: -40px; animation-delay: 20ms; }
+.hl-seal-arrive > i:nth-child(3)  { --x: 14px;  --y: -36px; animation-delay: 40ms; }
+.hl-seal-arrive > i:nth-child(4)  { --x: 42px;  --y: -18px; animation-delay: 16ms; }
+.hl-seal-arrive > i:nth-child(5)  { --x: 36px;  --y: 16px;  animation-delay: 48ms; }
+.hl-seal-arrive > i:nth-child(6)  { --x: 8px;   --y: 30px;  animation-delay: 32ms; }
+.hl-seal-arrive > i:nth-child(7)  { --x: -28px; --y: 26px;  animation-delay: 56ms; }
+.hl-seal-arrive > i:nth-child(8)  { --x: -48px; --y: 4px;   animation-delay: 24ms; }
+.hl-seal-arrive > i:nth-child(9)  { --x: -8px;  --y: -18px; animation-delay: 8ms; }
+.hl-seal-arrive > i:nth-child(10) { --x: 22px;  --y: -8px;  animation-delay: 36ms; }
+.hl-seal-arrive > i:nth-child(11) { --x: -34px; --y: -8px;  animation-delay: 44ms; }
+.hl-seal-arrive > i:nth-child(12) { --x: 4px;   --y: 8px;   animation-delay: 12ms; }
+
 @media (prefers-reduced-motion: reduce) {
-  .hl-msg-in-me, .hl-msg-in-peer, .hl-fade-in { animation: none; will-change: auto; }
+  .hl-msg-in-me, .hl-msg-in-peer, .hl-fade-in, .hl-seal-arrive, .hl-seal-arrive > i { animation: none; will-change: auto; }
 }
 
 /* NO HYPHENS GLOBALLY */

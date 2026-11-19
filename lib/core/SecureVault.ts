@@ -234,6 +234,7 @@ export class SecureVault {
   public lock(): void {
     this.cryptoKey = null;
     this.memoryCache.clear();
+    import('@/lib/chat/record-session').then((m) => m.lockRecordSession()).catch(() => {});
   }
 }
 

@@ -48,16 +48,24 @@ export async function sha256Hex(data: Uint8Array): Promise<string> {
 
 const bs = (u: Uint8Array) => u as unknown as BufferSource;
 
-export async function aesSeal(key: Uint8Array, nonce: Uint8Array, plain: Uint8Array): Promise<Uint8Array> {
+export function zeroize(bytes: Uint8Array | null | undefined): void {
+  if (bytes) bytes.fill(0);
+}
+
+export async function aesSeal(key: Uint8Array, nonce: Uint8Array, plain: Uint8Array, aad?: Uint8Array): Promise<Uint8Array> {
   const subtle = globalThis.crypto.subtle;
   const cryptoKey = await subtle.importKey('raw', bs(key), 'AES-GCM', false, ['encrypt']);
-  const cipher = await subtle.encrypt({ name: 'AES-GCM', iv: bs(nonce) }, cryptoKey, bs(plain));
+  const params: AesGcmParams = { name: 'AES-GCM', iv: bs(nonce) };
+  if (aad) params.additionalData = bs(aad);
+  const cipher = await subtle.encrypt(params, cryptoKey, bs(plain));
   return new Uint8Array(cipher);
 }
 
-export async function aesOpen(key: Uint8Array, nonce: Uint8Array, cipher: Uint8Array): Promise<Uint8Array> {
+export async function aesOpen(key: Uint8Array, nonce: Uint8Array, cipher: Uint8Array, aad?: Uint8Array): Promise<Uint8Array> {
   const subtle = globalThis.crypto.subtle;
   const cryptoKey = await subtle.importKey('raw', bs(key), 'AES-GCM', false, ['decrypt']);
-  const plain = await subtle.decrypt({ name: 'AES-GCM', iv: bs(nonce) }, cryptoKey, bs(cipher));
+  const params: AesGcmParams = { name: 'AES-GCM', iv: bs(nonce) };
+  if (aad) params.additionalData = bs(aad);
+  const plain = await subtle.decrypt(params, cryptoKey, bs(cipher));
   return new Uint8Array(plain);
 }

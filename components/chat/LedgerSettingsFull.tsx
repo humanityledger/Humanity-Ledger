@@ -510,6 +510,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   // blocking browser dialog.
   const { nuclearDisconnect } = useSystemSignOut();
   const [signingOut, setSigningOut] = useState(false);
+  const [recordPass, setRecordPass] = useState('');
   const handleSignOut = useCallback(() => setModal('signout'), []);
   const confirmSignOut = useCallback(async () => {
     setSigningOut(true);
@@ -1079,6 +1080,56 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
+
+              <Group title="Records on this device" footer="The passphrase wraps record keys on this device only. Other people in the chat keep their own copies. Locking drops the key from memory. A passkey, when this browser has one, is preferred over a passphrase.">
+                <div className="px-4 py-3 flex flex-col gap-2">
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={recordPass}
+                    onChange={e => setRecordPass(e.target.value)}
+                    placeholder="Passphrase, at least 8 characters"
+                    className="h-11 px-3 rounded-xl bg-[#f4f5f7] text-[15px] text-[#15171c] outline-none"
+                  />
+                  <button
+                    type="button"
+                    className="h-10 rounded-xl bg-[#15171c] text-white text-[14px] font-semibold disabled:opacity-40"
+                    disabled={recordPass.length < 8}
+                    onClick={async () => {
+                      try {
+                        const { recordSession } = await import('@/lib/chat/record-session');
+                        const { randomBytes, toHex } = await import('@/vendor/ledger-record/src/hex');
+                        const existing = localStorage.getItem('hl_record_kdf_salt');
+                        const salt = existing && existing.length === 32
+                          ? Uint8Array.from(existing.match(/../g)!.map(h => parseInt(h, 16)))
+                          : randomBytes(16);
+                        await recordSession().unlockPassphrase(recordPass, salt);
+                        localStorage.setItem('hl_record_kdf_salt', toHex(salt));
+                        setRecordPass('');
+                        toast.success('This device is unlocked. Locking it drops record keys from memory. Other people in the chat are not affected.');
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : 'Could not set the passphrase');
+                      }
+                    }}
+                  >Protect record keys</button>
+                  <button
+                    type="button"
+                    className="h-10 rounded-xl bg-[#f4f5f7] text-[#15171c] text-[14px] font-semibold"
+                    onClick={async () => {
+                      try {
+                        const { passkeyKek } = await import('@/lib/chat/record-passkey');
+                        const { recordSession } = await import('@/lib/chat/record-session');
+                        const kek = await passkeyKek();
+                        await recordSession().unlockPasskey(kek);
+                        kek.fill(0);
+                        toast.success('Record keys on this device now unlock with this passkey');
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : 'This passkey could not be used');
+                      }
+                    }}
+                  >Use a passkey</button>
+                </div>
+              </Group>
 
               <Group title="Danger zone" footer="These actions are permanent and cannot be undone.">
                 <Row icon={<RefreshCw size={18} />} label="Clear all caches" onTap={() => setModal('clearCache')} />

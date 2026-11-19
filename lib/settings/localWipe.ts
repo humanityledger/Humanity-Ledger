@@ -59,6 +59,10 @@ export async function wipeLocalChatData(address: string): Promise<void> {
     await deleteStudioData(address);
   } catch {}
   await wipeVaultEntries(address);
+  try {
+    const { wipeRecordKeyStore } = await import('@/lib/chat/record-keys');
+    await wipeRecordKeyStore();
+  } catch {}
   try { wipeLocalKeys(localStorage); } catch {}
   try { sessionStorage.clear(); } catch {}
 }

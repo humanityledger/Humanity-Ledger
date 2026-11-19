@@ -93,8 +93,10 @@ import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/li
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
-import { isRecordMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
+import { isRecordMessage, legacyPreview, parseLegacyMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
 import { RecordSendError, sealFileMessage, sealNoteMessage } from '@/lib/chat/seal-record';
+import { epochForPeer, RecordEpochError, setRecordEpochProvider } from '@/lib/chat/record-epoch';
+import { installRecordWorker } from '@/lib/chat/record-worker';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
 import { encodeInvoicePayload, parseInvoicePayload, type ZkInvoice } from '@/lib/zk/zkInvoice';
@@ -300,8 +302,13 @@ export const formatMessagePreview = (content: string): string => {
   // Encrypted attachments carry their decryption key: never preview or notify their text.
   const remoteAttachment = parseAttachmentMessage(cleanContent);
   if (remoteAttachment) return attachmentPreview(remoteAttachment);
-  const record = parseRecordMessage(cleanContent);
-  if (record) return recordPreview(record);
+  if (isRecordMessage(cleanContent)) {
+    const modern = parseRecordMessage(cleanContent);
+    if (modern) return recordPreview(modern);
+    const older = parseLegacyMessage(cleanContent);
+    if (older) return legacyPreview(older);
+    return 'Sealed note';
+  }
   // Scheduled calls: a short label, never the JSON.
   const meeting = parseMeeting(cleanContent);
   if (meeting) return meetingPreview(meeting);
@@ -665,6 +672,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   conversationsRef.current = conversations;
   const [activePeer, setActivePeer] = useState<string | null>(null);
   const activePeerState = activePeer; // read by executeSend, which may be told another recipient
+
+  useEffect(() => { installRecordWorker(); }, []);
+
+  useEffect(() => {
+    setRecordEpochProvider(async () => {
+      if (!client || !activePeer || !address) return null;
+      try { return await epochForPeer(client, activePeer, address); } catch { return null; }
+    });
+    return () => setRecordEpochProvider(null);
+  }, [client, activePeer, address]);
   // The address of the person in the current call: call signals go to them even if another chat is open.
   const callPeerAddrRef = useRef<string | null>(null);
   // The wallet address of the person in the current call, for the call screens. It is the call's
@@ -6127,13 +6144,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       toast.error('Write the note, then seal it.');
       return;
     }
-    if (!address || !activePeer) return;
+    if (!address || !activePeer || !client) return;
     try {
-      const message = await sealNoteMessage(text, [address, activePeer]);
+      const epoch = await epochForPeer(client, activePeer, address);
+      const message = await sealNoteMessage(text, [address, activePeer], epoch);
       const sent = await executeSend(message);
       if (sent) setInputText('');
     } catch (err) {
-      toast.error(err instanceof RecordSendError ? err.message : 'Could not seal the record');
+      toast.error(err instanceof RecordEpochError || err instanceof RecordSendError ? err.message : 'Could not seal the record');
     }
   };
 
@@ -6141,7 +6159,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const file = e.target.files?.[0];
     if (!file) return;
     setShowAppDrawer(false);
-    if (!address || !activePeer) { resetFileInputs(e); return; }
+    if (!address || !activePeer || !client) { resetFileInputs(e); return; }
     if (isOffline) {
       toast.error('You are offline. Records are only sent while connected.');
       resetFileInputs(e);
@@ -6149,10 +6167,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
     setIsUploading(true);
     try {
-      const message = await sealFileMessage(file, file.name, [address, activePeer]);
+      const epoch = await epochForPeer(client, activePeer, address);
+      const message = await sealFileMessage(file, file.name, [address, activePeer], epoch);
       await executeSend(message);
     } catch (err) {
-      toast.error(err instanceof RecordSendError ? err.message : 'Could not seal the file');
+      toast.error(err instanceof RecordEpochError || err instanceof RecordSendError ? err.message : 'Could not seal the file');
     } finally {
       setIsUploading(false);
       resetFileInputs(e);
