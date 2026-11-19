@@ -15,6 +15,8 @@ import { useSignMessage, useReconnect } from 'wagmi';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
+import { diag, short } from '@/lib/xmtp/diag';
+import { reportDelivery } from '@/lib/xmtp/client';
 import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
@@ -4529,11 +4531,20 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             // to prevent the message from being silently dropped.
             const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
+            // One event per message received (lib/xmtp/diag.ts): never its content, ids shortened.
+            diag('recv', {
+              conv: short(convoId), msg: short(realId), fromPeer,
+              peer: resolvedPeerAddr ? short(resolvedPeerAddr) : 'unresolved',
+              type: String(msg.contentType?.typeId ?? (typeof msg.content)).slice(0, 24),
+              active: !!currentActivePeer && resolvedPeerAddr === currentActivePeer,
+            });
+            if (fromPeer && !resolvedPeerAddr) reportDelivery('receive_unresolved', 'sender not resolved to an address');
 
             // Blocked wallets: drop their messages, call signals and
             // notifications here, before anything is shown, rung or stored.
             if (fromPeer && blockedPeersRef.current.has(String(msgConvPeer).toLowerCase())) {
               confirmedMsgIds.current.add(realId);
+              diag('drop', { msg: short(realId), reason: 'blocked' });
               continue;
             }
 
@@ -4545,7 +4556,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             let firstSight = false;
             if (confirmedMsgIds.current.has(realId)) {
               const alreadyInState = messagesRef.current?.some((m: any) => m.id === realId);
-              if (alreadyInState) continue;
+              if (alreadyInState) { diag('drop', { msg: short(realId), reason: 'already shown' }); continue; }
               // ID was in dedup Set but NOT in state — re-insert (fall through).
             } else {
               confirmedMsgIds.current.add(realId);
@@ -4555,7 +4566,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             pruneOptimisticMap(); // prune stale optimistic entries
 
             // Cleared or deleted on this device: a replay after a reconnect must not bring it back.
-            if (!survivesClear(sentAtNs, clearedAtMs(msgConvPeer, [address])) || isHidden(msgConvPeer, realId)) continue;
+            if (!survivesClear(sentAtNs, clearedAtMs(msgConvPeer, [address])) || isHidden(msgConvPeer, realId)) {
+              const reason = isHidden(msgConvPeer, realId) ? 'deleted on this device' : 'before this chat was cleared';
+              diag('drop', { msg: short(realId), reason });
+              if (fromPeer && reason !== 'deleted on this device') reportDelivery('receive_cleared', 'new message older than the clear cut-off');
+              continue;
+            }
 
             // Delivery receipt (double grey tick on the sender's side) for a message that arrived on
             // this device but is not being read now: page hidden, or another chat open. Sent once,
@@ -5059,8 +5075,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             }
             } catch (msgErr) {
               console.error('[XMTP Stream] Error processing message:', msgErr);
+              // A message whose handling throws is not shown: say so (it used to vanish silently).
+              diag('drop', { msg: short(msg?.id), reason: 'error while handling', error: String((msgErr as Error)?.message ?? msgErr).slice(0, 120) });
             }
           }
+          // The stream ended without an error. Messages that arrive before it reopens are not
+          // streamed: the event shows how often this happens.
+          diag('stream_ended', { restartInMs: 5000 });
           await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e: any) {
           const errMsg = (e?.message || String(e) || '').toLowerCase();
@@ -5074,6 +5095,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
           if (!cancelled) {
             streamRestarts++;
             const backoffMs = Math.min(1000 * Math.pow(1.5, streamRestarts), 15000);
+            diag('stream_restart', { n: streamRestarts, inMs: Math.round(backoffMs), groupInactive: isGroupInactive, error: errMsg.slice(0, 100) });
             if (!isGroupInactive) {
                console.warn('[Chat] global stream failed (will retry):', e);
             }

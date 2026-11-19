@@ -5,6 +5,15 @@ import { useVisitBeacon } from '@/lib/stats/useVisitBeacon';
 import { ChatEngineProvider } from '@/context/ChatEngineProvider';
 import { KeyboardViewport } from '@/components/layout/KeyboardViewport';
 import { BootMark } from '@/components/layout/BootMark';
+import { useEffect, useState } from 'react';
+
+// /chat?debug=delivery shows this browser's delivery events (lib/xmtp/diag.ts), for a report.
+const DeliveryDebugPanel = dynamic(() => import('@/components/chat/DeliveryDebugPanel'), { ssr: false });
+function useDebugDelivery() {
+  const [on, setOn] = useState(false);
+  useEffect(() => { setOn(new URLSearchParams(window.location.search).get('debug') === 'delivery'); }, []);
+  return on;
+}
 
 // Test builds only (NEXT_PUBLIC_E2E_HARNESS=1, inlined at build): /chat?e2e=settings mounts Settings
 // alone for the WebKit and Chromium test (scripts/ui/settings-webkit.mjs). Absent from production.
@@ -34,10 +43,12 @@ const LedgerChat = dynamic(
 export default function ChatPage() {
   // Counts this browser once a day for the live map on the landing page (lib/stats).
   useVisitBeacon();
+  const debugDelivery = useDebugDelivery();
   if (SettingsHarness && harnessOn()) return <SettingsHarness />;
   return (
     <TuringShieldGate>
       <KeyboardViewport />
+      {debugDelivery && <DeliveryDebugPanel />}
       <ChatEngineProvider>
         {/* On desktop Ledger Chat floats as a rounded card on a plain, light background; on phones it
             fills the screen. The margin around the card follows the window (clamp on vw and vh), so
