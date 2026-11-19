@@ -1,7 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRedisHealth } from '@/lib/redis/client';
-import { healthVerdict, type HealthCheck as Check, type MigrationCheck } from '@/lib/health';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { healthVerdict, latestMigrationName, migrationProgress, type HealthCheck as Check, type MigrationCheck } from '@/lib/health';
+
+/** The newest migration shipped in this build, read once per process. */
+let shipped: string | null | undefined;
+function expectedLatest(): string | null {
+  if (shipped !== undefined) return shipped;
+  try {
+    shipped = latestMigrationName(readdirSync(join(process.cwd(), 'prisma', 'migrations')));
+  } catch {
+    shipped = null;
+  }
+  return shipped;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +72,15 @@ async function checkMigrations(): Promise<MigrationCheck> {
       CHECK_TIMEOUT_MS,
     );
     const failed = rows.map((r: { migration_name: string }) => r.migration_name);
-    return { ok: failed.length === 0, status: failed.length === 0 ? 'OK' : 'NEEDS_ATTENTION', failed };
+    const last = await withTimeout<{ migration_name: string }[]>(
+      prisma.$queryRaw<{ migration_name: string }[]>`SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1`,
+      CHECK_TIMEOUT_MS,
+    ).catch(() => []);
+    const latestApplied = last[0]?.migration_name ?? null;
+    const expected = expectedLatest();
+    if (failed.length) return { ok: false, status: 'NEEDS_ATTENTION', failed, latestApplied, expectedLatest: expected };
+    const progress = migrationProgress(latestApplied, expected);
+    return { ok: progress !== 'BEHIND', status: progress === 'BEHIND' ? 'BEHIND' : 'OK', failed, latestApplied, expectedLatest: expected };
   } catch {
     return { ok: false, status: 'UNKNOWN', failed: [] };
   }
@@ -77,6 +99,8 @@ export async function GET() {
       environment: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'unknown',
       replicaId: process.env.RAILWAY_REPLICA_ID || 'local',
       uptimeSeconds: Math.round(process.uptime()),
+      // The commit this replica runs (Railway sets it on Git deploys): which code answers.
+      version: { commit: (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 12) || null },
       services: { web: { ok: true, status: 'OK' }, database, redis, migrations },
     },
     {
