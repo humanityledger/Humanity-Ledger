@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
   const codeHash = hashInviteCode(code, pepper);
   try {
     const member = await prisma.$transaction(async (tx) => {
+      // R2-2: one redemption at a time, so two codes redeemed together cannot pass the 50 cap.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(72707370)`;
       const count = await tx.alphaMember.count();
       if (count >= MAX_TESTERS) return 'full' as const;
       // Claim the invitation atomically: only an unused, unrevoked, unexpired code matches.

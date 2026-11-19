@@ -82,6 +82,16 @@ This document covers the five trust boundaries most likely to be attacked:
 
 ---
 
+### 5b. Closed alpha on Aztec Alpha (added 19/11/2026, internal review 2)
+
+| Threat (STRIDE) | Control | Residual |
+| --- | --- | --- |
+| Elevation: a non-member opens an agreement | `GET /api/alpha/gate` (server-side membership, enabled, until, class, deployment), asked before the deploy and before funding. It fails closed. | The contracts have no allowlist: a modified client is bounded by the 100 HLC `MAX_AMOUNT` and by HLC going only to members (R2-8). |
+| Tampering: the terms a tester accepts differ from the signed ones | The SHA-256 of the served bytes must equal `ALPHA_TERMS_SHA256`, checked again by `/api/alpha/redeem`. | None while the variables match the signed file. |
+| Denial: exits blocked during an incident | The exits never ask the value mode or the gate, and the contracts have no pause. | None in the app. Node availability is outside our control (alert `node_stalled`). |
+| Information disclosure: admission data kept too long | `retainUntil` is 6 months after `until`, with a daily purge cron. | If `until` is null, nothing is purged until it is set. |
+| Repudiation: Fee Juice grants | Admin-only, with a hash looked up on the network, the budget checked under a lock, and a CSV export. | The recipient and amount are as reported (R2-10). |
+
 ## Infrastructure & Supply Chain
 
 | ID | Threat | Category | Mitigation | Task |

@@ -19,6 +19,7 @@
  * stores them outside the conversation, or sends them anywhere but the DM.
  */
 import { assertNewValueAllowed } from './value-mode';
+import { assertClosedAlphaAllows } from '../alpha/gate-client';
 import type { AgreementInvite, EscrowInvite, StreamInvite } from './agreement-invite';
 import type { EscrowView, StreamView } from './agreements';
 import { getPrivateWallet } from './wallet/client';
@@ -171,6 +172,8 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
     salt: new L.fields.Fr(1n),
     token: L.addresses.AztecAddress.fromStringUnsafe(r.tokenAddress),
   });
+  // Closed alpha gate (R2-1): enabled, until, class, recorded deployment, membership, risk acknowledgement.
+  await assertClosedAlphaAllows(AZTEC_WALLET_CONFIG.network, probe.instance.currentContractClassId.toString());
   const classPublished = !!(await ctx.node.getContractClass(probe.instance.currentContractClassId));
   const common = {
     sender: { wallet: ctx.wallet, address: ctx.me },
@@ -184,6 +187,7 @@ export async function openChatAgreement(r: OpenRequest): Promise<{ raw: string; 
     beforeFund: async (raw: string) => {
       // Asked again right before money moves: deploying the instance takes minutes and the switch may flip meanwhile.
       await assertNewValueAllowed();
+      await assertClosedAlphaAllows(AZTEC_WALLET_CONFIG.network, probe.instance.currentContractClassId.toString());
       r.onStep?.('Posting the invitation in this chat');
       await r.post(raw);
       r.onStep?.('Funding the agreement and proving on this device. This can take a few minutes.');
