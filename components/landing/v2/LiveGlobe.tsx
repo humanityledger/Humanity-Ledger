@@ -4,8 +4,8 @@
  * LiveGlobe — the landing page's live map: a lit 3D globe with the real numbers of Ledger Chat.
  *
  * Every figure comes from GET /api/stats/live (lib/stats/live.ts), refreshed every 15 s while the
- * map is on screen: accounts that signed in, @usernames reserved, and visitors, each browser once a
- * day, placed by its time zone. Nothing is seeded or estimated; a region lights up only where
+ * map is on screen: accounts that signed in, @usernames reserved, and visits (one per page load;
+ * until 19/11/2026 each browser once a day), placed by time zone. Nothing is seeded or estimated; a region lights up only where
  * someone came from. Drag to turn the globe; it turns by itself otherwise (not with reduced motion).
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -283,7 +283,7 @@ export function LiveGlobe({ headless = false }: { headless?: boolean } = {}) {
 
       <div className={s.grid}>
         <div ref={wrapRef} className={s.globe}>
-          <canvas ref={canvasRef} role="img" aria-label={`Globe lit where visitors came from${topRegions.length ? `: ${topRegions.map((r) => place(r.tz)).join(', ')}` : ''}`} />
+          <canvas ref={canvasRef} role="img" aria-label={`Globe lit where visits came from${topRegions.length ? `: ${topRegions.map((r) => place(r.tz)).join(', ')}` : ''}`} />
         </div>
 
         <div className={s.numbers}>
@@ -299,9 +299,9 @@ export function LiveGlobe({ headless = false }: { headless?: boolean } = {}) {
               <p>Reserved, each one unique.</p>
             </div>
             <div>
-              <dt>Visitors</dt>
+              <dt>Visits</dt>
               <dd data-testid="live-visitors">{stats ? fmt(visitors) : '–'}</dd>
-              <p>{stats ? `${fmt(stats.visitorsToday)} today · since ${since(stats.countedSince)}` : 'One per browser per day.'}</p>
+              <p>{stats ? `${fmt(stats.visitorsToday)} today · since ${since(stats.countedSince)}` : 'One per page load.'}</p>
             </div>
             {stats?.clones && (
               <div>
@@ -320,7 +320,7 @@ export function LiveGlobe({ headless = false }: { headless?: boolean } = {}) {
           </dl>
 
           {topRegions.length > 0 && (
-            <ol className={s.regions} aria-label="Where visitors came from">
+            <ol className={s.regions} aria-label="Where visits came from">
               {topRegions.map((r) => (
                 <li key={r.tz}>
                   <span>{place(r.tz)}</span>
@@ -331,7 +331,7 @@ export function LiveGlobe({ headless = false }: { headless?: boolean } = {}) {
           )}
 
           <p className={s.note}>
-            Counted from our database, not estimated. A visitor is a browser, counted once a day and placed by its time zone; no IP address is stored. Visitors are counted from {stats ? since(stats.countedSince) : '18 Nov 2026'}.
+            Counted from our database, not estimated. A visit is a page load, placed by the time zone the browser reports. Nothing is stored in your browser and no IP address is kept beyond a one-minute rate limit. Until 19 Nov 2026 a browser counted once a day. Visits are counted from {stats ? since(stats.countedSince) : '18 Nov 2026'}.
           </p>
         </div>
       </div>

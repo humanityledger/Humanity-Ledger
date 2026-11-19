@@ -127,7 +127,7 @@ export const CALLS = {
 };
 export const LIVE = {
   title: ['People on Ledger Chat. ', 'Right now', '.'],
-  method: 'Visitors are counted once per browser per day by time zone, with no IP address stored, since 18 November 2026.',
+  method: 'Visits are counted by time zone, one per page load. Nothing is stored in your browser and no IP address is kept beyond a one-minute rate limit. Counting started on 18 November 2026.',
 };
 
 /**

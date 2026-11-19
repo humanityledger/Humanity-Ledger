@@ -1,49 +1,37 @@
 'use client';
 
 /**
- * Counts this browser once per UTC day for the live map (POST /api/stats/visit). Sends only the
- * time zone the browser reports and a random id kept in this browser; the server stores neither
- * the id nor the IP address. Calls `onCounted` when the visit was counted, so the map can refresh.
+ * Counts a visit for the live map (POST /api/stats/visit): one per page load, sent with only the
+ * time zone the browser reports. Nothing is written to the browser (no localStorage, no cookie,
+ * no id), so counting needs no consent under the ePrivacy rules on storing information on the
+ * user's device (LSSI art. 22.2 in Spain). Calls `onCounted` when the visit was counted, so the
+ * map can refresh. Until 19 November 2026 a random id kept in localStorage counted each browser
+ * once a day; that id is no longer created, and an old one left in a browser is removed.
  */
 import { useEffect } from 'react';
 
-const ID_KEY = 'hl.visit.id';
-const DAY_KEY = 'hl.visit.day';
-
-function randomId(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  let bin = '';
-  bytes.forEach((b) => { bin += String.fromCharCode(b); });
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+/** Once per page load, whatever remounts in between (in memory only). */
+let sent = false;
 
 export function useVisitBeacon(onCounted?: () => void) {
   useEffect(() => {
-    let today: string;
-    let vid: string;
+    // Remove what the previous version kept in this browser.
     try {
-      today = new Date().toISOString().slice(0, 10);
-      if (localStorage.getItem(DAY_KEY) === today) return;
-      vid = localStorage.getItem(ID_KEY) || randomId();
-      localStorage.setItem(ID_KEY, vid);
-    } catch {
-      return; // storage blocked: do not count a browser we cannot recognise tomorrow
-    }
+      localStorage.removeItem('hl.visit.id');
+      localStorage.removeItem('hl.visit.day');
+    } catch { /* storage blocked: nothing to remove */ }
+    if (sent) return;
+    sent = true;
     let tz = 'unknown';
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'; } catch { /* unknown */ }
     fetch('/api/stats/visit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tz, vid }),
+      body: JSON.stringify({ tz }),
       keepalive: true,
     })
-      .then(async (r) => {
-        if (!r.ok) return;
-        try { localStorage.setItem(DAY_KEY, today); } catch { /* counted anyway */ }
-        const d = await r.json().catch(() => null);
-        if (d?.counted) onCounted?.();
-      })
+      .then((r) => (r.ok ? r.json().catch(() => null) : null))
+      .then((d) => { if (d?.counted) onCounted?.(); })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

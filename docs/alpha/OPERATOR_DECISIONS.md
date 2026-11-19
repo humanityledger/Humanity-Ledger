@@ -101,3 +101,11 @@ by the read-only preflight; the HLC alpha finished within its targets; Stefan's 
 
 **Unchanged:** OD-2 (100 HLC per agreement), OD-7 (no protocol fee), OD-8 (the lawyer's note before the first
 invitation code), OD-9 (open, see above).
+
+**PA-1, applied further (19/11/2026, afternoon).** Following the preliminary legal note prepared for counsel (not yet
+signed by a lawyer), the HLC token model is **withdrawn**, not only suspended: `docs/TOKENOMICS.md` now states that HLC
+is a test token and that no launch is planned; the allocations, fair launch, buyback and burn, staking, vesting and
+launch conditions are removed from `lib/protocol/tokenomics.ts` and from the landing sections; the old text stays only in
+git history. In the same change: the Alpha banner no longer says "Real ETH" (payments are in HLC, fees in Fee Juice);
+the visit counter stores nothing in the browser; `public/aztec_x_ledger_partnership.svg` is removed. Still for Stefan:
+redeploy HLC with a neutral on-chain name (the current contract is named "Humanity Ledger Corp.").

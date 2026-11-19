@@ -8,7 +8,8 @@
  * at build time), so the bundle impact is zero in the default build.
  *
  * Purpose: inform users clearly that:
- *  - private payments use real ETH (Aztec Alpha on Ethereum mainnet)
+ *  - payments in the closed alpha use HLC, a test token with no monetary value (PA-1),
+ *    on Aztec Alpha (Ethereum mainnet); network fees are paid in Fee Juice, which has value
  *  - the protocol has not been externally audited yet (G8 open)
  *  - value caps are in effect per NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS
  *
@@ -43,7 +44,7 @@ interface AlphaNetworkBannerProps {
 
 /**
  * Renders nothing on the test network.
- * On Aztec Alpha: shows a persistent "real funds, unaudited" banner once per session.
+ * On Aztec Alpha: shows a persistent "test token, no external audit" banner once per session.
  */
 export function AlphaNetworkBanner({ className = '', variant = 'strip' }: AlphaNetworkBannerProps) {
   const [dismissed, setDismissed] = useState(() => wasDismissed());
@@ -68,11 +69,12 @@ export function AlphaNetworkBanner({ className = '', variant = 'strip' }: AlphaN
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-[#9A3412] leading-snug">
-              Aztec Alpha — real funds, unaudited
+              Aztec Alpha · HLC is a test token with no monetary value
             </p>
             <p className="mt-1 text-[12px] text-[#92400E] leading-relaxed">
-              Private payments run on {networkLabel()} (Ethereum mainnet). This software has not been
-              externally audited. Use small amounts only. Transactions cannot be reversed.
+              Private payments run on {networkLabel()} (Ethereum mainnet) with HLC, a test token. Network
+              fees are paid in Fee Juice, which does have value. This software has had an internal security
+              review, not an external audit. Transactions cannot be reversed.
             </p>
             <div className="mt-2 flex items-center gap-3">
               <a
@@ -108,7 +110,7 @@ export function AlphaNetworkBanner({ className = '', variant = 'strip' }: AlphaN
       <div className="flex items-center gap-2 min-w-0">
         <AlertTriangle size={13} strokeWidth={2} className="shrink-0" aria-hidden="true" />
         <span className="truncate">
-          <strong className="font-semibold">Aztec Alpha</strong> · Real ETH · Unaudited · Keep amounts small
+          <strong className="font-semibold">Aztec Alpha</strong> · HLC test token, no value · Fees in Fee Juice · No external audit
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">

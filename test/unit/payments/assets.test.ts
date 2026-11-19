@@ -62,8 +62,8 @@ describe('payment assets (PA-1)', () => {
     expect(read('components/zk/wallet/WalletSheets.tsx')).toMatch(/isTestToken\(symbol\)/);
     expect(read('lib/landing/content.ts')).toMatch(/HLC is a test token with no monetary value, used only to test private payments/);
     expect(read('lib/landing/content.ts')).toMatch(/planned in cUSDC/);
-    expect(read('docs/TOKENOMICS.md')).toMatch(/Suspended on 19 November 2026/);
-    expect(read('lib/protocol/tokenomics.ts')).toMatch(/MODEL_STATUS = 'suspended'/);
+    expect(read('docs/TOKENOMICS.md')).toMatch(/Withdrawn on 19 November 2026/);
+    expect(read('lib/protocol/tokenomics.ts')).toMatch(/MODEL_STATUS = 'withdrawn'/);
     expect(ASSETS_SENTENCE).toMatch(/^HLC is a test token with no monetary value/);
   });
 
