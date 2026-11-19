@@ -1887,6 +1887,13 @@ model AlphaInvite {
   redeemedBy String?   @unique
   redeemedAt DateTime?
   revokedAt  DateTime?
+  /// Operator checks before the code (package 4): EU consolidated sanctions list and age. Only
+  /// the result is stored, never an identity document. Deleted at retainUntil (scripts/alpha/purge.mjs).
+  sanctionsCheckedAt DateTime?
+  sanctionsListDate  String?
+  sanctionsResult    String?
+  adultCheckedAt     DateTime?
+  retainUntil        DateTime?
 }
 
 /// A tester: an Ethereum wallet that redeemed an invitation. Revoking keeps exits only
@@ -1897,6 +1904,15 @@ model AlphaMember {
   joinedAt       DateTime  @default(now())
   riskAckAt      DateTime?
   revokedAt      DateTime?
+  /// The three separate boxes of the terms (package 4), each with its time and the SHA-256 of the
+  /// exact signed text accepted. Deleted at retainUntil (scripts/alpha/purge.mjs).
+  termsAcceptedAt       DateTime?
+  termsSha256           String?
+  risksAcceptedAt       DateTime?
+  risksSha256           String?
+  eligibilityAcceptedAt DateTime?
+  eligibilitySha256     String?
+  retainUntil           DateTime?
 }
 
 /// Visits to ledgerchat.org, counted for the live map on the landing page. One row per UTC day
