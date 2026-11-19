@@ -9,7 +9,7 @@ Stefan does these steps once, in Railway. The agent does not change Railway.
    - This file runs `node scripts/alpha/purge.mjs` every day at 03:17 UTC.
    - It has no health check and is never restarted.
    - The web service keeps `railway.toml`.
-3. Set **one** variable on `alpha-purge`: `DATABASE_URL=${{Postgres.DATABASE_URL}}` (direct, not PgBouncer). It needs no other secret.
+3. Set two variables on `alpha-purge`: `DATABASE_URL=${{Postgres.DATABASE_URL}}` and `DATABASE_URL_UNPOOLED=${{Postgres.DATABASE_URL}}`. Both are direct, not PgBouncer, because the schema names both. It needs no other secret.
 4. Deploy it once. In its log, expect one of these lines:
    - `Cleared 0 invitation(s) and 0 tester(s).`
    - `Due: …` when run with `--dry-run`.
