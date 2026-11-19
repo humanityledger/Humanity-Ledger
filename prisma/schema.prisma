@@ -1915,6 +1915,22 @@ model AlphaMember {
   retainUntil           DateTime?
 }
 
+/// A Fee Juice grant to a tester (package 5, OD-9). Stefan makes the grant with his own keys; this
+/// row records what he reports, after the transaction is found on the network, read-only.
+/// Admins only (/api/alpha/fee-juice-grants). Exported as CSV for the tax adviser.
+model FeeJuiceGrant {
+  id                    String   @id @default(cuid())
+  recipientAztecAddress String
+  amount                String
+  network               String
+  txHash                String   @unique
+  block                 Int
+  grantedAt             DateTime @default(now())
+  marketValueEur        String
+  valueSource           String
+  recordedBy            String
+}
+
 /// Visits to ledgerchat.org, counted for the live map on the landing page. One row per UTC day
 /// and IANA time zone, with the number of different browsers that came that day. No IP address,
 /// account or browser id is stored: the time zone is the only place information (lib/stats).
