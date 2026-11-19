@@ -60,3 +60,14 @@ While any gate is unmet, the wallet drops cUSDC from its token list even if it i
 - HLC remains a test token. It is either kept as a "test mode" or removed from the wallet. It is never converted into anything.
 - Ledger Chat never holds a user's key or funds. Every payment is signed in the user's own wallet.
 - `audit` stays `null` in the manifest until an external audit of Humanity Ledger's own contracts exists.
+
+## Wallet slot (package 9, 19/11/2026)
+
+- `CUSDC` is a wallet slot in `lib/aztec/wallet/config.ts`. It is built only on Alpha, from `NEXT_PUBLIC_AZTEC_TOKENS.CUSDC`, and always passes through `withoutGatedTokens`. While any gate in `CUSDC_GATES` is unmet, it stays empty, even if the variable is set.
+- Test-network readiness counts only the faucet slots (`TESTNET_TOKEN_KEYS`: USDC, DAI, ETH). Adding the slot did not change it.
+- `test/unit/aztec/deployments-registry.test.ts` exempts a third-party token from the reserved-symbol rule only when it matches a `plannedTokens` entry by symbol and address, with role `real` and an issuer. Operator tokens may no longer contain a real asset's symbol either.
+- **Still to do, each behind its gate:**
+  - the preflight confirming the address on the node (`onchain`);
+  - a token record in `tokens` with its class;
+  - Stefan's PR turning each gate's `met` to true, with evidence.
+

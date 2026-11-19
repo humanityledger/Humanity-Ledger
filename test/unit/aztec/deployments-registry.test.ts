@@ -155,10 +155,26 @@ describe('deployments/aztec-mainnet.json tokens', () => {
     }
   });
 
+  // Package 9: a token issued by a third party (cUSDC by human.tech) carries its issuer's symbol.
+  // It is exempt only when it matches a plannedTokens entry by address and symbol, with role
+  // "real", and is not administered by us; every other token keeps the reserved-symbol rule.
+  const planned = (mainnet.plannedTokens ?? []) as Array<{ symbol: string; address: string; role: string; issuer?: string }>;
+  const thirdParty = (t: { symbol: string; address: string; admin?: string }) =>
+    planned.some((p) => p.role === 'real' && !!p.issuer && p.symbol === t.symbol && p.address.toLowerCase() === t.address.toLowerCase());
+
+  it('a third-party token is recognised only by its planned record', () => {
+    expect(thirdParty({ symbol: 'cUSDC', address: '0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38' })).toBe(true);
+    expect(thirdParty({ symbol: 'cUSDC', address: '0x' + '11'.repeat(32) })).toBe(false);
+    expect(thirdParty({ symbol: 'USDC', address: '0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38' })).toBe(false);
+  });
+
   it('never names an operator token like a real asset', () => {
     for (const t of tokens) {
       expect(t.symbol.trim().length, t.key).toBeGreaterThan(0);
+      if (thirdParty(t)) continue;
       expect(RESERVED, t.symbol).not.toContain(t.symbol.toUpperCase());
+      // An operator token must not contain a real asset's symbol either (cUSDC-like names).
+      for (const r of RESERVED) if (r !== 'AZTEC') expect(t.symbol.toUpperCase().includes(r), `${t.symbol} contains ${r}`).toBe(false);
       // The Token contract stores the name as a 31-byte compressed string.
       expect(new TextEncoder().encode(t.name).length, t.symbol).toBeLessThanOrEqual(31);
     }
