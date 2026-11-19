@@ -1,14 +1,16 @@
 /**
  * POST /api/wallet/payment-report — a wallet transaction event (lib/aztec/wallet/payment-report.ts),
  * written to the server log as one line, as /api/chat/delivery-report does for messages. Only the
- * stage, the kind of transaction, the network, a reason code and a duration are accepted; nothing
- * is stored and no amount, address, hash or error text is accepted. Signed-in accounts only,
+ * stage, the kind of transaction, the network, a reason code and a duration are accepted. On Alpha
+ * the stage and reason are also counted per hour (lib/ops/counters.ts, package 6); no amount,
+ * address, hash or error text is accepted or stored. Signed-in accounts only,
  * 30 reports a minute.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { PAYMENT_REASONS, PAYMENT_STAGES } from '@/lib/aztec/wallet/payment-report';
+import { bumpCounter } from '@/lib/ops/counters';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +30,10 @@ export async function POST(req: NextRequest) {
   const network = NETWORKS.has(body?.network) ? body.network : 'other';
   const reason = body?.stage === 'failed' ? (REASONS.has(body?.reason) ? body.reason : 'other') : '';
   const ms = Number.isFinite(body?.ms) && body.ms >= 0 && body.ms < 3_600_000 ? Math.round(body.ms) : '';
+  if (network === 'mainnet') {
+    await bumpCounter('payment', body.stage);
+    if (reason) await bumpCounter('payment', `failed_${reason}`);
+  }
   console.warn(`[payment] stage=${body.stage} kind=${kind} network=${network}${reason ? ` reason=${reason}` : ''}${ms !== '' ? ` ms=${ms}` : ''}`);
   return new NextResponse(null, { status: 204 });
 }

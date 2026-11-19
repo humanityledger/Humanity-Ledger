@@ -610,6 +610,7 @@ export async function sendMessage(
       // publish keeps running, and the next attempt queues behind it instead of racing it.
       await withTimeout(publishSerial(cacheKey, dm), PUBLISH_WAIT_MS, 'publish timeout');
       diag('send_published', { conv: short(dm?.id), attempt: i + 1, signal: isSignal(content) });
+      if (!isSignal(content)) reportDelivery('send_published', '');
       return sentId;
     } catch (sendErr: any) {
       lastError = sendErr;
