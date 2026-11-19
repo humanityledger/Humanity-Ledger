@@ -32,7 +32,7 @@ describe('one loading mark', () => {
     expect(loading).toContain('<BootMark />');
     expect(loading).toContain('bg-white md:bg-[#f4f6fa]');
     expect(loading).not.toContain('linear-gradient');
-    expect(read('app/chat/page.tsx')).toContain('<BootMark />');
+    expect(read('components/chat/surface/ChatSurface.tsx')).toContain('<BootMark />');
     expect(read('components/terminal/LedgerChatV2.tsx')).toContain('<BootMark label="Loading your account" />');
     expect(read('components/terminal/PadlockLoader.tsx')).toContain('/boot-mark.webp');
     expect(read('app/layout.tsx')).toContain('href="/boot-mark.webp"');

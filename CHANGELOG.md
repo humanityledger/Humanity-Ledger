@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Live activities: the island and the floating call window (19 November 2026)
+
+- One ActivityManager (`lib/activities`, zustand) replaces the old Dynamic Island store. Each activity has static
+  attributes and a dynamic state, like ActivityKit: call, payment proof, payment received, recording, message,
+  session. Pure priority rules (`priority.ts`) decide what the island shows: one primary, one minimal, a count.
+- Privacy by types: an activity holds a 32-character display name, an amount and a token symbol, made only by
+  `values.ts`. A message notification names the sender and never shows the message (it used to show a preview).
+- The call has one presentation for the whole app: the full-screen stage, the floating window or the island.
+  The window is draggable and throwable to the four corners, keyboard-operable (arrows, Enter, Escape, + and -),
+  stays above the keyboard and inside the safe areas, remembers its corner and size, and offers the browser's
+  picture in picture where it exists. The call and the window share one `layoutId`, so they morph into each other.
+- The call survives route changes: the chat is mounted by `ChatKeepAlive` from the root layout and stays alive,
+  hidden, while a call is live off `/chat`. A call that ends shows "Call ended" with its length for 2.4 s.
+- The wallet's payment proof and incoming payments appear in the island with their real stage; the fake
+  waveform of the old minimised call is gone. Reduced motion uses a short fade; dark mode follows the document.
+- Tests: `test/unit/activities` (priority edge cases, store lifecycle, geometry, values).
+
 ### No fee sponsorship (15 November 2026)
 
 - Product decision: Ledger Chat sponsors no network fee. Every account pays its own fees on Aztec Alpha, with

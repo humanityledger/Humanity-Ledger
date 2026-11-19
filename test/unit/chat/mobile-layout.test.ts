@@ -20,7 +20,7 @@ describe('chat on a phone', () => {
   });
 
   it('with the keyboard open, the chat fills exactly the visible part of the screen', () => {
-    expect(read('app/chat/page.tsx')).toContain('<KeyboardViewport />');
+    expect(read('components/chat/surface/ChatSurface.tsx')).toContain('<KeyboardViewport />');
     expect(read('components/layout/ClientLayout.tsx')).toContain("data-chat-root={isChat ? '' : undefined}");
     const css = read('app/globals.css');
     expect(css).toMatch(/html\.hl-kb-open \[data-chat-root\] \{[^}]*height: var\(--hl-vv-h, 100%\) !important;/);
@@ -33,7 +33,7 @@ describe('chat on a phone', () => {
   });
 
   it('the card frame is for wide screens only: on a phone the chat fills the screen', () => {
-    const page = read('app/chat/page.tsx');
+    const page = read('components/chat/surface/ChatSurface.tsx');
     // The card's limits and margins apply from md up only; the margins follow the window, so zoom
     // never pushes the card off screen.
     expect(page).toContain('md:max-h-[min(1100px,100dvh)]');

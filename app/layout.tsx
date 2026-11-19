@@ -29,7 +29,7 @@ import { ReactNode } from "react";
 
 import { MobileEnforcer } from '@/components/layout/MobileEnforcer';
 
-import { DynamicIsland } from "@/components/ui/DynamicIsland";
+import { LiveActivityLayer } from "@/components/activities/LiveActivityLayer";
 
 import { ClientOverlays } from "@/components/layout/ClientOverlays";
 
@@ -615,7 +615,7 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
         <ScrollProgressBar />
 
-        <DynamicIsland />
+        <LiveActivityLayer />
 
         <Providers cookies={cookies}>
 

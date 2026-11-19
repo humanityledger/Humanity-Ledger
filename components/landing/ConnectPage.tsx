@@ -40,7 +40,7 @@ import { toast } from "sonner";
 import { BrandedQr } from "@/components/chat/profile/BrandedQr";
 import { useUIStore } from "@/lib/store/ui-store";
 import { useSystemSignOut } from "@/hooks/useSystemSignOut";
-import { useDynamicIsland } from "@/lib/store/dynamic-island-store";
+import { setSessionActivity } from "@/lib/activities/hooks";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
@@ -401,7 +401,7 @@ export default function ConnectPage() {
         }
 
         setSyncStatus("SYNCED");
-        useDynamicIsland.getState().setState("syncing", { title: "Signing you in" }, 3000);
+        setSessionActivity("signing-in");
         const hy = await fetch("/api/auth/qr-hydrate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
