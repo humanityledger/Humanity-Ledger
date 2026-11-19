@@ -57,3 +57,22 @@ Fee Juice per tester: in the last measurement, creating an account reserved abou
 ## Reported by Stefan (18/11/2026, in the chat)
 
 Stefan reported that between two different phones, calls, video calls, chat and sending money work. No accounts, network or transaction hashes were given, so this record holds no figure. R8 (a G7 session and a payment between two different people, `docs/MAINNET_READINESS.md`) is marked done only with those details.
+
+## OD-4 amended (19/11/2026)
+
+**Decision:** the closed alpha takes **at most 50 testers, for messaging and for payments** (option A). It was 20 for payments.
+
+Stefan Antonio Cirisanu decided this in writing in the chat on 19/11/2026 ("50 para todo, mensajería y pagos"). The agent transcribed it here.
+
+**Applied in:**
+- `lib/alpha/invites.ts`: `MAX_TESTERS = 50`;
+- `deployments/aztec-mainnet.json`: `closedAlpha.maxTesters` = 50;
+- `scripts/alpha/invites.mjs`;
+- `docs/alpha/DEPLOY_RUNBOOK.md`;
+- the landing (`lib/landing/content.ts`, `NEXT_WAVE`).
+
+`/api/alpha/redeem` enforces the cap on the server.
+
+**Unchanged:**
+- OD-2: 100 HLC per agreement.
+- OD-9, the Fee Juice budget: set at 20 AZTEC per tester × 20 = 400 AZTEC. With 50 testers it would be 1,000 AZTEC. **Open: Stefan decides whether the budget per tester or the total changes.**

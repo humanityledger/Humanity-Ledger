@@ -147,7 +147,7 @@ export const FEATURES: { group: string; items: { title: string; body: string }[]
   },
 ];
 
-export const NEXT_WAVE = 'Escrow and payment streams come next, to a closed alpha of at most 20 testers, with a cap of 100 HLC per agreement.';
+export const NEXT_WAVE = 'Escrow and payment streams come next, to a closed alpha of at most 50 testers, with a cap of 100 HLC per agreement.';
 
 export const DEVICES = [
   { name: 'iPhone', how: 'Safari or Chrome. Add it to your Home Screen.' },

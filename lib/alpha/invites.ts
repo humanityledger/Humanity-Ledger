@@ -11,8 +11,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 export const CODE_LENGTH = 16;
-/** OD-4: at most 20 testers. */
-export const MAX_TESTERS = 20;
+/** OD-4 as amended on 19/11/2026: at most 50 testers, for messaging and payments. */
+export const MAX_TESTERS = 50;
 
 /** A new code from 10 random bytes (80 bits), grouped by four. */
 export function newInviteCode(randomBytes: (n: number) => Uint8Array): string {

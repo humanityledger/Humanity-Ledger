@@ -46,7 +46,7 @@ Without both, `lib/alpha/gate.ts` keeps every new agreement refused.
 node scripts/alpha/invites.mjs create --by 0x<Stefan's wallet> --count 5 --days 14
 ```
 
-- Each code is printed once. Hand it over in person or through a private channel. At most 20 testers (OD-4).
+- Each code is printed once. Hand it over in person or through a private channel. At most 50 testers (OD-4, amended 19/11/2026).
 - To revoke a tester, run `node scripts/alpha/invites.mjs revoke-member 0x…`. That tester can still settle (claim, refund, withdraw, cancel) but cannot open new agreements.
 
 ## 6. End of the alpha

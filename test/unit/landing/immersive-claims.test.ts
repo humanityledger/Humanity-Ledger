@@ -96,8 +96,8 @@ describe('the fuller landing stays true', () => {
     expect(communities?.body).toMatch(/stored on our server and are not end-to-end encrypted/);
     for (const g of C.FEATURES) for (const f of g.items) expect(`${f.title} ${f.body}`).not.toMatch(/audit|sponsor|partner/i);
   });
-  it('the next wave states the signed limits (OD-2: 100 HLC, OD-4: 20 testers)', () => {
-    expect(C.NEXT_WAVE).toMatch(/at most 20 testers/);
+  it('the next wave states the signed limits (OD-2: 100 HLC, OD-4 as amended: 50 testers)', () => {
+    expect(C.NEXT_WAVE).toMatch(/at most 50 testers/);
     expect(C.NEXT_WAVE).toMatch(/100 HLC per agreement/);
   });
   it('versions under the hood are read from the repository, not typed', () => {
