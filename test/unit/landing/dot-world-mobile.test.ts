@@ -28,7 +28,9 @@ describe('mobile rendering and the world in dots (19/11/2026)', () => {
   });
   it('Aztec is credited as what is true, with the wordmark file of the brand kit', () => {
     const page = read('components/landing/immersive/ImmersiveLanding.tsx');
-    expect(page).toMatch(/aria-label="Built on Aztec Network"/);
+    expect(page).toMatch(/Built on\s*<a href="https:\/\/aztec\.network"/);
+    expect(page).toMatch(/<a href="https:\/\/ethereum\.org"[^>]*aria-label="Ethereum"><Mark name="ethereum" \/><\/a>/);
+    expect(page).not.toMatch(/Live on \$\{NETWORK\}/);
     expect(page).not.toMatch(/partner|official|backed by/i);
     expect(read('public/brand/aztec/README.md')).toMatch(/media-kit/);
   });
@@ -40,5 +42,17 @@ describe('the land masks reach visitors without a session', () => {
     expect(mw).toMatch(/\|fonts\/\|images\/\|icons\/\|globe\/\)/);
     // Only that folder: API routes and pages still go through the middleware.
     expect(mw).toMatch(/'\/api\/:path\*'/);
+  });
+});
+
+describe('official Ethereum mark and no blank screens', () => {
+  it('the Ethereum diamond is the file from ethereum.org, recorded with its source', () => {
+    expect(readFileSync('public/brand/ethereum/eth-diamond-black.svg', 'utf8')).toMatch(/viewBox="0 0 1920 1920"/);
+    expect(readFileSync('public/brand/ethereum/README.md', 'utf8')).toMatch(/ethereum\/ethereum-org-website/);
+  });
+  it('captions are visible as soon as their scene is (blank screens between scenes, 19/11/2026)', () => {
+    const css = readFileSync('components/landing/immersive/Immersive.module.css', 'utf8');
+    expect(css).toMatch(/\.caption \{[^}]*opacity: 1; transform/);
+    expect(readFileSync('scripts/ui/landing-webkit.mjs', 'utf8')).toMatch(/elementsFromPoint/);
   });
 });
