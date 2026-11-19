@@ -31,6 +31,7 @@ import { isValidAztecAddress } from '../grumpkin';
 import { parseUnits } from './amounts';
 import { issueCap, recordedAdmin } from '../token-issuer';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
+import { paymentReason, reportPayment } from './payment-report';
 import { assertFeeChoice, identifyNode } from '../fees';
 import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
@@ -1380,6 +1381,7 @@ class PrivateWallet {
     } catch (err: any) {
       upsertActivity(this.me.toString(), { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
       this.set({ activity: await this.loadActivity().catch(() => this.snapshot.activity) });
+      reportPayment('failed', { kind, network: AZTEC_WALLET_CONFIG.network, reason: 'fee' });
       throw err;
     }
     // Gas limits from a simulation, so the network asks the fee payer to hold the fee this
@@ -1426,9 +1428,13 @@ class PrivateWallet {
     this.inflight++;
     this.set({});
     let txHash: string | undefined;
+    const started = Date.now();
+    const net = AZTEC_WALLET_CONFIG.network;
+    reportPayment('attempted', { kind, network: net });
     try {
       const sent = await sendFn();
       txHash = sent.txHash?.toString?.() ?? String(sent.txHash);
+      reportPayment('sent', { kind, network: net, ms: Date.now() - started });
       upsertActivity(me, { id, kind, txHash, status: 'pending', createdAt: Date.now() });
       this.set({ activity: await this.loadActivity() });
       const receipt = await this.sdk!.waitForTx(this.node, sent.txHash, { timeout: 600, interval: 2 });
@@ -1440,15 +1446,18 @@ class PrivateWallet {
         blockNumber: Number(receipt.blockNumber ?? 0) || undefined,
         createdAt: Date.now(),
       });
+      reportPayment('mined', { kind, network: net, ms: Date.now() - started });
       return receipt;
     } catch (err: any) {
       if (txHash && isConfirmationTimeout(err)) {
+        reportPayment('unconfirmed', { kind, network: net, ms: Date.now() - started });
         // Sent but not confirmed in time: it may still be included. Never shown as failed, so nobody sends it twice.
         upsertActivity(me, { id, kind, txHash, status: 'pending', error: UNCONFIRMED_MESSAGE, createdAt: Date.now() });
         this.set({ error: UNCONFIRMED_MESSAGE });
         throw new Error(UNCONFIRMED_MESSAGE);
       }
       upsertActivity(me, { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
+      reportPayment('failed', { kind, network: net, reason: paymentReason(err), ms: Date.now() - started });
       this.lastSendError = err;
       this.healConsumedClaim(err);
       return null;
