@@ -831,3 +831,25 @@ Ninguna transacción en Alpha, ningún deploy, ningún broadcast. `audit` sigue 
 - **Una firma para entrar.** La clave de la base de datos XMTP ya no se pide con una segunda firma en cada carga: se guarda en este dispositivo envuelta por una clave AES no extraíble en IndexedDB (`lib/xmtp/device-key-vault.ts`). Cuenta nueva en el dispositivo: ninguna firma extra. Base de datos bloqueada por la firma anterior: se pide una última vez. Sin almacén disponible: el camino anterior. Contrapartida: la copia local queda protegida por el perfil del navegador, no por una firma en cada carga. XMTP sigue pidiendo su propia firma la primera vez que un dispositivo se registra; no se puede unir con la de entrada.
 
 Pantallas abiertas en Chrome (Playwright), 1280 px y 390 px con los componentes reales: llamada entrante, saliente y de voz; expresiones con deslizamiento táctil (CDP), trackpad y pestañas; confirmación de envío en el hueco del botón. Sin teléfono físico ni Safari real en esta sesión: Safari, compartir pantalla y la llamada entre dos dispositivos quedan por probar a mano (checklist en `docs/CALLS.md`, puntos 13–15).
+
+---
+
+## Sesión 19 noviembre 2026 · Puertas de la alpha y fuente única de verdad
+
+Prompts `docs/plan/prompts/05-gates-protocol.md` y `06-single-source-of-truth.md`. Un PR por paquete, apilados en este orden:
+
+| PR | Paquete | Qué cambia |
+| --- | --- | --- |
+| #177 | Fases 0-1 | Mapa de integración, glosario con términos prohibidos, índice, nota jurídica y anexos como borradores |
+| #178 | 1 | `HLC_TOKEN_META`, despliegue solo de token para el operador, nombre comprobado por el preflight, runbook |
+| #179 | 2 | Fuera «Humanity Ledger Corporation» y las rutas de API de pago sin uso |
+| #180 | 3 | `closedAlpha.distributor` obligatorio para códigos, canje y emisión |
+| #181 | 4 | Admisión: términos firmados con hash, sanciones y edad, borrado a 6 meses |
+| #182 | 5 | Registro de Fee Juice con presupuesto, comprobación en red y CSV |
+| #183 | 6 | Cuatro puertas nuevas de cUSDC y filtro en la wallet |
+| #184 | 7 | Marcas de terceros con fuente; Aztec en texto (D-1) |
+| #185 | 8 | `docs/legal/` con hechos reales; test de consistencia en CI |
+| #186 | 9 | ADR 005: contratos no actualizables |
+| este | 10 | Changelog, README, cierre |
+
+Archivos protegidos: `lib/docs/pages/legal.ts` y `protocol.ts` no se han modificado. Ninguna transacción se ha firmado ni enviado. `audit` sigue en `null`. `communityMls`, `closedAlpha.enabled` y `CUSDC_GATES` no se han activado.
