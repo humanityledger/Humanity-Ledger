@@ -2,6 +2,7 @@
  * components/zk/walletCreationSteps.ts — the steps of opening a private wallet and what each shows.
  * Pure, so the rule is tested without rendering (test/unit/aztec/wallet-creation-steps.test.ts).
  */
+import { FEE_PRIVACY } from '@/lib/landing/content';
 
 export type CreationPhase = 'idle' | 'signing' | 'starting' | 'needs-fee-juice' | 'deploying' | 'ready' | 'error' | string;
 
@@ -15,7 +16,7 @@ export function creationSteps(alpha: boolean, networkName: string, linkedCompute
       note: 'Free, and it sends no transaction. Check that the site is ledgerchat.org',
     },
     { key: 'keys', label: 'Create your keys on this device', note: 'We never receive them' },
-    ...(alpha ? [{ key: 'fees' as const, label: 'Add Fee Juice', note: 'Your account pays its own network fee. The fee payer is public' }] : []),
+    ...(alpha ? [{ key: 'fees' as const, label: 'Add Fee Juice', note: `Your account pays its own network fee. ${FEE_PRIVACY.short}` }] : []),
     { key: 'account', label: `Create your account on ${networkName}`, note: 'About a minute. Keep this page open' },
   ];
 }

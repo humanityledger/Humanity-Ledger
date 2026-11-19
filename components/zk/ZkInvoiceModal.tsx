@@ -1,5 +1,6 @@
 'use client';
 
+import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -215,7 +216,7 @@ export function ZkInvoiceModal({
                 {existingInvoice ? existingInvoice.invoiceNumber : 'New invoice'}
               </h2>
               <p className="text-[12.5px] text-gray-500">
-                {existingInvoice ? 'Review and pay' : 'Sent as an encrypted message in this chat. A private payment hides the amount and both people; the network fee payer is public.'}
+                {existingInvoice ? 'Review and pay' : `Sent as an encrypted message in this chat. ${FEE_PRIVACY.short}`}
               </p>
             </div>
           </div>

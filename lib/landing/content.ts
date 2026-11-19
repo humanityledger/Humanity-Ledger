@@ -238,6 +238,21 @@ export const FACT_SOURCES = {
 
 /** Trademark attribution only: no sentence about independence or endorsement (master plan, decision 6). */
 export const TRADEMARKS = 'Aztec and Ethereum are trademarks of their respective owners.';
+/**
+ * Package 5: the one statement of what a private payment reveals on Aztec Alpha, read by the web
+ * and the wallet (test/unit/landing/fee-privacy.test.ts). On Alpha there is no sponsored fee payer:
+ * each account pays its own network fee in Fee Juice, publicly. Private fee payment through an FPC
+ * is evaluated in docs/aztec/FPC_EVALUATION.md and is not in use.
+ */
+export const FEE_PRIVACY = {
+  /** One line, for buttons, notes and steps. */
+  short: 'Amount and parties stay private; the account that pays the fee is public.',
+  /** For settings and explanations. */
+  long: 'On Aztec Alpha the amount and the parties of a private payment stay private. The account that pays the network fee, in Fee Juice, is public, so its transactions can be linked to each other. Nothing is sponsored.',
+  /** What an observer of the chain sees for one payment. */
+  onChain: 'That a transaction happened, its fee and the account that paid it. Not the amount or the recipient.',
+} as const;
+
 export const SETTLES = 'Private payments on Aztec Network. Aztec settles on Ethereum.';
 
 /** Media. Source and licence must be confirmed in public/media/landing/README.md before launch. */
