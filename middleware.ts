@@ -46,6 +46,7 @@ const PUBLIC_PATHS = new Set([
   '/login',
   '/auth',
   '/connect',
+  '/alpha',      // Joining the closed alpha: the page asks for sign-in itself; /api/alpha/* checks the session
   '/chat',       // LedgerChat handles its own auth internally (XMTP + MetaMask)
   '/u',          // Profile links (/u#token): hands the token to /chat; the token never reaches the server
   '/studio',     // Ledger Studio handles its own wallet auth internally
