@@ -1,25 +1,39 @@
 'use client';
 /**
  * The landing's one scroll loop. Native scroll, never hijacked: a passive listener only asks for
- * a frame; the frame reads scrollY once and writes one CSS variable (--p, the scene's progress)
- * per scene that changed. Layout is measured
- * on load and in a ResizeObserver, never in the loop. No React state per frame, and no page-wide
- * variable: --p is a registered, non-inherited number, so only the elements that read it restyle.
+ * a frame; the frame reads scrollTop once and writes, per scene that changed, two registered
+ * CSS numbers. Layout is measured on load and in a ResizeObserver, never in the loop. No React
+ * state per frame.
  *
- * Why a loop and not `animation-timeline` driving --p: animating a custom property from a scroll
- * timeline is recomputed on the main thread too, and the loop gives one behaviour in every
- * browser (Safari and Firefox included). The cost is a handful of setProperty calls per frame.
+ *  --p   the scene's own progress, 0..1, while its picture is fully on screen;
+ *  --in  0..1 while the scene fades in over the one before it.
+ *
+ * Consecutive pinned scenes overlap by one screen plus a fade (the CSS gives each scene after
+ * the first a negative top margin). The next scene pins while the previous one is still pinned
+ * and fades in over it, so scrolling never shows a half-scrolled, empty or cut-off frame, with
+ * the wheel or the finger. Scrolling up runs the same frames backwards.
+ *
+ * The loop also marks the page as scrolled (the navigation's border) and the section in view
+ * (the navigation's current link), from positions measured once.
  */
-import { sceneProgress } from '@/lib/landing/progress';
+import { clamp01 } from '@/lib/landing/progress';
 
 type Listener = (p: number, near: boolean) => void;
-interface Scene { el: HTMLElement; top: number; height: number; p: number; near: boolean }
+interface Scene { el: HTMLElement; top: number; height: number; fadeIn: number; fadeOut: number; p: number; i: number; near: boolean }
+interface Spy { id: string; top: number }
 
 const scenes: Scene[] = [];
+const spies: Spy[] = [];
 const listeners = new Map<HTMLElement, Set<Listener>>();
+let root: HTMLElement | null = null;
+let links: HTMLAnchorElement[] = [];
 /** The element that scrolls the page: on "/" the layout scrolls inside <main>, elsewhere the window. */
 let scroller: HTMLElement | null = null;
 const scrollTop = () => (scroller ? scroller.scrollTop : window.scrollY);
+let vh = 0;
+let frame = 0;
+let scrolled: boolean | null = null;
+let active: string | null = null;
 
 function findScroller(el: HTMLElement): HTMLElement | null {
   for (let n = el.parentElement; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
@@ -28,17 +42,37 @@ function findScroller(el: HTMLElement): HTMLElement | null {
   }
   return null;
 }
-let vh = 0;
-let frame = 0;
+
+/** Pure: the two numbers of a scene at scroll position y. Exported for the unit test. */
+export function sceneState(y: number, s: { top: number; height: number; fadeIn: number; fadeOut: number }, viewport: number) {
+  const start = s.top + s.fadeIn;
+  const end = s.top + s.height - viewport - s.fadeOut;
+  const p = end <= start ? (y >= start ? 1 : 0) : clamp01((y - start) / (end - start));
+  const inn = s.fadeIn > 0 ? clamp01((y - s.top) / s.fadeIn) : 1;
+  return { p, in: inn };
+}
 
 function measure() {
+  if (!root) return;
   vh = scroller ? scroller.clientHeight : window.innerHeight;
   const y = scrollTop();
   const origin = scroller ? scroller.getBoundingClientRect().top : 0;
-  for (const s of scenes) {
+  for (let k = 0; k < scenes.length; k++) {
+    const s = scenes[k];
     const r = s.el.getBoundingClientRect();
     s.top = r.top - origin + y;
     s.height = r.height;
+    // The overlap with the scene before is in its negative top margin: one screen plus the fade.
+    const mt = parseFloat(getComputedStyle(s.el).marginTop) || 0;
+    s.fadeIn = mt < 0 ? Math.max(0, -mt - vh) : 0;
+  }
+  for (let k = 0; k < scenes.length; k++) scenes[k].fadeOut = scenes[k + 1]?.fadeIn ?? 0;
+  for (const sp of spies) {
+    const el = document.getElementById(sp.id);
+    sp.top = el ? el.getBoundingClientRect().top - origin + y : Infinity;
+    // A scene's own content starts after its fade-in.
+    const sc = scenes.find((x) => x.el === el);
+    if (sc) sp.top += sc.fadeIn;
   }
   request();
 }
@@ -47,11 +81,15 @@ function tick() {
   frame = 0;
   const y = scrollTop();
   for (const s of scenes) {
-    const p = sceneProgress(y, s.top, s.height, vh);
+    const st = sceneState(y, s, vh);
     const near = y + vh * 1.5 > s.top && y < s.top + s.height + vh * 0.5;
-    if (Math.abs(p - s.p) > 1e-4) {
-      s.p = p;
-      s.el.style.setProperty('--p', p.toFixed(4));
+    if (Math.abs(st.p - s.p) > 1e-4) {
+      s.p = st.p;
+      s.el.style.setProperty('--p', st.p.toFixed(4));
+    }
+    if (Math.abs(st.in - s.i) > 1e-4) {
+      s.i = st.in;
+      s.el.style.setProperty('--in', st.in.toFixed(4));
     }
     if (near !== s.near) {
       s.near = near;
@@ -59,6 +97,22 @@ function tick() {
     }
     const subs = listeners.get(s.el);
     if (subs) for (const f of subs) f(s.p, s.near);
+  }
+  if (root) {
+    const sc = y > 8;
+    if (sc !== scrolled) {
+      scrolled = sc;
+      root.toggleAttribute('data-scrolled', sc);
+    }
+    let cur: string | null = null;
+    for (const sp of spies) if (y + vh * 0.5 >= sp.top) cur = sp.id;
+    if (cur !== active) {
+      active = cur;
+      for (const a of links) {
+        if (a.hash === `#${cur}`) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      }
+    }
   }
 }
 
@@ -74,12 +128,34 @@ function settle() {
 
 /** Starts the loop for every [data-scene] under el. Returns the cleanup. */
 export function startScenes(el: HTMLElement): () => void {
+  root = el;
   scenes.length = 0;
-  el.querySelectorAll<HTMLElement>('[data-scene]').forEach((s) => scenes.push({ el: s, top: 0, height: 0, p: -1, near: false }));
+  spies.length = 0;
+  el.querySelectorAll<HTMLElement>('[data-scene]').forEach((s) => scenes.push({ el: s, top: 0, height: 0, fadeIn: 0, fadeOut: 0, p: -1, i: -1, near: false }));
+  links = Array.from(el.querySelectorAll<HTMLAnchorElement>('[data-spy-nav] a[href^="#"]'));
+  for (const a of links) {
+    const id = a.hash.slice(1);
+    if (id && !spies.some((x) => x.id === id)) spies.push({ id, top: Infinity });
+  }
   el.setAttribute('data-scenes', String(scenes.length));
+
+  // The phone menu closes when one of its links is followed.
+  const onClick = (e: MouseEvent) => {
+    const a = (e.target as Element | null)?.closest?.('a');
+    const menu = a?.closest('details');
+    if (menu) menu.removeAttribute('open');
+  };
+  el.addEventListener('click', onClick);
+
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    for (const s of scenes) s.el.style.setProperty('--p', '1');
-    return () => undefined;
+    for (const s of scenes) {
+      s.el.style.setProperty('--p', '1');
+      s.el.style.setProperty('--in', '1');
+    }
+    return () => {
+      el.removeEventListener('click', onClick);
+      root = null;
+    };
   }
   scroller = findScroller(el);
   const ro = new ResizeObserver(measure);
@@ -105,13 +181,19 @@ export function startScenes(el: HTMLElement): () => void {
   measure();
   return () => {
     ro.disconnect();
+    el.removeEventListener('click', onClick);
     window.removeEventListener('scroll', onScroll, { capture: true });
     window.removeEventListener('scrollend', onEnd, { capture: true });
     window.removeEventListener('resize', measure);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     scenes.length = 0;
+    spies.length = 0;
+    links = [];
     scroller = null;
+    root = null;
+    scrolled = null;
+    active = null;
   };
 }
 

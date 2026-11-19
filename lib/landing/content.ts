@@ -65,8 +65,32 @@ export const NAV = [
   { id: 'payments', label: 'Payments' },
   { id: 'network', label: 'Network' },
   { id: 'live', label: 'Live' },
+  { id: 'how', label: 'How it works' },
   { id: 'devices', label: 'Devices' },
 ] as const;
+
+/**
+ * The anatomy every scene and chapter shares: an index, an eyebrow, a title with one emphasis,
+ * a lead of one or two lines, the visual, and one line of proof that links to the code, the
+ * record or the documentation.
+ */
+export const EYEBROWS = {
+  hero: 'Ledger Chat',
+  hi: 'Messages',
+  enc: 'Encryption',
+  name: 'Usernames',
+  pay: 'Payments',
+  record: 'On chain',
+  eth: 'Settlement',
+  calls: 'Calls',
+  live: 'Live',
+  features: 'Today',
+  how: 'How it works',
+  protects: 'Security',
+  open: 'In the open',
+  faq: 'Questions',
+  devices: 'Every screen',
+} as const;
 
 export const HERO = { title: ['Your wallet is ', 'your account', '.'], line: 'Messages, calls and private payments. One app.' };
 export const SAY_HI = { typed: 'Hi how are you', title: ['Say hi. ', 'To anyone', ' with a wallet.'] };
@@ -211,7 +235,8 @@ export const FACT_SOURCES = {
   calls: blob('lib/calls/media.ts'),
 };
 
-export const TRADEMARKS = 'Aztec and Ethereum are trademarks of their respective owners. Ledger Chat is an independent project.';
+/** Trademark attribution only: no sentence about independence or endorsement (master plan, decision 6). */
+export const TRADEMARKS = 'Aztec and Ethereum are trademarks of their respective owners.';
 export const SETTLES = 'Private payments on Aztec Network. Aztec settles on Ethereum.';
 
 /** Media. Source and licence must be confirmed in public/media/landing/README.md before launch. */

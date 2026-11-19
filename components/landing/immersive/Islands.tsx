@@ -160,7 +160,8 @@ export function SceneVideo({ play, scrub, poster, a = 0, b = 1, priority = false
   );
 }
 
-const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-8)}`;
+/** Truncated in the middle, like 0x1eb2bb76…40a5. */
+const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-4)}`;
 
 /** A hash shortened for reading, copied in full on click, linked to the explorer when one is configured. */
 export function CopyHash({ hash, label, href }: { hash: string; label: string; href?: string }) {
@@ -168,16 +169,17 @@ export function CopyHash({ hash, label, href }: { hash: string; label: string; h
   const copy = () => {
     navigator.clipboard?.writeText(hash).then(() => {
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
+      window.setTimeout(() => setCopied(false), 1500);
     }).catch(() => undefined);
   };
   return (
     <div className={s.hash}>
       <span className={s.hashLabel}>{label}</span>
       <code title={hash}>{shortHash(hash)}</code>
-      <button type="button" onClick={copy} aria-label={`Copy the full ${label.toLowerCase()}`}>
+      <button type="button" onClick={copy} aria-label={`Copy the full ${label.toLowerCase()}`} data-copied={copied || undefined}>
         {copied ? 'Copied' : 'Copy'}
       </button>
+      <span className={s.srOnly} role="status">{copied ? `${label} copied` : ''}</span>
       {href && <a href={href} target="_blank" rel="noopener noreferrer">Explorer</a>}
     </div>
   );
@@ -208,7 +210,7 @@ const GlobeLazy = dynamic(() => import('@/components/landing/v2/LiveGlobe').then
 export function SceneGlobe() {
   return (
     <WhenNear fill={false} fallback={<p className={s.muted}>Live numbers unavailable without JavaScript.</p>}>
-      <GlobeLazy />
+      <GlobeLazy headless />
     </WhenNear>
   );
 }

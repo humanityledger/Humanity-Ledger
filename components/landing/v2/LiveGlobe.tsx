@@ -44,7 +44,8 @@ const fmt = (n: number) => n.toLocaleString('en-US');
 const place = (tz: string) => (tz.split('/').pop() || tz).replace(/_/g, ' ');
 const since = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
-export function LiveGlobe() {
+/** `headless`: inside a page that gives the section its own id and title (the landing's Live chapter). */
+export function LiveGlobe({ headless = false }: { headless?: boolean } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<LiveStats | null>(null);
@@ -267,15 +268,17 @@ export function LiveGlobe() {
   const topRegions = (stats?.regions ?? []).slice(0, 5);
 
   return (
-    <section id="live" className={s.section} aria-labelledby="live-title">
+    <Wrap headless={headless}>
       <div className={s.head}>
-        <p className={s.eyebrow}>
+        <p className={s.eyebrow} role="status">
           <span className={`${s.live} ${error ? s.liveOff : ''}`} aria-hidden="true" />
           {error ? 'Live numbers unavailable, retrying' : `Live${ago != null ? ` · updated ${ago < 5 ? 'just now' : `${ago} s ago`}` : ''}`}
         </p>
-        <h2 id="live-title" className={s.h2}>
-          People on Ledger Chat. <em>Right now.</em>
-        </h2>
+        {!headless && (
+          <h2 id="live-title" className={s.h2}>
+            People on Ledger Chat. <em>Right now.</em>
+          </h2>
+        )}
       </div>
 
       <div className={s.grid}>
@@ -332,8 +335,14 @@ export function LiveGlobe() {
           </p>
         </div>
       </div>
-    </section>
+    </Wrap>
   );
+}
+
+function Wrap({ headless, children }: { headless: boolean; children: React.ReactNode }) {
+  return headless
+    ? <div className={`${s.section} ${s.headless}`}>{children}</div>
+    : <section id="live" className={s.section} aria-labelledby="live-title">{children}</section>;
 }
 
 export default LiveGlobe;

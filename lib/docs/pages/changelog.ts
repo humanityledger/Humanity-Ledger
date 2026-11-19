@@ -27,6 +27,8 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "fixed", text: "Landing: scrolling with the mouse or the finger no longer shows half-scrolled or empty frames. Each scene now fades in over the one before it, and on phones the words and the picture each have their own part of the screen." },
+      { kind: "improved", text: "Landing: one design for the whole page, with a number and a label on every part, a sources line under each, a menu on phones, and the current section marked in the bar." },
       { kind: "fixed", text: "Appearance: Theme, Wallpaper and Bubbles each have their own space in the bar, with the number of options beside each name. The same fix keeps every tab bar in the app laid out as designed." },
       { kind: "improved", text: "Stickers: one pack, Spike the cactus. Stickers sent from earlier packs still show in your chats." },
       { kind: "improved", text: "Ledger Chat on a computer is wider, and the space around it follows the window, so zooming in or out keeps it whole." },
