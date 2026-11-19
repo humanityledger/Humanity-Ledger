@@ -1,5 +1,6 @@
 ﻿'use client';
 // @ts-nocheck
+import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -1470,7 +1471,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     ['Calls', 'Voice and video use WebRTC with DTLS-SRTP. With IP masking on, media goes through a TURN relay only when the server has one configured; it stays encrypted either way.'],
                     ['Communities', 'Community posts are stored on our server and are not end to end encrypted.'],
                     ['Your account', 'Your wallet is your account. To use another device, sign in with the same wallet there.'],
-                    ['Payments', 'Private payments run on Aztec Alpha in HLC, with a cap per payment and no external audit. The amount and the parties stay private. The fee is paid publicly in Fee Juice by your account. Nothing is sponsored.'],
+                    ['Payments', `Private payments run on Aztec Alpha in HLC, a test token with no monetary value, with a cap per payment and no external audit. ${FEE_PRIVACY.long}`],
                   ].map(([t, d]) => (
                     <div key={t} className="py-3 border-t border-black/[0.05] first:border-0">
                       <p className="text-[14px] font-semibold text-[#15171c]">{t}</p>

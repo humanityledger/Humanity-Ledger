@@ -17,6 +17,7 @@
  * only, and stops under prefers-reduced-motion.
  */
 
+import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
 import s from './PaymentProgress.module.css';
@@ -186,7 +187,7 @@ export function PaymentProgress(p: PaymentProgressProps) {
       <dl className={s.facts}>
         <div><dt>To</dt><dd className={s.mono}>{short(p.recipient)}</dd></div>
         <div><dt>Network</dt><dd>{p.network}</dd></div>
-        <div><dt>Visible on chain</dt><dd>That a transaction happened and its fee. Not the amount, you or the recipient</dd></div>
+        <div><dt>Visible on chain</dt><dd>{FEE_PRIVACY.onChain}</dd></div>
         <div><dt>Fee</dt><dd>Paid in Fee Juice; only the gas used is charged</dd></div>
         {p.txHash && (
           <div>

@@ -12,6 +12,7 @@
  * chat to post in this DM only.
  */
 
+import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { singleFlight } from '@/lib/aztec/single-flight';
 import { X, KeyRound, Lock, Waves } from 'lucide-react';
@@ -198,7 +199,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
         </div>
         <p className="text-[13px] text-[#727a88] mt-1 leading-snug">
           {ALPHA
-            ? `An escrow or a payment stream in its own contract on ${networkLabel()}. Real funds. Amounts and parties stay private; the fee payer is public. The contracts have no external audit.`
+            ? `An escrow or a payment stream in its own contract on ${networkLabel()}. HLC is a test token with no monetary value; the network fee is paid in Fee Juice. ${FEE_PRIVACY.short} The contracts have no external audit.`
             : 'An escrow or a payment stream in its own contract on the Aztec test network. Amounts and parties stay private. Test tokens only, no value. The contracts have no external audit.'}
         </p>
         {/* Shown first, before any field and before any transaction: the same refusal assertCanOpen enforces. */}
