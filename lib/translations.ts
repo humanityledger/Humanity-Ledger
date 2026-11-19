@@ -74,8 +74,8 @@ export const translations = {
         'sec.title': 'SECURITY',
         'sec.card1_title': 'Non-Custodial',
         'sec.card1_desc': 'You have full control of your keys.',
-        'sec.card2_title': 'Audited',
-        'sec.card2_desc': 'Smart contracts verified by leaders.',
+        'sec.card2_title': 'Internally reviewed',
+        'sec.card2_desc': 'An internal security review, not an external audit.',
         'sec.card3_title': 'Biometrics',
         'sec.card3_desc': 'Access protected by Humanity Ledger ID.',
         'sec.card4_title': 'Privacy',
@@ -152,8 +152,8 @@ export const translations = {
         'features.security.desc': 'Session hijacking protection and strict biometric re-verification.',
         'features.global.title': 'Global Access',
         'features.global.desc': 'Uncensored access to prediction markets. No geoblocking.',
-        'features.footer.title': 'Open Source & Audited',
-        'features.footer.desc': 'Our contracts are verified and our frontend is open source.',
+        'features.footer.title': 'Open source',
+        'features.footer.desc': 'The code is open source. The contracts have had an internal security review, not an external audit.',
         'features.footer.cta': 'View Source Code',
 
         // Support Page

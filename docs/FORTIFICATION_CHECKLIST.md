@@ -52,7 +52,7 @@
 | 26 | Enforce that no private key is ever included in a URL, query parameter, or referrer. | `test/fortification.test.ts`, Next.js middleware scanner | **ENFORCED** |
 | 27 | Add Content-Security-Policy directives that prevent exfiltration of key material via injected scripts. | `next.config.mjs` CSP: `connect-src 'self' ...` | **ENFORCED** |
 | 28 | Implement a key ceremony checklist for any future multi-sig or governance keys. | `docs/CIRCUITS.md`, air-gapped ceremony protocol | **ENFORCED** |
-| 29 | Document the exact curve parameters and ensure they match the audited libraries. | BN254, Ed25519, Secp256k1 parameter verification | **ENFORCED** |
+| 29 | Document the exact curve parameters and ensure they match the upstream libraries. | BN254, Ed25519, Secp256k1 parameter verification | **ENFORCED** |
 | 30 | Add a CI job that verifies the integrity of the barretenberg WASM binary used for proving. | SHA-256 hash pinning of `barretenberg.wasm` | **ENFORCED** |
 | 31 | Ensure that proof generation does not leak intermediate witnesses to the main thread. | Web Worker boundary with isolated postMessage response | **ENFORCED** |
 | 32 | Add tests that the Web Worker prover has no access to `document.cookie` or `localStorage`. | `test/eaf_isolation.adversarial.test.ts` worker checks | **ENFORCED** |
@@ -368,7 +368,7 @@
 | 286 | Implement key ceremony recordings for any high-value key generation. | Air-gapped cryptographic ceremony recordings | **ENFORCED** |
 | 287 | Add dual control for any manual intervention in production. | 2-person signoff required for production commands | **ENFORCED** |
 | 288 | Document the exact versions of all infrastructure components. | Docker, Node, Postgres, Redis versions pinned | **ENFORCED** |
-| 289 | Add a test that the production configuration matches the audited configuration. | Hash comparison of production configs | **ENFORCED** |
+| 289 | Add a test that the production configuration matches the reviewed configuration. | Hash comparison of production configs | **ENFORCED** |
 | 290 | Implement automated drift detection for cloud resources. | Terraform drift detection CI cron job | **ENFORCED** |
 | 291 | Add a war-game exercise for a simulated Lazarus intrusion. | Annual adversary simulation exercise | **ENFORCED** |
 | 292 | Ensure that all team members with production access use hardware keys. | FIDO2 / YubiKey mandatory MFA | **ENFORCED** |

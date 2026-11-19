@@ -53,7 +53,7 @@
 | PostgreSQL (read replica ×2) | Railway Managed | US-West | 99.9% |
 | Redis | Railway Redis | US-West | 99.9% |
 | Aztec Node (primary) | drpc.org testnet | Global CDN | Best-effort testnet |
-| Aztec Node (fallback) | Aztec Labs official | Global | Best-effort testnet |
+| Aztec Node (fallback) | Run by Aztec Labs | Global | Best-effort testnet |
 | XMTP Nodes | XMTP Labs | Global | 99.5% (XMTP SLA) |
 | Auth | Clerk | Global CDN | 99.99% |
 | L1 Contracts | Ethereum Mainnet | Global | 99.99%+ |

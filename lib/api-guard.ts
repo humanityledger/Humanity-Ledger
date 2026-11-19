@@ -160,7 +160,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
       .update(`${timestamp}${req.method}${req.nextUrl.pathname}`)
       .digest('hex');
 
-    // ️ [AUDITED SECURITY] Use timingSafeEqual to prevent side-channel timing attacks
+    // ️ [REVIEWED SECURITY] Use timingSafeEqual to prevent side-channel timing attacks
     const signatureBuffer = Buffer.from(signature, 'hex');
     const computedBuffer = Buffer.from(computedSignature, 'hex');
 

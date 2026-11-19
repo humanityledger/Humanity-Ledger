@@ -292,7 +292,7 @@ export async function acceptInvite(
 // ─── Confirming an agreement against the contract's own notes ─────────────────
 //
 // verifyAgreementInvite proves that the invitation names a genuine instance
-// of the audited class. It cannot prove that the deposit behind it matches
+// of the checked class. It cannot prove that the deposit behind it matches
 // the invitation's amount, deadline or claim secret: those fields are the
 // sender's word. escrow_view and stream_view (utility functions, run in the
 // receiver's PXE) return what the contract actually stored, and the

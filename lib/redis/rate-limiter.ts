@@ -36,7 +36,7 @@ export class RedisRateLimiter {
 
     const key = `${this.PREFIX}${apiKeyId}`;
     
-    //  [AUDITED SCALABILITY] Atomic Lua Scripting 
+    //  [REVIEWED SCALABILITY] Atomic Lua Scripting 
     // Consolidates INCR and EXPIRE into a single atomic operation in Redis.
     // This prevents race conditions and ensures TTL is set only once.
     const luaScript = `

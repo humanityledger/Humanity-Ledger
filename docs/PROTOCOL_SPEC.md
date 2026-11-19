@@ -99,7 +99,7 @@ The implementation is conformant with this specification only when all of the fo
 
 ## 5. Residual Risks & Treatment Ledger
 
-Every residual risk identified in the protocol threat model is formally tracked, evaluated, and assigned an audited treatment status:
+Every residual risk identified in the protocol threat model is formally tracked, evaluated, and assigned a tracked treatment status:
 
 | Risk ID | Description | Severity | Treatment Status | Verification & Mitigation Reference |
 |---|---|---|---|---|

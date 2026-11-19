@@ -13,7 +13,7 @@ An independent external evaluation established the maturity state of Humanity Le
 time of assessment, identifying critical gaps between documented claims and verifiable implementation.
 The following table records the initial state and the normative state achieved at v1.0.
 
-| Dimension | Initial State (Audited) | Normative State at v1.0 |
+| Dimension | Initial State (reviewed) | Normative State at v1.0 |
 |---|---|---|
 | Vision and Architecture | High | Codified normatively in `docs/PROTOCOL_SPEC.md` |
 | Web2 Messaging Layer | Moderate–High | RFC 9420 compliant (XMTP 5.2.0 pinned, PCS tests passing) |
@@ -147,7 +147,7 @@ All were resolved:
 - **Prototype Pollution (`deepmerge`):** Pinned to version `4.1.2`.
 - **Build Tool CVE (`eslint-config-next` / `glob`):** Synchronized `eslint-config-next` to `15.5.28`
   (Next.js 15); replaced `glob` with `fast-glob`.
-- **Elliptic Curve Library (`elliptic`):** Replaced upstream unpatched package with the audited fork
+- **Elliptic Curve Library (`elliptic`):** Replaced upstream unpatched package with a maintained fork
   `npm:@mapped/elliptic@^6.6.10`.
 - **Result:** `npm audit` reports 0 vulnerabilities (zero critical, zero high, zero moderate, zero low).
 
