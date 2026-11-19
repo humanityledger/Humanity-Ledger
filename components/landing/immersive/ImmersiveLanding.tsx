@@ -154,7 +154,7 @@ const Mark = ({ name }: { name: 'aztec' | 'ethereum' }) => {
   const file = C.BRAND_FILES[name];
   const label = name === 'aztec' ? 'Aztec Network' : 'Ethereum';
   if (!file) return <span className={s.brandText}>{label}</span>;
-  // The Ethereum diamond is the official glyph; its name is set beside it in the page's type.
+  // The Ethereum diamond from ethereum.org's assets; its name is set beside it in the page's type.
   return name === 'ethereum' ? (
     <span className={s.brandEth}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
