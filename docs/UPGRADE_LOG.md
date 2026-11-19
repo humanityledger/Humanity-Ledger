@@ -853,3 +853,25 @@ Prompts `docs/plan/prompts/05-gates-protocol.md` y `06-single-source-of-truth.md
 | este | 10 | Changelog, README, cierre |
 
 Archivos protegidos: `lib/docs/pages/legal.ts` y `protocol.ts` no se han modificado. Ninguna transacción se ha firmado ni enviado. `audit` sigue en `null`. `communityMls`, `closedAlpha.enabled` y `CUSDC_GATES` no se han activado.
+
+## Session 19 November 2026 · Mature protocol (packages 0-10)
+
+Prompt `docs/plan/prompts/07-protocolo-maduro.md`. One PR per package, stacked in this order. Stefan merges them in order.
+
+| PR | Package | What changes |
+| --- | --- | --- |
+| #192 | 0 (root cause) | `/` scrolls the document, not a nested `main` in a fixed body (merged) |
+| #193 | 0 | Scroll debug overlay; pixel, touch-flick and browser-bar checks |
+| #194 | 1 | Health: running commit, latest applied and expected migration |
+| — | 2 | HLC rehearsal dispatched on `main`, queued behind the CI backlog; nothing to record yet |
+| #195 | 3 | Payment events, purge cron, terms procedure, invitation rehearsal, first-code checklist |
+| #196 | 4 | Wave 1 classes test, exit TXE tests, runbook order |
+| #197 | 5 | `FEE_PRIVACY`, FPC evaluation |
+| #198 | 6 | Alerts, measured status page, incident drill 1 |
+| #199 | 7 | Internal security review 2 and its fixes |
+| #200 | 8 | Aztec questions with evidence, forum draft |
+| #201 | 9 | cUSDC slot behind its gates |
+| this | 10 | Changelog, integration map, index, report |
+
+Protected files: `lib/docs/pages/legal.ts` and `protocol.ts` are not modified. No transaction was signed or sent. `audit` stays `null`. `communityMls`, `closedAlpha.enabled`, `closedAlpha.distributor`, `CUSDC_GATES` and `verifiedOnChain` are unchanged.
+

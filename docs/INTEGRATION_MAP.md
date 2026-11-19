@@ -21,6 +21,14 @@ Each topic has one source. Every other file links to it or reads it in code. Inv
 | Allowed and forbidden words | `docs/GLOSSARY.md` | every surface | Checked in CI |
 | Third-party marks on the site | `BRAND_FILES` in `lib/landing/content.ts` and `public/brand/README.md` | landing | Package 7 |
 | Contract upgrade policy | `docs/ADR/005-contratos-no-actualizables-en-alpha.md` (package 9) | none | New |
+| What a private payment reveals on Alpha | `FEE_PRIVACY` in `lib/landing/content.ts` (package 5) | wallet, agreement composer, invoice, settings | Read from one place; tested |
+| Closed alpha gate enforcement | `GET /api/alpha/gate` + `lib/alpha/gate-client.ts` (package 7, R2-1) | `lib/aztec/chat-agreements.ts` | Asked before deploy and before funding |
+| Payment and delivery measures | `/api/wallet/payment-report`, `/api/chat/delivery-report`, `lib/ops/counters.ts` | `/status`, `/api/status/alpha`, "Alpha alerts" workflow | Package 6 |
+| Alert thresholds | `lib/ops/alerts.ts` | `docs/alpha/TESTER_MISSIONS.md` | Proposals for Stefan |
+| Signed terms served and hashed | `docs/alpha/TERMS_PUBLISHING.md` | `/alpha`, `/api/alpha/redeem` | Package 3 |
+| Admission data retention | `railway.purge.toml`, `docs/alpha/PURGE_CRON.md` | `scripts/alpha/purge.mjs` | Package 3 |
+| Wave 1 classes vs artifacts | `test/unit/aztec/wave1-classes.test.ts` | `closedAlpha.classes`, `DEPLOY_RUNBOOK.md` | Package 4 |
+| Wallet slots and test-network readiness | `TOKEN_ORDER`, `TESTNET_TOKEN_KEYS` in `lib/aztec/wallet/config.ts` | `lib/payments/assets.ts` | Package 9 |
 
 ## Findings of the inventory and what was done
 

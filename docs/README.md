@@ -17,6 +17,12 @@ says which one is the source. The words to use and to avoid are in [GLOSSARY.md]
 - [alpha/HLC_REDEPLOY_RUNBOOK.md](alpha/HLC_REDEPLOY_RUNBOOK.md): HLC Test Token with a neutral name (package 1).
 - [alpha/INCIDENT.md](alpha/INCIDENT.md) and [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
 - [alpha/TESTER_MISSIONS.md](alpha/TESTER_MISSIONS.md): what testers do and what is measured.
+- [alpha/FIRST_CODE_CHECKLIST.md](alpha/FIRST_CODE_CHECKLIST.md): ten conditions before the first invitation code.
+- [alpha/TERMS_PUBLISHING.md](alpha/TERMS_PUBLISHING.md): publishing the signed terms and their hash.
+- [alpha/PURGE_CRON.md](alpha/PURGE_CRON.md): the daily purge of admission data.
+- [aztec/FPC_EVALUATION.md](aztec/FPC_EVALUATION.md): private fee payment on Alpha, evaluated (no change).
+- [aztec/FORUM_DRAFT_2026-11-19.md](aztec/FORUM_DRAFT_2026-11-19.md): four questions for Stefan to post.
+- [plan/REPORT_2026-11-19.md](plan/REPORT_2026-11-19.md): packages 0-10, what is done and what waits on Stefan or counsel.
 
 ## Legal (drafts until counsel signs, OD-8)
 
@@ -29,6 +35,8 @@ says which one is the source. The words to use and to avoid are in [GLOSSARY.md]
 
 - [MAINNET_READINESS.md](MAINNET_READINESS.md), [MAINNET_ACTIVATION.md](MAINNET_ACTIVATION.md), [MAINNET_FIRST_TRANSFER.md](MAINNET_FIRST_TRANSFER.md).
 - [audit/INTERNAL_SECURITY_REVIEW_2026-11-18.md](audit/INTERNAL_SECURITY_REVIEW_2026-11-18.md): internal security review. It is not an audit.
+- [audit/INTERNAL_SECURITY_REVIEW_2026-11-19.md](audit/INTERNAL_SECURITY_REVIEW_2026-11-19.md): internal review 2 (R2-1 to R2-10). It is not an audit.
+- [audit/EXTERNAL_REVIEW_PACKAGE.md](audit/EXTERNAL_REVIEW_PACKAGE.md): preparation for an external review (NLnet D-4, D-5). No external review exists.
 - [payments/CUSDC_INTEGRATION.md](payments/CUSDC_INTEGRATION.md): cUSDC, planned and off.
 - [TOKENOMICS.md](TOKENOMICS.md): HLC is a test token; the token model is withdrawn.
 
