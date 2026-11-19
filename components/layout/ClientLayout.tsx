@@ -89,10 +89,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             const newSW = reg.installing;
             if (!newSW) return;
             newSW.addEventListener('statechange', () => {
-              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                console.info('[SW] Update available  will apply on next visit.');
-              }
+              if (newSW.state === 'installed') newSW.postMessage({ type: 'SKIP_WAITING' });
             });
+          });
+          let reloaded = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (reloaded) return;
+            reloaded = true;
+            window.location.reload();
           });
         })
         .catch((err) => console.warn('[SW] Registration failed:', err));

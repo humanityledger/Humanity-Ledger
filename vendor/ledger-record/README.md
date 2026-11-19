@@ -8,7 +8,7 @@ This package does not create accounts, does not talk to Aztec, and does not move
 
 `2.0.0 · not externally audited`
 
-Version 2 wraps each record to the MLS exporter secret of one epoch. The content key is not in the message. The browser SDK Ledger Chat ships does not expose that exporter yet, so sealing fails closed instead of using a weaker key. Read [SPEC.md](SPEC.md) and [SECURITY.md](SECURITY.md). Version 1 messages still open.
+Version 2 wraps each record to the MLS exporter secret of one epoch when the messaging client can export it. This browser SDK cannot, so a note is sealed inside the encrypted message instead. The key is then protected by the same MLS message as the rest of the chat. It is not a separate epoch wrap. Read [SPEC.md](SPEC.md) and [SECURITY.md](SECURITY.md). Version 1 messages still open.
 
 ## What a record is
 

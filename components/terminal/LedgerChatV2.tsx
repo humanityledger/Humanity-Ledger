@@ -6150,14 +6150,22 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
     if (!address || !activePeer || !client) return;
     try {
-      const epoch = await epochForPeer(client, activePeer, address);
-      const message = epoch
-        ? await sealNoteMessage(text, [address, activePeer], epoch)
-        : await sealNoteInsideMessage(text, [address, activePeer]);
+      // The note always sends. The epoch wrap is used only when this build
+      // actually exports it. Any failure there falls back to sealing inside
+      // the encrypted message.
+      let message: string;
+      try {
+        const epoch = await epochForPeer(client, activePeer, address);
+        message = epoch
+          ? await sealNoteMessage(text, [address, activePeer], epoch)
+          : await sealNoteInsideMessage(text, [address, activePeer]);
+      } catch {
+        message = await sealNoteInsideMessage(text, [address, activePeer]);
+      }
       const sent = await executeSend(message);
       if (sent) setInputText('');
     } catch (err) {
-      toast.error(err instanceof RecordEpochError || err instanceof RecordSendError ? err.message : 'Could not seal the record');
+      toast.error(err instanceof RecordSendError ? err.message : 'Could not seal the note');
     }
   };
 

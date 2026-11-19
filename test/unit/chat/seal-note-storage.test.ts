@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { openRecord, parseRecordMessage, wipeRecordKeys, type EpochSecret } from '@/vendor/ledger-record/src/index';
 import { sealFileMessage, sealNoteInsideMessage, sealNoteMessage } from '@/lib/chat/seal-record';
 import { openLegacyRecord } from '@/vendor/ledger-record/src/index';
@@ -20,6 +22,12 @@ describe('a sealed note never needs file storage', () => {
     expect(pointer?.inline).toBeTruthy();
     expect(pointer?.url).toBeUndefined();
     expect(message).not.toContain('storage_unavailable');
+  });
+
+  it('the chat screen no longer refuses a note for lack of an exporter', () => {
+    const src = fs.readFileSync(path.join(process.cwd(), 'components/terminal/LedgerChatV2.tsx'), 'utf8');
+    expect(src).not.toContain('weaker key');
+    expect(src).toContain('await sealNoteInsideMessage(text, [address, activePeer])');
   });
 
   it('seals a note inside the encrypted message when the exporter is missing', async () => {
