@@ -32,6 +32,7 @@ import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgr
 import {
   AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, groupHex, shortHex,
 } from './WalletUI';
+import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
 
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
@@ -180,6 +181,7 @@ export function SendFlow({
           <KV k="To" v={shortHex(to, 8)} mono />
           <KV k="From" v="Your private balance" />
           <KV k="Network" v={networkLabel()} />
+          {isTestToken(symbol) && <KV k="Asset" v={`${symbol}, ${TEST_TOKEN_NOTE.toLowerCase()}`} />}
           <KV k="Network fee" v="Fee Juice" hint="Paid by your account. The fee is public; the amount, you and the recipient are not." />
         </Card>
         <p className="font-mono text-[12.5px] leading-[1.6] break-all rounded-2xl bg-[#f7f8fa] border border-[#e4e7ec] px-4 py-3" style={{ color: INK_2 }} aria-label="Full recipient address">

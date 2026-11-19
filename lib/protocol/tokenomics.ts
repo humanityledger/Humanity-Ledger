@@ -5,11 +5,18 @@
  * here, so the published figures cannot drift from each other. All quantities are bigint base
  * units (6 decimals, as the deployed token); percentages are basis points.
  *
+ * SUSPENDED on 19 November 2026 (operator decision PA-1): HLC is a test token with no monetary
+ * value, never sold, offered or launched, and no launch is planned. Real payments are planned in
+ * cUSDC (lib/payments/assets.ts). The model is kept as the record of a plan no longer pursued.
+ *
  * This is a plan, not an offer: nothing is sold or distributed until every launch condition at
  * the bottom is met and recorded. The deployed HLC contract today still has a live admin that can
  * grant minting rights (see /protocol), so the fixed supply below is a commitment to be enforced
  * on-chain at genesis, not yet a property of the contract.
  */
+
+/** The HLC launch model is suspended (PA-1, 19/11/2026); nothing reads it as a live plan. */
+export const MODEL_STATUS = 'suspended' as const;
 
 export const HLC_DECIMALS = 6;
 const UNIT = 10n ** BigInt(HLC_DECIMALS);

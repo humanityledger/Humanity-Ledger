@@ -1,5 +1,12 @@
 # HLC: token model
 
+> **Suspended on 19 November 2026 (operator decision PA-1, `docs/alpha/OPERATOR_DECISIONS.md`).**
+> HLC is a **test token** with no monetary value. It exists only to test private payments in the closed alpha, and it is
+> never sold, offered, airdropped or launched. No launch of HLC is planned. Real payments are planned in **cUSDC**
+> (Clean USDC, issued by human.tech through its Shield bridge, not by Humanity Ledger), and stay off until the gates in
+> `lib/payments/assets.ts` are met. The model below is kept as the record of a plan that is no longer pursued; any
+> future token would need a new decision, a legal opinion and a notified white paper first.
+
 **Status: plan, not an offer.** HLC is not sold, airdropped or distributed until every launch condition below is met
 and recorded in this repository. The figures here are the ones in `lib/protocol/tokenomics.ts`; the landing page and
 `/protocol` read the same file, and `test/unit/protocol/tokenomics.test.ts` checks that they add up.
