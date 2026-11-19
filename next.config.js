@@ -525,6 +525,16 @@ const nextConfig = {
                     { key: 'Expires',       value: '0' },
                 ]
             },
+            //  The landing serves two trees from one URL, by device (lib/landing/device.ts): every
+            //  cache keys / on the headers that decide. Set here because Next replaces a Vary set by
+            //  the middleware with its own; it appends its RSC values to this one.
+            {
+                source: '/',
+                headers: [
+                    { key: 'Vary',      value: 'User-Agent, Sec-CH-UA-Mobile' },
+                    { key: 'Accept-CH', value: 'Sec-CH-UA-Mobile' },
+                ]
+            },
             //  Static asset immutable caching 
             // Images & fonts cached for 1 year  eliminates repeated server hits
             // Explicit paths to bypass Next.js path-to-regexp capturing group errors.

@@ -5,7 +5,9 @@
  * Motion is one reveal per section (opacity and transform, 240 ms) and the poster-to-loop fade.
  */
 
+
 .page {
+  overflow-x: clip;
   --ink: #15171c;
   --muted: #4f5562; /* 7.4:1 on white */
   --line: #e4e7ec;
@@ -67,8 +69,8 @@
 .notice { padding: 8px var(--side); background: var(--soft); border-bottom: 1px solid var(--line); color: var(--muted); }
 
 /* ── Type ─────────────────────────────────────────────────────────────── */
-.kicker { display: flex; gap: 16px; margin-bottom: 16px; font-size: 16px; color: var(--muted); font-weight: 400; }
-.index { font-variant-numeric: tabular-nums; color: var(--violet); }
+.kicker { margin-bottom: 8px; font-size: 16px; color: var(--violet); font-weight: 600; }
+
 .h1 { font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 600; max-width: 14ch; }
 .h2 { font-size: 28px; line-height: 1.2; letter-spacing: -0.015em; font-weight: 600; max-width: 20ch; }
 .h3 { font-size: 20px; line-height: 1.3; font-weight: 600; margin-top: 32px !important; margin-bottom: 8px !important; }
@@ -80,26 +82,38 @@
 .proof { margin-top: 24px !important; }
 .proof a { display: inline-flex; align-items: center; min-height: 44px; color: var(--violet); font-weight: 400; text-decoration: none; }
 
-/* ── Hero: the only block sized by the viewport ──────────────────────── */
+/* ── Hero: copy, then the film edge to edge ───────────────────────────── */
 .hero {
   min-height: calc(100svh - 56px - env(safe-area-inset-top));
-  display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
-  padding: 32px var(--side) 40px;
+  display: flex; flex-direction: column;
+  padding: 32px var(--side) 0;
+  background: var(--soft);
 }
+.heroCopy { max-width: 560px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
 .cta, .ghost {
   display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px;
   border-radius: 999px; font-weight: 600; text-decoration: none; -webkit-tap-highlight-color: transparent;
 }
 .cta { background: var(--violet); color: #fff !important; }
-.ghost { border: 1px solid var(--line); }
+.ghost { border: 1px solid var(--line); background: #fff; }
 .cta:active, .ghost:active, .barCta:active { transform: scale(0.98); }
+.settles { padding: 16px 0 24px; color: var(--muted); text-align: center; }
 
-.heroMedia, .film {
-  position: relative; overflow: hidden; border-radius: 24px; background: var(--soft);
-  aspect-ratio: 16 / 9; max-width: 480px; width: 100%;
+/* A film: full width of the phone at 4:5, the same size and place in every section. */
+.film {
+  position: relative; overflow: hidden;
+  width: 100vw; margin: 32px calc(50% - 50vw) 0;
+  aspect-ratio: 4 / 5; max-height: 80svh;
+  background: #e9ebef;
 }
-.film { margin-top: 24px; aspect-ratio: 960 / 506; }
+.filmHero { margin-top: 24px; flex: 1 0 auto; }
+/* The hero film fades up into the hero's grey, so copy and film read as one surface. */
+.filmHero::after {
+  content: ''; position: absolute; inset: 0 0 auto; height: 20%;
+  background: linear-gradient(var(--soft), rgba(247, 248, 250, 0));
+  pointer-events: none;
+}
 .media, .loop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .loop { opacity: 0; transition: opacity 240ms ease-out; }
 .loop:global(.on) { opacity: 1; }
@@ -109,10 +123,9 @@
   padding: 56px var(--side);
   border-top: 1px solid var(--line);
   content-visibility: auto;
-  contain-intrinsic-size: auto 800px;
+  contain-intrinsic-height: auto 800px;
 }
 .inner { max-width: 560px; margin: 0 auto; }
-.hero .heroCopy { max-width: 560px; }
 
 /* One reveal per section, added by Reveal.tsx below the fold only (nothing hides without it). */
 @media (prefers-reduced-motion: no-preference) {
@@ -123,19 +136,31 @@
   }
 }
 
-.bubble { display: flex; justify-content: flex-end; margin-top: 16px; }
+.bubble { position: absolute; right: var(--side); bottom: 24px; z-index: 1; display: flex; }
 .bubble span { padding: 8px 16px; border-radius: 20px 20px 4px 20px; background: var(--violet); color: #fff; font-weight: 400; }
 
 .screen { display: flex; justify-content: center; margin-top: 32px; }
+/* The flow: bands joined by a labelled connector, the Settlement diagram, everywhere a path is told. */
+.flow { display: grid; margin-top: 32px; }
+.band { display: grid; gap: 4px; padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: #fff; }
+.bandSoft { background: var(--soft); }
+.bandInk { background: var(--ink); border-color: var(--ink); color: #fff; }
+.bandInk .bandDetail { color: #c9ccd3; }
+.bandTitle { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; color: inherit; min-height: 24px; }
+a.bandTitle { min-height: 44px; margin: -10px 0; }
+.bandDetail { color: var(--muted); }
+.link { display: grid; justify-items: center; padding: 0; }
+.link::before, .link::after { content: ''; width: 0; height: 12px; border-left: 1px dashed var(--violet); }
+.link span { padding: 4px 12px; border-radius: 999px; border: 1px dashed var(--violet); color: var(--violet); background: #fff; }
 .screen .callImg { width: 280px; height: auto; }
 
-.n { font-variant-numeric: tabular-nums; color: var(--violet); font-weight: 600; min-width: 24px; }
-.layers { display: grid; gap: 8px; margin-top: 24px; }
-.layers li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 56px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 16px; }
-.layers li:nth-child(2) { background: var(--soft); }
-.layers code { color: var(--muted); letter-spacing: 0.08em; }
 
-.field { display: inline-flex; align-items: center; margin-top: 24px; min-height: 56px; padding: 0 20px; border: 1px solid var(--line); border-radius: 16px; font-size: 20px; font-weight: 600; }
+
+
+
+
+
+
 .at { color: var(--violet); }
 
 .date { margin-top: 16px !important; color: var(--muted); }
@@ -145,7 +170,8 @@
 .timeline > li:not(.gap)::before { content: ''; position: absolute; left: -22px; top: 22px; width: 10px; height: 10px; border-radius: 50%; background: var(--violet); }
 .timeline h3 { font-size: 20px; line-height: 1.3; font-weight: 600; margin: 4px 0 8px; }
 .timeline p { color: var(--muted); }
-.gap { color: var(--muted); font-variant-numeric: tabular-nums; }
+.gap { display: flex; color: var(--muted); font-variant-numeric: tabular-nums; }
+.gap span { padding: 4px 12px; border-radius: 999px; border: 1px dashed var(--violet); color: var(--violet); }
 .k { color: var(--muted); font-size: 16px; font-variant-numeric: tabular-nums; }
 .hash { margin-top: 16px; display: grid; gap: 8px; padding: 16px; border-radius: 16px; background: var(--soft); border: 1px solid var(--line); }
 .hash code { word-break: break-all; -webkit-user-select: all; user-select: all; line-height: 1.5; }
@@ -155,11 +181,11 @@
   border-radius: 999px; border: 1px solid var(--line); background: #fff; font: inherit; font-weight: 600; color: var(--ink); text-decoration: none;
 }
 
-.bands { display: grid; gap: 8px; margin-top: 24px; }
-.band { display: grid; gap: 4px; padding: 16px; border-radius: 16px; border: 1px solid var(--line); }
-.band span:last-child { color: var(--muted); }
-.bandEth { background: var(--soft); }
-.proofTag { justify-self: center; padding: 4px 12px; border-radius: 999px; border: 1px dashed var(--violet); color: var(--violet); font-weight: 400; }
+
+
+
+
+
 .markText { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
 .marks { display: flex; justify-content: center; gap: 24px; margin-top: 24px !important; }
 
@@ -195,9 +221,9 @@
 .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px !important; }
 .links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); text-decoration: none; font-weight: 400; }
 
-.road { display: grid; gap: 8px; }
-.road li { padding: 16px; border-radius: 16px; background: var(--soft); }
-.road p { color: var(--muted); margin-top: 4px; }
+
+
+
 
 .faq { margin-top: 24px; border-top: 1px solid var(--line); }
 .faq details { border-bottom: 1px solid var(--line); }
@@ -217,7 +243,7 @@
   display: grid; justify-items: center; text-align: center; gap: 0;
   padding: 72px var(--side) calc(56px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line); background: var(--soft);
-  content-visibility: auto; contain-intrinsic-size: auto 420px;
+  content-visibility: auto; contain-intrinsic-height: auto 420px;
 }
 .close .cta { margin-top: 24px; }
 .close .h2 { margin: 0 auto; }
@@ -225,7 +251,7 @@
 .foot {
   padding: 40px var(--side) calc(40px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
-  content-visibility: auto; contain-intrinsic-size: auto 900px;
+  content-visibility: auto; contain-intrinsic-height: auto 900px;
 }
 .footCol { border-bottom: 1px solid var(--line); }
 .footCol summary { display: flex; align-items: center; justify-content: space-between; min-height: 56px; font-weight: 600; cursor: pointer; list-style: none; }
