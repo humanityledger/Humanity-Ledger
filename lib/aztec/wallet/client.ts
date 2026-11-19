@@ -640,6 +640,53 @@ class PrivateWallet {
     return { token, deployTx, mintTx, payTx };
   }
 
+  /**
+   * Operator only, on Aztec Alpha: deploys the HLC Test Token with this account as admin, and
+   * nothing else (no issue, no payment). Universal deployment, like the HLC of 14/11/2026, so the
+   * address is known before sending. The address is kept on this device under its own key, so a
+   * reload never deploys a second time. The operator signs in their own wallet; then the read-only
+   * preflight confirms name, decimals and class before the token is recorded
+   * (docs/alpha/HLC_REDEPLOY_RUNBOOK.md).
+   */
+  async deployHlcTestToken(
+    meta: { name: string; symbol: string; decimals: number },
+    onStep?: (info: { token: string; txHash?: string }) => void,
+  ): Promise<{ token: string; deployTx?: string; resumed: boolean }> {
+    if (AZTEC_WALLET_CONFIG.network !== 'mainnet') throw new Error('This tool is for Aztec Alpha only.');
+    if (new TextEncoder().encode(meta.name).length > 31 || new TextEncoder().encode(meta.symbol).length > 31) throw new Error('Name and symbol hold at most 31 bytes.');
+    await assertNewValueAllowed();
+    const ctx = this.agreementContext();
+    const sdk = this.sdk!;
+    const me = ctx.me;
+    const KEY = `hl:hlc-test-token:${me.toString().toLowerCase()}`;
+    let kept = '';
+    try { kept = localStorage.getItem(KEY) || ''; } catch { /* not kept */ }
+    if (kept) {
+      onStep?.({ token: kept });
+      return { token: kept, resumed: true };
+    }
+    const artifact = sdk.TokenContract.artifact;
+    const [{ Contract, DeployMethod }, { randomField }] = await Promise.all([import('@aztec-labs/aztec.js/contracts'), import('../random')]);
+    const args = [me, meta.name, meta.symbol, meta.decimals];
+    const salt = randomField();
+    const expected = await sdk.getContractInstanceFromInstantiationParams(artifact, { constructorArgs: args, salt, deployer: sdk.AztecAddress.ZERO });
+    const token = expected.address.toString();
+    onStep?.({ token });
+    const deployment = (DeployMethod as any).create(
+      ctx.wallet,
+      { artifact, args, postDeployCtor: (instance: any, w: any) => (Contract as any).at(instance.address, artifact, w) },
+      { salt, universalDeploy: true },
+    );
+    const { fee, consumes } = await this.resolveFee();
+    const receipt = await this.sendAndWait(() => deployment.send({ from: me, fee, wait: sdk.NO_WAIT }), `hlc-test-token-${Date.now()}`, 'deploy');
+    if (!receipt) throw new Error(this.snapshot.activity[0]?.error || 'The deploy transaction failed. Nothing more was sent.');
+    if (consumes) this.dropClaim(consumes);
+    const deployTx = (receipt as any)?.txHash?.toString?.() ?? ((receipt as any)?.txHash ? String((receipt as any).txHash) : undefined);
+    try { localStorage.setItem(KEY, token); } catch { /* not kept */ }
+    onStep?.({ token, txHash: deployTx });
+    return { token, deployTx, resumed: false };
+  }
+
   private claimMethod(c: FeeJuiceClaim) {
     const sdk = this.sdk!;
     const secret = this.claimSecrets[c.secretIndex];

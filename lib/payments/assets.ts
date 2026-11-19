@@ -19,6 +19,14 @@ import registry from '../../deployments/aztec-mainnet.json';
 
 export type AssetRole = 'test' | 'real' | 'fees';
 
+/**
+ * The on-chain metadata of the HLC Test Token (decision D-2, 19/11/2026). The standard Token sets
+ * name, symbol and decimals in its constructor, so a new name needs a new instance: the operator
+ * deploys it with these values (docs/alpha/HLC_REDEPLOY_RUNBOOK.md) and the read-only preflight
+ * checks them on the node. The name has no company form: no company exists yet.
+ */
+export const HLC_TOKEN_META = { name: 'HLC Test Token', symbol: 'HLC', decimals: 6 } as const;
+
 /** The words shown next to HLC wherever an amount of it appears. */
 export const TEST_TOKEN_NOTE = 'Test token · no monetary value';
 
