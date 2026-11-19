@@ -243,3 +243,53 @@ export function SessionHeal() {
   }, []);
   return null;
 }
+
+/**
+ * /?debug=scroll: what the scroll engine sees, on screen only (nothing is sent anywhere). The
+ * element that scrolls, scrollTop, the viewport heights (innerHeight, visualViewport, svh, lvh),
+ * --p and --in of the scenes in view, and frames longer than 50 ms. For diagnosing phones.
+ */
+export function ScrollDebug() {
+  const [on, setOn] = useState(false);
+  const [lines, setLines] = useState<string[]>([]);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('debug') !== 'scroll') return;
+    setOn(true);
+    const probe = (unit: string) => {
+      const d = document.createElement('div');
+      d.style.cssText = `position:fixed;top:0;left:0;width:1px;height:100${unit};visibility:hidden;pointer-events:none`;
+      document.body.appendChild(d);
+      const h = d.getBoundingClientRect().height;
+      d.remove();
+      return Math.round(h);
+    };
+    let raf = 0;
+    let last = 0;
+    let long = 0;
+    const tick = (t: number) => {
+      if (last && t - last > 50) long++;
+      last = t;
+      const main = document.querySelector('main');
+      const doc = document.scrollingElement as HTMLElement | null;
+      const scroller = main && main.scrollHeight > main.clientHeight + 1 && getComputedStyle(main).overflowY !== 'visible' ? main : doc;
+      const scenes = Array.from(document.querySelectorAll<HTMLElement>('[data-scene]'))
+        .filter((s) => { const r = s.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; })
+        .map((s) => `${(s.getAttribute('aria-label') || '?').slice(0, 14)} p=${s.style.getPropertyValue('--p') || '-'} in=${s.style.getPropertyValue('--in') || '-'}`);
+      setLines([
+        `scroller ${scroller?.tagName ?? '?'} top ${Math.round(scroller?.scrollTop ?? 0)}`,
+        `inner ${innerHeight} vv ${Math.round(window.visualViewport?.height ?? 0)} svh ${probe('svh')} lvh ${probe('lvh')}`,
+        `frames >50ms: ${long}`,
+        ...scenes,
+      ]);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  if (!on) return null;
+  return (
+    <pre aria-hidden="true" style={{ position: 'fixed', zIndex: 100, left: 8, bottom: 8, margin: 0, padding: 8, maxWidth: 'calc(100vw - 16px)', font: '11px/1.4 ui-monospace, monospace', color: '#15171C', background: 'rgba(247,248,250,0.92)', border: '1px solid #E4E7EC', borderRadius: 12, pointerEvents: 'none', whiteSpace: 'pre-wrap' }}>
+      {lines.join('\n')}
+    </pre>
+  );
+}
