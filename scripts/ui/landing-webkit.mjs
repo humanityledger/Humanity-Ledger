@@ -4,6 +4,14 @@
 // On the phones it also checks every position the instant it is reached, before the scroll loop
 // has run a frame (what a real finger flick shows), and loads the page's late code slowly, as a
 // mobile network does, so a phone that has not loaded yet can never leave a white screen.
+// Package 0 (19/11/2026) adds three checks the DOM probe cannot make:
+//   - pixels: each settled screen is captured and fails when 98.5 % or more of it below the
+//     navigation is white (the page is white by design, so a lower threshold would flag real
+//     scenes that are mostly white with a caption);
+//   - Chromium (Pixel 7): real touch flicks with momentum (CDP Input.synthesizeScrollGesture),
+//     captured the moment each flick ends, down and back up;
+//   - WebKit (iPhone 15): the viewport grows by 80 px half way down and shrinks half way up, as
+//     the browser bars do when they hide and show.
 //   node scripts/ui/landing-webkit.mjs <baseUrl> <outDir>
 import { chromium, webkit, devices } from 'playwright';
 import fs from 'node:fs';
@@ -45,6 +53,21 @@ const PROBE_FN = `() => {
 }`;
 const PROBE = `(${PROBE_FN})()`;
 // Scroll and look in the same task: the scroll loop's next frame has not run yet.
+let PNG = null;
+try { ({ PNG } = await import('pngjs')); } catch { /* pngjs is installed by the workflow; the pixel check is skipped without it */ }
+/** Share of near-white pixels below the navigation (sampled), or null without pngjs. */
+function whiteShare(buf, skipTop) {
+  if (!PNG) return null;
+  const img = PNG.sync.read(buf);
+  let white = 0, all = 0;
+  for (let y = skipTop; y < img.height; y += 4) for (let x = 0; x < img.width; x += 4) {
+    const i = (img.width * y + x) << 2;
+    all++;
+    if (img.data[i] >= 245 && img.data[i + 1] >= 245 && img.data[i + 2] >= 245) white++;
+  }
+  return all ? white / all : null;
+}
+const WHITE_MAX = 0.985;
 const FLICK = (y) => `(() => { (${SCROLLER}).scrollTop = ${y}; return (${PROBE_FN})(); })()`;
 
 let blank = 0;
@@ -72,8 +95,23 @@ for (const [bName, engine, dName, cfg, phone] of RUNS) {
   const pass = [...ys, ...[...ys].reverse()];
   let shots = 0;
   const fail = (e) => ({ seen: -1, why: [String(e.message).slice(0, 80)], pins: [] });
+  const resize = phone && bName === 'webkit';
+  const baseSize = page.viewportSize();
+  const dpr = opts.deviceScaleFactor || 1;
+  const skipTop = Math.round(72 * dpr);
+  const pixelCheck = async (label) => {
+    const buf = await page.screenshot().catch(() => null);
+    const w = buf ? whiteShare(buf, skipTop) : null;
+    if (w !== null && w >= WHITE_MAX) {
+      blank++;
+      report.push({ browser: bName, device: dName, when: label, white: Number(w.toFixed(4)) });
+      fs.writeFileSync(path.join(out, `${bName}-${dName}-white-${label}.png`), buf);
+    }
+  };
   for (const [n, y] of pass.entries()) {
     const dir = n < ys.length ? 'down' : 'up';
+    if (resize && n === Math.floor(ys.length / 2)) await page.setViewportSize({ width: baseSize.width, height: baseSize.height + 80 });
+    if (resize && n === ys.length + Math.floor(ys.length / 2)) await page.setViewportSize(baseSize);
     const checks = [];
     if (phone) checks.push(['flick', await page.evaluate(FLICK(y)).catch(fail)]);
     else await page.evaluate(`(${SCROLLER}).scrollTop = ${y}`);
@@ -84,6 +122,26 @@ for (const [bName, engine, dName, cfg, phone] of RUNS) {
       blank++;
       report.push({ browser: bName, device: dName, dir, y, when, ...r });
       if (shots++ < 6) await page.screenshot({ path: path.join(out, `${bName}-${dName}-blank-${dir}-${y}-${when}.png`) }).catch(() => undefined);
+    }
+    await pixelCheck(`${dir}-${y}`);
+  }
+  if (resize) await page.setViewportSize(baseSize);
+  // Real touch flicks with momentum on the Android phone, captured as each flick ends.
+  if (phone && bName === 'chromium') {
+    const cdp = await ctx.newCDPSession(page);
+    const top = () => page.evaluate(`(${SCROLLER}).scrollTop`);
+    await page.evaluate(`(${SCROLLER}).scrollTop = 0`);
+    for (const dirSign of [-1, 1]) {
+      let prev = -1;
+      for (let k = 0; k < 80; k++) {
+        await cdp.send('Input.synthesizeScrollGesture', { x: 200, y: 500, yDistance: dirSign * 700, speed: 3500, gestureSourceType: 'touch', preventFling: false }).catch((e) => errors.push('gesture ' + e.message));
+        const at = await top();
+        const r = await page.evaluate(PROBE).catch(fail);
+        if (r.seen === 0) { blank++; report.push({ browser: bName, device: dName, when: `touch-${dirSign < 0 ? 'down' : 'up'}`, y: at, ...r }); }
+        await pixelCheck(`touch-${dirSign < 0 ? 'down' : 'up'}-${Math.round(at)}`);
+        if (at === prev) break;
+        prev = at;
+      }
     }
   }
   // The landing scrolls the document, never a nested element: a fixed body with an inner scroller

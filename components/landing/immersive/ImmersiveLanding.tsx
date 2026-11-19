@@ -19,7 +19,7 @@ import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel } from '@/lib/aztec/wa
 import { HLLogo } from '@/components/shared/HLLogo';
 import { SiteFooter } from '@/components/landing/v2/SiteFooter';
 import * as C from '@/lib/landing/content';
-import { CopyHash, SceneGlobe, ScenePhone, SceneVideo, ScrollRoot, SessionHeal, SiteQr } from './Islands';
+import { CopyHash, SceneGlobe, ScenePhone, SceneVideo, ScrollDebug, ScrollRoot, SessionHeal, SiteQr } from './Islands';
 import { DotWorld } from './DotWorld';
 import s from './Immersive.module.css';
 
@@ -203,6 +203,7 @@ export function ImmersiveLanding() {
   return (
     <ScrollRoot className={s.page}>
       <SessionHeal />
+      <ScrollDebug />
       <a href="#main-content" className={s.skip}>Skip to content</a>
 
       <header className={s.nav}>
