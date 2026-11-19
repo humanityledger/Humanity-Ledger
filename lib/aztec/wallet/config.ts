@@ -23,7 +23,13 @@ import { withoutGatedTokens } from '../../payments/assets';
 
 export type WalletNetwork = 'testnet' | 'mainnet';
 
-export type TokenKey = 'USDC' | 'DAI' | 'ETH';
+/**
+ * Wallet slots. USDC, DAI and ETH are the test network's tokens (on Alpha the USDC slot holds HLC,
+ * the test token). CUSDC is the slot for Clean USDC, issued by a third party (package 9): it stays
+ * empty until every gate in lib/payments/assets.ts CUSDC_GATES is met (withoutGatedTokens), and it
+ * exists only on Alpha.
+ */
+export type TokenKey = 'USDC' | 'DAI' | 'ETH' | 'CUSDC';
 
 export interface TokenConfig {
   key: TokenKey;
@@ -43,10 +49,13 @@ export interface FaucetConfig {
 export const TESTNET_L1_CHAIN_ID = 11155111;
 
 /** Display order in the wallet. */
-export const TOKEN_ORDER: TokenKey[] = ['USDC', 'DAI', 'ETH'];
+export const TOKEN_ORDER: TokenKey[] = ['USDC', 'DAI', 'ETH', 'CUSDC'];
+
+/** The slots the test network must have filled (its faucet tokens). CUSDC is never one of them. */
+export const TESTNET_TOKEN_KEYS: readonly TokenKey[] = ['USDC', 'DAI', 'ETH'];
 
 /** The amount the faucet mints per request, in whole tokens. */
-export const FAUCET_AMOUNT: Record<TokenKey, string> = { USDC: '100', DAI: '100', ETH: '0.05' };
+export const FAUCET_AMOUNT: Record<TokenKey, string> = { USDC: '100', DAI: '100', ETH: '0.05', CUSDC: '0' }; // cUSDC is never minted: no faucet, third-party issuer
 
 function parseJson<T>(raw: string | undefined): T | null {
   if (!raw) return null;
@@ -98,6 +107,7 @@ export const AZTEC_WALLET_CONFIG = {
   rpcMaxBatch: Number(process.env.NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH || 3),
   // cUSDC and any other planned token stay out until every gate is met (lib/payments/assets.ts).
   tokens: withoutGatedTokens(TOKEN_ORDER.flatMap((key) => {
+    if (key === 'CUSDC' && NETWORK !== 'mainnet') return [];
     const t = TOKENS_RAW?.[key];
     return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
   }) as TokenConfig[]),
@@ -121,7 +131,8 @@ export function isWalletConfigured(cfg: WalletReadiness = AZTEC_WALLET_CONFIG): 
   if (cfg.network === 'mainnet') {
     return cfg.alphaEnabled;
   }
-  return cfg.tokens.length === TOKEN_ORDER.length && !!cfg.sponsoredFpc;
+  // Every faucet slot filled (not cUSDC, which is Alpha-only and gated): counting TOKEN_ORDER would break testnet readiness.
+  return TESTNET_TOKEN_KEYS.every((k) => cfg.tokens.some((t) => t.key === k)) && !!cfg.sponsoredFpc;
 }
 
 /** True when at least one private token is configured (Shield, Unshield, Send, agreements). */
