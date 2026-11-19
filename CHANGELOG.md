@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Closed alpha gates and one source of truth (19 November 2026)
+
+- HLC is a test token with no monetary value (PA-1). The token model is withdrawn, and the wallet labels HLC a test token. A new instance named "HLC Test Token" is prepared for Stefan to deploy (`docs/alpha/HLC_REDEPLOY_RUNBOOK.md`). The read-only preflight checks the on-chain name.
+- No route claims "Humanity Ledger Corporation". The unused paid-API routes are removed.
+- HLC cannot be distributed until `closedAlpha.distributor` records who distributes it (MiCA art. 4(1)(a)).
+- Tester admission needs the signed terms (three boxes, hashed) and the operator's sanctions and age checks. These fields are deleted 6 months after the alpha.
+- Fee Juice grants to testers are recorded within a budget and checked on the network, with a CSV export for the tax adviser.
+- cUSDC has four more gates, and the wallet never lists it while any gate is unmet.
+- Third-party marks are recorded with their source. Aztec is named in text until its brand rules are in writing (D-1).
+- `docs/legal/` drafts now state the real facts. ADR 005: no upgradeable contracts in the alpha.
+- `docs/GLOSSARY.md` forbidden terms are checked in CI (`test/unit/docs/consistency.test.ts`), and false audit claims are removed from `docs/` and `lib/translations.ts`.
+
 ### No fee sponsorship (15 November 2026)
 
 - Product decision: Ledger Chat sponsors no network fee. Every account pays its own fees on Aztec Alpha, with
