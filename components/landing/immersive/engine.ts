@@ -27,7 +27,7 @@ const spies: Spy[] = [];
 const listeners = new Map<HTMLElement, Set<Listener>>();
 let root: HTMLElement | null = null;
 let links: HTMLAnchorElement[] = [];
-/** The element that scrolls the page: on "/" the layout scrolls inside <main>, elsewhere the window. */
+/** The element that scrolls the page: the window on "/" (ClientLayout leaves the landing unbounded); a nested scroller is followed if a layout adds one. */
 let scroller: HTMLElement | null = null;
 const scrollTop = () => (scroller ? scroller.scrollTop : window.scrollY);
 let vh = 0;

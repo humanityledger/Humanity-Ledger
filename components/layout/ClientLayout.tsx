@@ -118,10 +118,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   //  Layout mode 
   // DASHBOARD   fixed inset-0 overflow-hidden   (LedgerProShell owns scroll)
   // BOUNDED     fixed inset-0 overflow-hidden   (header + inner scroll box)
-  // LANDING     also bounded — prevents white zone below footer
+  // LANDING     the document scrolls (not bounded). On iPhone and Android a fixed body with the page
+  //             scrolling inside <main> kept the browser bars from collapsing, made 100svh scenes
+  //             disagree with the scroller's height, and broke the sticky scenes during a flick
+  //             (white and glitched frames reported on 19/11/2026). The landing paints its own white
+  //             page down to the footer, so there is no white zone to prevent.
   const isDashboard = pathname.startsWith('/terminal');
   const isLanding = pathname === '/';
-  const isBounded = !isDashboard && BOUNDED_PREFIXES.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)));
+  const isBounded = !isDashboard && !isLanding && BOUNDED_PREFIXES.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)));
 
   // Documentation, company and legal pages are public and must never be
   // wrapped in LinkedGate, which redirects visitors without a session.

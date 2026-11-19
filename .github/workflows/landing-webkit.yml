@@ -8,14 +8,21 @@ on:
     branches: ['claude/**']
     paths:
       - 'components/landing/**'
+      - 'components/layout/**'
+      - 'components/activities/**'
       - 'app/page.tsx'
+      - 'app/layout.tsx'
       - 'app/globals.css'
       - 'scripts/ui/landing-webkit.mjs'
       - '.github/workflows/landing-webkit.yml'
   pull_request:
     paths:
       - 'components/landing/**'
+      - 'components/layout/**'
+      - 'components/activities/**'
       - 'app/page.tsx'
+      - 'app/layout.tsx'
+      - 'app/globals.css'
       - 'scripts/ui/landing-webkit.mjs'
   workflow_dispatch:
 

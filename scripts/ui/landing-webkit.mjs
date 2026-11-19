@@ -86,6 +86,9 @@ for (const [bName, engine, dName, cfg, phone] of RUNS) {
       if (shots++ < 6) await page.screenshot({ path: path.join(out, `${bName}-${dName}-blank-${dir}-${y}-${when}.png`) }).catch(() => undefined);
     }
   }
+  // The landing scrolls the document, never a nested element: a fixed body with an inner scroller
+  // is what broke scrolling on iPhone and Android (19/11/2026).
+  if (geo.tag !== 'HTML') { blank++; report.push({ browser: bName, device: dName, problem: `the page scrolls inside ${geo.tag}, not the document` }); }
   report.push({ browser: bName, device: dName, scroller: geo.tag, height: geo.h, steps: pass.length, errors: [...new Set(errors)].slice(0, 5) });
   await browser.close();
 }
