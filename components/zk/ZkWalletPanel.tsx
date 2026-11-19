@@ -55,6 +55,8 @@ import { feeRunway } from '@/components/zk/wallet/walletLogic';
 export { feeRunway };
 import { ReceiveView, SendFlow, ShieldFlow, symbolOf } from '@/components/zk/wallet/WalletSheets';
 import { HLC_TOKEN_META, isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
+import { distributionDecision, type ClosedAlphaEntry } from '@/lib/alpha/gate';
+import mainnetRecord from '../../deployments/aztec-mainnet.json';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -603,6 +605,9 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
   if (!wallet || keys.length === 0) return null;
   const key = keys[0];
   const sym = symbolOf(key);
+  // Package 3: on Alpha, nothing is issued for testers while no distributor of HLC is recorded.
+  const distribution = ALPHA ? distributionDecision((mainnetRecord as { closedAlpha?: ClosedAlphaEntry }).closedAlpha) : { ok: true as const };
+  const blocked = distribution.ok ? '' : distribution.reasons[0];
   const decimals = AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.decimals ?? 18;
   const run = async () => {
     setBusy(true);
@@ -632,13 +637,18 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
         />
         <button
           type="button"
-          disabled={disabled || busy || !amount}
+          disabled={disabled || busy || !amount || !!blocked}
           onClick={run}
           className={`min-h-[48px] px-5 rounded-2xl bg-[#15171c] text-white text-[15px] font-semibold disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
         >
           {busy ? 'Issuing…' : 'Issue'}
         </button>
       </div>
+      {blocked && (
+        <div className="mt-2">
+          <Notice tone="bad">{blocked}</Notice>
+        </div>
+      )}
     </ToolCard>
   );
 }

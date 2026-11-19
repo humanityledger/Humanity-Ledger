@@ -11,8 +11,12 @@
  *
  * It does not touch `audit`: an audit, if one is ever recorded, is a separate path.
  */
+import { distributorProblem } from './rules.mjs';
+
 export interface ClosedAlphaEntry {
   enabled: boolean;
+  /** Who distributes HLC (lib/alpha/rules.mjs). null until counsel decides. */
+  distributor?: unknown;
   until: string | null;
   scope?: 'value' | 'app';
   maxTesters?: number;
@@ -55,4 +59,13 @@ export function closedAlphaDecision(i: ClosedAlphaInput): ClosedAlphaResult {
   else if (!i.member.active) reasons.push(CLOSED_ALPHA_REASONS.revoked);
   else if (!i.member.riskAcknowledged) reasons.push(CLOSED_ALPHA_REASONS.ack);
   return reasons.length ? { ok: false, reasons } : { ok: true };
+}
+
+/**
+ * Package 3: may HLC be distributed to testers at all (codes created, codes redeemed, HLC issued)?
+ * Only when closedAlpha.distributor records who distributes it and on what basis.
+ */
+export function distributionDecision(entry: ClosedAlphaEntry | null | undefined): ClosedAlphaResult {
+  const problem = distributorProblem(entry?.distributor ?? null);
+  return problem ? { ok: false, reasons: [problem] } : { ok: true };
 }
