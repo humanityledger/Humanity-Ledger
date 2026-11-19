@@ -12,6 +12,15 @@
 //     captured the moment each flick ends, down and back up;
 //   - WebKit (iPhone 15): the viewport grows by 80 px half way down and shrinks half way up, as
 //     the browser bars do when they hide and show.
+// The phone landing (components/landing/mobile, 19/11/2026) adds, on the phones only:
+//   - the tree split: / with an iPhone user agent gets the phone tree, with a desktop one the
+//     immersive tree, and both responses carry Vary: User-Agent, Sec-CH-UA-Mobile;
+//   - Pixel 7 (Chromium, CPU throttled 4x, real touch flicks down and up): no long animation frame
+//     over 50 ms, rAF interval p95 at or below 1.5x the frame interval, no layout shift, no
+//     non-passive touchstart / touchmove / wheel listener on window, document or body, and layout
+//     work in the trace bounded by the sections that come into view (content-visibility: auto);
+//   - iPhone 15 (WebKit): rAF interval p95, layout shifts and long tasks where WebKit reports them;
+//   - "before": the same Pixel 7 run against the immersive tree (desktop user agent), reported only.
 //   node scripts/ui/landing-webkit.mjs <baseUrl> <outDir>
 import { chromium, webkit, devices } from 'playwright';
 import fs from 'node:fs';
@@ -71,7 +80,103 @@ const WHITE_MAX = 0.995;
 const FLICK = (y) => `(() => { (${SCROLLER}).scrollTop = ${y}; return (${PROBE_FN})(); })()`;
 
 let blank = 0;
+let slow = 0;
 const report = [];
+
+/* ── Phone landing checks ─────────────────────────────────────────────── */
+const UA_IPHONE = devices['iPhone 15'].userAgent;
+const UA_DESKTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+for (const [name, ua, want] of [['iphone', UA_IPHONE, true], ['desktop', UA_DESKTOP, false]]) {
+  const res = await fetch(base + '/', { headers: { 'user-agent': ua } }).catch((e) => ({ ok: false, error: e.message }));
+  const html = res.ok ? await res.text() : '';
+  const vary = res.headers?.get('vary') ?? '';
+  const mobile = html.includes('data-landing="mobile"');
+  const desktop = html.includes('data-scene');
+  const ok = res.ok && mobile === want && desktop === !want && /user-agent/i.test(vary) && /sec-ch-ua-mobile/i.test(vary);
+  if (!ok) slow++;
+  report.push({ check: 'tree', ua: name, ok, gotMobileTree: mobile, gotDesktopTree: desktop, vary, acceptCH: res.headers?.get('accept-ch') ?? '' });
+}
+
+// Collected in the page while the finger moves: rAF gaps, long animation frames, layout shifts.
+const PERF_START = `(() => {
+  const P = window.__perf = { gaps: [], loaf: [], longtask: 0, shifts: 0, on: true, types: PerformanceObserver.supportedEntryTypes || [] };
+  let last = performance.now();
+  const tick = (t) => { if (!P.on) return; P.gaps.push(t - last); last = t; requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+  const obs = (type, fn) => { if (P.types.includes(type)) new PerformanceObserver((l) => l.getEntries().forEach(fn)).observe({ type }); };
+  obs('long-animation-frame', (e) => P.loaf.push(Math.round(e.duration)));
+  obs('longtask', () => { P.longtask++; });
+  obs('layout-shift', (e) => { if (!e.hadRecentInput) P.shifts++; });
+  return P.types;
+})()`;
+const PERF_STOP = `(() => { const P = window.__perf; P.on = false; const g = P.gaps.slice(2).sort((a, b) => a - b);
+  const q = (x) => g.length ? g[Math.min(g.length - 1, Math.floor(g.length * x))] : 0;
+  return { frames: g.length, median: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), loafOver50: P.loaf.filter((d) => d > 50), longtask: P.types.includes('longtask') ? P.longtask : 'n/a', shifts: P.types.includes('layout-shift') ? P.shifts : 'n/a', sections: document.querySelectorAll('[data-reveal]').length }; })()`;
+
+async function nonPassiveListeners(cdp) {
+  const bad = [];
+  for (const expr of ['window', 'document', 'document.body']) {
+    const { result } = await cdp.send('Runtime.evaluate', { expression: expr });
+    const { listeners } = await cdp.send('DOMDebugger.getEventListeners', { objectId: result.objectId });
+    for (const l of listeners) if (/^(touchstart|touchmove|wheel|mousewheel)$/.test(l.type) && !l.passive) bad.push(`${expr}:${l.type}`);
+  }
+  return bad;
+}
+
+/** Pixel 7, CPU 4x slower, real touch flicks down and back up, traced. */
+async function chromiumPerf(page, ctx, label, enforce) {
+  const cdp = await ctx.newCDPSession(page);
+  await page.evaluate('scrollTo(0, 0)');
+  await page.waitForTimeout(600);
+  const nonPassive = await nonPassiveListeners(cdp).catch((e) => [`check failed: ${e.message}`]);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  const events = [];
+  cdp.on('Tracing.dataCollected', (d) => { for (const e of d.value) if (e.name === 'Layout' || e.name === 'UpdateLayoutTree' || e.name === 'ScheduleStyleRecalculation') events.push(e.name); });
+  const done = new Promise((r) => cdp.once('Tracing.tracingComplete', r));
+  await cdp.send('Tracing.start', { categories: 'devtools.timeline', transferMode: 'ReportEvents' });
+  await page.evaluate(PERF_START);
+  for (const sign of [-1, 1]) for (let k = 0; k < 6; k++) {
+    await cdp.send('Input.synthesizeScrollGesture', { x: 200, y: 500, yDistance: sign * 900, speed: 4000, gestureSourceType: 'touch', preventFling: false }).catch(() => undefined);
+  }
+  const r = await page.evaluate(PERF_STOP);
+  await cdp.send('Tracing.end');
+  await done;
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  const layout = events.filter((n) => n === 'Layout').length;
+  const style = events.filter((n) => n === 'UpdateLayoutTree').length;
+  const vsync = r.median || 16.7;
+  const limits = { rafP95: +(1.5 * vsync).toFixed(2), layout: 2 * r.sections + 4 };
+  const fails = [];
+  if (r.loafOver50.length) fails.push(`long animation frames over 50 ms: ${r.loafOver50.join(', ')}`);
+  if (r.p95 > limits.rafP95) fails.push(`rAF p95 ${r.p95} ms > ${limits.rafP95}`);
+  if (typeof r.shifts === 'number' && r.shifts > 0) fails.push(`${r.shifts} layout shift(s)`);
+  if (nonPassive.length) fails.push(`non-passive listeners: ${nonPassive.join(', ')}`);
+  if (layout > limits.layout) fails.push(`${layout} layouts during the flicks > ${limits.layout}`);
+  if (enforce && fails.length) slow++;
+  report.push({ check: 'perf', run: label, enforced: enforce, ...r, layout, styleRecalc: style, nonPassive, limits, fails });
+}
+
+/** iPhone 15 (WebKit): the rAF gaps while the page is scrolled down and up, and what WebKit reports. */
+async function webkitPerf(page) {
+  await page.evaluate('scrollTo(0, 0)');
+  await page.waitForTimeout(400);
+  await page.evaluate(PERF_START);
+  const h = await page.evaluate('document.documentElement.scrollHeight - innerHeight');
+  for (const target of [h, 0]) {
+    for (let i = 1; i <= 24; i++) {
+      await page.evaluate(`scrollTo(0, ${Math.round(target ? (h * i) / 24 : h - (h * i) / 24)})`);
+      await page.waitForTimeout(50);
+    }
+  }
+  const r = await page.evaluate(PERF_STOP);
+  const vsync = r.median || 16.7;
+  const fails = [];
+  if (r.p95 > 1.5 * vsync) fails.push(`rAF p95 ${r.p95} ms > ${(1.5 * vsync).toFixed(2)}`);
+  if (typeof r.shifts === 'number' && r.shifts > 0) fails.push(`${r.shifts} layout shift(s)`);
+  if (typeof r.longtask === 'number' && r.longtask > 0) fails.push(`${r.longtask} long task(s)`);
+  if (fails.length) slow++;
+  report.push({ check: 'perf', run: 'webkit-iphone-15 (phone tree)', enforced: true, ...r, fails });
+}
 for (const [bName, engine, dName, cfg, phone] of RUNS) {
   const { defaultBrowserType, ...opts } = cfg; // eslint-disable-line no-unused-vars
   const browser = await engine.launch();
@@ -144,13 +249,28 @@ for (const [bName, engine, dName, cfg, phone] of RUNS) {
       }
     }
   }
+  // The phone tree's frame checks (after the white-screen pass, from the top of the page).
+  if (phone && bName === 'chromium') await chromiumPerf(page, ctx, 'chromium-pixel-7 (phone tree)', true);
+  if (phone && bName === 'webkit') await webkitPerf(page);
   // The landing scrolls the document, never a nested element: a fixed body with an inner scroller
   // is what broke scrolling on iPhone and Android (19/11/2026).
   if (geo.tag !== 'HTML') { blank++; report.push({ browser: bName, device: dName, problem: `the page scrolls inside ${geo.tag}, not the document` }); }
   report.push({ browser: bName, device: dName, scroller: geo.tag, height: geo.h, steps: pass.length, errors: [...new Set(errors)].slice(0, 5) });
   await browser.close();
 }
+// "Before": the immersive tree on the same phone (a desktop user agent), measured the same way.
+{
+  const { defaultBrowserType, userAgent, ...opts } = devices['Pixel 7']; // eslint-disable-line no-unused-vars
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ ...opts, userAgent: UA_DESKTOP });
+  const page = await ctx.newPage();
+  await page.goto(base + '/', { waitUntil: 'networkidle', timeout: 60000 }).catch(() => undefined);
+  await page.waitForTimeout(1500);
+  await chromiumPerf(page, ctx, 'chromium-pixel-7 (immersive tree, before)', false).catch((e) => report.push({ check: 'perf', run: 'before', error: e.message }));
+  await browser.close();
+}
 fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 for (const r of report) console.log(JSON.stringify(r));
 console.log(blank ? `FAIL: ${blank} blank screen(s)` : 'PASS: something visible on every screen, down and up');
-process.exit(blank ? 1 : 0);
+console.log(slow ? `FAIL: ${slow} phone landing check(s) (tree split or frames)` : 'PASS: phone landing tree split and frame checks');
+process.exit(blank || slow ? 1 : 0);

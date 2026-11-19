@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { ImmersiveLanding } from '@/components/landing/immersive/ImmersiveLanding';
+import { MobileLanding } from '@/components/landing/mobile/MobileLanding';
 import { ONE_LINE } from '@/lib/landing/content';
+import { isPhoneRequest } from '@/lib/landing/device';
 
 /**
  * Rendered per request because the site's CSP gives every response its own script nonce
@@ -27,10 +30,25 @@ const JSON_LD = {
   url: 'https://ledgerchat.org',
 };
 
-export default function Home() {
+/**
+ * Two trees, decided on the server (lib/landing/device.ts): phones get the mobile tree, a page in
+ * normal flow with no per-frame JavaScript (components/landing/mobile); tablets and desktops get
+ * the immersive landing, unchanged. Responses vary on the headers that decide (middleware.ts).
+ */
+export default async function Home() {
+  const phone = isPhoneRequest(await headers());
+  const ld = <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />;
+  if (phone) {
+    return (
+      <>
+        {ld}
+        <MobileLanding />
+      </>
+    );
+  }
   return (
     <div className="w-full flex-1 flex flex-col">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
+      {ld}
       <ImmersiveLanding />
     </div>
   );

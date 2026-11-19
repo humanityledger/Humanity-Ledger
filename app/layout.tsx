@@ -1,6 +1,7 @@
 // System layout  No Clerk provider needed (SIWE-native auth)
 
 import { headers } from 'next/headers'
+import { LANDING_TREE_HEADER } from '@/lib/landing/device'
 
 import { Inter, IBM_Plex_Mono, Instrument_Serif } from 'next/font/google'
 
@@ -263,6 +264,11 @@ export default async function RootLayout({
   const cookies = headersList.get('cookie');
 
   const nonce = headersList.get('x-nonce') || '';
+  // The phone landing (/, a phone; set by middleware.ts from lib/landing/device.ts) is a page of
+  // plain HTML: none of the app's fixed layers or providers, which cost frames while scrolling and
+  // which it does not use. Its links into the app are full page loads, so the app arrives with
+  // this whole shell. Every other request gets the shell below, unchanged.
+  const mobileLanding = headersList.get(LANDING_TREE_HEADER) === 'mobile';
 
 
 
@@ -613,6 +619,7 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
         </a>
 
+        {mobileLanding ? children : (<>
         <ScrollProgressBar />
 
         <LiveActivityLayer />
@@ -652,6 +659,7 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
           </GlobalErrorBoundary>
 
         </Providers>
+        </>)}
 
       </body>
 

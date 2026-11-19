@@ -1,5 +1,6 @@
 # The landing must show content on every screen while scrolling, on an iPhone (WebKit), an
-# Android phone (Chromium) and a desktop, down and back up (reported 19/11/2026).
+# Android phone (Chromium) and a desktop, down and back up (reported 19/11/2026). Phones get their own
+# tree (components/landing/mobile): its frame checks and budgets run here too.
 
 name: Landing in WebKit
 
@@ -14,6 +15,9 @@ on:
       - 'app/layout.tsx'
       - 'app/globals.css'
       - 'scripts/ui/landing-webkit.mjs'
+      - 'scripts/ui/mobile-budget.mjs'
+      - 'lib/landing/**'
+      - 'middleware.ts'
       - '.github/workflows/landing-webkit.yml'
   pull_request:
     paths:
@@ -24,6 +28,9 @@ on:
       - 'app/layout.tsx'
       - 'app/globals.css'
       - 'scripts/ui/landing-webkit.mjs'
+      - 'scripts/ui/mobile-budget.mjs'
+      - 'lib/landing/**'
+      - 'middleware.ts'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +47,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # The phone landing must leave the desktop landing untouched (components/landing/mobile).
+      - name: Desktop landing unchanged
+        if: github.head_ref == 'claude/mobile-landing' || github.ref == 'refs/heads/claude/mobile-landing'
+        run: git diff --exit-code "$(git merge-base origin/main HEAD)" HEAD -- components/landing/immersive
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -63,6 +76,7 @@ jobs:
           npx next start -p 3100 > next.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
           node scripts/ui/landing-webkit.mjs http://localhost:3100 landing-shots
+          node scripts/ui/mobile-budget.mjs http://localhost:3100 landing-shots/mobile-budget.json
       - if: always()
         uses: actions/upload-artifact@v4
         with:
