@@ -22,8 +22,9 @@ const VIOLET = '#5200FF';
 const OK = '#10B981';
 const BAD = '#FF3B30';
 
-async function sha256Hex(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+/** SHA-256 of the exact bytes served (R2-7): decoding to text first would drop a BOM and differ from sha256sum. */
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -44,9 +45,10 @@ export default function AlphaJoin() {
     setStatus(s);
     if (s.terms?.url) {
       try {
-        const t = await fetch(s.terms.url, { cache: 'no-store' }).then((x) => (x.ok ? x.text() : ''));
+        const bytes = await fetch(s.terms.url, { cache: 'no-store' }).then((x) => (x.ok ? x.arrayBuffer() : null));
+        const t = bytes ? new TextDecoder('utf-8').decode(bytes) : '';
         setText(t);
-        setHash(t ? await sha256Hex(t) : '');
+        setHash(bytes && bytes.byteLength ? await sha256Hex(bytes) : '');
       } catch {
         setText('');
       }

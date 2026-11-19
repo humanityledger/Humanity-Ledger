@@ -59,7 +59,12 @@ export interface GrantRow {
   valueSource: string;
 }
 
-const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+/** A spreadsheet runs a cell that starts with = + - @ (or a tab or CR) as a formula: such a cell is prefixed with ' (R2-4). */
+const neutral = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v);
+const csvCell = (raw: string) => {
+  const v = neutral(raw);
+  return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+};
 
 /** One line per grant, oldest first, for the tax adviser. */
 export function grantsCsv(rows: GrantRow[]): string {

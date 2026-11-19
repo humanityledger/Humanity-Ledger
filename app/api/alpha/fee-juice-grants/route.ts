@@ -87,17 +87,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'The network could not be read.' }, { status: 502, headers: NO_STORE });
   }
   if (block === null) return NextResponse.json({ error: 'That transaction was not found, or it did not succeed.' }, { status: 400, headers: NO_STORE });
-  const row = await prisma.feeJuiceGrant.create({
-    data: {
-      recipientAztecAddress: body.recipientAztecAddress!.toLowerCase(),
-      amount: body.amount!,
-      network: body.network!,
-      txHash: body.txHash!.toLowerCase(),
-      block,
-      marketValueEur: body.marketValueEur!,
-      valueSource: body.valueSource!.trim().slice(0, 200),
-      recordedBy: by,
-    },
-  });
-  return NextResponse.json({ grant: row }, { headers: NO_STORE });
+  // R2-3: the budget is checked again under a lock with the grant it admits, so two grants
+  // recorded together cannot pass it; a hash already recorded is a 409, not a 500.
+  try {
+    const row = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(72707371)`;
+      const rows = await tx.feeJuiceGrant.findMany({ select: { amount: true } });
+      const spentNow = rows.reduce((s, r) => s + parseUnits(r.amount, FEE_JUICE_DECIMALS), 0n);
+      const again = grantProblem(body, parseBudget(process.env.ALPHA_FEE_JUICE_BUDGET), spentNow);
+      if (again) return again;
+      return tx.feeJuiceGrant.create({
+        data: {
+          recipientAztecAddress: body.recipientAztecAddress!.toLowerCase(),
+          amount: body.amount!,
+          network: body.network!,
+          txHash: body.txHash!.toLowerCase(),
+          block: block!,
+          marketValueEur: body.marketValueEur!,
+          valueSource: body.valueSource!.trim().slice(0, 200),
+          recordedBy: by,
+        },
+      });
+    });
+    if (typeof row === 'string') return NextResponse.json({ error: row }, { status: 400, headers: NO_STORE });
+    return NextResponse.json({ grant: row }, { headers: NO_STORE });
+  } catch (e) {
+    if ((e as { code?: string })?.code === 'P2002') return NextResponse.json({ error: 'That transaction is already recorded.' }, { status: 409, headers: NO_STORE });
+    throw e;
+  }
 }
