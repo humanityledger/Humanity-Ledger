@@ -22,6 +22,8 @@ describe('delivery diagnostics', () => {
     expect(chat).toMatch(/diag\('recv', \{/);
     expect(chat).toMatch(/diag\('stream_ended'/);
     expect(chat).toMatch(/diag\('stream_restart'/);
+    expect(chat).toMatch(/kind: signalKind,/);
+    expect(chat).toMatch(/diag\('shown', \{/);
   });
   it('the stream, the client and every send leave events; the server accepts the new problem kinds', () => {
     const client = readFileSync('lib/xmtp/client.ts', 'utf8');
