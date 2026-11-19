@@ -4532,7 +4532,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
             // One event per message received (lib/xmtp/diag.ts): never its content, ids shortened.
+            // `kind` is only the protocol marker of a signal (READ, DELIVERED, TYPING, CALL_…) or
+            // "chat" for a message a person wrote, so a receipt is never mistaken for a reply.
+            const signalKind = typeof content === 'string'
+              ? (/^__([A-Z_]{2,24}?)__/.exec(content)?.[1] ?? 'chat')
+              : 'other';
             diag('recv', {
+              kind: signalKind,
               conv: short(convoId), msg: short(realId), fromPeer,
               peer: resolvedPeerAddr ? short(resolvedPeerAddr) : 'unresolved',
               type: String(msg.contentType?.typeId ?? (typeof msg.content)).slice(0, 24),
@@ -4926,6 +4932,12 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 if (msgConvPeer) push.notifyIfHidden(msgConvPeer, mappedContent || content);
               }
 
+              // The message is put in the chat's list under this peer key; it is on screen when the
+              // key is the open chat's.
+              diag('shown', {
+                msg: short(realId), fromPeer, peer: short(msgConvPeer),
+                openChat: String(msgConvPeer).toLowerCase() === (activePeerRef.current?.toLowerCase() ?? ''),
+              });
               setMessages(prev => {
                 // Guard: if real ID already in list (can happen on reconnect), skip
                 if (prev.some(m => m.id === realId)) return prev;
