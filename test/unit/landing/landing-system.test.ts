@@ -140,4 +140,12 @@ describe('the scroll engine cross-fades pinned scenes', () => {
     expect(css).toMatch(/@property --in \{ syntax: '<number>'; inherits: false; initial-value: 1; \}/);
     expect(css).toMatch(/opacity: var\(--in\)/);
   });
+
+  it('on phones and touch screens the scenes do not overlap and every pin is opaque', () => {
+    const block = /@media \(max-width: 899px\), \(pointer: coarse\) \{([^}]*\}){3}\s*\}/.exec(css)?.[0] ?? '';
+    expect(block).toMatch(/\.scene \+ \.scene \{ margin-top: 0; \}/);
+    expect(block).toMatch(/\.pin \{ opacity: 1; \}/);
+    // the hand film stays until the live phone has loaded
+    expect(css).toMatch(/\.hero \.pin:has\(\.heroPhone \.phoneHold\) \.frame \{ opacity: 1;/);
+  });
 });
