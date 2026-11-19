@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { checkAlphaConfig } from '../../../scripts/aztec/check-alpha-config.mjs';
 import {
-  ASSETS_SENTENCE, CUSDC_GATES, PLANNED_TOKENS, TEST_TOKEN_NOTE, cusdcReady, isTestToken, roleOf,
+  ASSETS_SENTENCE, CUSDC_GATES, PLANNED_TOKENS, TEST_TOKEN_NOTE, cusdcReady, isTestToken, roleOf, withoutGatedTokens,
 } from '@/lib/payments/assets';
 
 const record = JSON.parse(fs.readFileSync('deployments/aztec-mainnet.json', 'utf8'));
@@ -39,10 +39,24 @@ describe('payment assets (PA-1)', () => {
   });
 
   it('cUSDC stays off while any gate is unmet', () => {
-    expect(CUSDC_GATES.map((g) => g.id)).toEqual(['legal', 'entity', 'onchain', 'alpha', 'operator']);
+    expect(CUSDC_GATES.map((g) => g.id)).toEqual(['legal', 'entity', 'onchain', 'alpha', 'operator', 'issuerWrittenClassification', 'legalNoteNotCasp', 'sanctionsPolicy', 'insurance']);
     expect(cusdcReady()).toBe(false);
     expect(cusdcReady(CUSDC_GATES.map((g) => ({ ...g, met: true })))).toBe(true);
     expect(cusdcReady(CUSDC_GATES.map((g, i) => ({ ...g, met: i !== 0 })))).toBe(false);
+  });
+
+  it('the wallet never lists cUSDC while any gate is false, even if configured', () => {
+    const c = PLANNED_TOKENS[0];
+    const hlc = { symbol: 'HLC', address: '0x' + '11'.repeat(32) };
+    const cusdc = { symbol: c.symbol, address: c.address };
+    expect(withoutGatedTokens([hlc, cusdc])).toEqual([hlc]);
+    expect(withoutGatedTokens([hlc, { ...cusdc, symbol: 'X' }])).toEqual([hlc]); // by address too
+    for (let i = 0; i < CUSDC_GATES.length; i++) {
+      const gates = CUSDC_GATES.map((g, j) => ({ ...g, met: j !== i }));
+      expect(withoutGatedTokens([hlc, cusdc], gates), CUSDC_GATES[i].id).toEqual([hlc]);
+    }
+    expect(withoutGatedTokens([hlc, cusdc], CUSDC_GATES.map((g) => ({ ...g, met: true })))).toEqual([hlc, cusdc]);
+    expect(fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8')).toMatch(/tokens: withoutGatedTokens\(/);
   });
 
   it('the build check refuses cUSDC if someone configures it before it is recorded in tokens', () => {

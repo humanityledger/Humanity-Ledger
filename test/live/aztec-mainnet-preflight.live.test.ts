@@ -132,6 +132,29 @@ describe.skipIf(!LIVE)(`Aztec Alpha mainnet preflight (${NODE_URL})`, () => {
     }, 180_000);
   }
 
+  // Planned tokens (cUSDC, package 6): read-only evidence for verifiedOnChain, which only changes in
+  // a PR. Reported, never required: the instance, its class, and name and decimals read with the
+  // standard Token slots (if cUSDC uses another contract, the read says so instead of failing).
+  for (const p of ((record as any).plannedTokens ?? []) as Array<{ symbol: string; address: string; name: string; decimals: number }>) {
+    it(`planned ${p.symbol} at ${p.address.slice(0, 10)}…: instance, class, name and decimals (evidence only)`, async () => {
+      const n: any = await node();
+      const { AztecAddress } = await import('@aztec-labs/aztec.js/addresses');
+      const { Fr } = await import('@aztec-labs/aztec.js/fields');
+      const { TokenContractArtifact } = (await import('@aztec-labs/noir-contracts.js/Token')) as any;
+      const { readTokenMeta } = await import('@/lib/aztec/token-meta');
+      const addr = AztecAddress.fromStringUnsafe(p.address);
+      const instance: any = await n.getContract(addr).catch(() => undefined);
+      report.push(`planned ${p.symbol}: instance ${instance ? 'found' : 'NOT FOUND'}${instance ? `, class ${instance.currentContractClassId.toString()}, deployer ${instance.deployer?.toString?.() ?? 'unknown'}` : ''}`);
+      if (!instance) return;
+      try {
+        const meta = await readTokenMeta(TokenContractArtifact, async (slot) => BigInt((await n.getPublicStorageAt('latest', addr, new Fr(slot))).toString()));
+        report.push(`planned ${p.symbol}: name "${meta.name}" (recorded "${p.name}"), symbol "${meta.symbol}", decimals ${meta.decimals} (recorded ${p.decimals})`);
+      } catch (e) {
+        report.push(`planned ${p.symbol}: metadata not readable with the standard Token slots (${e instanceof Error ? e.message : 'error'})`);
+      }
+    }, 180_000);
+  }
+
   // R1: the transactions of the first private payment are mined, and in which block.
   const fpp = (record as any).firstPrivatePayment as undefined | { txs: Array<{ step: string; txHash: string; block: number }> };
   for (const tx of fpp?.txs ?? []) {
