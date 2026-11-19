@@ -27,18 +27,11 @@ const NETWORK = networkLabel();
 const NOTICE = (process.env.NEXT_PUBLIC_STATUS_NOTICE || '').trim();
 const IMG = '/media/landing/mobile';
 
-/** The order of the story, the same as the desktop page. Its length is the "/ 15" of every index. */
-const ORDER = ['hero', 'hi', 'enc', 'name', 'pay', 'record', 'eth', 'calls', 'live', 'features', 'how', 'protects', 'open', 'faq', 'devices'] as const;
-type Key = (typeof ORDER)[number];
-const pad = (n: number) => String(n).padStart(2, '0');
+type Key = keyof typeof C.EYEBROWS;
 
+/** The eyebrow over a title: what the section is about, never a slide number. */
 function Kicker({ k }: { k: Key }) {
-  return (
-    <p className={s.kicker}>
-      <span className={s.index}>{pad(ORDER.indexOf(k) + 1)} / {pad(ORDER.length)}</span>
-      <span>{C.EYEBROWS[k]}</span>
-    </p>
-  );
+  return <p className={s.kicker}>{C.EYEBROWS[k]}</p>;
 }
 
 /** A headline with one violet emphasis. */
@@ -48,6 +41,47 @@ function Title({ parts, as: Tag = 'h2', id }: { parts: readonly string[]; as?: '
     <Tag id={id} className={Tag === 'h1' ? s.h1 : s.h2}>
       {a}<em>{em}</em>{b}
     </Tag>
+  );
+}
+
+/**
+ * A flow: what happens between two ends, drawn as bands joined by a labelled connector (the
+ * Settlement diagram, used in every section that explains a path). Every word comes from content.ts.
+ */
+type Step = { title: React.ReactNode; detail?: string; tone?: 'plain' | 'soft' | 'ink'; href?: string };
+function Flow({ label, steps, links }: { label: string; steps: Step[]; links: string[] }) {
+  return (
+    <ol className={s.flow} aria-label={label}>
+      {steps.map((st, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <li className={s.link}><span>{links[i - 1]}</span></li>}
+          <li className={`${s.band} ${st.tone === 'ink' ? s.bandInk : st.tone === 'soft' ? s.bandSoft : ''}`}>
+            {st.href ? (
+              <a href={st.href} target="_blank" rel="noopener noreferrer" className={s.bandTitle}>{st.title}<span aria-hidden="true"> ↗</span></a>
+            ) : (
+              <span className={s.bandTitle}>{st.title}</span>
+            )}
+            {st.detail && <span className={s.bandDetail}>{st.detail}</span>}
+          </li>
+        </React.Fragment>
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * A film, edge to edge at 4:5: the poster is the loop's first frame (AVIF, WebP), the loop fades in
+ * over it once it plays (Reveal.tsx), so nothing jumps. `children` sit on the film (a bubble).
+ */
+function Film({ name, alt, hero = false, children }: { name: 'hero' | 'typing'; alt: string; hero?: boolean; children?: React.ReactNode }) {
+  return (
+    <div className={`${s.film} ${hero ? s.filmHero : ''}`}>
+      <Pic hero={hero} name={name} widths={[480, 720, 1080]} w={1080} h={1350} sizes="100vw" alt={alt} className={s.media} />
+      <video data-loop className={s.loop} muted playsInline loop preload="none" aria-hidden="true" tabIndex={-1} width={1080} height={1350}>
+        <source src={`${IMG}/${name}-loop.mp4`} type="video/mp4" />
+      </video>
+      {children}
+    </div>
   );
 }
 
@@ -67,7 +101,7 @@ function Proof({ href, children }: { href: string; children: React.ReactNode }) 
 function Section({ k, id, title, lead, size, children }: { k: Key; id?: string; title: readonly string[]; lead?: string; size: number; children?: React.ReactNode }) {
   const titleId = `${k}-title`;
   return (
-    <section id={id} className={s.section} aria-labelledby={titleId} style={{ containIntrinsicSize: `auto ${size}px` }}>
+    <section id={id} className={s.section} aria-labelledby={titleId} style={{ containIntrinsicHeight: `auto ${size}px` }}>
       <div className={s.inner} data-reveal>
         <Kicker k={k} />
         <Title parts={title} id={titleId} />
@@ -171,7 +205,8 @@ export function MobileLanding() {
       {NOTICE && <p className={s.notice} role="status">{NOTICE}</p>}
 
       <main id="main-content">
-        {/* 01. Hero: the title, the line and the action are readable at first paint. */}
+        {/* Hero: the title, the line and the action are readable at first paint; the film follows,
+            edge to edge, and blends into the hero's own grey. */}
         <section className={s.hero} aria-labelledby="hero-title">
           <div className={s.heroCopy}>
             <Kicker k="hero" />
@@ -182,51 +217,67 @@ export function MobileLanding() {
               <a href="/chat" className={s.cta}>Open Ledger Chat</a>
               <a href="#how" className={s.ghost}>How it works</a>
             </div>
-            <p className={s.small}>{C.SETTLES}</p>
           </div>
-          <div className={s.heroMedia}>
-            <Pic hero name="hero" widths={[640, 960, 1280]} w={1280} h={720} sizes="(max-width: 480px) 100vw, 480px" alt="A hand holding a phone." className={s.media} />
-            <video data-loop className={s.loop} muted playsInline loop preload="none" aria-hidden="true" tabIndex={-1} width={720} height={406}>
-              <source src={`${IMG}/hand-loop-720.mp4`} type="video/mp4" />
-            </video>
-          </div>
+          <Film hero name="hero" alt="A hand holding a phone." />
+          <p className={s.settles}>{C.SETTLES}</p>
         </section>
 
-        {/* 02. Messages. */}
-        <Section k="hi" id="messages" title={C.SAY_HI.title} size={620}>
-          <div className={s.film}>
-            <Pic name="typing" widths={[640, 960]} w={960} h={506} sizes="(max-width: 480px) 100vw, 480px" alt="A thumb typing Hi how are you on a phone keyboard." className={s.media} />
-            <video data-loop className={s.loop} muted playsInline loop preload="none" aria-hidden="true" tabIndex={-1} width={720} height={380}>
-              <source src={`${IMG}/typing-loop-720.mp4`} type="video/mp4" />
-            </video>
-          </div>
-          <p className={s.bubble}><span>{C.SAY_HI.typed}</span></p>
+        {/* Messages: the typing film, the message it sends, and the path it takes. */}
+        <Section k="hi" id="messages" title={C.SAY_HI.title} size={1500}>
+          <Film name="typing" alt="A thumb typing Hi how are you on a phone keyboard.">
+            <p className={s.bubble}><span>{C.SAY_HI.typed}</span></p>
+          </Film>
+          <Flow
+            label="The path of a direct message"
+            links={['encrypted with MLS', 'encrypted with MLS']}
+            steps={[
+              { title: 'Your device', detail: C.STACK[0].detail },
+              { title: C.STACK[1].name, detail: C.STACK[1].detail, tone: 'ink', href: C.STACK[1].href },
+              { title: 'Their device', detail: C.FEATURES[0].items[0].body },
+            ]}
+          />
           <Proof href={C.FACT_SOURCES.messages}>Source: lib/xmtp</Proof>
         </Section>
 
-        {/* 03. Encryption: three layers, the message readable only at the ends. */}
-        <Section k="enc" title={C.ENCRYPTION.title} lead={C.ENCRYPTION.line} size={720}>
-          <ol className={s.layers}>
-            {C.ENCRYPTION.layers.map((l, i) => (
-              <li key={l}><span className={s.n}>{pad(i + 1)}</span><span>{l}</span>{i === 1 && <code aria-hidden="true">•••• •••• ••••</code>}</li>
-            ))}
-          </ol>
+        {/* Encryption: readable only at the two ends. */}
+        <Section k="enc" title={C.ENCRYPTION.title} lead={C.ENCRYPTION.line} size={900}>
+          <Flow
+            label="Where a message is readable"
+            links={['•••• •••• ••••', '•••• •••• ••••']}
+            steps={C.ENCRYPTION.layers.map((l, i) => ({ title: l, tone: i === 1 ? ('ink' as const) : i === 2 ? ('soft' as const) : ('plain' as const) }))}
+          />
           <Proof href="/docs/security-model">Security model</Proof>
         </Section>
 
-        {/* 04. Usernames. */}
-        <Section k="name" title={C.NAME.title} lead={C.NAME.line} size={460}>
-          <p className={s.field}><span className={s.at}>@</span>{C.NAME.handle}</p>
+        {/* Usernames. */}
+        <Section k="name" title={C.NAME.title} lead={C.NAME.line} size={760}>
+          <Flow
+            label="How a name opens a chat"
+            links={['your code']}
+            steps={[
+              { title: <><span className={s.at}>@</span>{C.NAME.handle}</>, detail: C.FEATURES[2].items[1].body },
+              { title: C.FEATURES[2].items[2].title, detail: C.FEATURES[2].items[2].body, tone: 'soft' },
+            ]}
+          />
         </Section>
 
-        {/* 05. Private payments on Aztec Network. */}
-        <Section k="pay" id="payments" title={C.PAYMENTS.title} lead={C.PAYMENTS.line} size={640}>
+        {/* Private payments: what stays on the device, what the chain sees, where it settles. */}
+        <Section k="pay" id="payments" title={C.PAYMENTS.title} lead={C.PAYMENTS.line} size={1100}>
+          <Flow
+            label="The path of a private payment"
+            links={['proof', 'settles']}
+            steps={[
+              { title: 'Your device', detail: C.PROTECTS.yes[1] },
+              { title: <Mark name="aztec" />, detail: C.FEE_PRIVACY.onChain, tone: 'ink' },
+              { title: <Mark name="ethereum" />, detail: C.STACK[3].detail, tone: 'soft' },
+            ]}
+          />
           <p className={s.note}>{C.FEE_PRIVACY.short}</p>
           <p className={s.small}>{C.PAYMENTS.small}</p>
           <Proof href={C.FACT_SOURCES.payments}>Record: deployments/aztec-mainnet.json</Proof>
         </Section>
 
-        {/* 06. The first private payment, on chain. */}
+        {/* The first private payment, on chain. */}
         <Section k="record" id="record" title={C.RECORD.title} size={1300}>
           <p className={s.date}>{NETWORK} · {C.FIRST_PAYMENT.date}</p>
           <ol className={s.timeline}>
@@ -236,7 +287,7 @@ export function MobileLanding() {
               <p>Test token, {C.FIRST_PAYMENT.tokenDecimals} decimals, no monetary value.</p>
               <Hash label="Contract" hash={C.FIRST_PAYMENT.token} />
             </li>
-            <li className={s.gap} aria-hidden="true">{blocks} blocks later</li>
+            <li className={s.gap}><span>{blocks} blocks later</span></li>
             <li>
               <p className={s.k}>L2 block {C.FIRST_PAYMENT.block.toLocaleString('en-US')}</p>
               <h3>First private payment from Ledger Chat</h3>
@@ -250,24 +301,35 @@ export function MobileLanding() {
           </p>
         </Section>
 
-        {/* 07. Aztec settles on Ethereum. */}
-        <Section k="eth" id="network" title={C.ETHEREUM.title} lead={C.ETHEREUM.small} size={620}>
-          <div className={s.bands}>
-            <p className={s.band}><Mark name="aztec" /><span>L2 · private state and notes</span></p>
-            <p className={s.proofTag} aria-hidden="true">proof</p>
-            <p className={`${s.band} ${s.bandEth}`}><Mark name="ethereum" /><span>L1 · chain {AZTEC_WALLET_CONFIG.l1ChainId}</span></p>
-          </div>
+        {/* Aztec settles on Ethereum. */}
+        <Section k="eth" id="network" title={C.ETHEREUM.title} lead={C.ETHEREUM.small} size={700}>
+          <Flow
+            label="Where Aztec settles"
+            links={['proof']}
+            steps={[
+              { title: <Mark name="aztec" />, detail: 'L2 · private state and notes' },
+              { title: <Mark name="ethereum" />, detail: `L1 · chain ${AZTEC_WALLET_CONFIG.l1ChainId}`, tone: 'soft' },
+            ]}
+          />
         </Section>
 
-        {/* 08. Calls. */}
-        <Section k="calls" title={C.CALLS.title} lead={C.CALLS.line} size={1080}>
+        {/* Calls. */}
+        <Section k="calls" title={C.CALLS.title} lead={C.CALLS.line} size={1500}>
           <div className={s.screen}>
             <Pic name="call" widths={[360, 540]} w={540} h={871} sizes="280px" alt="A group video call on a phone." className={s.callImg} />
           </div>
+          <Flow
+            label="The path of a call"
+            links={['DTLS-SRTP']}
+            steps={[
+              { title: 'Your device', detail: C.FEATURES[3].items[0].body },
+              { title: 'Their device', tone: 'soft' },
+            ]}
+          />
           <Proof href={C.FACT_SOURCES.calls}>Source: lib/calls</Proof>
         </Section>
 
-        {/* 09. Live: the real numbers, filled once when the page is idle. */}
+        {/* Live: the real numbers, filled once when the page is idle. */}
         <Section k="live" id="live" title={C.LIVE.title} lead={C.LIVE.method} size={760}>
           <dl className={s.stats}>
             <div><dt>Accounts</dt><dd data-live="accounts">–</dd><p>Wallets that have signed in.</p></div>
@@ -277,7 +339,7 @@ export function MobileLanding() {
           </dl>
         </Section>
 
-        {/* 10. What it does today. */}
+        {/* What it does today. */}
         <Section k="features" title={['Everything in ', 'one app', '.']} lead={C.NEXT_WAVE} size={1900}>
           {C.FEATURES.map((g) => (
             <div key={g.group} className={s.group}>
@@ -289,16 +351,13 @@ export function MobileLanding() {
           ))}
         </Section>
 
-        {/* 11. How it works. */}
-        <Section k="how" id="how" title={['From your device to ', 'Ethereum', '.']} lead="Four layers. Each one links to its code." size={1700}>
-          <ol className={s.stack}>
-            {C.STACK.map((x, i) => (
-              <li key={x.name}>
-                <span className={s.n}>{pad(i + 1)}</span>
-                <div><a href={x.href} target="_blank" rel="noopener noreferrer"><b>{x.name}</b></a><p>{x.detail}</p></div>
-              </li>
-            ))}
-          </ol>
+        {/* How it works: the four layers as one path, then the parts with their sources. */}
+        <Section k="how" id="how" title={['From your device to ', 'Ethereum', '.']} lead="Four layers. Each one links to its code." size={1800}>
+          <Flow
+            label="The four layers"
+            links={['messages', 'payments', 'settlement']}
+            steps={C.STACK.map((x, i) => ({ title: x.name, detail: x.detail, href: x.href, tone: i === 1 ? ('ink' as const) : i === 3 ? ('soft' as const) : ('plain' as const) }))}
+          />
           <dl className={s.spec}>
             {spec.map((r) => (
               <div key={r.k}><dt>{r.k}</dt><dd>{r.v}</dd><a href={r.href} target="_blank" rel="noopener noreferrer">Source</a></div>
@@ -313,7 +372,7 @@ export function MobileLanding() {
           )}
         </Section>
 
-        {/* 12. What it protects, and what not yet. */}
+        {/* What it protects, and what not yet. */}
         <Section k="protects" title={['What it protects. ', 'What not yet', '.']} size={900}>
           <h3 className={s.h3}>Protected</h3>
           <ul className={s.yes}>{C.PROTECTS.yes.map((x) => <li key={x}>{x}</li>)}</ul>
@@ -327,7 +386,7 @@ export function MobileLanding() {
           </p>
         </Section>
 
-        {/* 13. Built in the open, and what comes next. */}
+        {/* Built in the open, and what comes next. */}
         <Section k="open" title={['Built in the ', 'open', '.']} size={1300}>
           <dl className={s.spec}>
             {facts.map((f) => <div key={f.k}><dt>{f.k}</dt><dd>{f.v}</dd><a href={f.href} target="_blank" rel="noopener noreferrer">{f.src}</a></div>)}
@@ -336,10 +395,10 @@ export function MobileLanding() {
             {C.OPEN.map((o) => <a key={o.label} href={o.href} {...(o.href.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })}>{o.label}</a>)}
           </p>
           <h3 className={s.h3}>What comes next</h3>
-          <ol className={s.road}>{C.ROADMAP.map((r) => <li key={r.when}><b>{r.when}</b><p>{r.what}</p></li>)}</ol>
+          <Flow label="What comes next" links={['then', 'then']} steps={C.ROADMAP.map((r, i) => ({ title: r.when, detail: r.what, tone: i === 0 ? ('ink' as const) : ('plain' as const) }))} />
         </Section>
 
-        {/* 14. Questions: native disclosure, no script. */}
+        {/* Questions: native disclosure, no script. */}
         <Section k="faq" title={['Questions, ', 'answered', '.']} size={900}>
           <div className={s.faq}>
             {C.FAQ.map((f) => (
@@ -351,7 +410,7 @@ export function MobileLanding() {
           </div>
         </Section>
 
-        {/* 15. Every screen. */}
+        {/* Every screen. */}
         <Section k="devices" id="devices" title={['The same account on ', 'every screen', '.']} lead="Sign in with the same wallet and your conversations follow you. Proofs for private payments are made on the device you hold." size={760}>
           <ul className={s.devices}>{C.DEVICES.map((d) => <li key={d.name}><b>{d.name}</b><p>{d.how}</p></li>)}</ul>
         </Section>

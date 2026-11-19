@@ -63,7 +63,7 @@ describe('phone landing tree', () => {
   });
 
   it('sizes everything below the fold so the scroll never jumps', () => {
-    expect(css).toMatch(/\.section\s*\{[^}]*content-visibility:\s*auto[^}]*contain-intrinsic-size/);
+    expect(css).toMatch(/\.section\s*\{[^}]*content-visibility:\s*auto[^}]*contain-intrinsic-height/);
     const page = files.find((x) => x.f === 'MobileLanding.tsx')!.src;
     expect(page).toMatch(/fetchPriority: 'high'/);
     expect(page).toMatch(/loading: 'lazy'/);

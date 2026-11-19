@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phone landing, second pass (19 November 2026)
+
+- No slide numbers: each section opens with its eyebrow only.
+- Films edge to edge at 4:5, the same size and place in every section, with the poster being the
+  loop's first frame. The hero loop is seamless (forward and back) and blends into the hero.
+- Flow diagrams in the style of the settlement diagram: the path of a message, of a private payment,
+  of a call, the layers, usernames and the roadmap. All their words come from `lib/landing/content.ts`.
+- Skipped sections get an intrinsic height only (`contain-intrinsic-height`). The previous
+  `contain-intrinsic-size: auto <n>px` set an intrinsic width too.
+- `Vary` for `/` is set in `next.config.js`, because Next replaced the middleware's.
+
 ### Phone landing: a separate tree for iOS and Android (19 November 2026)
 
 - `/` now decides on the server, from the user agent or `Sec-CH-UA-Mobile` (`lib/landing/device.ts`),
