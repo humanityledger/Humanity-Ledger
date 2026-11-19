@@ -1,0 +1,63 @@
+# The landing must show content on every screen while scrolling, on an iPhone (WebKit), an
+# Android phone (Chromium) and a desktop, down and back up (reported 19/11/2026).
+
+name: Landing in WebKit
+
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'components/landing/**'
+      - 'app/page.tsx'
+      - 'app/globals.css'
+      - 'scripts/ui/landing-webkit.mjs'
+      - '.github/workflows/landing-webkit.yml'
+  pull_request:
+    paths:
+      - 'components/landing/**'
+      - 'app/page.tsx'
+      - 'scripts/ui/landing-webkit.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: landing-webkit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  landing:
+    # Playwright 1.49's WebKit system packages install on 22.04.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --legacy-peer-deps
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ZK_MODE: testnet
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+      - name: Playwright (WebKit and Chromium)
+        run: npm install --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps webkit chromium
+      - name: Scroll the landing like a finger
+        env:
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+        run: |
+          npx next start -p 3100 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
+          node scripts/ui/landing-webkit.mjs http://localhost:3100 landing-shots
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-webkit
+          path: landing-shots
