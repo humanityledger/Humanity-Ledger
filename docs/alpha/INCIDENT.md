@@ -12,7 +12,10 @@ The contracts have no external audit (OD-10).
 
 ## First hour
 
-1. **Close the entrance.** Set `closedAlpha.enabled: false` in `deployments/aztec-mainnet.json` and deploy. New agreements are refused at once. Settling existing ones stays possible: the classes have no admin and no pause, so nothing can freeze them.
+1. **Close the entrance.**
+   - **Fastest (Stefan, Railway):** set `AZTEC_VALUE_MODE=exits-only` on the web service. Every new value action (send, issue, opening or accepting an agreement) asks the server first (`lib/aztec/value-mode.ts`) and is refused from the next attempt, with no deploy needed.
+   - **Then:** set `closedAlpha.enabled: false` in `deployments/aztec-mainnet.json`, in a PR Stefan merges.
+   - Settling existing agreements stays possible. `actOnAgreement` (claim, refund, withdraw, cancel) does not ask the value mode, and the classes have no admin and no pause, so nothing can freeze them.
 2. **Tell the testers.**
    - What happened, in one sentence.
    - That opening new agreements is closed.
@@ -42,3 +45,18 @@ The rehearsal date and transaction hashes are recorded here.
 | Rehearsal | Date | Transactions |
 |---|---|---|
 | Test network | not yet run | — |
+
+### Drill 1: tabletop, 19/11/2026 (package 6)
+
+This was run by the agent against the code and documents only. **No transaction was sent and no switch was changed.**
+
+| Step | Checked against | Result |
+| --- | --- | --- |
+| Detect | `/api/status/alpha`, `/status` and the "Alpha alerts" workflow (every 30 min) | Payment failures above 10 % of 5 or more attempts, send failures above 5 % of 20 or more reports, and a node whose block number has not moved for 10 min all raise an alert (`test/unit/ops/alerts.test.ts`). |
+| Close (fast) | `assertNewValueAllowed` in `lib/aztec/wallet/client.ts` and `lib/aztec/chat-agreements.ts` | Send, issue, deploy, open and accept ask the server mode. `actOnAgreement` does not, so exits stay open. |
+| Close (record) | `lib/alpha/gate.ts` | **Finding:** `closedAlphaDecision` (enabled, until, member, risk acknowledgement) was not called by any opening path. Only the recorded-deployment check in `checkAgreementPolicy` applied. Fixed in package 7: the gate is enforced before an agreement is opened on Alpha. |
+| Settle | TXE tests: refund at the maximum, cancel never refused, withdrawal after cancel refused | Covered in `contracts/aztec/*/src/test.nr`. |
+| Record | `docs/alpha/incidents/<date>.md` | Template steps above. |
+
+**Still to do (testnet drill):** close, refund an open escrow, cancel a stream, then reopen. Record the transaction hashes here from the "Aztec escrow e2e" run, which is queued.
+

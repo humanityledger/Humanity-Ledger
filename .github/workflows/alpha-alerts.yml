@@ -1,0 +1,31 @@
+name: Alpha alerts
+# Package 6: reads the measured status (GET /api/status/alpha, public, read-only) every 30 minutes
+# and fails when it raises an alert: payment failures, message delivery failures, or an Aztec Alpha
+# node whose block number stopped moving. A failed scheduled run notifies the repository's
+# watchers. Nothing is written anywhere.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: alpha-alerts
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read /api/status/alpha
+        env:
+          STATUS_URL: ${{ vars.ALPHA_STATUS_URL || 'https://ledgerchat.org/api/status/alpha' }}
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS --max-time 30 "$STATUS_URL")
+          echo "$body" | jq '{measuredAt, payments, delivery, node, alerts}'
+          n=$(echo "$body" | jq '.alerts | length')
+          if [ "$n" -gt 0 ]; then
+            echo "$body" | jq -r '.alerts[] | "::error title=\(.key)::\(.detail)"'
+            exit 1
+          fi
