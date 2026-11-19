@@ -21,6 +21,8 @@
     "until": null,
     "scope": "value",
     "maxTesters": 50,
+    "$distributorComment": "Who distributes HLC to testers (MiCA art. 4(1)(a); preliminary legal note, A.2; decision D-3). null: nobody can create invitation codes, redeem them or issue HLC (lib/alpha/rules.mjs). Stefan fills it in a PR of his own once counsel decides: { kind: 'company', legalName, taxId, registry } or { kind: 'natural-person', legalNote: { ref, signedBy, signedOn } }.",
+    "distributor": null,
     "classes": [
       "0x165090de7e22e636ed3c392069f26895eca9600c5355d5766265b84d59c6f143",
       "0x0f2ba459de8636b73e86365de0d9a8d775b3b82bc47f39333dd17deeef6fc1e3"
@@ -35,6 +37,8 @@
       "name": "Humanity Ledger Corp.",
       "role": "test",
       "monetaryValue": "none",
+      "renamePending": true,
+      "$renamePendingComment": "The on-chain name sets out a company that does not exist (preliminary legal note, 19/11/2026, A.4). Stefan deploys a new instance named as HLC_TOKEN_META in lib/payments/assets.ts (docs/alpha/HLC_REDEPLOY_RUNBOOK.md); once the read-only preflight confirms it, this instance moves to retiredTokens and the new one replaces it here. Until then the preflight checks that the on-chain name equals the recorded name.",
       "decimals": 6,
       "address": "0x1f49571a48699da4e70e1b7dbc5afcea5bb712f7b2cfaf432353e694851e24e5",
       "admin": "0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42",

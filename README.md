@@ -20,7 +20,7 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 * The Ethereum portal and receiver addresses (added 17 November 2026) are written and tested in CI and **deployed nowhere**. The wallet says so and moves no money through them.
 * Passkeys open the private wallet by unwrapping the same account root the Ethereum wallet signs. Whoever holds an enrolled passkey can spend, exactly like whoever holds the wallet.
 * Community posts are not end-to-end encrypted. Our server can read them, and the app says so on the community screen.
-* HLC is a token issued by the operator. It is uncapped, unbacked and is not money.
+* HLC is a test token with no monetary value, issued by the operator only to test private payments in the closed alpha. It is never sold or offered (decision PA-1). Real payments are planned in cUSDC, issued by human.tech, and stay off ([`lib/payments/assets.ts`](lib/payments/assets.ts)).
 * Humanity Ledger is not affiliated with, endorsed by or audited by Aztec Labs, the Aztec Foundation or XMTP Labs.
 
 ---
@@ -207,7 +207,7 @@ through a fee link. No sponsor contract, route or client path remains in the cod
 | Admin | `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` | `0x01c7e18f1751ea94e3d63aad2d0b7221642ad299454f769103f0d32364ce549b` |
 | Why | Deployed from the Ledger Chat private wallet, universal deployment | Nobody holds the key of its admin account, so it can never be issued |
 
-Name "Humanity Ledger Corp.", symbol HLC, 6 decimals. The wallet keeps HLC in an internal slot named `USDC`; that name is never shown to users and HLC has no relation to USDC.
+Name "Humanity Ledger Corp.", symbol HLC, 6 decimals. That name suggests a company that does not exist, so a new instance named "HLC Test Token" is prepared ([`docs/alpha/HLC_REDEPLOY_RUNBOOK.md`](docs/alpha/HLC_REDEPLOY_RUNBOOK.md)). The wallet keeps HLC in an internal slot named `USDC`; that name is never shown to users and HLC has no relation to USDC.
 
 ---
 

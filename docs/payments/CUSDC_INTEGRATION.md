@@ -44,6 +44,17 @@ Each step is a pull request on a `claude/` branch. Stefan merges it. No agent si
 7. **Words:** the wallet labels cUSDC "Issued by human.tech" and links to Shield to bridge in and out. The landing FAQ answer changes from "planned" to "available" only in this PR.
 8. **Gate `alpha`:** the HLC alpha has finished within the targets in `docs/alpha/TESTER_MISSIONS.md`.
 
+## Gate 3 of the preliminary legal note (added 19/11/2026)
+
+Four more gates in `CUSDC_GATES`, all unmet:
+
+- `issuerWrittenClassification`: human.tech answers in writing how cUSDC qualifies under MiCA, which entity issues it, and who guarantees redemption 1:1.
+- `legalNoteNotCasp`: counsel confirms that the integration does not make the company a crypto-asset service provider or a payment service provider.
+- `sanctionsPolicy`: a written policy on users from sanctioned countries, and how it is applied.
+- `insurance`: professional liability and cyber insurance in force.
+
+While any gate is unmet, the wallet drops cUSDC from its token list even if it is configured (`withoutGatedTokens` in `lib/payments/assets.ts`, applied in `lib/aztec/wallet/config.ts`). The read-only preflight reports the cUSDC instance, its class, name and decimals as evidence. `verifiedOnChain` changes only in a PR.
+
 ## What stays true after the switch
 
 - HLC remains a test token. It is either kept as a "test mode" or removed from the wallet. It is never converted into anything.

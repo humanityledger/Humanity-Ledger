@@ -253,4 +253,10 @@ export const MEDIA = {
  * public/brand/ with its source and download date in public/brand/README.md. Until then the
  * landing writes the name in plain text: no redrawn or approximated logo.
  */
-export const BRAND_FILES: { aztec: string | null; ethereum: string | null } = { aztec: '/brand/aztec/aztec-wordmark-ink.svg', ethereum: '/brand/ethereum/eth-diamond-black.svg' };
+/**
+ * Third-party marks shown on the landing. Every file here has an entry in public/brand/README.md
+ * with its source, download date and conditions (test/unit/landing/brand-files.test.ts).
+ * Aztec: null, so the landing writes "Aztec Network" in text, until Aztec's brand rules for this
+ * use are in writing (decision D-1, 19/11/2026).
+ */
+export const BRAND_FILES: { aztec: string | null; ethereum: string | null } = { aztec: null, ethereum: '/brand/ethereum/eth-diamond-black.svg' };

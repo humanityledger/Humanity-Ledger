@@ -54,7 +54,9 @@ import { feeRunway } from '@/components/zk/wallet/walletLogic';
 
 export { feeRunway };
 import { ReceiveView, SendFlow, ShieldFlow, symbolOf } from '@/components/zk/wallet/WalletSheets';
-import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
+import { HLC_TOKEN_META, isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
+import { distributionDecision, type ClosedAlphaEntry } from '@/lib/alpha/gate';
+import mainnetRecord from '../../deployments/aztec-mainnet.json';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -354,6 +356,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
 
                   {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
                   {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#r1' && <FirstPayment disabled={state.busy} />}
+                  {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#hlc-deploy' && <DeployHlcTestToken disabled={state.busy} />}
                   {ALPHA && state.phase === 'ready' && <IssueTokens disabled={state.busy} />}
 
                   <p className="px-2 pb-2 text-center text-[13px] leading-relaxed" style={{ color: INK_3 }}>
@@ -602,6 +605,9 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
   if (!wallet || keys.length === 0) return null;
   const key = keys[0];
   const sym = symbolOf(key);
+  // Package 3: on Alpha, nothing is issued for testers while no distributor of HLC is recorded.
+  const distribution = ALPHA ? distributionDecision((mainnetRecord as { closedAlpha?: ClosedAlphaEntry }).closedAlpha) : { ok: true as const };
+  const blocked = distribution.ok ? '' : distribution.reasons[0];
   const decimals = AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.decimals ?? 18;
   const run = async () => {
     setBusy(true);
@@ -631,13 +637,60 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
         />
         <button
           type="button"
-          disabled={disabled || busy || !amount}
+          disabled={disabled || busy || !amount || !!blocked}
           onClick={run}
           className={`min-h-[48px] px-5 rounded-2xl bg-[#15171c] text-white text-[15px] font-semibold disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
         >
           {busy ? 'Issuing…' : 'Issue'}
         </button>
       </div>
+      {blocked && (
+        <div className="mt-2">
+          <Notice tone="bad">{blocked}</Notice>
+        </div>
+      )}
+    </ToolCard>
+  );
+}
+
+/** Operator only (#hlc-deploy): deploys the HLC Test Token and nothing else. Runbook: docs/alpha/HLC_REDEPLOY_RUNBOOK.md. */
+function DeployHlcTestToken({ disabled }: { disabled: boolean }) {
+  const { wallet } = useAztecWallet('');
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<{ token: string; txHash?: string; resumed?: boolean } | null>(null);
+  const [err, setErr] = useState('');
+  if (!wallet) return null;
+  const run = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const r = await wallet.deployHlcTestToken(HLC_TOKEN_META, (info) => setRes((x) => ({ ...x, ...info })));
+      setRes({ token: r.token, txHash: r.deployTx, resumed: r.resumed });
+      toast.success(r.resumed ? 'Already deployed from this device: nothing was sent.' : 'HLC Test Token deployed. Give the hash to the preflight.');
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <ToolCard title="Deploy HLC Test Token (operator)">
+      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
+        Deploys a standard Token named {HLC_TOKEN_META.name}, symbol {HLC_TOKEN_META.symbol}, {HLC_TOKEN_META.decimals} decimals, with this account as admin. One transaction,
+        paid in Fee Juice. It issues nothing. Then copy the hash for the read-only preflight.
+      </p>
+      <div className="mt-2">
+        <PrimaryButton disabled={disabled} busy={busy} onClick={run}>
+          {busy ? 'Deploying…' : `Deploy ${HLC_TOKEN_META.name}`}
+        </PrimaryButton>
+      </div>
+      {res?.token && <CopyKV k="Token" v={res.token} />}
+      {res?.txHash && <CopyKV k="Deploy hash" v={res.txHash} />}
+      {err && (
+        <div className="mt-2">
+          <Notice tone="bad">{err}</Notice>
+        </div>
+      )}
     </ToolCard>
   );
 }
@@ -655,7 +708,7 @@ function FirstPayment({ disabled }: { disabled: boolean }) {
     setLog([]);
     try {
       await wallet.firstPaymentWithNewToken(
-        { name: 'Humanity Ledger Corp.', symbol: 'HLC', decimals: 6, mint: '1', pay: '0.10', to: to.trim() },
+        { ...HLC_TOKEN_META, mint: '1', pay: '0.10', to: to.trim() },
         (step, info) => setLog((l) => [...l, { step, ...info }]),
       );
       toast.success('First private payment settled on Aztec Alpha.');

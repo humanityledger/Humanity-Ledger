@@ -201,69 +201,10 @@ export const brand: DocPage = {
         },
       ],
     },
-    { t: "h2", text: "Aztec Network marks", id: "aztec" },
+    { t: "h2", text: "Aztec Network", id: "aztec" },
     {
       t: "p",
-      text: "Private payments in Ledger Chat settle on Aztec Network. When we show that, we use the Aztec marks exactly as Aztec supplies them on [aztec.network/brand](https://aztec.network/brand). The marks belong to Aztec. Ledger Chat is an independent application and showing the marks does not mean Aztec endorses it.",
-    },
-    {
-      t: "defs",
-      items: [
-        {
-          term: "Two marks, used apart",
-          text: "The symbol and the wordmark are separate assets for separate places. Never set them together, and never join either of them to the Humanity Ledger logo as a single lockup.",
-        },
-        {
-          term: "Surface",
-          text: "The wordmark is ink (#141900) on light surfaces and paper (#FFF9F2) on dark ones. The symbol keeps its gradient on both.",
-        },
-        {
-          term: "Size and room",
-          text: "Never narrower than 60px on screen or 20mm in print, with clear space on every side.",
-        },
-        {
-          term: "Unchanged",
-          text: "No other colors, outlines, shadows or effects, and no stretching, rotating or type set inside them.",
-        },
-      ],
-    },
-    {
-      t: "gallery",
-      columns: 2,
-      items: [
-        {
-          src: "/brand/aztec/aztec-wordmark-ink.svg",
-          width: 619,
-          height: 143,
-          alt: "Aztec wordmark in ink",
-          caption: "Wordmark, ink, for light surfaces.",
-          surface: "paper",
-        },
-        {
-          src: "/brand/aztec/aztec-wordmark-paper.svg",
-          width: 619,
-          height: 143,
-          alt: "Aztec wordmark in paper",
-          caption: "Wordmark, paper, for dark surfaces.",
-          surface: "ink",
-        },
-        {
-          src: "/brand/aztec/aztec-symbol.svg",
-          width: 207,
-          height: 207,
-          alt: "Aztec symbol with its gradient",
-          caption: "Symbol, gradient, on dark.",
-          surface: "ink",
-        },
-        {
-          src: "/brand/aztec/aztec-symbol-ink.svg",
-          width: 207,
-          height: 207,
-          alt: "Aztec symbol in ink",
-          caption: "Symbol, single color ink.",
-          surface: "paper",
-        },
-      ],
+      text: "Private payments in Ledger Chat settle on Aztec Network. We name it in text, \"Aztec Network\", with a link to [aztec.network](https://aztec.network). We do not reproduce the Aztec marks until we have Aztec's brand rules in writing for this use (decision D-1, 19/11/2026). Aztec Network is a trademark of its owner. Ledger Chat is not made, endorsed or operated by Aztec.",
     },
     { t: "h2", text: "Mobile interface benchmarks" },
     {

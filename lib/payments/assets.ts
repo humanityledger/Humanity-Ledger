@@ -19,6 +19,14 @@ import registry from '../../deployments/aztec-mainnet.json';
 
 export type AssetRole = 'test' | 'real' | 'fees';
 
+/**
+ * The on-chain metadata of the HLC Test Token (decision D-2, 19/11/2026). The standard Token sets
+ * name, symbol and decimals in its constructor, so a new name needs a new instance: the operator
+ * deploys it with these values (docs/alpha/HLC_REDEPLOY_RUNBOOK.md) and the read-only preflight
+ * checks them on the node. The name has no company form: no company exists yet.
+ */
+export const HLC_TOKEN_META = { name: 'HLC Test Token', symbol: 'HLC', decimals: 6 } as const;
+
 /** The words shown next to HLC wherever an amount of it appears. */
 export const TEST_TOKEN_NOTE = 'Test token · no monetary value';
 
@@ -67,9 +75,24 @@ export const CUSDC_GATES: readonly Gate[] = [
   { id: 'onchain', label: 'The cUSDC address read from Shield is confirmed on the Aztec v6 node by the read-only preflight (class and instance)', met: false, evidence: 'none yet' },
   { id: 'alpha', label: 'Closed alpha with HLC finished: delivery and payment metrics within their targets (docs/alpha/TESTER_MISSIONS.md)', met: false, evidence: 'none yet' },
   { id: 'operator', label: 'Stefan signs the switch-on, with a cap per payment in cUSDC', met: false, evidence: 'none yet' },
+  // Gate 3 of the preliminary legal note (19/11/2026, B.7 and the action plan):
+  { id: 'issuerWrittenClassification', label: 'Written answer from human.tech: how cUSDC qualifies under MiCA, which entity issues it, and who guarantees redemption 1:1', met: false, evidence: 'none yet' },
+  { id: 'legalNoteNotCasp', label: 'Note from counsel: the integration does not make the company a crypto-asset service provider or a payment service provider', met: false, evidence: 'none yet' },
+  { id: 'sanctionsPolicy', label: 'Policy on users from sanctioned countries (EU Regulation 833/2014 art. 5b and similar), with how it is applied', met: false, evidence: 'none yet' },
+  { id: 'insurance', label: 'Professional liability and cyber insurance in force for real payments', met: false, evidence: 'none yet' },
 ];
 
 export const cusdcReady = (gates: readonly Gate[] = CUSDC_GATES): boolean => gates.every((g) => g.met);
+
+/**
+ * The wallet's own guard: a planned token (cUSDC) is never listed while any gate is unmet, even if
+ * someone configures it. Applied in lib/aztec/wallet/config.ts.
+ */
+export function withoutGatedTokens<T extends { symbol: string; address: string }>(tokens: T[], gates: readonly Gate[] = CUSDC_GATES): T[] {
+  if (cusdcReady(gates)) return tokens;
+  const planned = new Set(PLANNED_TOKENS.flatMap((p) => [p.symbol.toLowerCase(), p.address.toLowerCase()]));
+  return tokens.filter((t) => !planned.has(t.symbol.toLowerCase()) && !planned.has(t.address.toLowerCase()));
+}
 
 /** The role of a recorded or planned symbol. */
 export function roleOf(symbol: string): AssetRole | null {

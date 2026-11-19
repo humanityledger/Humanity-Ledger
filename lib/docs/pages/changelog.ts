@@ -27,6 +27,9 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "security", text: "HLC is a test token with no monetary value, used only to test private payments in the closed alpha. It is never sold or offered, and the wallet says so next to every HLC balance. Real payments are planned in cUSDC, issued by human.tech, and stay off until a legal review and other conditions are met." },
+      { kind: "security", text: "The closed alpha admits a tester only after they accept the signed terms in three separate boxes, and after the operator's sanctions and age checks. Only the results of the checks are kept, and they are deleted 6 months after the alpha ends." },
+      { kind: "improved", text: "Aztec Network is named in text, with a link, until Aztec's brand rules for this use are in writing." },
       { kind: "fixed", text: "Landing: scrolling with the mouse or the finger no longer shows half-scrolled or empty frames. Each scene now fades in over the one before it, and on phones the words and the picture each have their own part of the screen." },
       { kind: "improved", text: "Landing: one design for the whole page, with a number and a label on every part, a sources line under each, a menu on phones, and the current section marked in the bar." },
       { kind: "fixed", text: "Appearance: Theme, Wallpaper and Bubbles each have their own space in the bar, with the number of options beside each name. The same fix keeps every tab bar in the app laid out as designed." },

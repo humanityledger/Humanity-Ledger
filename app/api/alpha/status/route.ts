@@ -1,6 +1,6 @@
 /**
  * /api/alpha/status — the signed-in wallet's closed alpha state.
- *   GET            { member, active, riskAcknowledged }
+ *   GET            { member, active, riskAcknowledged, terms: { version, sha256, url } }
  *   POST { ack: true }  records that the tester acknowledged the risks (consent screen)
  * Signed session only. Stores the time of the acknowledgement and nothing else.
  */
@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
   const w = await who(req);
   if (!w) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401, headers: NO_STORE });
   const m = await prisma.alphaMember.findUnique({ where: { walletAddress: w } });
-  return NextResponse.json({ member: !!m, active: !!m && !m.revokedAt, riskAcknowledged: !!m?.riskAckAt }, { headers: NO_STORE });
+  // The signed terms the redemption screen shows (package 4); empty until counsel signs (OD-8).
+  const terms = { version: process.env.ALPHA_TERMS_VERSION || '', sha256: (process.env.ALPHA_TERMS_SHA256 || '').toLowerCase(), url: process.env.ALPHA_TERMS_URL || '' };
+  return NextResponse.json({ member: !!m, active: !!m && !m.revokedAt, riskAcknowledged: !!m?.riskAckAt, terms }, { headers: NO_STORE });
 }
 
 export async function POST(req: NextRequest) {

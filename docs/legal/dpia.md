@@ -1,37 +1,43 @@
-# Evaluación de Impacto de Protección de Datos (DPIA)
+# Evaluación de impacto relativa a la protección de datos (EIPD), alpha cerrada
 
-> **Status (19/11/2026): internal draft, not in force.** It has not been reviewed by a lawyer (OD-8). The live texts are the pages at /docs (lib/docs/pages/legal.ts). Facts that override anything below: the controller is Stefan Antonio Cirisanu, a private individual (no company exists yet); there is no data protection officer and no external consultancy; the visit counter stores nothing in the browser since 19/11/2026.
+Estado: borrador interno, no vigente hasta la firma del abogado (OD-8) · Fecha: 19/11/2026 · Dueño: Stefan Antonio Cirisanu · Fuente de verdad: los textos vigentes son las páginas de /docs (`lib/docs/pages/legal.ts`)
 
-## Conforme al Artículo 35 del RGPD (Reglamento UE 2016/679)
+> Borrador preparado con Claude, pendiente de revisión por un abogado colegiado. Sustituye la versión anterior, que nombraba un DPO y una consultoría externa que no existen.
 
-**Responsable del Tratamiento:** Humanity Ledger  
-**Fecha:** Octubre 2026 | **Versión:** 2.0  
-**Evaluadores:** DPO / Consultoría Criptográfica Externa  
+## 1. Quién la hace y cuándo
 
----
+- **Responsable del tratamiento:** Stefan Antonio Cirisanu, persona física, hasta que exista la S.L. (`lib/constants/legalEntity.ts`). «Humanity Ledger» es un nombre comercial, no una entidad.
+- **Autor de este borrador:** preparado con Claude el 19/11/2026, pendiente de revisión por el abogado. No hay delegado de protección de datos: la ley no lo exige para este tamaño y actividad [verificar]. Hay un contacto de privacidad, el del aviso legal.
 
-## 1. Descripción Sistemática de las Operaciones de Tratamiento
-Humanity Ledger procesa interacciones entre usuarios en dos ámbitos sensibles:
-1. **Mensajería Instantánea Descentralizada:** Utiliza XMTP v3 con arquitectura MLS (Messaging Layer Security). Las comunicaciones 1:1 y grupales privadas están cifradas de extremo a extremo (E2EE). Los servidores de Humanity Ledger actúan como meros enlaces de interfaz sin almacenar mensajes ni poseer claves de descifrado.
-2. **Transferencias Financieras Privadas:** Emplea Aztec L2 sobre Ethereum. El cómputo de conocimiento cero (UltraHonk) se ejecuta en el navegador (PXE en WebAssembly). El servidor de Humanity Ledger no procesa cuantías, saldos ni identidades de contrapartes, registrando exclusivamente el hash de transacción de Capa 2 para confirmaciones de estado.
+## 2. Por qué hace falta (art. 35 RGPD)
 
----
+Tecnología nueva (pruebas de conocimiento cero en el dispositivo), registros en cadena que no se pueden borrar, pagos y comunicaciones. El CEPD recomienda evaluar el impacto antes de tratar datos con blockchain (Directrices 02/2025, v2.0, 7/7/2026).
 
-## 2. Necesidad y Proporcionalidad
-- **Minimización de Datos (Art. 5.1.c RGPD):** Se aplica privacidad por diseño y por defecto. No se recogen nombres reales, números telefónicos ni documentos de identidad gubernamentales salvo mandato legal específico.
-- **Limitación del Plazo de Conservación (Art. 5.1.e RGPD):** Los registros técnicos del servidor se depuran automáticamente cada 30 días o menos.
+## 3. Tratamientos
 
----
+| Dato | Finalidad | Base jurídica | Plazo |
+| --- | --- | --- | --- |
+| Dirección de wallet y sesión (SIWE) | Dar acceso a la cuenta | Contrato (art. 6.1.b RGPD) | Mientras la cuenta exista |
+| Nombre de usuario | Que otras personas te encuentren | Contrato | Mientras la cuenta exista; se libera al borrarla |
+| Nombre y contacto del tester | Gestionar la alpha | Contrato de tester | 8 semanas de alpha + 6 meses |
+| Aceptación de las condiciones (fecha y hash del texto) y comprobación de sanciones y edad (solo el resultado) | Demostrar la admisión en la alpha | Obligación y interés legítimo, a confirmar por el abogado | Hasta 6 meses después del fin de la alpha (`scripts/alpha/purge.mjs`) |
+| Publicaciones de comunidades (servidor, Railway) | Prestar la función de comunidades | Contrato | Hasta que el autor o la comunidad las borre |
+| Informes de entrega con identificadores recortados | Diagnosticar fallos de entrega | Interés legítimo (art. 6.1.f), con ponderación escrita pendiente | 30 días |
+| Registros técnicos y de seguridad | Proteger el servicio | Interés legítimo | 90 días |
+| Registro de entregas de Fee Juice | Documentar las entregas para Hacienda | Obligación legal | Plazo fiscal, a confirmar |
+| Mensajes directos | Ledger Chat no los ve: cifrados con MLS en el dispositivo | Sin tratamiento del contenido; metadatos en la red XMTP | Según XMTP |
 
-## 3. Evaluación de Riesgos para los Derechos y Libertades
-| Riesgo Identificado | Probabilidad | Gravedad | Medida de Mitigación Implementada |
-| :--- | :--- | :--- | :--- |
-| **Acceso no autorizado a conversaciones** | Muy Baja | Crítica | Cifrado E2EE con XMTP MLS; claves en IndexedDB con trinquete post-compromiso. |
-| **Trazabilidad de pagos en cadena** | Baja | Alta | zk-SNARKs UltraHonk ocultan remitente, destinatario y balance en Aztec L2. |
-| **Suplantación de identidad de cartera** | Muy Baja | Alta | Firma criptográfica SIWE (EIP-4361) con nonces de un solo uso en Redis. |
-| **Ataque de fuerza bruta contra PIN** | Muy Baja | Media | Argon2id con sal aleatoria de 16 bytes y bloqueo tras 8 intentos fallidos. |
+## 4. Riesgos y medidas
 
----
+| Riesgo | Medida | Riesgo residual |
+| --- | --- | --- |
+| Una dirección de wallet se vincula a una persona (tester con nombre, nombre de usuario) | Nada identificativo se escribe en Aztec ni en Ethereum; los nombres de usuario viven en el servidor | Medio |
+| Lo que está en cadena no se puede suprimir | Se avisa antes de actuar (condiciones y política); el diseño evita escribir datos personales en cadena | Medio |
+| Las publicaciones de comunidades no están cifradas de extremo a extremo | Se dice así en la política; acceso limitado al servidor | Medio |
+| Metadatos en la red XMTP (direcciones, momentos) | Explicarlo en la política; calificación de los operadores de nodos pendiente del abogado | Medio |
+| Transferencia a EE. UU. (Railway) | Acuerdo de encargo y base de la transferencia pendientes; valorar región UE (D-6) | Medio hasta firmar |
+| Almacenamiento en el navegador | Solo el necesario para funcionar; el contador de visitas ya no guarda nada (PR #176) | Bajo |
 
-## 4. Conclusión del DPO
-El tratamiento de datos es **conforme al RGPD** y presenta un nivel de riesgo residual bajo gracias a la arquitectura soberana y no custodia de la plataforma.
+## 5. Conclusión
+
+Pendiente de la revisión del abogado. Este borrador no concluye que el riesgo sea aceptable.

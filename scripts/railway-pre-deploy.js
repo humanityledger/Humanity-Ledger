@@ -30,6 +30,12 @@ for (const key of ['DATABASE_URL', 'DATABASE_URL_UNPOOLED']) {
 }
 
 const { extractObjects, decide } = require('../lib/db/migration-inspect.js');
+const { isLeakedLock, budgetLeft } = require('../lib/db/migrate-lock.js');
+
+// The app must listen before Railway's healthcheck window closes, so the pre-deploy has a budget
+// (PREDEPLOY_BUDGET_S, default 150 s). When it runs out the script stops waiting and start.sh boots
+// the app; /api/health reports the schema state (19/11/2026: the lock wait outlasted the window).
+const STARTED_AT = new Date();
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'prisma', 'migrations');
 const SUPERSEDED = path.join(__dirname, '..', 'prisma', 'superseded-migrations.json');
@@ -86,7 +92,9 @@ async function existingObjects(client) {
 }
 
 function cli(args) {
-  execSync(`npx prisma ${args}`, { stdio: 'inherit', timeout: 120000, env: CLI_ENV });
+  const left = budgetLeft(STARTED_AT, process.env.PREDEPLOY_BUDGET_S);
+  if (left < 5000) throw new Error('pre-deploy budget exhausted');
+  execSync(`npx prisma ${args}`, { stdio: 'inherit', timeout: Math.min(120000, left), env: CLI_ENV });
 }
 
 function sha256File(file) {
@@ -220,19 +228,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * server connection kept open by PgBouncer after a migrate that went through it in transaction
  * mode (12 Nov 2026), which keeps every later deploy from migrating until PgBouncer recycles it.
  * Only that session is ended (pg_terminate_backend; PgBouncer opens a new one on demand), and only
- * when it is idle (not running a query, not inside a transaction) for at least LEAKED_IDLE_S.
+ * when lib/db/migrate-lock.js says it is a leak: idle for LEAKED_IDLE_S, or the same session not
+ * running anything at two checks in a row and connected before this pre-deploy began.
  */
-const LEAKED_IDLE_S = 120;
-async function releaseLeakedLock(databaseUrl, holder) {
-  if (!holder || holder.state !== 'idle' || !(holder.idle_s >= LEAKED_IDLE_S)) return false;
+async function releaseLeakedLock(databaseUrl, holder, previous) {
+  if (!isLeakedLock(holder, previous, STARTED_AT)) return false;
   try {
     return await withClient(databaseUrl, async (c) => {
+      // Re-checked in the same statement: never end a session that is running a query now.
       const { rows } = await c.query(
         `SELECT pg_terminate_backend(a.pid) AS ended
            FROM pg_stat_activity a
-          WHERE a.pid = $1 AND a.state = 'idle' AND now() - a.state_change >= make_interval(secs => $2)
+          WHERE a.pid = $1 AND a.state <> 'active'
             AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'advisory' AND l.granted AND l.objid = 72707369)`,
-        [holder.pid, LEAKED_IDLE_S],
+        [holder.pid],
       );
       return Boolean(rows[0] && rows[0].ended);
     });
@@ -254,9 +263,14 @@ async function main() {
   const seen = new Set();
   let lockWaits = 0;
   let lockWaited = false;
+  let previousHolder = null;
   // Each round: resolve what failed from the real schema, then deploy. A migration that fails is
   // inspected in the next round; one that fails twice, or is partly applied, stops the deploy.
   for (let round = 1; round <= 30; round++) {
+    if (budgetLeft(STARTED_AT, process.env.PREDEPLOY_BUDGET_S) < 5000) {
+      console.error('[pre-deploy] FATAL: the pre-deploy budget ran out before migrations finished; the app starts on the current schema so the healthcheck can pass. Set DATABASE_URL_UNPOOLED to ${{Postgres.DATABASE_URL}} in Railway and redeploy.');
+      process.exit(1);
+    }
     const url = process.env.DATABASE_URL_UNPOOLED || databaseUrl;
     const settled = await settleSupersededMigrations(url);
     const resolved = await resolveFailedMigrations(url, seen);
@@ -278,12 +292,15 @@ async function main() {
         lockWaits += 1;
         lockWaited = true;
         const who = `pid ${holder.pid} (${holder.application_name || 'no application name'}, ${holder.state || 'unknown state'}, idle ${holder.idle_s ?? '?'} s)`;
-        if (await releaseLeakedLock(url, holder)) {
+        if (await releaseLeakedLock(url, holder, previousHolder)) {
           console.warn(`[pre-deploy] The migrate lock was leaked by ${who}; that session was ended. Retrying now.`);
+          previousHolder = null;
           await sleep(1000);
         } else {
-          console.warn(`[pre-deploy] The migrate lock is held by ${who}; waiting 20 s (${lockWaits}/12).`);
-          await sleep(20000);
+          const wait = Math.min(20000, Math.max(0, budgetLeft(STARTED_AT, process.env.PREDEPLOY_BUDGET_S) - 10000));
+          console.warn(`[pre-deploy] The migrate lock is held by ${who}; waiting ${Math.round(wait / 1000)} s (${lockWaits}/12).`);
+          previousHolder = holder;
+          await sleep(wait);
         }
         continue;
       }

@@ -1,109 +1,49 @@
-# Privacy Policy
+# Privacy policy (draft for the closed alpha)
 
-> **Status (19/11/2026): internal draft, not in force.** It has not been reviewed by a lawyer (OD-8). The live texts are the pages at /docs (lib/docs/pages/legal.ts). Facts that override anything below: the controller is Stefan Antonio Cirisanu, a private individual (no company exists yet); there is no data protection officer and no external consultancy; the visit counter stores nothing in the browser since 19/11/2026.
+Estado: internal draft, not in force until counsel signs (OD-8) · Fecha: 19/11/2026 · Dueño: Stefan Antonio Cirisanu · Fuente de verdad: the texts in force are the pages under /docs (`lib/docs/pages/legal.ts`)
 
-**Last updated**: October 2025 | **Version**: 2.0
+> Draft prepared with Claude, pending review by a qualified lawyer. It replaces the earlier version, which named a data protection officer and an external consultancy that do not exist.
 
----
+The alpha privacy text proposed for counsel is `docs/legal/drafts/ANEXO_II_privacidad_alpha.md` (Spanish). This file keeps the same facts in English for the repository.
 
-## 1. Who we are
+## Who is responsible
 
-Humanity Ledger ("we", "us") provides a privacy-preserving communication and payment platform. Our core product combines end-to-end encrypted messaging (via XMTP) with private payments (via Aztec Protocol).
+Stefan Antonio Cirisanu, a private individual, until the S.L. exists. There is no data protection officer. The privacy contact is the one in the legal notice (`/docs/legal-notice`).
 
-**Contact**: [humanityledger@icloud.com](mailto:humanityledger@icloud.com)
+## What we cannot see
 
----
+Direct and group messages are end-to-end encrypted with MLS on your device and travel through the XMTP network. Your Aztec payment keys are derived in your browser from a signature of your wallet; we never hold them. Each payment is proved and signed on your device. The network hides its amount and parties; the account that pays the network fee is visible on Alpha.
 
-## 2. What data we collect and why
-
-### 2.1 Data you provide
+## What we process and why
 
 | Data | Purpose | Legal basis | Retention |
-|------|---------|-------------|-----------|
-| Wallet address (Ethereum) | Identity in SIWE authentication | Contract performance | Until account deleted |
-| Email address (optional) | Alternative login via OTP | Legitimate interest / consent | Until account deleted |
-| PIN hash (Argon2id) | Screen lock for the app | Contract performance | Until PIN removed |
-| Community posts (public communities) | Community content delivery | Legitimate interest | Until deleted or community disbanded |
-| Profile display name, avatar URL | User profile | Consent | Until changed or deleted |
+| --- | --- | --- | --- |
+| Wallet address and session (SIWE) | Account access | Contract, art. 6(1)(b) | While the account exists |
+| Username | Being found by others | Contract | While the account exists; released on deletion |
+| Tester name and contact | Running the closed alpha | Tester agreement | 8 weeks of alpha + 6 months |
+| Acceptance of the terms (time and text hash) and the operator's sanctions and age checks (result only) | Proving admission | To be confirmed by counsel | 6 months after the alpha ends (`scripts/alpha/purge.mjs`) |
+| Community posts (server) | Community feature | Contract | Until the author or the community deletes them |
+| Delivery reports with shortened ids | Diagnosing delivery | Legitimate interest, art. 6(1)(f); written balancing test pending | 30 days |
+| Technical and security logs | Protecting the service | Legitimate interest | 90 days |
+| Fee Juice grants to testers | Tax documentation | Legal obligation | Tax period, to be confirmed |
+| Direct messages | Not processed: end-to-end encrypted with MLS on the device | — | — |
 
-### 2.2 Data generated automatically
 
-| Data | Purpose | Retention |
-|------|---------|-----------|
-| Session token (HttpOnly cookie `hl_session`) | Authentication | 15 min (access) / 30 days (refresh) |
-| Redis rate-limit counters | Abuse prevention | 5–60 min TTL |
-| SIWE nonces | Replay attack prevention | 10 min TTL |
-| Server logs | Debugging, security | ≤ 30 days |
-| Notification metadata | Push delivery (no message content) | Until delivered or 7 days |
+Community posts are **not** end-to-end encrypted. They are stored on our server and can be read by the community's members and by us.
 
-### 2.3 What we do NOT store
+## Who else is involved
 
-- **Direct message content** — DMs travel exclusively over XMTP (end-to-end encrypted). We never see the plaintext. We do not store message history.
-- **Private payment amounts or recipients** — Aztec ZK transfers are processed client-side. We store only the Aztec transaction hash.
-- **Private community messages** — Private communities use XMTP MLS groups. Server holds no message content.
-- **Your private keys** — Wallets, XMTP keys, and Aztec keys never leave your device.
+- Railway (United States) hosts the app and its database as a processor. The transfer basis and the hosting region are pending (D-6).
+- The XMTP network carries encrypted messages and sees technical metadata such as addresses and times.
+- Aztec and Ethereum are public ledgers nobody controls. What is written there cannot be erased.
+- Authorities, only when a law or a valid order requires it (`docs/legal/law-enforcement.md`).
 
----
+We do not sell data or use it for advertising.
 
-## 3. How we use your data
+## Your rights
 
-- Authenticate your account (SIWE or email OTP)
-- Deliver notifications (silent push — no message content in payload)
-- Moderate public communities (human review of reported content)
-- Protect against abuse (rate limiting, WAF)
-- Comply with legal obligations (DSA, GDPR)
+Access, rectification, erasure, objection, restriction and portability, through the privacy contact, answered within one month. Erasure cannot reach what is recorded on Aztec or Ethereum. You can complain to the Agencia Española de Protección de Datos (aepd.es).
 
----
+## Minors
 
-## 4. Third-party processors
-
-| Processor | Purpose | Location | DPA |
-|-----------|---------|----------|-----|
-| Railway (Brex) | Hosting, PostgreSQL, Redis | US (US-East) | Required — see N-003 |
-| LiveKit | Real-time calls (SFU/TURN) | US/EU | Required — see N-003 |
-| XMTP Labs | Encrypted messaging network | US | Required — see N-003 |
-
----
-
-## 5. Your rights (GDPR)
-
-- **Access** (Art. 15): Request a copy of your data via `GET /api/user/export`
-- **Erasure** (Art. 17): Delete your account at Settings → Delete Account (`/api/user/nuke`)
-- **Portability** (Art. 20): Export your profile data via `GET /api/user/export`
-- **Rectification** (Art. 16): Update profile data in Settings
-- **Objection** (Art. 21): Contact [humanityledger@icloud.com](mailto:humanityledger@icloud.com)
-
-**EEA residents** may also contact your national DPA.
-
----
-
-## 6. Cookies
-
-We use **one essential cookie** only:
-
-| Cookie | Purpose | Duration |
-|--------|---------|---------|
-| `hl_session` | Authentication (HttpOnly, Secure, SameSite=Strict) | 30 days |
-
-No advertising, analytics, or third-party cookies.
-
----
-
-## 7. Data security
-
-- Transport: TLS 1.3 enforced (HSTS preload)
-- PIN hashing: Argon2id with per-user random salt and server-side pepper
-- Session tokens: short-lived with rotation, reuse detection
-- Infrastructure: Railway (encrypted volumes)
-
----
-
-## 8. International transfers
-
-Data is processed on Railway infrastructure in the US. Standard Contractual Clauses (SCCs) apply for EEA→US transfers. See `docs/legal/transfers.md`.
-
----
-
-## 9. Changes
-
-We will notify users by email or in-app notice of material changes at least 30 days in advance.
+The closed alpha is for people aged 18 or over.

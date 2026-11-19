@@ -128,7 +128,8 @@ Cada término tiene un uso permitido como mucho, escrito en `allow` (por ejemplo
     "lib/blockchain/abi/",
     "lib/docs/pages/legal.ts",
     "lib/docs/pages/protocol.ts",
-    "docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md"
+    "docs/protocol/FEE_CONTRACT_IMPLEMENTATION_LOG.md",
+    "docs/INTEGRATION_MAP.md"
   ]
 }
 ```
