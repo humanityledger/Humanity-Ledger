@@ -35,6 +35,7 @@
     "test:scan": "vitest run test/unit/scan",
     "studio:check": "node scripts/studio-check.mjs",
     "lint": "next lint",
+    "ship": "bash scripts/ship.sh",
     "check:copy": "node scripts/check-forbidden-copy.mjs",
     "check:artifacts": "node scripts/zk/check-artifacts.mjs",
     "verify:integrity": "npx tsx scripts/verify-bundle-integrity.ts",
