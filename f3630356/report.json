@@ -1,0 +1,511 @@
+[
+  {
+    "page": "home",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YTgwZTMwZjgtMjZhZi00YjEwLWEyYWEtYTAyNTJlMzNhZmIy' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    ],
+    "started": "8",
+    "scenes": [
+      {
+        "scene": "Your wallet is your account",
+        "f": 0,
+        "p": "1.0000",
+        "y": 0,
+        "at": 4051
+      },
+      {
+        "scene": "Your wallet is your account",
+        "f": 0.5,
+        "p": "0.6731",
+        "y": 630,
+        "at": 630
+      },
+      {
+        "scene": "Your wallet is your account",
+        "f": 1,
+        "p": "1.0000",
+        "y": 1260,
+        "at": 1260
+      },
+      {
+        "scene": "Say hi",
+        "f": 0,
+        "p": "0.0000",
+        "y": 936,
+        "at": 936
+      },
+      {
+        "scene": "Say hi",
+        "f": 0.5,
+        "p": "0.4879",
+        "y": 1881,
+        "at": 1875
+      },
+      {
+        "scene": "Say hi",
+        "f": 1,
+        "p": "1.0000",
+        "y": 2826,
+        "at": 2811
+      },
+      {
+        "scene": "Encryption",
+        "f": 0,
+        "p": "0.0000",
+        "y": 2502,
+        "at": 2502
+      },
+      {
+        "scene": "Encryption",
+        "f": 0.5,
+        "p": "0.5000",
+        "y": 3222,
+        "at": 3222
+      },
+      {
+        "scene": "Encryption",
+        "f": 1,
+        "p": "1.0000",
+        "y": 3942,
+        "at": 3942
+      },
+      {
+        "scene": "Your name",
+        "f": 0,
+        "p": "0.0000",
+        "y": 3618,
+        "at": 3618
+      },
+      {
+        "scene": "Your name",
+        "f": 0.5,
+        "p": "0.5000",
+        "y": 4248,
+        "at": 4248
+      },
+      {
+        "scene": "Your name",
+        "f": 1,
+        "p": "1.0000",
+        "y": 4878,
+        "at": 4878
+      },
+      {
+        "scene": "Private payments",
+        "f": 0,
+        "p": "0.0000",
+        "y": 4554,
+        "at": 4554
+      },
+      {
+        "scene": "Private payments",
+        "f": 0.5,
+        "p": "0.5000",
+        "y": 5364,
+        "at": 5364
+      },
+      {
+        "scene": "Private payments",
+        "f": 1,
+        "p": "1.0000",
+        "y": 6174,
+        "at": 6150
+      },
+      {
+        "scene": "The first private payment on chain",
+        "f": 0,
+        "p": "0.0000",
+        "y": 5850,
+        "at": 5850
+      },
+      {
+        "scene": "The first private payment on chain",
+        "f": 0.5,
+        "p": "0.5000",
+        "y": 6570,
+        "at": 6570
+      },
+      {
+        "scene": "The first private payment on chain",
+        "f": 1,
+        "p": "1.0000",
+        "y": 7290,
+        "at": 7290
+      },
+      {
+        "scene": "Aztec settles on Ethereum",
+        "f": 0,
+        "p": "0.0000",
+        "y": 6966,
+        "at": 6966
+      },
+      {
+        "scene": "Aztec settles on Ethereum",
+        "f": 0.5,
+        "p": "0.5000",
+        "y": 7596,
+        "at": 7596
+      },
+      {
+        "scene": "Aztec settles on Ethereum",
+        "f": 1,
+        "p": "1.0000",
+        "y": 8226,
+        "at": 8226
+      },
+      {
+        "scene": "Calls",
+        "f": 0,
+        "p": "0.0000",
+        "y": 7902,
+        "at": 7902
+      },
+      {
+        "scene": "Calls",
+        "f": 0.5,
+        "p": "0.1338",
+        "y": 8285,
+        "at": 8285
+      },
+      {
+        "scene": "Calls",
+        "f": 1,
+        "p": "1.0000",
+        "y": 8667,
+        "at": 8667
+      }
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NWQwM2RkODYtMDY0Ny00NmUwLWI4MGEtY2RjNmRlOTBmNzkw' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZDM0Mzk5YTYtZWEyZS00OTVhLWJjZDEtNGRlMzE3OTQwOTI4' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-OTA0ZmYwYWYtZGIwNC00YWI0LTgzM2QtNWM4ZTJjMGMwYzIw' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-ecosystem",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/ecosystem",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MDE1YTc2YjktMjNlZS00Njk5LTg3N2MtYzJkYjdkNzI3M2Q2' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-whitepaper",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/whitepaper",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZDdhMWRjZWMtNGM2Zi00ZWJjLWE3NjQtOWJhOWMxOTZjYzdh' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NWUwMTM1YmItMzRkMi00YTg2LWJhZDAtZDJjM2ZhYTViM2Y0' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2E1OTExM2EtOTcxMi00ZmZlLTk4MTItMmMxYWVhNDY5Nzk1' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-OGQzZmVjMWUtMWI3MC00NWVjLWJkMmYtOGQzMzVkMjY1NGFj' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "hub-redirect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MWZjNjQ4OWEtZDMyOS00ZTIxLTk2OWYtYjAzZDJjMWExODgz' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YmZlODNlMjEtODdkZC00MjIyLWJhZGUtZGYyZGM3ZjkwOWMy' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "home",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-Yjc3MzZmNjctZmM4MS00ZmMxLWEzNDUtMzE5ZjE3NzhmZDIx' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    ],
+    "started": "8",
+    "scenes": [
+      {
+        "scene": "Your wallet is your account",
+        "f": 0,
+        "p": "1.0000",
+        "y": 0,
+        "at": 2698
+      },
+      {
+        "scene": "Your wallet is your account",
+        "f": 0.5,
+        "p": "0.6999",
+        "y": 443,
+        "at": 443
+      },
+      {
+        "scene": "Your wallet is your account",
+        "f": 1,
+        "p": "1.0000",
+        "y": 886,
+        "at": 886
+      },
+      {
+        "scene": "Say hi",
+        "f": 0,
+        "p": "0.0000",
+        "y": 633,
+        "at": 633
+      },
+      {
+        "scene": "Say hi",
+        "f": 0.5,
+        "p": "0.5004",
+        "y": 1298,
+        "at": 1298
+      },
+      {
+        "scene": "Say hi",
+        "f": 1,
+        "p": "1.0000",
+        "y": 1962,
+        "at": 1962
+      },
+      {
+        "scene": "Encryption",
+        "f": 0,
+        "p": "0.0000",
+        "y": 1709,
+        "at": 1709
+      },
+      {
+        "scene": "Encryption",
+        "f": 0.5,
+        "p": "0.5010",
+        "y": 2216,
+        "at": 2216
+      },
+      {
+        "scene": "Encryption",
+        "f": 1,
+        "p": "1.0000",
+        "y": 2722,
+        "at": 2722
+      },
+      {
+        "scene": "Your name",
+        "f": 0,
+        "p": "0.0000",
+        "y": 2469,
+        "at": 2469
+      },
+      {
+        "scene": "Your name",
+        "f": 0.5,
+        "p": "0.5005",
+        "y": 2912,
+        "at": 2912
+      },
+      {
+        "scene": "Your name",
+        "f": 1,
+        "p": "1.0000",
+        "y": 3355,
+        "at": 3355
+      },
+      {
+        "scene": "Private payments",
+        "f": 0,
+        "p": "0.0000",
+        "y": 3102,
+        "at": 3102
+      },
+      {
+        "scene": "Private payments",
+        "f": 0.5,
+        "p": "0.4993",
+        "y": 3671,
+        "at": 3671
+      },
+      {
+        "scene": "Private payments",
+        "f": 1,
+        "p": "1.0000",
+        "y": 4241,
+        "at": 4241
+      },
+      {
+        "scene": "The first private payment on chain",
+        "f": 0,
+        "p": "0.0000",
+        "y": 3988,
+        "at": 3988
+      },
+      {
+        "scene": "The first private payment on chain",
+        "f": 0.5,
+        "p": "0.4994",
+        "y": 4494,
+        "at": 4494
+      },
+      {
+        "scene": "The first private payment on chain",
+        "f": 1,
+        "p": "1.0000",
+        "y": 5001,
+        "at": 5001
+      },
+      {
+        "scene": "Aztec settles on Ethereum",
+        "f": 0,
+        "p": "0.0000",
+        "y": 4748,
+        "at": 4748
+      },
+      {
+        "scene": "Aztec settles on Ethereum",
+        "f": 0.5,
+        "p": "0.5010",
+        "y": 5191,
+        "at": 5191
+      },
+      {
+        "scene": "Aztec settles on Ethereum",
+        "f": 1,
+        "p": "1.0000",
+        "y": 5634,
+        "at": 5634
+      },
+      {
+        "scene": "Calls",
+        "f": 0,
+        "p": "0.0000",
+        "y": 5381,
+        "at": 5381
+      },
+      {
+        "scene": "Calls",
+        "f": 0.5,
+        "p": "0.0571",
+        "y": 5650,
+        "at": 5650
+      },
+      {
+        "scene": "Calls",
+        "f": 1,
+        "p": "1.0000",
+        "y": 5919,
+        "at": 5919
+      }
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NDdlZTg2ZjMtYjVmMy00MDc3LTkzMTItMjBmODg1NWIzMGYz' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NWMzYjJjYTMtNDQ4Ni00MmFmLWIwYzEtMTk0YjBiZDcxZTY2' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YWUyM2VlOGQtMGJkZi00YTQwLWFiODAtNDNiZjJjODc2YTI3' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-ecosystem",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/ecosystem",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTk5MGQzOGItYmI1Yy00YmJlLTlkNDAtMGIwZTNkOGVmMjcx' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs-whitepaper",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/whitepaper",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZjM3OGIzMzQtNTVlYi00ZTI0LTkxNTQtZTdiOTFlMDJmMWY0' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MGYzMGI0NTgtMTIwZC00MjkzLWFmM2UtMzE1NDUzZjRjZDcy' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MDExMGQzZWUtNGE2My00N2RiLWJjODYtY2Y1ZTg1MTk4MTZi' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZTVhYmZjMDktNDM4MC00ZGNmLTkyNjMtOWNlODdjNzg2ZWIy' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "hub-redirect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NmRlN2Q5MTItNWE1YS00MTAzLTk2ODUtOWM1ODk1MGU4MTBl' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MDAyMThkYWMtM2FkOS00NzUzLTg5MDktMTgwZGU2MjM0MzM4' 'wasm-unsafe-eval' htt"
+    ]
+  }
+]
