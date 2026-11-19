@@ -37,6 +37,7 @@ import { jwtVerify } from 'jose/jwt/verify';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
 import { isRetiredApiRoute, retiredPageTarget } from './lib/security/retiredRoutes';
 import { isSessionPayload } from './lib/security/sessionClaims';
+import { isPhoneRequest, LANDING_ACCEPT_CH, LANDING_TREE_HEADER, LANDING_VARY } from './lib/landing/device';
 
 // ── Public routes: accessible to EVERYONE (no auth required) ──────────────────
 const PUBLIC_PATHS = new Set([
@@ -418,9 +419,18 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
     const publicNonce = newNonce();
     sanitizedHeaders.set('x-nonce', publicNonce);
+    // The landing has two trees, decided per request (lib/landing/device.ts): the root layout
+    // reads which one, and every cache keys / on the headers that decide it.
+    sanitizedHeaders.delete(LANDING_TREE_HEADER);
+    const landing = pathname === '/' ? (isPhoneRequest(req.headers) ? 'mobile' : 'desktop') : null;
+    if (landing) sanitizedHeaders.set(LANDING_TREE_HEADER, landing);
     const publicRes = NextResponse.next({ request: { headers: sanitizedHeaders } });
     publicRes.headers.set('x-nonce', publicNonce);
     publicRes.headers.set('Content-Security-Policy', buildCsp(publicNonce));
+    if (landing) {
+      publicRes.headers.set('Vary', LANDING_VARY);
+      publicRes.headers.set('Accept-CH', LANDING_ACCEPT_CH);
+    }
     return publicRes;
   }
 

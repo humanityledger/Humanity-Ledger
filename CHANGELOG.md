@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phone landing: a separate tree for iOS and Android (19 November 2026)
+
+- `/` now decides on the server, from the user agent or `Sec-CH-UA-Mobile` (`lib/landing/device.ts`),
+  whether to serve the phone tree (`components/landing/mobile`) or the immersive landing.
+  - Tablets and desktops keep the immersive landing, unchanged.
+  - `Vary` and `Accept-CH` are set for `/` only.
+- The phone tree:
+  - Content: the same fifteen sections in the same order, all copy from `lib/landing/content.ts`.
+  - Rendering: a Server Component in normal flow, with two client islands. One reveals sections
+    (IntersectionObserver, used once per section); the other handles copy buttons and the live numbers.
+  - Images: AVIF and WebP made from the existing posters.
+  - Video: two short muted loops that play only while on screen.
+  - What it leaves out: no per-frame JavaScript, no pinned scenes, no scrubbed video, no globe or 3D
+    phone, and none of the app's fixed layers or providers.
+- Docs: `docs/LANDING.md`.
+- CI:
+  - `scripts/ui/landing-webkit.mjs` adds the tree split and frame checks: long animation frames, rAF
+    p95, layout shifts, passive listeners and traced layout work, on a Pixel 7 at 4x CPU and an iPhone 15.
+  - `scripts/ui/mobile-budget.mjs` enforces the budgets.
+  - `lighthouserc.mobile.json` adds a mobile Lighthouse run with a Performance score of at least 95.
+
 ### Mature protocol, packages 0-10 (19 November 2026)
 
 - Landing: `/?debug=scroll` overlay; the browser test now checks pixels, real touch flicks (Android) and the browser bars (iPhone). Phones pass.

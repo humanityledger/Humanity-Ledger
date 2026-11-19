@@ -50,10 +50,20 @@ jobs:
           ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
           ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
 
+      # The phone landing (components/landing/mobile): mobile form factor, simulated 4G, on /.
+      # Lighthouse's mobile user agent is an Android phone, so it gets the phone tree.
+      - name: Run Lighthouse CI (phone landing)
+        if: always()
+        run: lhci autorun --config=./lighthouserc.mobile.json
+        env:
+          JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+          ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+          ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+
       - name: Scores
         if: always()
         run: |
-          for f in .lighthouseci/lhr-*.json; do
+          for f in .lighthouseci/lhr-*.json .lighthouseci-mobile/lhr-*.json; do
             [ -f "$f" ] || continue
             jq -r '"\(.finalDisplayedUrl): " + ([.categories[] | "\(.id)=\(.score)"] | join(" "))' "$f"
             jq -r '[.audits[] | select(.score != null and .score < 0.9 and (.scoreDisplayMode=="binary" or .scoreDisplayMode=="numeric")) | "  \(.id) \(.score)"] | .[]' "$f" | head -40
@@ -64,5 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-reports
-          path: .lighthouseci/
+          path: |
+            .lighthouseci/
+            .lighthouseci-mobile/
           retention-days: 14
