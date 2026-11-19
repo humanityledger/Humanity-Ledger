@@ -76,3 +76,28 @@ Stefan Antonio Cirisanu decided this in writing in the chat on 19/11/2026 ("50 p
 **Unchanged:**
 - OD-2: 100 HLC per agreement.
 - OD-9, the Fee Juice budget: set at 20 AZTEC per tester × 20 = 400 AZTEC. With 50 testers it would be 1,000 AZTEC. **Open: Stefan decides whether the budget per tester or the total changes.**
+
+## PA-1: the payment assets (19/11/2026)
+
+**Decision:** **HLC is a test token**, with no monetary value, used only to test private payments in the closed alpha. It
+is never sold, offered, airdropped or launched, and **no launch of HLC is planned**: the token model in
+`docs/TOKENOMICS.md` is suspended. **Real payments are planned in cUSDC** (Clean USDC, issued by human.tech through its
+Shield bridge, not by Humanity Ledger) and stay off until every gate in `lib/payments/assets.ts` (`CUSDC_GATES`) is met.
+AZTEC, as Fee Juice, only pays network fees: Aztec makes it non-transferable on L2.
+
+Stefan Antonio Cirisanu decided this in writing in the chat on 19/11/2026 ("deja claro de forma explícita que HLC es
+prueba token para posteriormente integrar cUSDC como activo de pago real"). The agent transcribed it here.
+
+**Applied in:**
+- `lib/payments/assets.ts`: roles, the test-token note, `CUSDC_GATES` (all unmet);
+- `deployments/aztec-mainnet.json`: HLC `role: "test"`, `monetaryValue: "none"`; cUSDC in `plannedTokens`, `verifiedOnChain: false`;
+- the wallet (balance and send review) shows "Test token · no monetary value" next to HLC;
+- the landing FAQ; `docs/TOKENOMICS.md` and `lib/protocol/tokenomics.ts` marked suspended;
+- `docs/payments/CUSDC_INTEGRATION.md`, `docs/alpha/TESTER_MISSIONS.md`.
+
+**Gates for cUSDC (none met today):** a written legal note (non-custodial software, not a crypto-asset service
+provider); the S.L. with terms of use and privacy policy for real payments; the address confirmed on the Aztec v6 node
+by the read-only preflight; the HLC alpha finished within its targets; Stefan's signature with a cap per payment.
+
+**Unchanged:** OD-2 (100 HLC per agreement), OD-7 (no protocol fee), OD-8 (the lawyer's note before the first
+invitation code), OD-9 (open, see above).

@@ -54,6 +54,7 @@ import { feeRunway } from '@/components/zk/wallet/walletLogic';
 
 export { feeRunway };
 import { ReceiveView, SendFlow, ShieldFlow, symbolOf } from '@/components/zk/wallet/WalletSheets';
+import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
 
 // Fee Juice (Aztec Alpha only): wagmi-heavy, so loaded on demand.
 const FeeJuiceStation = dynamic(() => import('@/components/zk/ZkBridgePortal').then((m) => m.FeeJuiceStation), { ssr: false });
@@ -475,6 +476,11 @@ function BalanceHero({
             <BigAmount text={formatUnits(main.privateUnits, main.decimals)} symbol={main.symbol} hidden={hidden} />
           )}
         </div>
+        {main && isTestToken(main.symbol) && (
+          <p className="mt-1 text-[12.5px] font-semibold" style={{ color: INK_3 }} data-testid="test-token-note">
+            {TEST_TOKEN_NOTE}
+          </p>
+        )}
 
         <p className="mt-2 text-[13px] tabular-nums" style={{ color: INK_3 }} role="status" aria-live="polite">
           {refreshing ? 'Syncing with Aztec…' : syncedAt ? `Synced at ${new Date(syncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet'}
@@ -500,6 +506,9 @@ function BalanceHero({
               <li key={b.key} className="flex items-center justify-between gap-3 py-2.5">
                 <span className="text-[14px] font-semibold" style={{ color: INK }}>
                   {b.symbol}
+                  {isTestToken(b.symbol) && (
+                    <span className="block text-[12px] font-medium" style={{ color: INK_3 }}>{TEST_TOKEN_NOTE}</span>
+                  )}
                 </span>
                 <span className="text-right">
                   <Figure text={formatUnits(b.privateUnits, b.decimals)} hidden={hidden} strong className="block text-[16px]" />
