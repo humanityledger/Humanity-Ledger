@@ -43,10 +43,12 @@ export function WhenNear({ children, fallback = null, fill = true }: { children:
 type Mode = 'poster' | 'play' | 'scrub';
 function pickMode(): Mode {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'poster';
-  // Scroll-scrubbing everywhere, phones included (the -scrub files are all-intra, 3 to 5 MB);
-  // looped playback only with Save-Data or a slow link.
+  // Scroll-scrubbing on desktops with a fine pointer. On phones and tablets the film plays (loops
+  // while its scene is on screen): seeking a video on every frame of a finger flick stalls iOS
+  // Safari and shows blank frames; the scene itself still moves with the scroll.
   const c = (navigator as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  if (c?.saveData || (c?.effectiveType && c.effectiveType !== '4g')) return 'play';
+  const touch = window.matchMedia('(pointer: coarse)').matches;
+  if (touch || c?.saveData || (c?.effectiveType && c.effectiveType !== '4g')) return 'play';
   return 'scrub';
 }
 

@@ -252,4 +252,4 @@ export const MEDIA = {
  * public/brand/ with its source and download date in public/brand/README.md. Until then the
  * landing writes the name in plain text: no redrawn or approximated logo.
  */
-export const BRAND_FILES: { aztec: string | null; ethereum: string | null } = { aztec: null, ethereum: null };
+export const BRAND_FILES: { aztec: string | null; ethereum: string | null } = { aztec: '/brand/aztec/aztec-wordmark-ink.svg', ethereum: null };

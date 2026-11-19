@@ -20,6 +20,7 @@ import { HLLogo } from '@/components/shared/HLLogo';
 import { SiteFooter } from '@/components/landing/v2/SiteFooter';
 import * as C from '@/lib/landing/content';
 import { CopyHash, SceneGlobe, ScenePhone, SceneVideo, ScrollRoot, SessionHeal, SiteQr } from './Islands';
+import { DotWorld } from './DotWorld';
 import s from './Immersive.module.css';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet' && AZTEC_WALLET_CONFIG.alphaEnabled;
@@ -206,6 +207,12 @@ export function ImmersiveLanding() {
           ))}
         </nav>
         <span className={s.status}>{status}</span>
+        {C.BRAND_FILES.aztec && (
+          <a className={s.builtOn} href="https://aztec.network" target="_blank" rel="noopener noreferrer" aria-label="Built on Aztec Network">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            Built on <img src={C.BRAND_FILES.aztec} alt="Aztec" width={70} height={16} />
+          </a>
+        )}
         <Link href="/chat" className={s.cta} prefetch>Open Ledger Chat</Link>
         <details className={s.menu}>
           <summary aria-label="Sections">
@@ -464,6 +471,8 @@ export function ImmersiveLanding() {
 
         {/* 15. Every screen, and the close. */}
         <Chapter id="devices" k="devices" title={['The same account on ', 'every screen', '.']} lead="Sign in with the same wallet and your conversations follow you. Proofs for private payments are made on the device you hold." className={s.devices}>
+          <DotWorld />
+          <p className={s.mapLegend}><i aria-hidden="true" />Where people are on Ledger Chat right now, by time zone. No IP address is stored.</p>
           <ul className={s.deviceList}>
             {C.DEVICES.map((d) => (
               <li key={d.name}><b>{d.name}</b><p>{d.how}</p></li>
