@@ -16,7 +16,7 @@ import s from "./SiteFooter.module.css";
  * where careful readers look for exactly that.
  *
  * The credit says who makes Ledger Chat and what it is built on, and nothing
- * more: Humanity Ledger makes it (as "Corp." only once a company exists, see
+ * more: Humanity Ledger makes it (with a company form only once a company exists, see
  * lib/constants/legalEntity.ts), and it runs on Aztec Network, which does not
  * make, endorse or operate it. "Aztec Network" is a text link to
  * aztec.network; the Aztec logo is not drawn here.
