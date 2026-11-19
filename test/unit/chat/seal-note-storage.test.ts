@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { openRecord, parseRecordMessage, wipeRecordKeys, type EpochSecret } from '@/vendor/ledger-record/src/index';
-import { sealFileMessage, sealNoteMessage } from '@/lib/chat/seal-record';
+import { sealFileMessage, sealNoteInsideMessage, sealNoteMessage } from '@/lib/chat/seal-record';
+import { openLegacyRecord } from '@/vendor/ledger-record/src/index';
 
 const members = ['0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'];
 
@@ -19,6 +20,14 @@ describe('a sealed note never needs file storage', () => {
     expect(pointer?.inline).toBeTruthy();
     expect(pointer?.url).toBeUndefined();
     expect(message).not.toContain('storage_unavailable');
+  });
+
+  it('seals a note inside the encrypted message when the exporter is missing', async () => {
+    const message = await sealNoteInsideMessage('the deed is in the drawer', members);
+    expect(message).not.toContain('storage_unavailable');
+    expect(message).not.toContain('"url"');
+    const opened = await openLegacyRecord(message, members);
+    expect(opened.text).toBe('the deed is in the drawer');
   });
 
   it('seals and opens a note twenty thousand times, and never asks storage', async () => {

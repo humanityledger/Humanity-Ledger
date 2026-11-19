@@ -53,6 +53,7 @@ export function recordAad(fields: BindFields, chunkIndex?: number, chunkCount?: 
   const epoch = utf8(fields.mlsEpoch);
   const members = utf8(fields.membership);
   const label = utf8(fields.label);
+  const installation = utf8(fields.installation);
   const parts = [
     utf8('ledger-record/v2\0'),
     u16(conv.length), conv,
@@ -63,7 +64,7 @@ export function recordAad(fields: BindFields, chunkIndex?: number, chunkCount?: 
     u16(label.length), label,
     fields.id,
     fields.prev,
-    u16(utf8(fields.installation).length), utf8(fields.installation),
+    u16(installation.length), installation,
   ];
   if (chunkIndex !== undefined && chunkCount !== undefined) {
     parts.push(u32(chunkIndex), u32(chunkCount));
@@ -76,6 +77,51 @@ export function aadHashHex(aad: Uint8Array): string {
   const d = sha256Bytes(aad);
   for (let i = 0; i < d.length; i++) s += d[i].toString(16).padStart(2, '0');
   return s;
+}
+
+/**
+ * The version hash input, in the only order seal, open and verify may use.
+ * bodyEpoch, bodyInstallation and bodyPrev are empty strings when this
+ * version encrypted the bytes itself.
+ */
+export function recordHeadLines(fields: {
+  id: string;
+  generation: number;
+  conversationId: string;
+  mlsEpoch: string;
+  membership: string;
+  prev: string;
+  digest: string;
+  bytes: number;
+  chunks: number;
+  kind: string;
+  label: string;
+  installation: string;
+  bodyGen: number;
+  bodyEpoch: string;
+  bodyInstallation: string;
+  bodyPrev: string;
+  aad: string;
+}): string[] {
+  return [
+    fields.id,
+    String(fields.generation),
+    fields.conversationId,
+    fields.mlsEpoch,
+    fields.membership,
+    fields.prev,
+    fields.digest,
+    String(fields.bytes),
+    String(fields.chunks),
+    fields.kind,
+    fields.label,
+    fields.installation,
+    String(fields.bodyGen),
+    fields.bodyEpoch,
+    fields.bodyInstallation,
+    fields.bodyPrev,
+    fields.aad,
+  ];
 }
 
 export async function versionHeadV2(lines: string[]): Promise<string> {

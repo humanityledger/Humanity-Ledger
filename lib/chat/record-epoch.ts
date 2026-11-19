@@ -4,8 +4,8 @@
  *
  * The browser SDK we ship (XMTP) can report the epoch number and can return
  * HMAC keys. Those HMAC keys are for a different job. They are not the epoch
- * secret, and this file never reads them. If the exporter is missing, sealing
- * fails closed.
+ * secret, and this file never reads them. If the exporter is missing, this
+ * returns null. A note can still be sealed inside the encrypted message.
  */
 import { EXPORTER_LABEL, EXPORTER_LENGTH, exporterContextFor, type EpochSecret } from '@/vendor/ledger-record/src/index';
 import { extractPeerAddress } from '@/lib/xmtp/client';
@@ -45,7 +45,7 @@ function exporterOf(conversation: ConversationLike): Exporter | null {
   return null;
 }
 
-export async function epochFromConversation(conversation: ConversationLike): Promise<EpochSecret> {
+export async function epochFromConversation(conversation: ConversationLike): Promise<EpochSecret | null> {
   if (!conversation.id || !conversation.debugInfo) {
     throw new RecordEpochError('This conversation has no MLS epoch to bind a record to.');
   }
@@ -55,9 +55,7 @@ export async function epochFromConversation(conversation: ConversationLike): Pro
     throw new RecordEpochError('This conversation did not report an MLS epoch.');
   }
   const fn = exporterOf(conversation);
-  if (!fn) {
-    throw new RecordEpochError('This build of messaging does not expose the MLS exporter. A record was not sealed with a weaker key.');
-  }
+  if (!fn) return null;
   const bytes = new Uint8Array(await fn.call(conversation, EXPORTER_LABEL, exporterContextFor(conversationId), EXPORTER_LENGTH));
   if (bytes.byteLength !== EXPORTER_LENGTH) {
     throw new RecordEpochError('The MLS exporter returned a secret of the wrong length.');
@@ -76,7 +74,7 @@ type ClientLike = {
 };
 
 /** The direct conversation with this address, or a clear failure. */
-export async function epochForPeer(client: ClientLike, peer: string, selfAddress: string): Promise<EpochSecret> {
+export async function epochForPeer(client: ClientLike, peer: string, selfAddress: string): Promise<EpochSecret | null> {
   const list = client.conversations?.listDms;
   if (!list) throw new RecordEpochError('Encrypted messaging is not ready on this device.');
   let dms = await list.call(client.conversations);

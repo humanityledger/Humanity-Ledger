@@ -117,6 +117,17 @@ export function previewAfterClear<C extends PreviewLine>(c: C, clearedAt: number
   return survivesClear(c.lastAt, clearedAt) ? c : { ...c, lastMessage: '' };
 }
 
+/**
+ * The list must not invent a preview from messages still in memory once the
+ * line under the address was cleared. A later message, with a time after the
+ * cut-off, is not cleared.
+ */
+export function lineWasCleared(c: PreviewLine, clearedAt: number): boolean {
+  if (!(clearedAt > 0)) return false;
+  if (previewAfterClear(c, clearedAt).lastMessage) return false;
+  return !survivesClear(c.lastAt, clearedAt);
+}
+
 export interface ThreadMessage {
   id: string;
   content?: unknown;

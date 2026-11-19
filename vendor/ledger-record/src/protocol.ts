@@ -11,7 +11,7 @@
  * It refuses any epoch secret that is not declared as the MLS exporter output.
  */
 
-import { aadHashHex, recordAad, versionHeadV2, type RecordKind } from './bind';
+import { aadHashHex, recordAad, recordHeadLines, versionHeadV2, type RecordKind } from './bind';
 import { aesOpen, aesSeal, fromHex, hexEqual, randomBytes, sha256Hex, toHex, utf8, utf8Decode, zeroize } from './hex';
 import { hkdfSha256 } from './kdf';
 import { Sha256 } from './sha256';
@@ -164,14 +164,15 @@ export function handoffBody(args: {
   mlsEpoch: string;
 }): Uint8Array {
   const commitment = args.commitment ?? ZERO_HEAD;
-  if (!ACTIONS.includes(args.action) || !EVM_RE.test(args.peer)) {
+  const peer = args.peer.toLowerCase();
+  if (!ACTIONS.includes(args.action) || !EVM_RE.test(peer)) {
     throw new RecordError('handoff', 'A handoff names a payment or an agreement, and one address');
   }
   if (!HEX64.test(commitment)) throw new RecordError('handoff', 'The commitment must be 32 bytes');
   if (!CONV_RE.test(args.conversationId) || !EPOCH_RE.test(args.mlsEpoch)) {
     throw new RecordError('handoff', 'A handoff is bound to one conversation and one epoch');
   }
-  return utf8(`{"action":"${args.action}","commitment":"${commitment}","conversation":"${args.conversationId}","epoch":"${args.mlsEpoch}","peer":"${args.peer.toLowerCase()}"}`);
+  return utf8(`{"action":"${args.action}","commitment":"${commitment}","conversation":"${args.conversationId}","epoch":"${args.mlsEpoch}","peer":"${peer}"}`);
 }
 
 function installationOf(value: string | undefined): string {
@@ -380,10 +381,11 @@ export async function seal(input: SealInput): Promise<SealedRecord> {
     ? await encryptReader(contentKey, baseNonce, input.reader, aadOf)
     : await encryptChunks(contentKey, baseNonce, input.plain, aadOf);
   const aad = aadHashHex(wrapAad);
-  const head = await versionHeadV2([
-    id, String(generation), input.epoch.conversationId, input.epoch.mlsEpoch, membership, prevHex,
-    sealed.digest, String(plainBytes), String(sealed.chunks), input.kind, label, installation, String(bodyGen), '', '', '', aad,
-  ]);
+  const head = await versionHeadV2(recordHeadLines({
+    id, generation, conversationId: input.epoch.conversationId, mlsEpoch: input.epoch.mlsEpoch,
+    membership, prev: prevHex, digest: sealed.digest, bytes: plainBytes, chunks: sealed.chunks,
+    kind: input.kind, label, installation, bodyGen, bodyEpoch: '', bodyInstallation: '', bodyPrev: '', aad,
+  }));
 
   const pointer: RecordPointer = {
     type: RECORD_TYPE,
@@ -575,11 +577,13 @@ async function assertBinding(pointer: RecordPointer, membership: string): Promis
     installation: pointer.installation,
   });
   if (!hexEqual(aadHashHex(aad), pointer.aad)) throw new RecordError('aad', 'The record binding was altered');
-  const head = await versionHeadV2([
-    pointer.id, String(pointer.generation), pointer.conversationId, pointer.mlsEpoch, membership, pointer.prev,
-    pointer.digest, String(pointer.bytes), String(pointer.chunks), pointer.kind, pointer.label, pointer.installation,
-    String(pointer.bodyGen ?? pointer.generation), pointer.bodyEpoch ?? '', pointer.bodyInstallation ?? '', pointer.bodyPrev ?? '', pointer.aad,
-  ]);
+  const head = await versionHeadV2(recordHeadLines({
+    id: pointer.id, generation: pointer.generation, conversationId: pointer.conversationId, mlsEpoch: pointer.mlsEpoch,
+    membership, prev: pointer.prev, digest: pointer.digest, bytes: pointer.bytes, chunks: pointer.chunks,
+    kind: pointer.kind, label: pointer.label, installation: pointer.installation,
+    bodyGen: pointer.bodyGen ?? pointer.generation, bodyEpoch: pointer.bodyEpoch ?? '',
+    bodyInstallation: pointer.bodyInstallation ?? '', bodyPrev: pointer.bodyPrev ?? '', aad: pointer.aad,
+  }));
   if (!hexEqual(head, pointer.head)) throw new RecordError('head', 'This record was altered');
 }
 
@@ -826,11 +830,11 @@ export async function rewrapToEpoch(args: {
   const wrap = await aesSeal(kek, wrapNonce, args.contentKey, wrapAad);
   zeroize(kek);
   const aad = aadHashHex(wrapAad);
-  const head = await versionHeadV2([
-    args.pointer.id, String(generation), args.epoch.conversationId, args.epoch.mlsEpoch, membership, args.pointer.head,
-    args.pointer.digest, String(args.pointer.bytes), String(args.pointer.chunks), args.pointer.kind, args.pointer.label,
-    installation, String(bodyGen), bodyEpoch, bodyInstallation, bodyPrev, aad,
-  ]);
+  const head = await versionHeadV2(recordHeadLines({
+    id: args.pointer.id, generation, conversationId: args.epoch.conversationId, mlsEpoch: args.epoch.mlsEpoch,
+    membership, prev: args.pointer.head, digest: args.pointer.digest, bytes: args.pointer.bytes, chunks: args.pointer.chunks,
+    kind: args.pointer.kind, label: args.pointer.label, installation, bodyGen, bodyEpoch, bodyInstallation, bodyPrev, aad,
+  }));
   const pointer: RecordPointer = {
     ...args.pointer,
     generation,
@@ -872,11 +876,13 @@ export async function verifyChain(messages: readonly string[], members: readonly
     const pointer = parseRecordMessage(message);
     if (!pointer) return false;
     if (!hexEqual(pointer.epoch, membership)) return false;
-    const head = await versionHeadV2([
-      pointer.id, String(pointer.generation), pointer.conversationId, pointer.mlsEpoch, membership, pointer.prev,
-      pointer.digest, String(pointer.bytes), String(pointer.chunks), pointer.kind, pointer.label, pointer.installation,
-      String(pointer.bodyGen ?? pointer.generation), pointer.bodyEpoch ?? '', pointer.bodyInstallation ?? '', pointer.bodyPrev ?? '', pointer.aad,
-    ]);
+    const head = await versionHeadV2(recordHeadLines({
+      id: pointer.id, generation: pointer.generation, conversationId: pointer.conversationId, mlsEpoch: pointer.mlsEpoch,
+      membership, prev: pointer.prev, digest: pointer.digest, bytes: pointer.bytes, chunks: pointer.chunks,
+      kind: pointer.kind, label: pointer.label, installation: pointer.installation,
+      bodyGen: pointer.bodyGen ?? pointer.generation, bodyEpoch: pointer.bodyEpoch ?? '',
+      bodyInstallation: pointer.bodyInstallation ?? '', bodyPrev: pointer.bodyPrev ?? '', aad: pointer.aad,
+    }));
     if (!hexEqual(head, pointer.head)) return false;
     if (!previous) {
       if (pointer.generation !== 1 || pointer.prev !== ZERO_HEAD) return false;

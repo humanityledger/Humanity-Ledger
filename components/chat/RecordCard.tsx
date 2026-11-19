@@ -114,7 +114,7 @@ export function RecordCard({ message, members, arrive = false }: { message: stri
         <span className="min-w-0">
           <span className="block text-[14px] font-semibold text-[#15171c] truncate">{label}</span>
           <span className="block text-[12px] text-[#727a88] mt-0.5">
-            {legacy ? 'Older record · its key is inside the message' : `Sealed record · version ${generation}`}
+            {legacy ? 'Sealed in this encrypted chat' : `Sealed record · version ${generation}`}
           </span>
         </span>
       </div>

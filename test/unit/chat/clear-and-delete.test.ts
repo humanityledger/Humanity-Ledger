@@ -11,6 +11,7 @@ import {
   clearCutoff,
   clearedAtMs,
   markCleared,
+  lineWasCleared,
   previewAfterClear,
   previewAfterDelete,
   survivesClear,
@@ -82,6 +83,21 @@ describe('clear chat', () => {
     expect(previewAfterClear({ peerAddress: PEER, lastMessage: 'dwadwa' }, 2_000).lastMessage).toBe('');
   });
 
+  it('a cleared line must not be refilled from messages still in memory', () => {
+    const cleared = previewAfterClear(
+      { peerAddress: PEER, lastMessage: 'nknmk', lastAt: new Date(1_500) },
+      2_000,
+    );
+    expect(cleared.lastMessage).toBe('');
+    expect(lineWasCleared(cleared, 2_000)).toBe(true);
+    const later = previewAfterClear(
+      { peerAddress: PEER, lastMessage: 'after', lastAt: new Date(2_500) },
+      2_000,
+    );
+    expect(lineWasCleared(later, 2_000)).toBe(false);
+    expect(lineWasCleared({ peerAddress: PEER, lastMessage: 'hello', lastAt: 1 }, 0)).toBe(false);
+  });
+
   it('shows a later message, and only that one', () => {
     const later = { peerAddress: PEER, lastMessage: 'new one', lastAt: new Date(2_500) };
     expect(previewAfterClear(later, 2_000).lastMessage).toBe('new one');
@@ -135,6 +151,7 @@ describe('every path in the chat screen asks the same rule', () => {
   it('queue, legacy reads, stream replays, stored history and the list line use the cut-off', () => {
     expect(src.match(/survivesClear\(/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
     expect(src.match(/previewAfterClear\(/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(src).toContain('lineWasCleared(conv, cut)');
   });
 
   it('delete for me records first, then updates thread and line', () => {

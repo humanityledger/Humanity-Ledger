@@ -15,7 +15,7 @@ The only accepted input is 32 bytes declared `source: "mls-exporter"`.
 Those bytes are the output of MLS-Exporter (RFC 9420 §8.6) for:
 
 * label: `ledger-record`
-* context: the UTF-8 bytes of `ledger-record/v2`
+* context: the UTF-8 bytes of `ledger-record/v2`, a zero byte, and the conversation id
 * length: 32
 
 The library does not derive this secret itself. The installed XMTP browser SDK, as of the build Ledger Chat ships, exposes the epoch number and per-epoch HMAC keys. It does not expose the exporter. HMAC keys are for a different purpose and are rejected. Sealing fails closed until the SDK grows an exporter with that label, context, and length.
@@ -41,7 +41,7 @@ AES-256-GCM. The base nonce is 12 bytes: 8 random bytes and 4 zero bytes. Chunk 
 
 Plaintext chunks are 64 KiB, except the last. Each chunk's associated data is the canonical binding plus the chunk index and the chunk count, both uint32 big-endian.
 
-Notes and handoffs are one chunk and at most 8 KiB, and the ciphertext is inline. Files are at most 20 MiB. Their ciphertext is the concatenation of the chunk ciphertexts (tag included). The digest is SHA-256 of that concatenation, computed incrementally, so the whole file need not be hashed as one buffer. The storage path is `/api/chat/attachments/` plus 32 hex characters. It is not inside the version hash. A path on another host is rejected.
+Notes and handoffs are one chunk and at most 8 KiB, and the ciphertext is inline. Files are at most 20 MiB. Their ciphertext is the concatenation of the chunk ciphertexts (tag included). The digest is SHA-256 of that concatenation, computed incrementally, so the whole file need not be hashed as one buffer. The storage path is `/api/chat/attachments/` plus 32 hex characters. It is not inside the version hash. A path on another host is rejected. When that storage answers that it is unavailable and the ciphertext still fits in one message, the file record carries `inline` instead of `url`. A note never has a URL.
 
 ## Associated data
 
@@ -57,6 +57,7 @@ uint8  kind (1 note, 2 file, 3 handoff)
 uint16 label length || label
 16-byte id
 32-byte previous head
+uint16 installation length || installation
 [uint32 chunk index || uint32 chunk count]   // content chunks only
 ```
 
@@ -69,9 +70,12 @@ SHA-256(utf8(
   "ledger-record/v2/head\n" ||
   id || "\n" || generation || "\n" || conversationId || "\n" || mlsEpoch || "\n" ||
   membership || "\n" || prev || "\n" || digest || "\n" || bytes || "\n" ||
-  chunks || "\n" || kind || "\n" || label || "\n" || aad
+  chunks || "\n" || kind || "\n" || label || "\n" || installation || "\n" ||
+  bodyGen || "\n" || bodyEpoch || "\n" || bodyInstallation || "\n" || bodyPrev || "\n" || aad
 ))
 ```
+
+`bodyGen` is the generation that encrypted the bytes. `bodyEpoch`, `bodyInstallation` and `bodyPrev` are empty unless this version only rewraps an older ciphertext, in which case they are the values that ciphertext was bound to. Seal, open and chain verification call one function, `recordHeadLines`, so those three paths cannot drift.
 
 The first version's `prev` is 64 zero hex digits. The next version keeps the id, adds one to `generation`, sets `prev` to the previous head, and uses a new content key. The chain check requires the same membership hash on every version it is asked to verify.
 

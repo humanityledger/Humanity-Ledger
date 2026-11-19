@@ -16,6 +16,7 @@ import {
   type HandoffAction,
 } from '@/vendor/ledger-record/src/index';
 import { toHex } from '@/vendor/ledger-record/src/hex';
+import { encodeRecordMessage as encodeLegacyMessage, sealNote as sealLegacyNote } from '@/vendor/ledger-record/src/v1';
 import { rememberRecordKey } from './record-keys';
 
 const EVM = /^0x[0-9a-fA-F]{40}$/;
@@ -35,6 +36,17 @@ export function recordMembers(...ids: string[]): string[] {
 
 async function keep(id: string, generation: number, key: Uint8Array): Promise<void> {
   try { await rememberRecordKey(id, generation, key); } finally { wipeRecordKeys(key); }
+}
+
+/**
+ * This messaging build does not export the MLS epoch secret. The note is still
+ * sealed, and the key rides inside the message. The message itself is already
+ * end-to-end encrypted by MLS, so the other person can open it. This is not
+ * the epoch wrap. It is the same protection as the rest of the chat.
+ */
+export async function sealNoteInsideMessage(text: string, members: string[], label = 'Note'): Promise<string> {
+  const pointer = await sealLegacyNote({ text, members: recordMembers(...members), label });
+  return encodeLegacyMessage(pointer);
 }
 
 export async function sealNoteMessage(text: string, members: string[], epoch: EpochSecret, label = 'Note'): Promise<string> {

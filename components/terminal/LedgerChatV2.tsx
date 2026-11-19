@@ -94,7 +94,7 @@ import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { isRecordMessage, legacyPreview, parseLegacyMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
-import { RecordSendError, sealFileMessage, sealNoteMessage } from '@/lib/chat/seal-record';
+import { RecordSendError, sealFileMessage, sealNoteInsideMessage, sealNoteMessage } from '@/lib/chat/seal-record';
 import { epochForPeer, RecordEpochError, setRecordEpochProvider } from '@/lib/chat/record-epoch';
 import { installRecordWorker } from '@/lib/chat/record-worker';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
@@ -115,7 +115,7 @@ import { EncryptedMediaEngine } from '@/lib/chat/media';
 import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
 import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal';
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
-import { clearCutoff, clearedAtMs, markCleared, previewAfterClear, previewAfterDelete, survivesClear } from '@/lib/chat/cleared-chats';
+import { clearCutoff, clearedAtMs, lineWasCleared, markCleared, previewAfterClear, previewAfterDelete, survivesClear } from '@/lib/chat/cleared-chats';
 
 
 
@@ -5253,8 +5253,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             .filter((m: any) => clearTsMsInit === 0 || (m.sentAtNs || 0) > clearTsMsInit);
           if (localMsgs && localMsgs.length > 0 && !cancelled) {
             setMessages(prev => {
+              // Re-read the cut-off here. Clear chat can land while this load
+              // is in flight, and the filter above still has the old time.
+              const cutNow = clearedAtMs(activePeer, [effectiveAddress, address]);
               const existingIds = new Set(prev.map(m => m.id));
-              const newMsgs = localMsgs.filter(m => !existingIds.has(m.id));
+              const newMsgs = localMsgs.filter(m => !existingIds.has(m.id) && survivesClear(m.sentAtNs, cutNow) && !isHidden(activePeer, m.id));
+              if (newMsgs.length === 0) return prev;
               return [...prev, ...newMsgs].sort((a, b) => a.sentAtNs - b.sentAtNs);
             });
           }
@@ -6147,7 +6151,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     if (!address || !activePeer || !client) return;
     try {
       const epoch = await epochForPeer(client, activePeer, address);
-      const message = await sealNoteMessage(text, [address, activePeer], epoch);
+      const message = epoch
+        ? await sealNoteMessage(text, [address, activePeer], epoch)
+        : await sealNoteInsideMessage(text, [address, activePeer]);
       const sent = await executeSend(message);
       if (sent) setInputText('');
     } catch (err) {
@@ -6168,6 +6174,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     setIsUploading(true);
     try {
       const epoch = await epochForPeer(client, activePeer, address);
+      if (!epoch) {
+        toast.error('A sealed file needs the MLS exporter. This build of messaging does not have it yet. A sealed note still sends.');
+        return;
+      }
       const message = await sealFileMessage(file, file.name, [address, activePeer], epoch);
       await executeSend(message);
     } catch (err) {
@@ -7003,12 +7013,17 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                           )}
                         </div>
                         {(() => {
+                          const cut = clearedAtMs(conv.peerAddress, [effectiveAddress, address]);
+                          // This list was already passed through previewAfterClear.
+                          // Do not fill the blank from messages that the clear removed.
+                          if (lineWasCleared(conv, cut)) {
+                            return null;
+                          }
                           let preview = formatMessagePreview(conv.lastMessage || '');
                           if (!preview || isSystemSignal(conv.lastMessage || '')) {
                             const convId = `dm-${conv.peerAddress.toLowerCase()}`;
                             // The fallback obeys "Clear chat" and "Delete for me" too: it used to bring
                             // back, under the name, a message that had been cleared from the thread.
-                            const cut = clearedAtMs(conv.peerAddress, [effectiveAddress, address]);
                             const validMsgs = messages.filter(m =>
                               m.conversationId?.toLowerCase() === convId &&
                               typeof m.content === 'string' &&
