@@ -26,7 +26,7 @@ describe('mobile rendering and the world in dots (19/11/2026)', () => {
     expect(map).not.toMatch(/pulse|setInterval/);
     expect(read('components/landing/immersive/ImmersiveLanding.tsx')).toMatch(/<DotWorld \/>/);
   });
-  it('Aztec is credited as what is true, with the wordmark file of the brand kit', () => {
+  it('Aztec is credited as what is true, linked to aztec.network (in text until D-1 is decided)', () => {
     const page = read('components/landing/immersive/ImmersiveLanding.tsx');
     expect(page).toMatch(/Built on\s*<a href="https:\/\/aztec\.network"/);
     expect(page).toMatch(/<a href="https:\/\/ethereum\.org"[^>]*aria-label="Ethereum"><Mark name="ethereum" \/><\/a>/);
