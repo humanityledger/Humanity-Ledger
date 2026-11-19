@@ -5,9 +5,9 @@
 // has run a frame (what a real finger flick shows), and loads the page's late code slowly, as a
 // mobile network does, so a phone that has not loaded yet can never leave a white screen.
 // Package 0 (19/11/2026) adds three checks the DOM probe cannot make:
-//   - pixels: each settled screen is captured and fails when 98.5 % or more of it below the
-//     navigation is white (the page is white by design, so a lower threshold would flag real
-//     scenes that are mostly white with a caption);
+//   - pixels: each settled screen is captured and fails when 99.5 % or more of it below the
+//     navigation is white. A blank screen is ~100 % white; the page is white by design and a
+//     text-only scene on desktop measured 98.7 % (CI, 19/11/2026), so a lower threshold flags it;
 //   - Chromium (Pixel 7): real touch flicks with momentum (CDP Input.synthesizeScrollGesture),
 //     captured the moment each flick ends, down and back up;
 //   - WebKit (iPhone 15): the viewport grows by 80 px half way down and shrinks half way up, as
@@ -67,7 +67,7 @@ function whiteShare(buf, skipTop) {
   }
   return all ? white / all : null;
 }
-const WHITE_MAX = 0.985;
+const WHITE_MAX = 0.995;
 const FLICK = (y) => `(() => { (${SCROLLER}).scrollTop = ${y}; return (${PROBE_FN})(); })()`;
 
 let blank = 0;
