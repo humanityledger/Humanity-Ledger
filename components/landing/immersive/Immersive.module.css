@@ -195,7 +195,9 @@
 .pin > *, .qrBox, .railFill, .cinema, .bands > * { --p: inherit; --k: clamp(0, calc((var(--p, 0) - var(--a, 0)) / (var(--b, 1) - var(--a, 0))), 1); --e: calc(1 - (1 - var(--k)) * (1 - var(--k)) * (1 - var(--k))); }
 
 .caption { position: absolute; z-index: 3; top: var(--cap-top); left: var(--margin); right: var(--margin); --a: 0.02; --b: 0.2;
-  opacity: var(--e); transform: translate3d(0, calc((1 - var(--e)) * 32px), 0); }
+  /* Visible as soon as its scene is: a scene at progress 0 used to show nothing, and between two
+     scenes the page scrolled through blank screens (white on phones, 19/11/2026). It moves in. */
+  opacity: 1; transform: translate3d(0, calc((1 - var(--e)) * 32px), 0); }
 @media (min-width: 900px) {
   .caption { top: auto; right: auto; bottom: clamp(48px, 9svh, 96px); width: min(560px, 40vw); }
 }
@@ -240,7 +242,7 @@
   transform: translate3d(-50%, calc(var(--e) * ((var(--vis-top) + 100svh) / 2 + 40px - var(--cap-top) - (100vw - var(--s32)) * 0.527 - 40px)), 0) scale(calc(1 - var(--e) * 0.2)); }
 .hiPhone { position: absolute; left: 50%; top: var(--vis-top); bottom: var(--s16); width: min(78vw, 340px); translate: -50% 0;
   --a: 0.5; --b: 0.66; opacity: var(--k); transform: translate3d(0, calc((1 - var(--e)) * 30svh), 0); }
-.hi .caption { --a: 0.68; --b: 0.84; }
+.hi .caption { --a: 0.68; --b: 0.84; opacity: var(--e); } /* the film holds the top band first */
 @media (min-width: 900px) {
   .hi .pin { --cw: min(80vw, calc((100svh - 260px) * 1.897), 1180px); }
   .cinemaMove { top: calc(50% + 32px); width: var(--cw); opacity: 1; --a: 0.5; --b: 0.66;
@@ -255,7 +257,7 @@
     transform: translate3d(calc(-50% + var(--e) * (70vw - 170px)), calc(var(--e) * (22svh + 84px - var(--cw) / 8.248)), 0) scale(calc(1 - var(--e) * 0.24)); }
   .hiPhone { left: auto; right: 4vw; top: calc(50% + 32px); bottom: auto; width: min(30vw, 340px); height: min(calc(100svh - var(--navh) - var(--s48)), 700px); translate: 0 -50%;
     --a: 0.52; --b: 0.68; transform: translate3d(calc((1 - var(--e)) * 40vw), 0, 0); }
-  .hi .caption { --a: 0.78; --b: 0.94; }
+  .hi .caption { --a: 0.78; --b: 0.94; opacity: var(--e); }
 }
 
 /* 03. Encryption: three layers in perspective */
@@ -512,5 +514,8 @@
 .mapLegend { margin: 0 0 var(--s32); font-size: var(--t14); color: var(--text); }
 .mapLegend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--violet); margin-right: var(--s8); vertical-align: 1px; }
 .builtOn { display: none; align-items: center; gap: var(--s8); font-size: var(--t12); color: var(--text); text-decoration: none; }
-.builtOn img { height: 16px; width: auto; display: block; }
+.builtOn a { display: inline-flex; align-items: center; color: var(--ink); text-decoration: none; }
+.builtOn .brand { height: 16px; }
+.brandEth { display: inline-flex; align-items: center; gap: var(--s4); font-weight: 600; color: var(--ink); }
+.brandEth .brand { width: auto; }
 @media (min-width: 1100px) { .builtOn { display: inline-flex; } }
