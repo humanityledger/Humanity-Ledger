@@ -83,7 +83,7 @@ describe.skipIf(!LIVE)(`Aztec Alpha mainnet preflight (${NODE_URL})`, () => {
   // the deploy transaction is mined and in which block, the instance exists, and
   // it passes the same checkTokenInstance the wallet runs when it opens. The block
   // and class ID are printed so a pending entry (deployBlock 0) can be completed.
-  for (const t of (record.tokens ?? []) as Array<{ symbol: string; address: string; classId: string | null; deployTx: string; deployBlock: number }>) {
+  for (const t of (record.tokens ?? []) as Array<{ symbol: string; name: string; decimals: number; renamePending?: boolean; address: string; classId: string | null; deployTx: string; deployBlock: number }>) {
     it(`token ${t.symbol} at ${t.address.slice(0, 10)}…: deploy transaction, instance and checkTokenInstance`, async () => {
       const n: any = await node();
       const { AztecAddress } = await import('@aztec-labs/aztec.js/addresses');
@@ -111,6 +111,24 @@ describe.skipIf(!LIVE)(`Aztec Alpha mainnet preflight (${NODE_URL})`, () => {
       report.push(`${t.symbol}: checkTokenInstance ${check.ok ? `ok (${check.artifact})` : `REFUSED: ${check.reason}`}`);
       expect(check, `${t.symbol}: checkTokenInstance`).toMatchObject({ ok: true });
       if (t.classId) expect(classId, `${t.symbol}: recorded classId`).toBe(t.classId);
+
+      // 4. Name, symbol and decimals from public storage, slots from the trusted artifact.
+      //    The on-chain name must equal the recorded one; a token not marked renamePending must
+      //    carry HLC_TOKEN_META (lib/payments/assets.ts).
+      const { Fr } = await import('@aztec-labs/aztec.js/fields');
+      const { readTokenMeta } = await import('@/lib/aztec/token-meta');
+      const { HLC_TOKEN_META } = await import('@/lib/payments/assets');
+      const meta = await readTokenMeta(TokenContractArtifact, async (slot) =>
+        BigInt((await n.getPublicStorageAt('latest', AztecAddress.fromStringUnsafe(t.address), new Fr(slot))).toString()),
+      );
+      report.push(`${t.symbol}: on-chain name "${meta.name}", symbol "${meta.symbol}", decimals ${meta.decimals}`);
+      expect(meta.name, `${t.symbol}: on-chain name`).toBe(t.name);
+      expect(meta.symbol, `${t.symbol}: on-chain symbol`).toBe(t.symbol);
+      expect(meta.decimals, `${t.symbol}: on-chain decimals`).toBe(t.decimals);
+      if (t.symbol === HLC_TOKEN_META.symbol && !t.renamePending) {
+        expect(meta.name, 'HLC: name of HLC_TOKEN_META').toBe(HLC_TOKEN_META.name);
+        expect(meta.decimals, 'HLC: decimals of HLC_TOKEN_META').toBe(HLC_TOKEN_META.decimals);
+      }
     }, 180_000);
   }
 
