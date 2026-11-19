@@ -1,89 +1,24 @@
-# Records of Processing Activities (ROPA)
+# Records of processing activities (art. 30 GDPR)
 
-> **Status (19/11/2026): internal draft, not in force.** It has not been reviewed by a lawyer (OD-8). The live texts are the pages at /docs (lib/docs/pages/legal.ts). Facts that override anything below: the controller is Stefan Antonio Cirisanu, a private individual (no company exists yet); there is no data protection officer and no external consultancy; the visit counter stores nothing in the browser since 19/11/2026.
+Estado: internal draft, not in force until counsel signs (OD-8) · Fecha: 19/11/2026 · Dueño: Stefan Antonio Cirisanu · Fuente de verdad: the texts in force are the pages under /docs (`lib/docs/pages/legal.ts`)
 
-# GDPR Article 30
+> Draft prepared with Claude, pending review by a qualified lawyer. It replaces the earlier version, which named a data protection officer and an external consultancy that do not exist.
 
-**Controller**: Humanity Ledger  
-**DPO Contact**: humanityledger@icloud.com  
-**Last updated**: October 2025
+- **Controller:** Stefan Antonio Cirisanu, a private individual, until the S.L. exists (`lib/constants/legalEntity.ts`). "Humanity Ledger" is a trading name, not an entity.
+- **Data protection officer:** none. A privacy contact is given in the legal notice.
+- **Processors:** Railway (hosting and database, United States; data processing agreement and transfer basis pending). The XMTP network carries encrypted messages; whether node operators are processors, joint controllers or independent third parties is for counsel to decide.
+- **Why this record is kept:** the exemption for fewer than 250 employees does not apply when processing is not occasional, and here it is not.
 
----
+| Data | Purpose | Legal basis | Retention |
+| --- | --- | --- | --- |
+| Wallet address and session (SIWE) | Account access | Contract, art. 6(1)(b) | While the account exists |
+| Username | Being found by others | Contract | While the account exists; released on deletion |
+| Tester name and contact | Running the closed alpha | Tester agreement | 8 weeks of alpha + 6 months |
+| Acceptance of the terms (time and text hash) and the operator's sanctions and age checks (result only) | Proving admission | To be confirmed by counsel | 6 months after the alpha ends (`scripts/alpha/purge.mjs`) |
+| Community posts (server) | Community feature | Contract | Until the author or the community deletes them |
+| Delivery reports with shortened ids | Diagnosing delivery | Legitimate interest, art. 6(1)(f); written balancing test pending | 30 days |
+| Technical and security logs | Protecting the service | Legitimate interest | 90 days |
+| Fee Juice grants to testers | Tax documentation | Legal obligation | Tax period, to be confirmed |
+| Direct messages | Not processed: end-to-end encrypted with MLS on the device | — | — |
 
-## Processing Activities
-
-### PA-001: User Authentication
-
-| Field | Value |
-|-------|-------|
-| Purpose | Authenticate users via SIWE (wallet) or email OTP |
-| Legal basis | Contract performance (Art. 6(1)(b)) |
-| Data categories | Wallet address, email (optional), session token, IP address |
-| Recipients | Internal only |
-| Retention | Session: 30 days; email: until account deleted |
-| Third-country transfers | None |
-| Security measures | Argon2id PIN hashing, HttpOnly cookies, rate limiting, Redis nonces |
-
-### PA-002: Direct Messaging
-
-| Field | Value |
-|-------|-------|
-| Purpose | Enable end-to-end encrypted private messaging |
-| Legal basis | Contract performance |
-| Data categories | Wallet address (conversation key), message metadata (timestamp of delivery to XMTP network) |
-| Note | **Message content never reaches our servers** — XMTP E2EE |
-| Recipients | XMTP network (decentralized) |
-| Retention | No message content stored |
-| Third-country transfers | XMTP network (US-based) — SCC required |
-
-### PA-003: Public Community Posts
-
-| Field | Value |
-|-------|-------|
-| Purpose | Community discussion in public channels |
-| Legal basis | Legitimate interest |
-| Data categories | Post content (text), wallet address of author, timestamps |
-| Recipients | Community members, moderators |
-| Retention | Until deleted by user/moderator or community disbanded |
-| Third-country transfers | Railway US — SCC required |
-
-### PA-004: Private Payments (Aztec)
-
-| Field | Value |
-|-------|-------|
-| Purpose | Private token transfers via Aztec ZK |
-| Legal basis | Contract performance |
-| Data categories | Aztec transaction hash only (amount/recipient is ZK-private) |
-| Note | All ZK computation happens client-side — server stores only txHash |
-| Recipients | Aztec network (public blockchain) |
-| Retention | TxHash stored indefinitely (blockchain record) |
-
-### PA-005: Push Notifications
-
-| Field | Value |
-|-------|-------|
-| Purpose | Alert users to new messages/events without revealing content |
-| Legal basis | Contract performance |
-| Data categories | Device push token, notification type (no message content) |
-| Recipients | Apple (APNs) / Google (FCM) |
-| Retention | Until notification delivered or 7 days |
-| Third-country transfers | Apple/Google US — SCC required |
-
-### PA-006: Server Logs
-
-| Field | Value |
-|-------|-------|
-| Purpose | Security, debugging, abuse detection |
-| Legal basis | Legitimate interest |
-| Data categories | IP address, request path, response code, timestamp |
-| Note | Logs are redacted — no email, wallet address, or message content |
-| Retention | ≤ 30 days |
-
-### PA-007: Moderation
-
-| Field | Value |
-|-------|-------|
-| Purpose | Enforce community guidelines (DSA obligations) |
-| Legal basis | Legal obligation (DSA Art. 16) |
-| Data categories | Reported content, reporter wallet address, timestamp |
-| Retention | 3 years (DSA requirement) |
+Anything written to Aztec or Ethereum cannot be erased. The design avoids writing identifying data on chain.
