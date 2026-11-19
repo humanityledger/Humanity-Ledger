@@ -22,13 +22,20 @@ const PROBE = `(() => {
   const vw = innerWidth, vh = innerHeight; let seen = 0; const why = [];
   for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) {
     const x = vw * (0.1 + 0.2 * i), y = 100 + (vh - 120) * (0.12 + 0.25 * j);
-    let el = document.elementFromPoint(x, y); if (!el) continue;
-    let op = 1; for (let n = el; n && n !== document.documentElement; n = n.parentElement) op *= parseFloat(getComputedStyle(n).opacity || '1');
-    const cs = getComputedStyle(el);
-    const text = [...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
-    const media = /^(IMG|VIDEO|CANVAS|svg|PICTURE|path|circle|rect)$/.test(el.tagName);
-    const bg = cs.backgroundColor && !/rgba?\\(255, 255, 255|rgba\\(0, 0, 0, 0\\)|transparent/.test(cs.backgroundColor) || (cs.backgroundImage && cs.backgroundImage !== 'none' && !/gradient/.test(cs.backgroundImage));
-    if ((text || media || bg) && op > 0.15) seen++; else if (why.length < 3) why.push(el.tagName + '.' + String(el.className).slice(0, 40) + ' op=' + op.toFixed(2));
+    // Every layer at the point, top first: an invisible layer on top (a scene fading in) must
+    // not hide a visible one below it.
+    let hit = null, top = null;
+    for (const el of document.elementsFromPoint(x, y)) {
+      if (!top) top = el;
+      let op = 1; for (let n = el; n && n !== document.documentElement; n = n.parentElement) op *= parseFloat(getComputedStyle(n).opacity || '1');
+      if (op <= 0.15) continue;
+      const cs = getComputedStyle(el);
+      const text = [...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
+      const media = /^(IMG|VIDEO|CANVAS|svg|PICTURE|path|circle|rect)$/.test(el.tagName);
+      const bg = cs.backgroundColor && !/rgba?\\(255, 255, 255|rgba\\(0, 0, 0, 0\\)|transparent/.test(cs.backgroundColor) || (cs.backgroundImage && cs.backgroundImage !== 'none' && !/gradient/.test(cs.backgroundImage));
+      if (text || media || bg) { hit = el; break; }
+    }
+    if (hit) seen++; else if (why.length < 3 && top) why.push(top.tagName + '.' + String(top.className).slice(0, 40));
   }
   const pins = [...document.querySelectorAll('[data-scene]')].map((s) => { const r = s.getBoundingClientRect(); return { label: s.getAttribute('aria-label'), top: Math.round(r.top), bottom: Math.round(r.bottom), p: s.style.getPropertyValue('--p'), in: s.style.getPropertyValue('--in'), near: s.hasAttribute('data-near'), pinOp: getComputedStyle(s.firstElementChild).opacity }; }).filter((s) => s.top < vh && s.bottom > 0);
   return { seen, why, pins };

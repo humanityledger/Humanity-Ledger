@@ -23,7 +23,6 @@ import { CopyHash, SceneGlobe, ScenePhone, SceneVideo, ScrollRoot, SessionHeal, 
 import { DotWorld } from './DotWorld';
 import s from './Immersive.module.css';
 
-const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet' && AZTEC_WALLET_CONFIG.alphaEnabled;
 const NETWORK = networkLabel();
 const NOTICE = (process.env.NEXT_PUBLIC_STATUS_NOTICE || '').trim();
 
@@ -154,8 +153,18 @@ function countTests(): number {
 const Mark = ({ name }: { name: 'aztec' | 'ethereum' }) => {
   const file = C.BRAND_FILES[name];
   const label = name === 'aztec' ? 'Aztec Network' : 'Ethereum';
-  // eslint-disable-next-line @next/next/no-img-element
-  return file ? <img src={file} alt={label} className={s.brand} /> : <span className={s.brandText}>{label}</span>;
+  if (!file) return <span className={s.brandText}>{label}</span>;
+  // The Ethereum diamond from ethereum.org's assets; its name is set beside it in the page's type.
+  return name === 'ethereum' ? (
+    <span className={s.brandEth}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={file} alt="" className={s.brand} />
+      <span>Ethereum</span>
+    </span>
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={file} alt={label} className={s.brand} />
+  );
 };
 
 /** Versions read from the repository once per process, never typed by hand. */
@@ -190,7 +199,6 @@ export function ImmersiveLanding() {
   ];
   const firstTxUrl = explorerTxUrl(C.FIRST_PAYMENT.tx) || undefined;
   const ticks = C.FIRST_PAYMENT.block - C.FIRST_PAYMENT.tokenBlock;
-  const status = ALPHA ? `Live on ${NETWORK}` : `On the ${NETWORK}`;
 
   return (
     <ScrollRoot className={s.page}>
@@ -206,13 +214,12 @@ export function ImmersiveLanding() {
             <a key={n.id} href={`#${n.id}`}>{n.label}</a>
           ))}
         </nav>
-        <span className={s.status}>{status}</span>
-        {C.BRAND_FILES.aztec && (
-          <a className={s.builtOn} href="https://aztec.network" target="_blank" rel="noopener noreferrer" aria-label="Built on Aztec Network">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            Built on <img src={C.BRAND_FILES.aztec} alt="Aztec" width={70} height={16} />
-          </a>
-        )}
+        <span className={s.builtOn}>
+          Built on
+          <a href="https://aztec.network" target="_blank" rel="noopener noreferrer" aria-label="Aztec Network"><Mark name="aztec" /></a>
+          <span aria-hidden="true">·</span>
+          <a href="https://ethereum.org" target="_blank" rel="noopener noreferrer" aria-label="Ethereum"><Mark name="ethereum" /></a>
+        </span>
         <Link href="/chat" className={s.cta} prefetch>Open Ledger Chat</Link>
         <details className={s.menu}>
           <summary aria-label="Sections">
@@ -222,7 +229,7 @@ export function ImmersiveLanding() {
             {C.NAV.map((n) => (
               <a key={n.id} href={`#${n.id}`}>{n.label}</a>
             ))}
-            <span className={s.sheetStatus}>{status}</span>
+            <span className={s.sheetStatus}>Built on <Mark name="aztec" /> · <Mark name="ethereum" /></span>
           </nav>
         </details>
       </header>
