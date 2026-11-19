@@ -1,5 +1,6 @@
 ﻿import { escapeHtml } from '@/lib/security/escapeHtml';
 import { Resend } from 'resend';
+import { LEGAL_ENTITY } from '@/lib/constants/legalEntity';
 
 // Provide a dummy key for build-time safety if env is missing
 const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
@@ -186,7 +187,7 @@ export async function sendWelcomeEmail(email: string, name?: string): Promise<vo
                   <tr>
                     <td style="padding: 40px 60px; background-color: #1D1A10; color: #F2ECD8; font-family: 'Roboto Mono', monospace;">
                       <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.5; margin-bottom: 10px;">
-                        Humanity Ledger Corporation // All Rights Reserved © 2026
+                        ${LEGAL_ENTITY.tradingName} · ${LEGAL_ENTITY.name} · ${new Date().getFullYear()}
                       </div>
                       <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.3;">
                         Confidential Transmission // Sovereign Eyes Only
@@ -360,7 +361,7 @@ export async function sendEnclaveResetEmail(email: string, otp: string): Promise
                     <tr>
                       <td style="padding:20px 40px;background:#0A0A0A;border-top:2px solid #0A0A0A;">
                         <div style="font-family:'Courier New',monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.2em;color:rgba(255,255,255,0.35);">
-                          Humanity Ledger Corporation // Confidential // ${new Date().getFullYear()}
+                          ${LEGAL_ENTITY.tradingName} · ${LEGAL_ENTITY.name} · ${new Date().getFullYear()}
                         </div>
                       </td>
                     </tr>

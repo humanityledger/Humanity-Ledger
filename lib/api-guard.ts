@@ -69,7 +69,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   if (subscription.status === 'disputed') {
     return {
       valid: false,
-      error: 'API key suspended due to active payment dispute. Contact support@ledgeralert.corp.',
+      error: 'API key suspended due to active payment dispute. Contact the provider listed at /docs/legal-notice.',
       statusCode: 403,
     };
   }
@@ -77,7 +77,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   if (subscription.status === 'canceled') {
     return {
       valid: false,
-      error: 'Subscription canceled. Renew at ledgeralert.corp/api-marketplace.',
+      error: 'Subscription canceled. This API is no longer offered.',
       statusCode: 403,
     };
   }
@@ -92,7 +92,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
       });
       return {
         valid: false,
-        error: 'Subscription suspended due to failed payment. Update payment at ledgeralert.corp/billing.',
+        error: 'Subscription suspended due to failed payment. This API is no longer offered.',
         statusCode: 403,
       };
     }
@@ -103,7 +103,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   if (subscription.currentPeriodEnd && subscription.currentPeriodEnd < new Date()) {
     return {
       valid: false,
-      error: 'Subscription expired. Renew at ledgeralert.corp/api-marketplace.',
+      error: 'Subscription expired. This API is no longer offered.',
       statusCode: 402,
     };
   }
