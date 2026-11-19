@@ -52,6 +52,7 @@ import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList
 import { OnlineDot, PresenceLine } from '@/components/chat/PresenceLine';
 import { revealMessage } from '@/lib/chat/reveal-message';
 import { CrystalNavBar, NavTab } from '@/components/chat/CrystalNavBar';
+import { LiveLatency } from '@/components/chat/LiveLatency';
 import SwipeableConversationRow from '@/components/chat/SwipeableConversationRow';
 import { ThemePickerSheet, chatThemeStyle, canvasStyle, canvasTone, type AppearanceTab } from '@/components/chat/ThemePickerSheet';
 import { findChatTheme, isChatThemeId, type ChatTheme } from '@/lib/chat/themes';
@@ -92,6 +93,8 @@ import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/li
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
+import { isRecordMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
+import { RecordSendError, sealFileMessage, sealNoteMessage } from '@/lib/chat/seal-record';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
 import { encodeInvoicePayload, parseInvoicePayload, type ZkInvoice } from '@/lib/zk/zkInvoice';
@@ -247,7 +250,7 @@ const carriesSecret = (content: unknown): boolean => {
   if (typeof content !== 'string') return false;
   // Reply, burn, thread and forward wrappers all end in "__::".
   const inner = content.startsWith('__') && content.includes('__::') ? (content.split('__::').pop() || '') : content;
-  return isAgreementMessage(content) || isAgreementMessage(inner) || isAttachmentMessage(inner);
+  return isAgreementMessage(content) || isAgreementMessage(inner) || isAttachmentMessage(inner) || isRecordMessage(content) || isRecordMessage(inner);
 };
 
 export const formatMessagePreview = (content: string): string => {
@@ -297,6 +300,8 @@ export const formatMessagePreview = (content: string): string => {
   // Encrypted attachments carry their decryption key: never preview or notify their text.
   const remoteAttachment = parseAttachmentMessage(cleanContent);
   if (remoteAttachment) return attachmentPreview(remoteAttachment);
+  const record = parseRecordMessage(cleanContent);
+  if (record) return recordPreview(record);
   // Scheduled calls: a short label, never the JSON.
   const meeting = parseMeeting(cleanContent);
   if (meeting) return meetingPreview(meeting);
@@ -899,6 +904,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
   const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recordFileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -5771,9 +5777,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const isAttachmentMsg = isAttachmentMessage(content);
     // Scheduled-call invitations are structured too: sent exactly as built.
     const isMeetingMsg = parseMeeting(content) !== null;
-    const isOpaqueMsg = isAgreementMsg || isAttachmentMsg || isMeetingMsg;
+    // A record pointer carries its key. It is sent as built, never rewritten,
+    // and never parked in the plain-text offline outbox.
+    const isRecordMsg = isRecordMessage(content);
+    const isOpaqueMsg = isAgreementMsg || isAttachmentMsg || isMeetingMsg || isRecordMsg;
     if (isOpaqueMsg && isOffline) {
-      toast.error(isAgreementMsg ? 'You are offline. Agreements are only sent while connected.' : isMeetingMsg ? 'You are offline. Invitations are only sent while connected.' : 'You are offline. Attachments are only sent while connected.');
+      toast.error(isAgreementMsg ? 'You are offline. Agreements are only sent while connected.' : isMeetingMsg ? 'You are offline. Invitations are only sent while connected.' : isRecordMsg ? 'You are offline. Records are only sent while connected.' : 'You are offline. Attachments are only sent while connected.');
       return false;
     }
     const moderationFlag = isOpaqueMsg ? null : moderateContent(content);
@@ -5851,13 +5860,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
     // Phase 2: Message Quoting
     let finalContent = content;
-    if (replyingTo && !isSignal && !isAgreementMsg) {
+    if (replyingTo && !isSignal && !isAgreementMsg && !isRecordMsg) {
       const snippet = (carriesSecret(replyingTo.content) ? formatMessagePreview(replyingTo.content) : (replyingTo.content || '')).replace(/__/g, '').slice(0, 80);
       finalContent = `__REPLY__${replyingTo.id}__SNIPPET__${snippet}__::${content}`;
       setReplyingTo(null);
     }
     // Thread support
-    if (threadParentId && !isSignal && !isAgreementMsg) {
+    if (threadParentId && !isSignal && !isAgreementMsg && !isRecordMsg) {
       finalContent = `__THREAD__${threadParentId}__::${finalContent}`;
       setThreadParentId(null);
     }
@@ -5882,7 +5891,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
 
     // Disappearing messages: a timer set for this chat wins over the global one.
-    if (!isSignal && !isAgreementMsg) {
+    if (!isSignal && !isAgreementMsg && !isRecordMsg) {
       let chatTimer = 'off';
       try { chatTimer = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()) || 'off'; } catch {}
       const globalTimer = (ledgerSettings as any)?.auto_delete_timer || 'off';
@@ -6108,6 +6117,46 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     } finally {
       setIsUploading(false);
       resetFileInputs(e);
+    }
+  };
+
+  const sealDraftAsRecord = async () => {
+    const text = inputText.trim();
+    setShowAppDrawer(false);
+    if (!text) {
+      toast.error('Write the note, then seal it.');
+      return;
+    }
+    if (!address || !activePeer) return;
+    try {
+      const message = await sealNoteMessage(text, [address, activePeer]);
+      const sent = await executeSend(message);
+      if (sent) setInputText('');
+    } catch (err) {
+      toast.error(err instanceof RecordSendError ? err.message : 'Could not seal the record');
+    }
+  };
+
+  const handleRecordFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setShowAppDrawer(false);
+    if (!address || !activePeer) { resetFileInputs(e); return; }
+    if (isOffline) {
+      toast.error('You are offline. Records are only sent while connected.');
+      resetFileInputs(e);
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const message = await sealFileMessage(file, file.name, [address, activePeer]);
+      await executeSend(message);
+    } catch (err) {
+      toast.error(err instanceof RecordSendError ? err.message : 'Could not seal the file');
+    } finally {
+      setIsUploading(false);
+      resetFileInputs(e);
+      if (recordFileRef.current) recordFileRef.current.value = '';
     }
   };
 
@@ -6562,6 +6611,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           <StudioIcon size={21} strokeWidth={1.8} />
         </button>
         <div className="flex-1" />
+        {/* Live round trip from this device. Same reading on phone, tablet and computer. */}
+        <LiveLatency />
         <button type="button" onClick={() => setShowFullSettings(true)} aria-label="Settings" title="Settings" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
           <Settings size={21} strokeWidth={1.8} />
         </button>
@@ -6628,6 +6679,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               </span>
             </button>
             <div className="flex items-center gap-0.5 shrink-0">
+              <LiveLatency />
               <button
                 type="button"
                 onClick={() => openStudio()}
@@ -7132,6 +7184,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
               {/* Voice and video in bordered squares, then Pay; round icons on phones. */}
               <div className="flex items-center gap-0.5 md:gap-2 shrink-0">
+                {/* The rail (and its reading above Settings) is hidden on a phone. */}
+                <LiveLatency className="md:hidden mr-1" />
                 <button type="button" onClick={() => handleStartCall('audio')} className="w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Voice call" aria-label="Voice call">
                   <Phone size={19} strokeWidth={1.8} />
                 </button>
@@ -7384,6 +7438,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                           // The DM's peer inbox, resolved from the conversation's members:
                           // an Aztec address is pinned only from that inbox.
                           dmPeerInboxId={activePeerInboxIdRef.current || undefined}
+                          recordMembers={address && activePeer ? [address, activePeer] : undefined}
                         />
                       );
                     }}
@@ -7567,6 +7622,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 </div>
               )}
                 <input type="file" ref={fileRef} className="hidden" onChange={handleFileUpload} />
+                <input type="file" ref={recordFileRef} className="hidden" onChange={handleRecordFile} />
                 {/* Camera capture — opens native camera on iOS/Android */}
                 <input type="file" ref={cameraRef} className="hidden" accept="image/*,video/*" capture="environment" onChange={handleFileUpload} />
                 {/* Gallery picker — opens photo library on iOS/Android */}
@@ -7592,6 +7648,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                             { id: 'camera',    color: '#FF3B30', iconPath: <Camera size={19} strokeWidth={1.8} />,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'gallery',   color: '#5856D6', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'Photos and videos', sublabel: 'Choose from your library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
                             { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 20 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'record-note', color: '#15171c', iconPath: <Lock size={19} strokeWidth={1.8} />, label: 'Seal this note', sublabel: 'A record of the text you wrote', onClick: () => { void sealDraftAsRecord(); } },
+                            { id: 'record-file', color: '#15171c', iconPath: <Lock size={19} strokeWidth={1.8} />, label: 'Sealed file', sublabel: 'Ciphertext only, up to 20 MB', onClick: () => { recordFileRef.current?.click(); setShowAppDrawer(false); } },
 
                             // ── Interactive ──────────────────────────────────────────
                             { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },

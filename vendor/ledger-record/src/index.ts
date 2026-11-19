@@ -1,0 +1,26 @@
+export {
+  RECORD_SCHEME,
+  RECORD_TYPE,
+  RECORD_VERSION,
+  ZERO_HEAD,
+  MAX_FILE_BYTES,
+  MAX_NOTE_BYTES,
+  RecordError,
+  buildPointer,
+  encodeRecordMessage,
+  encryptBody,
+  handoffBody,
+  isRecordMessage,
+  membershipEpoch,
+  normalizeMembers,
+  openRecord,
+  parseRecordMessage,
+  recordPreview,
+  sealFileBody,
+  sealHandoff,
+  sealNote,
+  verifyChain,
+  versionHead,
+} from './protocol';
+
+export type { HandoffAction, OpenedRecord, RecordKind, RecordPointer, SealedBody } from './protocol';

@@ -26,6 +26,20 @@ describe('chat on a phone', () => {
     expect(css).toMatch(/html\.hl-kb-open \[data-chat-root\] \{[^}]*height: var\(--hl-vv-h, 100%\) !important;/);
   });
 
+  it('shows the live millisecond count above Settings on the rail, and on a phone where that rail is hidden', () => {
+    const chat = read('components/terminal/LedgerChatV2.tsx');
+    const rail = chat.indexOf('aria-label="Ledger Chat"');
+    const gear = chat.indexOf('aria-label="Settings"', rail);
+    const reading = chat.indexOf('<LiveLatency />', rail);
+    expect(reading).toBeGreaterThan(rail);
+    expect(reading).toBeLessThan(gear);
+    expect(chat).toContain('<LiveLatency className="md:hidden mr-1" />');
+    const src = read('lib/chat/liveRtt.ts');
+    expect(src).not.toMatch(/navigator\.connection\b/);
+    expect(src).toContain("credentials: 'omit'");
+    expect(src).toContain("cache: 'no-store'");
+  });
+
   it('the list beside the rail takes the remaining width, not the full width (nothing cut at the right)', () => {
     const chat = read('components/terminal/LedgerChatV2.tsx');
     expect(chat).toContain('w-full md:w-auto md:flex-1 md:min-w-0 lg:flex-none lg:w-96');

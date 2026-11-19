@@ -75,6 +75,7 @@ const PUBLIC_PATHS = new Set([
   '/favicon.ico',
   '/robots.txt',
   '/sitemap.xml',
+  '/api/ping', // Live client round-trip. Exact path only. See app/api/ping.
 ]);
 
 const PUBLIC_PREFIXES = [
@@ -336,9 +337,29 @@ export function buildCsp(nonce: string, isDev = process.env.NODE_ENV === 'develo
   return `default-src 'self'; script-src 'self' 'nonce-${nonce}' ${isDev ? "'unsafe-eval' " : ""}'wasm-unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob: data:${isDev ? ' ws: http:' : ''}; media-src 'self' blob: mediastream:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';`;
 }
 
+function limitPing(req: NextRequest): NextResponse | null {
+  const forwardedFor = req.headers.get('x-forwarded-for') || '';
+  const hops = forwardedFor.split(',').map(h => h.trim()).filter(Boolean);
+  const clientIp = hops.length > 0 ? hops[hops.length - 1] : ((req as any).ip || '127.0.0.1');
+  const isDev = process.env.NODE_ENV === 'development';
+  const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost';
+  if (isDev && isLocalhost) return null;
+  // One visible tab probes every 1.5 s (~40/min). Three tabs still fit. A flood does not.
+  return applyRateLimit('ping:' + clientIp, 120);
+}
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   let earlySession: string | null | undefined;
+
+  // Live latency probe. It stays in front of the session check on purpose:
+  // verifying a JWT here would add server time that is not the network, and
+  // the number on screen is the client's own round trip. No cookie, no body, no data.
+  if (pathname === '/api/ping') {
+    const limited = limitPing(req);
+    if (limited) return limited;
+    return NextResponse.next();
+  }
 
   // Ledger Studio is closed. The page at /studio renders a lock and loads no model.
   // Every studio API answers 410 before auth, rate limits or a provider call.

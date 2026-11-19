@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { matchesPrefix, isPublicPath, checkCsrf } from '@/middleware';
+import { matchesPrefix, isPublicPath, checkCsrf, middleware } from '@/middleware';
 
 /**
  * Regression tests for the identity perimeter.
@@ -47,6 +47,9 @@ describe('isPublicPath — sibling routes do not inherit a neighbour’s exempti
   it('keeps the documented public routes public', () => {
     expect(isPublicPath('/api/auth/nonce')).toBe(true);
     expect(isPublicPath('/api/health')).toBe(true);
+    expect(isPublicPath('/api/ping')).toBe(true);
+    expect(isPublicPath('/api/pinger')).toBe(false);
+    expect(isPublicPath('/api/ping/extra')).toBe(false);
     expect(isPublicPath('/api/aztec/sponsor')).toBe(false);
     // Since 2026-10-28 the user directory needs a session: anyone could walk it.
     expect(isPublicPath('/api/chat/users/search')).toBe(false);
@@ -61,6 +64,11 @@ describe('isPublicPath — sibling routes do not inherit a neighbour’s exempti
   it('does not exempt a route that merely shares a prefix string', () => {
     expect(isPublicPath('/api/settingsExport')).toBe(false);
     expect(isPublicPath('/api/authorize')).toBe(false);
+  });
+
+  it('lets the latency probe through with no session, before any JWT check', async () => {
+    const res = await middleware(new NextRequest('https://ledger.example/api/ping?n=1'));
+    expect(res.status).toBe(200);
   });
 });
 

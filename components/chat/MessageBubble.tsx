@@ -26,6 +26,8 @@ import { parseMeeting } from '@/lib/chat/meeting';
 import { MeetingCard } from './MeetingCard';
 import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { RemoteAttachmentBubble } from './RemoteAttachmentBubble';
+import { parseRecordMessage } from '@/vendor/ledger-record/src/index';
+import { RecordCard } from './RecordCard';
 
 // Loaded only when a conversation contains an agreement message.
 const AgreementCard = dynamic(() => import('./AgreementCard').then((m) => m.AgreementCard), { ssr: false });
@@ -106,6 +108,8 @@ export interface MessageProps {
   onJoinGroupCall?: (roomId: string, password: string) => void;
   /** The other person's XMTP inbox when this is a direct conversation; agreements need it. */
   dmPeerInboxId?: string;
+  /** Addresses a record was sealed for. Ledger Record checks this set before it decrypts. */
+  recordMembers?: string[];
   /**
    * Play the entrance once, at mount (VirtualizedMessageList decides: sent or received while the chat
    * is open). Read only at mount: a later change of the prop never replays it.
@@ -605,7 +609,7 @@ MessageTicks.displayName = 'MessageTicks';
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, enter = false,
+  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, recordMembers, enter = false,
 }: MessageProps) => {
   const controls = useAnimation();
   // Captured at mount only (see `enter`). The class carries `will-change`, removed when the
@@ -694,6 +698,7 @@ export const MessageBubble = React.memo(({
   // Encrypted voice notes, photos, videos and files (lib/chat/remote-attachment.ts).
   // The message carries the decryption key: it is never shown as text.
   const remoteAttachment = isAgreement ? null : parseAttachmentMessage(content);
+  const record = isAgreement || remoteAttachment ? null : parseRecordMessage(content);
   // Scheduled calls (lib/chat/meeting.ts).
   const meeting = isAgreement ? null : parseMeeting(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
@@ -888,6 +893,8 @@ export const MessageBubble = React.memo(({
               <MeetingCard invite={meeting} isMe={isMe} />
             ) : remoteAttachment ? (
               <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
+            ) : record ? (
+              <RecordCard pointer={record} members={recordMembers ?? []} />
             ) : isSticker ? (
               <StickerBubble
                 content={content}
