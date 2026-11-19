@@ -32,7 +32,11 @@ The last section of this file records a recommended posture for each question, d
 
 **Context:** `PrivateEscrow` publishes `H(escrow_id, settlement_tag)` as a nullifier from both `claim` and `refund`. Only one of them can land first; the other is refused by the nullifier tree. `claim` enforces inclusion before `deadline`; `refund` enforces inclusion after it. A deposit nullifier `H(escrow_id, sender)` prevents a second deposit under the same `escrow_id` from sharing the settlement path.
 
-**Decision / interim position:** Use the shared settlement nullifier as designed. The deposit nullifier (added after the first version) closes the double-fund vector. This pattern is used in production.
+**Decision / interim position:** Use the shared settlement nullifier as designed. The deposit nullifier (added after the first version) closes the double-fund vector. Nothing is deployed on Alpha yet; the pattern runs on the test network.
+
+**Repository evidence (19/11/2026):**
+- `contracts/aztec/escrow/src/main.nr`: the deposit nullifier over `(escrow_id, sender)` with `DOM_SEP__ESCROW_DEPOSIT` (line 208); the settlement nullifier with `DOM_SEP__ESCROW_SETTLED`, the same value from `claim` (line 255) and `refund` (line 304); claim expiry capped at the deadline (`set_expiration_timestamp`, line 253).
+- TXE tests in `contracts/aztec/escrow/src/test.nr`: `claimed_escrow_cannot_also_be_refunded`, `escrow_cannot_be_claimed_twice`, `early_refund_fails`, `claim_after_the_deadline_fails`, `second_deposit_with_the_same_escrow_id_fails`, `the_same_escrow_id_cannot_be_reused_after_settlement`.
 
 **Consequence if changed:** If Aztec recommends `delayed_public_mutable` or a commitment-based approach, the escrow contract must be rewritten and recompiled, the class ID changes, and all deployed instances become legacy. `docs/AZTEC_TESTNET_DEPLOYMENTS.md` and `deployments/aztec-pending-recompile.json` must be updated.
 
@@ -40,7 +44,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -48,9 +52,14 @@ The last section of this file records a recommended posture for each question, d
 
 > *Is a keyed deployment whose secret is shared with the parties the pattern you recommend for a contract that holds a private balance, or is there a better one?*
 
-**Context:** `lib/aztec/keyed-deploy.ts` deploys each escrow and stream as a fresh instance with Schnorr keys derived from the conversation secret. The parties hold the secret; neither knows the other's EVM key. The first keyless instances (4 November 2026, `deployments/aztec-testnet.json`) are marked do-not-use.
+**Context:** `lib/aztec/keyed-deploy.ts` deploys each escrow and stream as a fresh instance whose public keys are derived from a random secret created for that agreement (`randomField()` in `lib/aztec/agreements.ts`). The secret travels to the recipient inside the encrypted chat invitation, so both parties can read the instance's notes; neither knows the other's EVM key. The first keyless instances (4 November 2026, `deployments/aztec-testnet.json`) are marked do-not-use.
 
-**Decision / interim position:** Keyed deployment is the current pattern. `lib/aztec/agreement-invite.ts` recomputes the deployment address from the shared secret before the receiver accepts; `confirmAgreement` checks the note against the contract's stored state. Trust on first use for the peer Aztec address (G7 open).
+**Decision / interim position:** Keyed deployment is the current pattern. `lib/aztec/agreement-invite.ts` recomputes the deployment address from the shared secret before the receiver accepts; `confirmAgreement` checks the note against the contract's stored state. The peer's Aztec address needs a verified proof of control (`lib/aztec/peer-binding.ts`, G7) before value moves.
+
+**Repository evidence (19/11/2026):**
+- `lib/aztec/keyed-deploy.ts`: `computeKeyedInstance` (line 58) derives the public keys from the secret; deploys use `universalDeploy: true` (`lib/aztec/agreements.ts`, `DeployMethod.create`).
+- `lib/aztec/agreement-invite.ts`: `verifyAgreementInvite` (line 102) recomputes the address and class from the secret, salt and token; `currentClassIds` (line 138) limits accepted classes to the record of the node's network.
+- `deployments/aztec-testnet.json`: the keyless instances of 4 November 2026 are `do-not-use`; `test/unit/aztec/deployments-registry.test.ts` refuses a balance-holding contract marked active without keys.
 
 **Consequence if changed:** If Aztec recommends account abstraction, shared nullifier keys, or a different escrow factory, the entire agreement flow (`lib/aztec/agreements.ts`, `lib/aztec/chat-agreements.ts`, `AgreementCard`, `AgreementComposer`) must be reworked. This is a large surface change.
 
@@ -58,7 +67,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -76,7 +85,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -88,13 +97,17 @@ The last section of this file records a recommended posture for each question, d
 
 **Decision / interim position:** Current design. No `delayed_public_mutable` used because it would make the cancellation time public before it lands, potentially revealing activity patterns.
 
+**Repository evidence (19/11/2026):**
+- `contracts/aztec/streams/src/main.nr`: the state nullifier with `DOM_SEP__STREAM_STATE`, pushed by `withdraw` (line 330) and by `cancel` (line 430); the create nullifier over `(salt, sender)` with `DOM_SEP__STREAM_CREATE` (line 281).
+- TXE tests in `contracts/aztec/streams/src/test.nr`: `a_withdrawal_cannot_reuse_an_earlier_accrual`, `a_cancel_from_a_stale_copy_fails_with_funds_left`, `a_withdrawal_after_cancel_fails`, `a_second_cancel_fails`, `stream_view_skips_the_senders_stale_copy`.
+
 **Consequence if changed:** Switching to `delayed_public_mutable` would simplify state handling but leak cancellation timing publicly. Needs explicit privacy trade-off decision.
 
 **Status:** OPEN — awaiting Aztec review.
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -102,9 +115,13 @@ The last section of this file records a recommended posture for each question, d
 
 > *A cancel measures accrual at its anchor block, chosen by the sender's PXE; we bound it by expiring the cancel 600 s after its anchor. Is there a better way to bound a time-dependent value in a private function?*
 
-**Context:** A private function has no access to the current timestamp; it only knows the anchor block chosen by the prover's PXE. Stream cancel computes accrual as `rate × (cancel_anchor − start)` and sets `tx_context.block_header.global_variables.timestamp` as the expiration window. Any cancel proof older than 600 s from its anchor is rejected by the sequencer.
+**Context:** A private function has no access to the current timestamp; it only knows the anchor block chosen by the prover's PXE. Stream cancel computes accrual as `rate × (cancel_anchor − start)` and sets the transaction's expiration to the anchor timestamp plus 600 s (`set_expiration_timestamp`). A cancel included later than that is not valid.
 
-**Decision / interim position:** 600-second expiry window. This bounds the worst-case over-accrual to `rate × 600`. Documented as a known limitation.
+**Decision / interim position:** 600-second expiry window. This bounds the worst-case under-payment to the recipient to `rate × 600`. Documented as a known limitation.
+
+**Repository evidence (19/11/2026):**
+- `contracts/aztec/streams/src/main.nr`: `CANCEL_MAX_TX_LIFETIME: u64 = 600` (line 213), applied as `set_expiration_timestamp(anchor_ts + CANCEL_MAX_TX_LIFETIME)` (line 418); withdrawals use `anchor_ts + 1800` (line 317); the rationale is in the header comment (SEC-S9, lines 55–67).
+- TXE tests: `cancel_mid_stream_splits_accrued_and_the_rest`, `cancel_with_dust_accrued_pays_it_without_fee`, `cancel_fee_never_refuses`.
 
 **Consequence if changed:** If Aztec introduces a time oracle or a tighter anchor-to-inclusion SLA, the window and the accrual bound can be tightened. No structural contract change needed; only the constant changes.
 
@@ -112,7 +129,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -130,7 +147,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -148,7 +165,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -166,7 +183,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -184,7 +201,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -202,7 +219,7 @@ The last section of this file records a recommended posture for each question, d
 
 **Aztec reply:** *(none yet)*
 
-**Posición interim adoptada: se mantiene el patrón actualmente implementado en el código, que sigue Path A (notas + nullifiers de Aztec) y los ejemplos de noir-contracts v6. Cualquier cambio requerirá respuesta explícita de Aztec Labs o nueva decisión documentada.**
+**Interim position adopted:** the pattern implemented in the code stays. It follows Path A (Aztec notes and nullifiers) and the noir-contracts v6 examples. Any change needs an explicit reply from Aztec Labs or a new documented decision.
 
 ---
 
@@ -220,24 +237,24 @@ No architectural claim about the Aztec integration may be made in public materia
 
 ---
 
-## Decisiones conservadoras adoptadas en ausencia de respuesta de Aztec Labs
+## Conservative decisions adopted while Aztec Labs has not replied
 
-Este apartado recoge las decisiones de diseño que el protocolo ha tomado unilateralmente mientras espera respuesta de Aztec Labs. Todas ellas son conservadoras en el siguiente sentido: mantienen el comportamiento ya implementado, evitan introducir nuevos patrones criptográficos y preservan la alineación con Path A (notas + nullifiers de la red Aztec).
+This section records the design decisions taken while a reply is awaited. Each is conservative in one sense: it keeps the behaviour already implemented, adds no new cryptographic pattern and stays with Path A (Aztec notes and nullifiers).
 
-| Decisión | Justificación conservadora | Riesgo si Aztec recomienda otra cosa |
+| Decision | Conservative rationale | Risk if Aztec recommends otherwise |
 |---|---|---|
-| **Q1:** Nullifier de liquidación compartido entre `claim` y `refund` | Es el patrón más directo con notas Aztec; el árbol de nullifiers garantiza unicidad sin lógica custom | El contrato debe recompilarse; el class ID cambia; las instancias desplegadas quedan como legacy |
-| **Q2:** Despliegue con clave derivada del secreto de conversación | Mantiene la custodia en las partes; no introduce un tercero custodio | Si Aztec recomienda account abstraction o factory pattern, el flujo de acuerdos completo debe rediseñarse |
-| **Q3:** Raw selector para llamadas al token | Evita la duplicación de crates que falla en la versión actual del toolchain | Si Aztec resuelve la duplicación, cambiar al interface tipado; es un cambio menor sin impacto en nullifiers ni notas |
-| **Q4:** Nullifier de estado compartido entre withdraw y cancel | Preserva la privacidad del momento de cancelación; `delayed_public_mutable` la expondría | Si Aztec recomienda `delayed_public_mutable`, se acepta la revelación pública del momento de cancelación |
-| **Q5:** Ventana de expiración de 600 s para pruebas de cancelación | Acota el sobre-accrual máximo a `rate × 600`; es un límite documentado y honesto | Si Aztec introduce un oráculo de tiempo o una SLA más ajustada, solo cambia la constante; sin cambio estructural |
-| **Q6:** Padding de gas del 25 % | Heurístico conservador; sin estimación oficial de Aztec | Si Aztec publica márgenes recomendados, actualizar `lib/aztec/wallet/`; sin impacto en contratos |
-| **Q7:** Alpha sin Sponsored FPC | Refleja la realidad documentada de Aztec Alpha hoy; no se oculta al usuario | Si Aztec lanza un FPC público en Alpha, actualizar `fees.ts` con la nueva dirección |
-| **Q8:** Fee payer público en Alpha | Honestidad técnica; el UI lo informa explícitamente; no se intenta disimular | Si Aztec introduce `PrivateFeePaymentMethod` para Alpha, evaluar e integrar |
-| **Q9:** Trust on first use para el Aztec address del peer | Mínimo viable sin introducir un protocolo de desafío-respuesta no especificado por Aztec | Si Aztec recomienda un patrón ligero de prueba de control de nsk, integrarlo en `peer-binding.ts` |
-| **Q10:** Dependencia del mecanismo estándar de sync del PXE para note discovery | No se añade tagging extra sin saber si Aztec ya lo garantiza; el UI muestra "Sync wallet" si el balance parece desfasado | Si Aztec documenta escenarios de nota irrecuperable, implementar tagging XMTP como mecanismo de entrega alternativo |
+| **Q1:** Settlement nullifier shared by `claim` and `refund` | The most direct pattern with Aztec notes: the nullifier tree guarantees uniqueness without custom logic | The contract is recompiled, the class id changes, deployed instances become legacy |
+| **Q2:** Deployment keyed by a per-agreement secret shared with the recipient | Custody stays with the parties; no third-party custodian | If Aztec recommends account abstraction or a factory, the whole agreement flow is redesigned |
+| **Q3:** Raw selector for token calls | Avoids the crate duplication that fails with the current toolchain | If Aztec resolves the duplication, switch to the typed interface; a small change with no effect on nullifiers or notes |
+| **Q4:** State nullifier shared by withdraw and cancel | Keeps the cancellation time private; `delayed_public_mutable` would expose it | If Aztec recommends `delayed_public_mutable`, the public cancellation time is accepted |
+| **Q5:** 600 s expiry for cancel proofs | Bounds the worst case to `rate × 600`, a documented limit | If Aztec offers a time oracle or a tighter inclusion bound, only the constant changes |
+| **Q6:** 25 % gas padding | Conservative heuristic; no Aztec estimate published | If Aztec publishes margins, update `lib/aztec/wallet/`; no contract impact |
+| **Q7:** Alpha without a sponsored FPC | Reflects Aztec Alpha today; the user is told | If Aztec launches a public FPC on Alpha, update `fees.ts` with its address |
+| **Q8:** Public fee payer on Alpha | Technical honesty; the interface says so (`FEE_PRIVACY`) | If Aztec offers private fee payment on Alpha, evaluate it (`docs/aztec/FPC_EVALUATION.md`) |
+| **Q9:** Verified proof of control of the peer's Aztec address | Minimum viable without a challenge-response Aztec has not specified | If Aztec recommends a lighter proof of nsk control, adopt it in `peer-binding.ts` |
+| **Q10:** The PXE's standard sync for note discovery | No extra tagging without knowing whether Aztec already guarantees it; the interface offers "Sync wallet" | If Aztec documents unrecoverable-note cases, add XMTP tagging as a fallback delivery |
 
-**Principio rector de esta sección:** ninguna de estas decisiones introduce un nuevo patrón criptográfico. Todas se apoyan en mecanismos ya presentes en el código de producción actual (`contracts/aztec/`, `lib/aztec/`) o en ejemplos de `noir-contracts` v6. Esta tabla se actualiza cada vez que llega respuesta de Aztec Labs para alguna de las preguntas Q1–Q10.
+**Guiding principle:** none of these decisions introduces a new cryptographic pattern. Each rests on mechanisms already in `contracts/aztec/` and `lib/aztec/`, or in the `noir-contracts` v6 examples. This table is updated whenever Aztec Labs replies to one of Q1–Q10.
 
 ---
 
