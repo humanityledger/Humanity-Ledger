@@ -1,0 +1,44 @@
+# Rehearses docs/alpha/HLC_REDEPLOY_RUNBOOK.md on the Aztec test network: a throwaway account paid
+# by the sponsored FPC deploys the HLC Test Token (HLC_TOKEN_META) with a universal deployment, and
+# the node is read back (class, deployer, name, symbol, decimals). No secrets, nothing of value.
+
+name: HLC redeploy rehearsal (testnet)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'scripts/aztec/rehearse-hlc-redeploy-testnet.mts'
+      - 'lib/aztec/token-meta.ts'
+      - '.github/workflows/hlc-redeploy-rehearsal.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hlc-redeploy-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Deploy and read back the HLC Test Token on testnet
+        # Same loader as the escrow e2e: lib/aztec is loaded as ESM for this run only (not committed).
+        run: |
+          echo '{"type":"module"}' > lib/aztec/package.json
+          node --conditions=browser --import tsx --import ./scripts/aztec/register.mjs scripts/aztec/rehearse-hlc-redeploy-testnet.mts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hlc-rehearsal-receipt
+          path: hlc-rehearsal-receipt.json
+          if-no-files-found: ignore
