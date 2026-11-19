@@ -17,36 +17,45 @@ These are the steps to put PrivateEscrow and PaymentStream (the closed-alpha cla
 
 1. Deploy one escrow and one stream with the current classes between two accounts that are not the operator's. Use `scripts/aztec/deploy-keyed.ts`, or open them from Ledger Chat on the test network.
 2. Run a claim, a refund after the deadline, a stream withdrawal and a cancel.
-3. Record each transaction and block in `deployments/aztec-testnet.json` (`e2eRuns`).
+3. Record each transaction and block in `deployments/aztec-testnet.json` (`e2eRuns`). The "Aztec escrow e2e" workflow runs steps 1 and 2 with throwaway accounts; its run id goes in the same entry.
 
 ## 2. Read-only preflight on Alpha
 
 1. Run the "Aztec mainnet preflight" workflow. It only reads: it confirms the network (L1 chain 1, rollup version), the node, and that the artifacts match the class ids.
 2. Do not continue if it is red.
 
-## 3. Deploy on Alpha (Stefan)
+## 3. Publish the classes on Alpha (Stefan)
 
-1. Deploy the PrivateEscrow and PaymentStream classes from the committed artifacts.
-2. Give the agent the transaction hash and the block of each deployment.
-3. The agent adds each contract to `contracts` in `deployments/aztec-mainnet.json`, with `classId`, `deployTx`, `deployBlock`, `tracksCurrentArtifact: true`, and the preflight run id that confirmed it.
-4. Verify on the explorer that each class id matches the record.
+The gate (`lib/alpha/gate.ts`) opens an agreement only for a class that is in `closedAlpha.classes` **and** recorded as deployed in `contracts`. An account must also be an active member. So the classes are published before the gate opens, and not by the first agreement.
 
-## 4. Open the gate
+1. With your own account and tools, publish the PrivateEscrow and PaymentStream classes from the committed artifacts. Use `contracts/aztec/escrow/target/private_escrow-PrivateEscrow.json` and `contracts/aztec/streams/target/payment_stream-PaymentStream.json`, the artifacts that `test/unit/aztec/wave1-classes.test.ts` ties to `closedAlpha.classes`.
+2. Give the agent the transaction hash and the block of each publication.
+3. The agent adds each class to `contracts` in `deployments/aztec-mainnet.json` with these fields:
+   - `classId`, `deployTx` and `deployBlock`;
+   - `tracksCurrentArtifact: true`;
+   - the run id of the preflight that saw the class published.
+4. Run the preflight again. It must report both classes as published.
+5. Check on the explorer that each class id matches the record.
+
+## 4. Open the gate (Stefan's PR)
 
 The agent prepares this as a PR, and Stefan merges it:
 
 - `closedAlpha.enabled: true`;
-- `closedAlpha.until`: 8 weeks from the first deployment (OD-9).
+- `closedAlpha.until`: 8 weeks from the first publication (OD-9).
 
-Without both, `lib/alpha/gate.ts` keeps every new agreement refused.
+Without both, every new agreement is refused. The exits (claim, refund, withdraw, cancel) are never gated.
 
 ## 5. Invitations
 
+Follow `FIRST_CODE_CHECKLIST.md`. Then, one code per tester, after the two checks:
+
 ```
-node scripts/alpha/invites.mjs create --by 0x<Stefan's wallet> --count 5 --days 14
+node scripts/alpha/invites.mjs create --by 0x<Stefan's wallet> --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked --days 14
 ```
 
 - Each code is printed once. Hand it over in person or through a private channel. At most 50 testers (OD-4, amended 19/11/2026).
+- Stefan's own test account needs a code too: the gate has no operator exception.
 - To revoke a tester, run `node scripts/alpha/invites.mjs revoke-member 0x…`. That tester can still settle (claim, refund, withdraw, cancel) but cannot open new agreements.
 
 ## 6. End of the alpha

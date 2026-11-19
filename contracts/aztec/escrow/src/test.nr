@@ -342,6 +342,31 @@ unconstrained fn the_alpha_maximum_is_accepted_and_claimed_in_full() {
     assert(balance(s.env, s.token, s.escrow) == 0);
 }
 
+// Package 4: the exit at the maximum. A refund of 100 HLC after the deadline returns all of it, no fee.
+#[test]
+unconstrained fn the_alpha_maximum_is_refunded_in_full_without_fee() {
+    let s = setup();
+    mint(s.env, s.token, s.sender, MAX_AMOUNT);
+    deposit_amount(s, MAX_AMOUNT, 1, 11);
+    s.env.mine_block_at(s.env.last_block_timestamp() + LOCK + 1);
+    refund(s, 1);
+    assert(balance(s.env, s.token, s.sender) == MINTED + MAX_AMOUNT);
+    assert(balance(s.env, s.token, s.escrow) == 0);
+}
+
+// Package 4 (internal review): the recipient cannot take the sender's refund, even after the deadline.
+#[test(should_fail_with = "escrow not found")]
+unconstrained fn the_recipient_cannot_take_the_refund() {
+    let s = setup();
+    let deadline = deposit(s, 1, 11);
+    s.env.mine_block_at(deadline + 1);
+    s.env.call_private_opts(
+        s.recipient,
+        CallPrivateOptions::new().with_additional_scopes([s.escrow]),
+        PrivateEscrow::at(s.escrow).refund(1),
+    );
+}
+
 // OD-2: one unit above the maximum is refused before any token moves.
 #[test(should_fail_with = "above the alpha maximum")]
 unconstrained fn above_the_alpha_maximum_is_refused() {
