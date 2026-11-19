@@ -4535,7 +4535,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
             diag('recv', {
               conv: short(convoId), msg: short(realId), fromPeer,
               peer: resolvedPeerAddr ? short(resolvedPeerAddr) : 'unresolved',
-              type: String(msg.contentType?.typeId ?? (typeof msg.content)).slice(0, 24),
+              type: String(msg.contentType?.typeId ?? 'unknown').slice(0, 24),
               active: !!currentActivePeer && resolvedPeerAddr === currentActivePeer,
             });
             if (fromPeer && !resolvedPeerAddr) reportDelivery('receive_unresolved', 'sender not resolved to an address');
