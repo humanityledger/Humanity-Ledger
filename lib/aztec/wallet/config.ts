@@ -19,6 +19,7 @@
  */
 import { AZTEC_NETWORKS } from '../sequencer/networks';
 import { WALLET_TYPED_DATA, WALLET_TYPED_DATA_ALPHA, type WalletTypedData } from './keys';
+import { withoutGatedTokens } from '../../payments/assets';
 
 export type WalletNetwork = 'testnet' | 'mainnet';
 
@@ -95,10 +96,11 @@ export const AZTEC_WALLET_CONFIG = {
   sponsoredFpc: NETWORK === 'testnet' ? SPONSORED_FPC : '',
   explorer: EXPLORER,
   rpcMaxBatch: Number(process.env.NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH || 3),
-  tokens: TOKEN_ORDER.flatMap((key) => {
+  // cUSDC and any other planned token stay out until every gate is met (lib/payments/assets.ts).
+  tokens: withoutGatedTokens(TOKEN_ORDER.flatMap((key) => {
     const t = TOKENS_RAW?.[key];
     return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
-  }) as TokenConfig[],
+  }) as TokenConfig[]),
   agreementCaps: parseAgreementCaps(CAPS_RAW),
   // Test tokens only: there is never a faucet on Alpha.
   faucet: NETWORK === 'testnet' && FAUCET_RAW?.address ? FAUCET_RAW : null,
