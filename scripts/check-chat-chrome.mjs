@@ -22,7 +22,7 @@ const SCOPE = [
   'components/studio',
   'components/terminal/LedgerChatV2.tsx',
   'components/terminal/LedgerChatSettings.tsx',
-  'components/ui/DynamicIsland.tsx',
+  'components/activities',
   'components/auth/TuringShieldGate.tsx',
 ];
 

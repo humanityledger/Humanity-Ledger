@@ -29,7 +29,7 @@ describe('mobile polish', () => {
   it('on phones the chat page is white edge to edge and body adds no second bottom inset', () => {
     const css = read('app/globals.css');
     expect(css).toMatch(/body:has\(\[data-chat-page\]\) \{\s*padding-bottom: 0;/);
-    expect(read('app/chat/page.tsx')).toContain('data-chat-page="true"');
+    expect(read('components/chat/surface/ChatSurface.tsx')).toContain('data-chat-page="true"');
   });
 
   it('a wallet code opens the chat and offers to save the contact', () => {

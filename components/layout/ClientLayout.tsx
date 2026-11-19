@@ -9,7 +9,8 @@ import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { useSystemSessionLock } from '@/hooks/useSystemSessionLock';
 import { TitaniumGate } from '@/components/layout/TitaniumGate';
 import { ThemeApplier } from '@/components/layout/ThemeApplier';
-import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
+import { setSessionActivity } from '@/lib/activities/hooks';
+import { ChatKeepAlive } from '@/components/chat/surface/ChatKeepAlive';
 
 import { ZoomWrapper } from './ZoomWrapper';
 import { StudioLockGuard } from '@/components/studio/StudioLockGuard';
@@ -100,13 +101,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   //  Axioma 350: Funnel tracking per navigation (non-blocking) 
   React.useEffect(() => {
-    // Network connectivity Dynamic Island
-    const handleOffline = () => {
-      useDynamicIsland.getState().setState('syncing', { title: 'You are offline', subtitle: 'Waiting for the network to come back' });
-    };
-    const handleOnline = () => {
-      useDynamicIsland.getState().setState('tx_success', { title: 'Back online' }, 2000);
-    };
+    // Connectivity in the island (lib/activities): offline stays until the network is back.
+    const handleOffline = () => setSessionActivity('offline');
+    const handleOnline = () => setSessionActivity('online');
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
     return () => {
@@ -269,6 +266,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                   } : undefined}
                 >
                   {displayContent}
+                  {/* Same place for every route, so a live call's chat is never remounted. */}
+                  <ChatKeepAlive />
                 </main>
               </ZoomWrapper>
             </div>

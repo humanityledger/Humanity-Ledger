@@ -102,7 +102,9 @@ import type { ExpressionTab } from '@/components/chat/ExpressionPicker';
 import { LinkedDeviceApprover } from '@/components/link/LinkedDeviceApprover';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { NewConversationLottie, SendConfirmationBurst, WelcomeLottie, preloadSendConfirmation } from '@/components/chat/ChatLottie';
-import { useDynamicIsland } from '@/lib/store/dynamic-island-store';
+import { useActivities } from '@/lib/activities/store';
+import { useCallMedia } from '@/lib/activities/call-media';
+import { notifyMessage, notifyPaymentReceived, useCallActivitySync, useRecordingActivitySync } from '@/lib/activities/hooks';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
 import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
@@ -132,6 +134,11 @@ const PAYMENT_DRAWER_IDS = new Set(['zkmoney', 'zkstream', 'agreement', 'zkinvoi
 /** forceAutoInit=true: always auto-init XMTP even on mobile (used by /chat route) */
 export interface LedgerChatProps {
   forceAutoInit?: boolean;
+  /** False while the chat is kept alive off /chat for a live call (ChatKeepAlive): the call then
+   *  leaves the full-screen stage for the floating window or the island. */
+  surfaceVisible?: boolean;
+  /** Brings the user back to /chat (used when "Open the full call" is pressed elsewhere). */
+  onRequestVisible?: () => void;
 }
 
 function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: boolean; size?: number }) {
@@ -411,7 +418,7 @@ function scheduleBurnOnRead(msgId: string, seconds: number, onBurn: (id: string)
   }, seconds * 1000);
 }
 
-export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
+export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onRequestVisible }: LedgerChatProps) {
   const { address, isConnected, isSystemHandshake, isChecking, connector, isZkVerified, isLocalSystemWallet } = useSystemAccount();
   // Email-authenticated users have address like 'email_user@gmail.com' — they have no wallet signer
   // so XMTP is not available. We detect this and route them to server-relay messaging.
@@ -1217,26 +1224,16 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
 
-  // The island shows the call as it really is: ringing, connecting, or
-  // active with a duration counted from the moment it connected.
+  // When the call connected (set once it is active, cleared when it ends): the call's timers and
+  // its length in the call log count from here.
   const callStartedAtRef = useRef<number | null>(null);
-  const recordingStartedAtRef = useRef<number | null>(null);
   useEffect(() => {
-    const island = useDynamicIsland.getState();
     if (callState === 'active') { if (!callStartedAtRef.current) callStartedAtRef.current = Date.now(); }
     else if (callState === 'idle') callStartedAtRef.current = null;
-    if (isRecording) { if (!recordingStartedAtRef.current) recordingStartedAtRef.current = Date.now(); }
-    else recordingStartedAtRef.current = null;
-    if (callState === 'active' || callState === 'calling' || callState === 'ringing' || callState === 'connecting') {
-      island.setState('calling', { title: getDisplayName(activePeer || ''), phase: callState, startedAt: callStartedAtRef.current ?? undefined });
-    } else if (isRecording) {
-      island.setState('recording', { title: getDisplayName(activePeer || ''), startedAt: recordingStartedAtRef.current ?? undefined });
-    } else {
-      if (island.activeState === 'calling' || island.activeState === 'recording') {
-        island.dismiss();
-      }
-    }
-  }, [callState, isRecording, activePeer, getDisplayName]);
+  }, [callState]);
+  // When the voice note started; the live-activity sync below shows it with its own timer.
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
+  useEffect(() => { setRecordingStartedAt(isRecording ? Date.now() : null); }, [isRecording]);
 
   const [callType, setCallType] = useState<'audio'|'video'|null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -1285,7 +1282,13 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, []);
   
   // ── Telegram/WhatsApp Parity States ──
-  const [isCallMinimized, setIsCallMinimized] = useState(false);
+  // Where the call is drawn is one app-wide value (lib/activities): 'stage' is the full-screen call
+  // below; 'window' and 'island' are drawn by the live-activity layer. Never two at once.
+  const callPresentation = useActivities((st) => st.presentation);
+  const isCallMinimized = callPresentation !== 'stage';
+  const setIsCallMinimized = useCallback((minimised: boolean) => {
+    useActivities.getState().setPresentation(minimised ? 'window' : 'stage');
+  }, []);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'poor' | 'disconnected'>('good');
   const [callRoute, setCallRoute] = useState<CallRoute>({ kind: 'unknown', path: null, rttMs: null });
   // Setup time and first audio of the current call (lib/calls/metrics.ts), shown in the minimized call.
@@ -1315,7 +1318,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // Call Duration State
   // When the call was answered. The running clock is <CallClock>, which ticks on its own.
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
-  // callStartedAtRef (declared above, also used by the Dynamic Island) holds the same time.
+  // callStartedAtRef (declared above, also read by the live activities) holds the same time.
   const callElapsedSeconds = () => (callStartedAtRef.current ? Math.round((Date.now() - callStartedAtRef.current) / 1000) : 0);
 
   // Auditor Fixes: Refs
@@ -3413,11 +3416,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [performEndCall, address, activePeer, callType]);
 
-  // ── Hang up from the Dynamic Island, call back from a call bubble ──────────
-  // The island's red button dispatches 'ledger_end_active_call'. Only the group
-  // call listened for it, so in a 1:1 call the island closed while the call
-  // went on and the other side never heard a hang-up. It now does exactly
-  // what the in-call buttons do: decline while ringing, hang up otherwise.
+  // ── Hang up from outside the chat, call back from a call bubble ────────────
+  // 'ledger_end_active_call' ends the call from anywhere in the app (the live-activity layer uses
+  // the registered controls instead). It does what the in-call buttons do: decline while ringing,
+  // hang up otherwise.
   //
   // "Hide my IP address in calls" is baked into the PeerJS connection when it
   // is created, so a change used to apply only after a reload. Rebuild the
@@ -3437,6 +3439,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
   }, [ipMaskingOn]);
 
   const endCallRef = useRef(endCall);
+  const answerCallRef = useRef(answerCall); answerCallRef.current = answerCall;
   endCallRef.current = endCall;
   const declineCallRef = useRef(declineCall);
   declineCallRef.current = declineCall;
@@ -3477,6 +3480,54 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     localStream.getVideoTracks().forEach(t => { t.enabled = !nextOff; });
     setIsCamOff(nextOff);
   }, [localStream, isCamOff]);
+
+  // ─── Live activities: the island and the floating window ─────────────────────
+  // One 'call' activity mirrors the engine (lib/activities/hooks.ts). Only names and timers leave
+  // this component: never a message.
+  useCallActivitySync({
+    engine: callState,
+    reconnecting: callReconnecting,
+    peerName: callPeer ? getDisplayName(callPeer) : 'Unknown',
+    media: callType === 'video' ? 'video' : 'audio',
+    connectedAt: callState === 'active' ? callStartedAt : null,
+    micMuted: isMicMuted,
+    cameraOff: isCamOff || !localHasVideo,
+    remoteVideo: remoteHasVideo,
+  });
+  useRecordingActivitySync(isRecording, activePeer ? getDisplayName(activePeer) : 'this chat', recordingStartedAt);
+
+  // The window and the island draw this call's streams and use these controls. Through refs, so
+  // a control pressed in another surface always runs the current function.
+  const toggleMicRef = useRef(toggleMic); toggleMicRef.current = toggleMic;
+  const toggleCameraRef = useRef(toggleCamera); toggleCameraRef.current = toggleCamera;
+  const surfaceVisibleRef = useRef(surfaceVisible); surfaceVisibleRef.current = surfaceVisible;
+  const onRequestVisibleRef = useRef(onRequestVisible); onRequestVisibleRef.current = onRequestVisible;
+  useEffect(() => {
+    if (callState === 'idle') { useCallMedia.getState().clear(); return; }
+    useCallMedia.getState().register({
+      remote: remoteStream,
+      local: localStream,
+      controls: {
+        answer: callState === 'ringing' ? () => { void answerCallRef.current(); } : undefined,
+        decline: callState === 'ringing' ? () => { void declineCallRef.current(); } : undefined,
+        end: () => { void endCallRef.current(); },
+        toggleMic: () => toggleMicRef.current(),
+        toggleCamera: () => toggleCameraRef.current(),
+        openStage: () => {
+          if (!surfaceVisibleRef.current) onRequestVisibleRef.current?.();
+          useActivities.getState().setPresentation('stage');
+        },
+      },
+    });
+  }, [callState, remoteStream, localStream]);
+  useEffect(() => () => useCallMedia.getState().clear(), []);
+
+  // Off /chat the stage cannot be shown: the call moves to the floating window.
+  useEffect(() => {
+    if (!surfaceVisible && callState !== 'idle' && callPresentation === 'stage') {
+      useActivities.getState().setPresentation('window');
+    }
+  }, [surfaceVisible, callState, callPresentation]);
 
   // ─── Voice → video without hanging up ────────────────────────────────────────
   // The camera is added to our stream and sent on a resume connection (lib/calls/resume.ts); the
@@ -4579,6 +4630,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
               continue;
             }
 
+            // A payment message from the other person, sent in the last two minutes: who and how
+            // much, in the island, once. A replay after a reconnect (not first sight) or an old
+            // message seen on page load never shows.
+            if (firstSight && fromPeer && typeof content === 'string' && content.startsWith('__PAYMENT__') && Date.now() - sentAtNs < 120_000) {
+              try {
+                const p = JSON.parse(content.replace(/^__PAYMENT__(::)?/, '')) as { amount?: unknown; token?: unknown; txHash?: unknown };
+                const from = String(msgConvPeer);
+                notifyPaymentReceived(
+                  resolveContactName(address || '', from) || formatAddress(from) || 'Someone',
+                  String(p.amount ?? ''),
+                  String(p.token ?? ''),
+                  typeof p.txHash === 'string' ? p.txHash : undefined,
+                );
+              } catch { /* not a payment this version can read: the bubble still shows it */ }
+            }
+
             // Delivery receipt (double grey tick on the sender's side) for a message that arrived on
             // this device but is not being read now: page hidden, or another chat open. Sent once,
             // the first time this device sees the message. A message read now gets __READ__ instead.
@@ -5043,12 +5110,11 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 }
                 if (!dnd && !mutedPeer && notifEnabled) {
                   const peerForIsland = String(msgConvPeer || '');
-                  const hidePreview = !!(ledgerSettings as any)?.hide_notification_content;
-                  useDynamicIsland.getState().setState('notification', {
-                    title: resolveContactName(address || '', peerForIsland) || formatAddress(peerForIsland) || 'New message',
-                    subtitle: hidePreview ? 'New message' : formatMessagePreview(content),
-                    onOpen: peerForIsland ? () => { setActiveCommunity(null); setSidebarTab('chats'); setActivePeer(peerForIsland); setShowList(false); } : undefined,
-                  }, 4000);
+                  // The island names the sender only, never the message (lib/activities/types.ts).
+                  notifyMessage(
+                    resolveContactName(address || '', peerForIsland) || formatAddress(peerForIsland) || 'Someone',
+                    peerForIsland ? () => { setActiveCommunity(null); setSidebarTab('chats'); setActivePeer(peerForIsland); setShowList(false); } : undefined,
+                  );
                 }
               }
               let needsSync = false;
@@ -7796,7 +7862,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
 
       {/* ── Incoming Call Screen (state: ringing) ──────────────────────────────── */}
-      {callState === 'ringing' && isMounted && typeof document !== 'undefined'
+      {callState === 'ringing' && surfaceVisible && callPresentation === 'stage' && isMounted && typeof document !== 'undefined'
         ? (createPortal(
         <IncomingCallScreen
           peerName={callPeer ? getDisplayName(callPeer) : 'Unknown caller'}
@@ -7809,7 +7875,7 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
         document.body
       ) as React.ReactNode) : null}
       {/* ── Outgoing Call Screen (state: calling — waiting for answer) ─────── */}
-      {(callState === 'calling' && isMounted && typeof document !== 'undefined')
+      {(callState === 'calling' && surfaceVisible && callPresentation === 'stage' && isMounted && typeof document !== 'undefined')
         ? (createPortal(
         <OutgoingCallScreen
           peerName={callPeer ? getDisplayName(callPeer) : 'Unknown'}
@@ -7828,65 +7894,10 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
       {/* 'connecting' (answered, media on its way) shows the call screen too: it used to show
           nothing for up to 30 s between tapping Answer and hearing the other person. */}
       {(callState === 'active' || callState === 'connecting') && isMounted && (
-        isCallMinimized ? createPortal(
-          callType === 'video' && remoteHasVideo ? (
-            <motion.div
-              drag
-              dragConstraints={{ top: 0, left: 0, right: typeof window !== 'undefined' ? window.innerWidth - 120 : 0, bottom: typeof window !== 'undefined' ? window.innerHeight - 160 : 0 }}
-              initial={{ x: 20, y: 80 }}
-              onClick={() => setIsCallMinimized(false)}
-              role="button"
-              aria-label="Return to the call"
-              className="fixed z-[100000] w-28 h-40 md:w-36 md:h-52 rounded-2xl overflow-hidden shadow-[0_18px_40px_-12px_rgba(16,24,40,0.45)] bg-[#15171c] cursor-pointer ring-1 ring-black/10"
-            >
-              <video
-                ref={el => attachVideo(el, remoteStream)}
-                autoPlay playsInline muted className="w-full h-full object-cover"
-              />
-              <div className="absolute top-2 left-2 bg-white/90 text-[#15171c] text-[12px] tabular-nums px-2 py-0.5 rounded-full font-medium">
-                <CallClock startedAt={callStartedAt} />
-              </div>
-              {callMetricsLabel(callRoute, callTiming) && (
-                <div className="absolute bottom-2 left-2 right-2 bg-black/55 text-white text-[10px] tabular-nums px-2 py-0.5 rounded-full truncate text-center" title={callMetricsDetail(callRoute, callTiming)}>
-                  {callMetricsLabel(callRoute, callTiming)}
-                </div>
-              )}
-            </motion.div>
-          ) : (
-            // The call keeps living in a black pill at the top, like the Dynamic Island.
-            <button
-              type="button"
-              onClick={() => setIsCallMinimized(false)}
-              aria-label={`Return to the call with ${callPeer ? getDisplayName(callPeer) : 'your contact'}${callMetricsDetail(callRoute, callTiming) ? '. ' + callMetricsDetail(callRoute, callTiming) : ''}`}
-              className="fixed left-1/2 -translate-x-1/2 z-[100000] h-10 max-w-[calc(100vw-24px)] pl-2.5 pr-2 rounded-full bg-[#0b0c0f] text-white flex items-center gap-3 shadow-[0_10px_30px_rgba(11,12,15,0.22)] active:scale-[0.98] transition-transform"
-              style={{ top: 'max(10px, calc(env(safe-area-inset-top, 0px) + 6px))' }}
-            >
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${callReconnecting ? 'bg-[#f59e0b]' : 'bg-[#12a150]'}`} aria-hidden="true">
-                <Phone size={13} strokeWidth={2.2} />
-              </span>
-              <span className="text-[13px] font-semibold truncate max-w-[160px]">
-                {callReconnecting ? 'Reconnecting…' : callPeer ? getDisplayName(callPeer) : 'Call'}
-              </span>
-              <span className="font-mono text-[12px] text-[#b9bdc6] tabular-nums shrink-0"><CallClock startedAt={callStartedAt} /></span>
-              {/* Local measurements only (lib/calls/metrics.ts): route and time to connect. */}
-              {callMetricsLabel(callRoute, callTiming) && (
-                <span
-                  className="hidden min-[400px]:inline text-[11px] text-[#8b909b] tabular-nums shrink-0"
-                  title={callMetricsDetail(callRoute, callTiming)}
-                >
-                  {callMetricsLabel(callRoute, callTiming)}
-                </span>
-              )}
-              <span className="flex items-center gap-[2px] h-4 shrink-0" aria-hidden="true">
-                {[8, 14, 10, 16, 7].map((h, i) => (
-                  <span key={i} className="w-[3px] rounded-sm bg-[#5fd38d] animate-pulse" style={{ height: h, animationDelay: `${i * 0.15}s` }} />
-                ))}
-              </span>
-              <span className="h-7 px-3 rounded-full bg-white text-[#0b0c0f] text-[12px] font-bold flex items-center shrink-0">Return</span>
-            </button>
-          ),
-          document.body
-        ) : createPortal(
+        // Minimised, the call is drawn by the live-activity layer (components/activities): the
+        // floating window or the island. Nothing is drawn here (nor off /chat, where the chat is hidden),
+        // so the call is never on screen twice.
+        isCallMinimized || !surfaceVisible ? null : createPortal(
           // On document.body, like the ringing and minimised screens. Inside the chat area it was
           // hidden whenever that area is (display: none below 1024 px while the chat list shows, and
           // in Communities): answering from outside the caller's chat connected the call but showed

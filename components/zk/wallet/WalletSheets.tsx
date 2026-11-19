@@ -29,6 +29,7 @@ import { amountProblem, recipientProblem } from './walletLogic';
 
 export { amountProblem, recipientProblem };
 import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
+import { usePaymentProofActivity } from '@/lib/activities/hooks';
 import {
   AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, groupHex, shortHex,
 } from './WalletUI';
@@ -102,6 +103,15 @@ export function SendFlow({
             ? 'proving'
             : 'preparing';
   const txHash = entry?.txHash ?? run?.txHash;
+  // The same stage in the island, so the payment can be followed after this sheet is closed or
+  // while a call is on screen. Recipient as a short address and the amount only.
+  usePaymentProofActivity({
+    key: run ? String(run.startedAt) : null,
+    step: stage,
+    toName: run ? `${run.to.slice(0, 6)}…${run.to.slice(-4)}` : '',
+    amount: run?.amount ?? '',
+    symbol: run?.symbol ?? '',
+  });
 
   const applyRequest = (text: string): boolean => {
     const req = decodePaymentRequest(text);

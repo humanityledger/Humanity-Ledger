@@ -1,14 +1,9 @@
 import { ReactNode } from 'react';
 
 /**
- * /chat route layout
- * Full-viewport layout for the mobile-optimised Ledger Chat page.
- * Uses 100dvh so it fills correctly on iOS Safari without address-bar overlap.
+ * /chat route layout. The chat itself is drawn by ChatKeepAlive (components/chat/surface) from the
+ * root layout, so a live call survives leaving /chat; this route only marks where the user is.
  */
 export default function ChatLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="bg-transparent flex flex-col flex-1 w-full h-full relative overflow-hidden">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }
