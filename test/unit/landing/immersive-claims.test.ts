@@ -69,7 +69,9 @@ describe('the immersive landing says only what the code and the record back', ()
   it('third-party marks are only official files, or the plain name', () => {
     expect(C.BRAND_FILES.aztec === null || C.BRAND_FILES.aztec.startsWith('/brand/')).toBe(true);
     expect(C.BRAND_FILES.ethereum === null || C.BRAND_FILES.ethereum.startsWith('/brand/')).toBe(true);
-    expect(C.TRADEMARKS).toBe('Aztec and Ethereum are trademarks of their respective owners. Ledger Chat is an independent project.');
+    // Trademark attribution only: no independence sentence on the landing (master plan, decision 6).
+    expect(C.TRADEMARKS).toBe('Aztec and Ethereum are trademarks of their respective owners.');
+    for (const src of sources) expect(src).not.toMatch(/independent project/i);
   });
 });
 
