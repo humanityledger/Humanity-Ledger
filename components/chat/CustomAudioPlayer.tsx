@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useMediaUrl } from '@/lib/chat/media-url';
 import { Play, Pause, Download } from 'lucide-react';
 
-export const CustomAudioPlayer = ({ src, isMe }: { src: string, isMe: boolean }) => {
+export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: boolean }) => {
+  // data: voice notes are played from a blob: URL, which the CSP allows (lib/chat/media-url.ts).
+  const src = useMediaUrl(rawSrc) ?? '';
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);

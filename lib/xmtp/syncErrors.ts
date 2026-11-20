@@ -11,7 +11,8 @@
  */
 export function isSyncWaitError(e: unknown): boolean {
   const text = String((e as { message?: unknown })?.message ?? e ?? '');
-  return /SyncFailedToWait/i.test(text) || /synced \d+ messages?, \d+ failed \d+ succeeded/i.test(text);
+  // The same condition, worded by newer libxmtp builds (production log, 20/11/2026).
+  return /SyncFailedToWait/i.test(text) || /sync failed to wait for intent/i.test(text) || /synced \d+ messages?, \d+ failed \d+ succeeded/i.test(text);
 }
 
 /** Error text safe to log: no hex ids, addresses or inbox ids, at most 160 characters. */

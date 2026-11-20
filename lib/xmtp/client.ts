@@ -749,19 +749,62 @@ export function publishSerial(cacheKey: string, dm: any): Promise<void> {
 
 const publishRetries = new Map<string, { dm: any; attempt: number; timer: ReturnType<typeof setTimeout> | null }>();
 const MAX_PUBLISH_RETRIES = 60; // about 25 minutes at the 30 s cap, plus every online/visible flush
+/** Conversations whose messages the network has not confirmed after every retry. Never dropped silently. */
+const undelivered = new Map<string, any>();
+
+/** Number of conversations with messages the network has not confirmed after every retry. */
+export function undeliveredCount(): number {
+  return undelivered.size;
+}
+
+let lastUndeliveredNotice = 0;
+/** Tell the person, once every two minutes at most, with a Retry action (production log: publish_gave_up). */
+function noticeUndelivered() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('ledger:undelivered', { detail: { count: undelivered.size } }));
+  if (Date.now() - lastUndeliveredNotice < 120_000) return;
+  lastUndeliveredNotice = Date.now();
+  import('sonner')
+    .then(({ toast }) => toast('Some messages are not delivered yet', {
+      description: 'The network did not confirm them. They stay in the chat and are sent when you retry or come back online.',
+      action: { label: 'Retry', onClick: () => { void retryUndelivered(); } },
+      duration: 15_000,
+    }))
+    .catch(() => {});
+}
+
+/** Publish again every conversation that gave up, with a fresh retry budget. */
+export async function retryUndelivered(): Promise<number> {
+  const stuck = [...undelivered.entries()];
+  undelivered.clear();
+  for (const [key, dm] of stuck) schedulePublishRetry(key, dm, 0);
+  return stuck.length;
+}
 
 /** Keep publishing a conversation's unpublished messages until the network confirms them. */
 function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
   const existing = publishRetries.get(cacheKey);
   if (attempt === 0 && existing) { existing.dm = dm; return; } // already retrying
-  if (attempt >= MAX_PUBLISH_RETRIES) { publishRetries.delete(cacheKey); reportDelivery('publish_gave_up', 'retries exhausted'); return; }
+  if (attempt >= MAX_PUBLISH_RETRIES) {
+    publishRetries.delete(cacheKey);
+    undelivered.set(cacheKey, dm);
+    reportDelivery('publish_gave_up', 'retries exhausted');
+    noticeUndelivered();
+    return;
+  }
   if (attempt === 4) reportDelivery('publish_retrying', `attempt ${attempt}`);
   const entry = { dm, attempt, timer: null as ReturnType<typeof setTimeout> | null };
   publishRetries.set(cacheKey, entry);
   entry.timer = setTimeout(() => {
     publishSerial(cacheKey, entry.dm)
-      .then(() => publishRetries.delete(cacheKey))
-      .catch(() => schedulePublishRetry(cacheKey, entry.dm, attempt + 1));
+      .then(() => { publishRetries.delete(cacheKey); undelivered.delete(cacheKey); })
+      .catch(async (err: unknown) => {
+        // "Sync failed to wait for intent": the publish intent is waiting for the group's state.
+        // A sync processes the pending commits that intent waits on; then the next publish can
+        // finish instead of waiting on the same intent again (production log, 20/11/2026).
+        if (isSyncWaitError(err)) await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
+        schedulePublishRetry(cacheKey, entry.dm, attempt + 1);
+      });
   }, Math.min(1000 * 2 ** attempt, 30_000));
 }
 
@@ -770,6 +813,8 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
  * returns and when the page becomes visible again). Returns how many conversations it tried.
  */
 export async function flushPendingPublishes(): Promise<number> {
+  // Coming back online or to the page also retries conversations that had given up.
+  if (undelivered.size) await retryUndelivered();
   const pending = [...publishRetries.entries()];
   await Promise.all(
     pending.map(async ([key, entry]) => {

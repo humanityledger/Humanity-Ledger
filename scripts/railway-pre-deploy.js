@@ -7,7 +7,7 @@
  * failure and start.sh does not boot, so a broken schema never serves traffic.
  */
 
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { Client } = require('pg');
@@ -30,7 +30,7 @@ for (const key of ['DATABASE_URL', 'DATABASE_URL_UNPOOLED']) {
 }
 
 const { extractObjects, decide } = require('../lib/db/migration-inspect.js');
-const { isLeakedLock, budgetLeft } = require('../lib/db/migrate-lock.js');
+const { isLeakedLock, budgetLeft, isLockTimeout, lockRetryDelay } = require('../lib/db/migrate-lock.js');
 
 // The app must listen before Railway's healthcheck window closes, so the pre-deploy has a budget
 // (PREDEPLOY_BUDGET_S, default 150 s). When it runs out the script stops waiting and start.sh boots
@@ -94,7 +94,15 @@ async function existingObjects(client) {
 function cli(args) {
   const left = budgetLeft(STARTED_AT, process.env.PREDEPLOY_BUDGET_S);
   if (left < 5000) throw new Error('pre-deploy budget exhausted');
-  execSync(`npx prisma ${args}`, { stdio: 'inherit', timeout: Math.min(120000, left), env: CLI_ENV });
+  // Output is shown as before and also kept, so a P1002 can be told apart from other failures.
+  const r = spawnSync('npx', ['prisma', ...args.split(' ')], { encoding: 'utf8', timeout: Math.min(120000, left), env: CLI_ENV });
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  if (r.status !== 0) {
+    const err = new Error(`prisma ${args} failed (${r.status ?? r.signal ?? r.error?.message})`);
+    err.output = `${r.stdout || ''}\n${r.stderr || ''}\n${r.error?.message || ''}`;
+    throw err;
+  }
 }
 
 function sha256File(file) {
@@ -263,6 +271,7 @@ async function main() {
   const seen = new Set();
   let lockWaits = 0;
   let lockWaited = false;
+  let lockTimeouts = 0;
   let previousHolder = null;
   // Each round: resolve what failed from the real schema, then deploy. A migration that fails is
   // inspected in the next round; one that fails twice, or is partly applied, stops the deploy.
@@ -302,6 +311,16 @@ async function main() {
           previousHolder = holder;
           await sleep(wait);
         }
+        continue;
+      }
+      // P1002 with nobody holding the lock any more: it was released in between. Retry a few
+      // times with backoff instead of stopping the deploy on a race.
+      if (!holder && isLockTimeout(deployErr && deployErr.output) && lockTimeouts < 3) {
+        lockTimeouts += 1;
+        lockWaited = true;
+        const wait = lockRetryDelay(lockTimeouts, budgetLeft(STARTED_AT, process.env.PREDEPLOY_BUDGET_S));
+        console.warn(`[pre-deploy] P1002: the migrate lock timed out but nobody holds it now; retrying in ${Math.round(wait / 1000)} s (${lockTimeouts}/3).`);
+        await sleep(wait);
         continue;
       }
       // A-017: never --accept-data-loss. The failed migration is inspected in the next round.
