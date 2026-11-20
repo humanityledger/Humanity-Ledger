@@ -29,16 +29,14 @@ const NOTICE = (process.env.NEXT_PUBLIC_STATUS_NOTICE || '').trim();
 type Vars = React.CSSProperties & Record<`--${string}`, string | number>;
 const v = (x: Record<string, string | number>) => Object.fromEntries(Object.entries(x).map(([k, val]) => [`--${k}`, val])) as Vars;
 
-/** The order of the story. Its length is the "/ 15" of every index. */
+/** The sections of the page, in order. */
 const ORDER = ['hero', 'hi', 'enc', 'name', 'pay', 'record', 'eth', 'calls', 'live', 'features', 'how', 'protects', 'open', 'faq', 'devices'] as const;
 type Key = (typeof ORDER)[number];
-const pad = (n: number) => String(n).padStart(2, '0');
 
-/** "02 / 15" and the eyebrow, the first two lines of every block. */
+/** The eyebrow above every block. No "02 / 15" counter: sections are named, not numbered. */
 function Kicker({ k }: { k: Key }) {
   return (
     <p className={s.kicker}>
-      <span className={s.index}>{pad(ORDER.indexOf(k) + 1)} / {pad(ORDER.length)}</span>
       <span className={s.eyebrow}>{C.EYEBROWS[k]}</span>
     </p>
   );
@@ -398,9 +396,8 @@ export function ImmersiveLanding() {
         {/* 11. How it works: the layers, then the parts with their versions and sources. */}
         <Chapter id="how" k="how" title={['From your device to ', 'Ethereum', '.']} lead="Four layers. Each one links to its code.">
           <ol className={s.stack}>
-            {C.STACK.map((x, i) => (
+            {C.STACK.map((x) => (
               <li key={x.name}>
-                <span className={s.n}>{pad(i + 1)}</span>
                 <div>
                   <a href={x.href} target="_blank" rel="noopener noreferrer"><b>{x.name}</b></a>
                   <p>{x.detail}</p>
