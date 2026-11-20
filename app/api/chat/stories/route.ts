@@ -165,6 +165,10 @@ export async function DELETE(req: NextRequest) {
   if (idx !== -1) inMemoryStories.splice(idx, 1);
 
   try {
+    // A photo or video kept in Postgres goes with its status.
+    const story = await prisma.story.findFirst({ where: { id, authorAddress: caller.toLowerCase() }, select: { contentUrl: true } }).catch(() => null);
+    const mediaId = story ? /\/api\/chat\/stories\/media\/([0-9a-f]{32})(?:#|$)/.exec(story.contentUrl)?.[1] : undefined;
+    if (mediaId) await prisma.statusMedia.deleteMany({ where: { id: mediaId, authorAddress: caller.toLowerCase() } }).catch(() => {});
     const { count } = await prisma.story.deleteMany({ where: { id, authorAddress: caller.toLowerCase() } });
     return NextResponse.json({ deleted: count || (idx !== -1 ? 1 : 0) });
   } catch {

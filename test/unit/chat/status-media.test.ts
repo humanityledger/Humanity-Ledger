@@ -1,6 +1,6 @@
 /** Status: photo and short video as our own encrypted attachments; audience controls; no leak. */
 import fs from 'node:fs';
-import { audienceAllows, encodeStatusMedia, normalizeAudience, parseStatusMedia, statusKindOf } from '@/lib/chat/status-media';
+import { audienceAllows, encodeStatusMedia, normalizeAudience, parseStatusMedia, statusKindOf, uploadErrorText } from '@/lib/chat/status-media';
 
 const h = (c: string, n: number) => c.repeat(n);
 const media = { path: `/api/chat/attachments/${h('a', 32)}`, mime: 'image/jpeg', contentDigest: h('b', 64), secret: h('c', 64), salt: h('d', 64), nonce: h('e', 24) };
@@ -19,6 +19,31 @@ describe('status media URL', () => {
     expect(parseStatusMedia(encodeStatusMedia({ ...media, nonce: 'zz' }, 'https://x.org'))).toBeNull();
     expect(parseStatusMedia(encodeStatusMedia({ ...media, mime: 'text/html' }, 'https://x.org'))).toBeNull();
     expect(parseStatusMedia('https://evil.example/pixel.gif')).toBeNull();
+  });
+});
+
+describe('status media without an R2 bucket', () => {
+  it('accepts the Postgres store path, and falls back to it on 503', () => {
+    const url = encodeStatusMedia({ ...media, path: `/api/chat/stories/media/${h('f', 32)}` }, 'https://ledgerchat.org');
+    expect(parseStatusMedia(url)?.path).toBe(`/api/chat/stories/media/${h('f', 32)}`);
+    const src = fs.readFileSync('lib/chat/status-media.ts', 'utf8');
+    expect(src).toMatch(/if \(res\.status === 503\) \(\{ res, data \} = await put\('\/api\/chat\/stories\/media'\)\);/);
+  });
+  it('names the failure instead of only "try again"', () => {
+    expect(uploadErrorText(413, '')).toMatch(/20 MB/);
+    expect(uploadErrorText(401, '')).toMatch(/Sign in again/);
+    expect(uploadErrorText(503, '')).toMatch(/cannot be stored right now/);
+  });
+  it('the store route checks the session, the size and plaintext, and expires rows', () => {
+    const r = fs.readFileSync('app/api/chat/stories/media/route.ts', 'utf8');
+    expect(r).toMatch(/getVerifiedCaller\(req\)/);
+    expect(r).toMatch(/looksLikePlaintextFile\(body\)/);
+    expect(r).toMatch(/deleteMany\(\{ where: \{ expiresAt: \{ lt: now \} \} \}\)/);
+    const g = fs.readFileSync('app/api/chat/stories/media/[id]/route.ts', 'utf8');
+    expect(g).toMatch(/'Content-Disposition': 'attachment'/);
+    const sql = fs.readFileSync('prisma/migrations/20261120140000_status_media/migration.sql', 'utf8');
+    expect(sql).toMatch(/CREATE TABLE "StatusMedia"/);
+    expect(sql).not.toMatch(/DROP|ALTER TABLE "Story"/i);
   });
 });
 

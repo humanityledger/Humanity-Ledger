@@ -1852,6 +1852,20 @@ model Story {
   @@index([expiresAt])
 }
 
+/// Ciphertext of a photo or video Status when no R2 bucket is configured (lib/chat/status-media.ts).
+/// The key is in the Story record, so the server can read it: Status is not end-to-end encrypted.
+model StatusMedia {
+  id            String   @id
+  authorAddress String
+  bytes         Bytes
+  size          Int
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([authorAddress])
+  @@index([expiresAt])
+}
+
 /// Passkey records of the private wallet (lib/aztec/wallet/passkey.ts). `record` is the JSON of a
 /// PasskeyRecord: credential id, PRF salt, IV and the AES-GCM ciphertext of the account root. The
 /// server cannot open it: the key is the passkey's PRF output, which only the authenticator yields.

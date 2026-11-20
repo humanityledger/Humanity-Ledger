@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PeerAvatar, SectionLabel, EmptyState, PrimaryButton, SecondaryButton, IconButton, Sheet, shortAddr } from './ui/kit';
-import { loadStatusMedia, parseStatusMedia, STATUS_VIDEO_MAX_SECONDS, uploadStatusMedia } from '@/lib/chat/status-media';
+import { loadStatusMedia, parseStatusMedia, STATUS_VIDEO_MAX_SECONDS, StatusMediaError, uploadStatusMedia } from '@/lib/chat/status-media';
 
 /*
  * Status: a short text, a photo or a video of up to 30 seconds, for 24 hours.
@@ -147,14 +147,19 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
         body: JSON.stringify({ contentUrl, mediaType, audience: picked ? Array.from(picked) : [] }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Could not post');
+      if (!res.ok) {
+        throw new StatusMediaError(
+          res.status === 401 ? 'Your session has expired. Sign in again to post.'
+          : data?.error === 'Too many active statuses' ? 'You have 30 active statuses. Delete one first.'
+          : typeof data?.error === 'string' && /characters|Ledger Chat attachment/.test(data.error) ? data.error
+          : 'Could not post your status. Try again.');
+      }
       setMine(prev => [data.story, ...prev]);
       resetComposer();
       toast.success('Status posted');
     } catch (e: any) {
-      const m = String(e?.message || '');
-      toast.error(m === 'Too many active statuses' ? 'You have 30 active statuses. Delete one first.'
-        : /up to|Use a JPEG|cannot be read/.test(m) ? m : 'Could not post your status. Try again.');
+      // Say what went wrong (size, length, type, session, storage), not only "try again".
+      toast.error(e instanceof StatusMediaError ? e.message : 'Could not post your status. Check your connection and try again.');
     }
     setPosting(false);
   };

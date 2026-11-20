@@ -9,7 +9,8 @@
  *     are drawn 0.5 unit larger than squares of the same nominal size (optical balance).
  *   - Each glyph has one idea: a bubble (chats), a handset (calls), a ring with a mark (status),
  *     a person with an index line (contacts), a note with a shield cut (private payments),
- *     three linked heads (communities), a dial with eight teeth (settings).
+ *     three linked heads (communities), a gear with eight teeth (settings: tips on r 9, roots on
+ *     r 6.9, one closed outline plus a hub of r 2.75, so it reads as a gear and not as a sun).
  */
 import type { SVGProps } from 'react';
 
@@ -55,7 +56,7 @@ export const CommunitiesIcon = (p: P) => (
 
 /** A dial with eight short teeth and an open centre. */
 export const SettingsIcon = (p: P) => (
-  <Svg {...p}><circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="6.5" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" /></Svg>
+  <Svg {...p}><path d="M10.21 5.34L10.51 3.12A9 9 0 0 1 13.49 3.12L13.79 5.34A6.9 6.9 0 0 1 15.45 6.02L17.23 4.67A9 9 0 0 1 19.33 6.77L17.98 8.55A6.9 6.9 0 0 1 18.66 10.21L20.88 10.51A9 9 0 0 1 20.88 13.49L18.66 13.79A6.9 6.9 0 0 1 17.98 15.45L19.33 17.23A9 9 0 0 1 17.23 19.33L15.45 17.98A6.9 6.9 0 0 1 13.79 18.66L13.49 20.88A9 9 0 0 1 10.51 20.88L10.21 18.66A6.9 6.9 0 0 1 8.55 17.98L6.77 19.33A9 9 0 0 1 4.67 17.23L6.02 15.45A6.9 6.9 0 0 1 5.34 13.79L3.12 13.49A9 9 0 0 1 3.12 10.51L5.34 10.21A6.9 6.9 0 0 1 6.02 8.55L4.67 6.77A9 9 0 0 1 6.77 4.67L8.55 6.02A6.9 6.9 0 0 1 10.21 5.34Z" /><circle cx="12" cy="12" r="2.75" /></Svg>
 );
 
 /** A bell with a flat lip. */
