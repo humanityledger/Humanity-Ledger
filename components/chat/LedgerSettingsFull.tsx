@@ -1,5 +1,6 @@
 ﻿'use client';
 // @ts-nocheck
+import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -172,7 +173,7 @@ const SETTINGS_SECTIONS = [
     title: 'Privacy and security',
     items: [
       { id: 'privacy', label: 'Privacy', sublabel: 'Last seen, read receipts, disappearing messages', icon: Eye },
-      { id: 'security', label: 'Security', sublabel: 'PIN lock, encryption, IP hiding', icon: Lock },
+      { id: 'security', label: 'Security', sublabel: pinLockEnabled() ? 'PIN lock, encryption, IP hiding' : 'Encryption, IP hiding', icon: Lock },
     ],
   },
   {
@@ -1051,15 +1052,20 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'security' && (
             <>
-              <Group title="App lock" footer="When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.">
-                <Row
-                  icon={<Fingerprint size={18} />}
-                  label="Ask for my PIN"
-                  sublabel="Each time Ledger Chat opens"
-                  toggle={!!settings.biometric_lock}
-                  onToggle={v => updateSetting('biometric_lock', v)}
-                />
-              </Group>
+              {/* The app lock needs a PIN on the account, and PINs can be created only while the PIN
+                  screen is enabled (lib/auth/pin-lock.ts, off by default). Without it the switch
+                  changed nothing, so it is shown only when it can lock. */}
+              {pinLockEnabled() && (
+                <Group title="App lock" footer="When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.">
+                  <Row
+                    icon={<Fingerprint size={18} />}
+                    label="Ask for my PIN"
+                    sublabel="Each time Ledger Chat opens"
+                    toggle={!!settings.biometric_lock}
+                    onToggle={v => updateSetting('biometric_lock', v)}
+                  />
+                </Group>
+              )}
 
               <Group title="Encryption" footer="Direct messages use XMTP with MLS. Messages marked as sent through the server fallback are not end to end encrypted.">
                 <Row
