@@ -176,7 +176,7 @@ export const calls: DocPage = {
   href: "/docs/calls",
   label: "Voice and video calls",
   summary: "How calls connect, how they are encrypted, and what they reveal about your network.",
-  keywords: ["call", "voice", "video", "webrtc", "ip address", "turn", "stun", "relay", "group call", "microphone", "camera"],
+  keywords: ["call", "voice", "video", "webrtc", "ip address", "turn", "stun", "relay", "group call", "microphone", "camera", "picture in picture", "pip"],
   updated: "2026-11-17",
   blocks: [
     {
@@ -206,6 +206,7 @@ export const calls: DocPage = {
         "On a computer the call is a card; on a phone it fills the screen.",
         "Hanging up or declining ends the call on both sides in every state, also while it is still connecting or reconnecting.",
         "Screen sharing is offered where the browser can capture a screen. Phone browsers that cannot say so and point to a computer.",
+        "Picture in picture keeps both faces: the other person fills the floating window and your own camera is a small mirrored inset in its corner. On Chrome and Edge on a computer the floating window also has Mute, Camera and End. On Safari and Chrome on Android the two videos are combined into one before they leave the page. Where a browser offers neither, the button is not shown. Audio stays with the call and never moves into the floating window.",
         "Call settings let you choose the audio output where the browser allows it.",
       ],
     },
