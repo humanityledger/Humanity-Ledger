@@ -6611,9 +6611,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           { id: 'calls', label: 'Calls', icon: <CallsIcon />, badge: 0 },
           { id: 'updates', label: 'Status', icon: <StatusIcon />, badge: 0 },
           { id: 'contacts', label: 'Contacts', icon: <ContactsIcon />, badge: 0 },
+          // Payments opens the Aztec wallet sheet rather than a list, so it is never "current".
+          { id: 'payments', label: 'Private payments on Aztec', icon: <PaymentsIcon />, badge: 0 },
           { id: 'communities', label: 'Communities', icon: <CommunitiesIcon />, badge: 0 },
         ] as const).map((t) => {
-          const on = sidebarTab === t.id;
+          const on = t.id !== 'payments' && sidebarTab === t.id;
           return (
             <button
               key={t.id}
@@ -6622,6 +6624,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               title={t.label}
               aria-current={on ? 'page' : undefined}
               onClick={() => {
+                if (t.id === 'payments') { setShowZkWallet(true); return; }
                 if (t.id === 'communities') { setSidebarTab('communities'); setActivePeer(null); }
                 else { setSidebarTab(t.id); setActiveCommunity(null); }
                 setShowList(true);
@@ -6637,11 +6640,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             </button>
           );
         })}
-        <span className="w-7 h-px bg-[#e6e8ec] my-2.5" aria-hidden="true" />
-        {/* Ledger Studio is closed (every /api/studio route answers 410), so it has no place in the rail. */}
-        <button type="button" onClick={() => setShowZkWallet(true)} aria-label="Private payments on Aztec" title="Private payments on Aztec" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
-          <PaymentsIcon />
-        </button>
+        {/* Order: Chats, Calls, Status, Contacts, Payments, Communities, then Settings at the foot.
+            Ledger Studio is closed (every /api/studio route answers 410), so it has no place in the rail. */}
         <div className="flex-1" />
         {/* Live round trip from this device. Same reading on phone, tablet and computer. */}
         <LiveLatency />
@@ -7370,7 +7370,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
                   <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
                   <span>
-                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and both people; the account that pays the network fee is public.' : ''}{' '}
+                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and the recipient; the account that pays the network fee is public.' : ''}{' '}
                     <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
                   </span>
                 </button>

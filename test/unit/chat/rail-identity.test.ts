@@ -25,6 +25,12 @@ describe('rail', () => {
     for (const icon of ['ChatsIcon', 'CallsIcon', 'StatusIcon', 'ContactsIcon', 'CommunitiesIcon', 'PaymentsIcon', 'SettingsIcon']) expect(rail).toContain(`<${icon}`);
     expect(rail).not.toMatch(/lucide|<MessageSquare|<Wallet |<Settings size/);
   });
+  it('keeps the order Chats, Calls, Status, Contacts, Payments, Communities, then Settings', () => {
+    const at = (x: string) => rail.indexOf(x);
+    const seq = ["id: 'chats'", "id: 'calls'", "id: 'updates'", "id: 'contacts'", "id: 'payments'", "id: 'communities'", '<SettingsIcon'];
+    for (let i = 1; i < seq.length; i++) expect(at(seq[i - 1])).toBeLessThan(at(seq[i]));
+    expect(at(seq[0])).toBeGreaterThan(-1);
+  });
   it('has no entry to the closed Ledger Studio', () => {
     expect(rail).not.toMatch(/openStudio|Ledger Studio"/);
   });
