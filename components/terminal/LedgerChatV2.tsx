@@ -1,6 +1,7 @@
 "use client";
 import { WalletGlyph } from '@/components/chat/WalletGlyph';
 import { BellIcon, CallsIcon, ChatsIcon, CommunitiesIcon, ContactsIcon, NewGroupIcon, PaymentsIcon, PlusIcon, SettingsIcon, StatusIcon } from '@/components/chat/icons/LedgerIcons';
+import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { walletAddressFromQr } from '@/lib/chat/wallet-qr';
 import { BootMark } from '@/components/layout/BootMark';
 import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
@@ -6335,7 +6336,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
   // Only when the optional app lock is on. With it off (the default) the lock screen must never render:
   // it used to show for the first render of every visit, before the effect above marked the app unlocked.
-  if (ledgerSettings?.biometric_lock && !isBiometricallyUnlocked) {
+  // The lock only exists while PINs can be created (lib/auth/pin-lock.ts); otherwise the stored
+  // switch is ignored rather than showing a lock that cannot be passed or set up.
+  if (ledgerSettings?.biometric_lock && pinLockEnabled() && !isBiometricallyUnlocked) {
     // The lock screen checks the PIN with the server. It used to unlock on
     // any key press, which made it a picture of a lock rather than a lock.
     return (
