@@ -1843,6 +1843,8 @@ model Story {
   authorAddress String
   contentUrl    String   @db.Text
   mediaType     String
+  /// Lowercase 0x addresses allowed to see this status. Empty = every contact who saved the author.
+  audience      String[] @default([])
   expiresAt     DateTime
   createdAt     DateTime @default(now())
 

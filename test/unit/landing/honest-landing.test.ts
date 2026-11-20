@@ -20,8 +20,8 @@ describe('technical honesty', () => {
     expect(lim?.a).toMatch(/no external audit/);
     expect(lim?.a).toMatch(/not end-to-end encrypted/);
   });
-  it('docs: Status is text, 24 hours, server-stored; group calls are not offered', () => {
-    expect(fs.readFileSync('lib/docs/pages/guide.ts', 'utf8')).toMatch(/Photos and videos in Status are not available yet/);
+  it('docs: Status is server-stored and not end-to-end encrypted; group calls are not offered', () => {
+    expect(fs.readFileSync('lib/docs/pages/guide.ts', 'utf8')).toMatch(/Status is stored on our server and is not end-to-end encrypted/);
     expect(fs.readFileSync('lib/docs/pages/ledger-chat.ts', 'utf8')).not.toMatch(/start a group call/);
   });
 });
