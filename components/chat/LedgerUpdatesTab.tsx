@@ -1,17 +1,50 @@
 'use client';
-import React, { useCallback, useEffect, useState } from 'react';
-import { CircleDot, Plus, Trash2, Info } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PeerAvatar, SectionLabel, EmptyState, PrimaryButton, SecondaryButton, IconButton, Sheet, shortAddr } from './ui/kit';
+import { loadStatusMedia, parseStatusMedia, STATUS_VIDEO_MAX_SECONDS, uploadStatusMedia } from '@/lib/chat/status-media';
 
 /*
- * Updates: short text statuses that last 24 hours.
+ * Status: a short text, a photo or a video of up to 30 seconds, for 24 hours.
  *
  * Server rules live in app/api/chat/stories/route.ts: you see your own
- * statuses and those of people who saved you as a contact. Statuses are
- * stored as plain text on our server, so the composer says they are not end
- * to end encrypted.
+ * statuses and those of people who saved you as a contact, narrowed to the
+ * contacts the author picked. Statuses are stored on our server; photos and
+ * videos are encrypted at rest with a key kept in the status record, so the
+ * server can read them. The composer says Status is not end-to-end encrypted.
  */
+
+/* In-house glyphs (no icon library). */
+const G = {
+  plus: <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>,
+  trash: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  info: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.4" /><path d="M8 7.2v4M8 4.9v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>,
+  ring: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.6" strokeDasharray="3 2.4" /><circle cx="10" cy="10" r="2.5" fill="currentColor" /></svg>,
+};
+
+type Mode = 'text' | 'image' | 'video';
+
+/** Decrypts and shows one photo or video status; text otherwise. */
+function StatusBody({ story, compact = false }: { story: Story; compact?: boolean }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const media = story.mediaType === 'text' ? null : parseStatusMedia(story.contentUrl);
+  useEffect(() => {
+    if (!media) return;
+    let url: string | null = null;
+    let live = true;
+    loadStatusMedia(media).then(u => { url = u; if (live) setSrc(u); else URL.revokeObjectURL(u); }).catch(() => live && setFailed(true));
+    return () => { live = false; if (url) URL.revokeObjectURL(url); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story.contentUrl]);
+  if (story.mediaType === 'text') return <span className="block text-[14.5px] text-[#15171c] whitespace-pre-wrap break-words">{story.contentUrl}</span>;
+  if (!media || failed) return <span className="block text-[13.5px] text-[#727a88]">This {story.mediaType === 'video' ? 'video' : 'photo'} is not available.</span>;
+  if (!src) return <span className={`block rounded-xl border border-[#e4e7ec] bg-white ${compact ? 'h-24 w-24' : 'h-48 w-full'}`} aria-label="Loading" />;
+  const cls = `block rounded-xl border border-[#e4e7ec] bg-white object-cover ${compact ? 'h-24 w-24' : 'max-h-[60vh] w-full object-contain'}`;
+  return story.mediaType === 'video'
+    ? <video src={src} className={cls} controls={!compact} muted playsInline preload="metadata" />
+    : <img src={src} alt="Status photo" className={cls} />;
+}
 
 interface Story {
   id: string;
@@ -20,6 +53,8 @@ interface Story {
   mediaType: string;
   createdAt: string | number;
   expiresAt: string | number;
+  /** Own statuses only: how many contacts were picked (0 = all contacts). */
+  audienceSize?: number;
 }
 
 interface LedgerUpdatesTabProps {
@@ -45,6 +80,24 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
   const [composer, setComposer] = useState(false);
   const [draft, setDraft] = useState('');
   const [posting, setPosting] = useState(false);
+  const [mode, setMode] = useState<Mode>('text');
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Set<string> | null>(null); // null = all contacts
+  const [viewing, setViewing] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const resetComposer = () => {
+    setComposer(false); setDraft(''); setMode('text'); setFile(null); setPreview(null); setPicked(null);
+  };
+
+  const pickFile = (f: File | undefined) => {
+    if (!f) return;
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+  };
 
   const nameOf = (addr: string) => contacts.find(c => c.peerAddress.toLowerCase() === addr.toLowerCase())?.name || shortAddr(addr);
 
@@ -71,11 +124,19 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
 
   useEffect(() => { load(); }, [load]);
 
+  const canPost = mode === 'text' ? Boolean(draft.trim()) : Boolean(file);
   const post = async () => {
-    const text = draft.trim();
-    if (!text || posting) return;
+    if (!canPost || posting) return;
+    if (picked && picked.size === 0) { toast.error('Pick at least one contact, or choose All my contacts.'); return; }
     setPosting(true);
     try {
+      let contentUrl = draft.trim();
+      let mediaType: Mode = 'text';
+      if (mode !== 'text' && file) {
+        const up = await uploadStatusMedia(file);
+        contentUrl = up.url;
+        mediaType = up.kind;
+      }
       const res = await fetch('/api/chat/stories', {
         method: 'POST',
         credentials: 'include',
@@ -83,16 +144,17 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
           'Content-Type': 'application/json',
           ...(myAddress ? { 'x-web3-address': myAddress } : {}),
         },
-        body: JSON.stringify({ contentUrl: text, mediaType: 'text' }),
+        body: JSON.stringify({ contentUrl, mediaType, audience: picked ? Array.from(picked) : [] }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Could not post');
       setMine(prev => [data.story, ...prev]);
-      setDraft('');
-      setComposer(false);
+      resetComposer();
       toast.success('Status posted');
     } catch (e: any) {
-      toast.error(e?.message === 'Too many active statuses' ? 'You have 30 active statuses. Delete one first.' : 'Could not post your status. Try again.');
+      const m = String(e?.message || '');
+      toast.error(m === 'Too many active statuses' ? 'You have 30 active statuses. Delete one first.'
+        : /up to|Use a JPEG|cannot be read/.test(m) ? m : 'Could not post your status. Try again.');
     }
     setPosting(false);
   };
@@ -128,13 +190,13 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
               aria-label="New status"
               className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#15171c] text-white ring-2 ring-white flex items-center justify-center"
             >
-              <Plus size={12} strokeWidth={2.4} />
+              {G.plus}
             </button>
           </span>
           <button type="button" onClick={() => setComposer(true)} className="flex-1 min-w-0 text-left">
             <span className="block text-[15.5px] font-medium text-[#15171c]">My status</span>
             <span className="block text-[13.5px] text-[#727a88]">
-              {mine.length === 0 ? 'Share a short update for 24 hours' : `${mine.length} active ${mine.length === 1 ? 'update' : 'updates'}`}
+              {mine.length === 0 ? 'Share a text, photo or short video for 24 hours' : `${mine.length} active ${mine.length === 1 ? 'status' : 'statuses'}`}
             </span>
           </button>
         </div>
@@ -143,11 +205,13 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             {mine.map(s => (
               <li key={s.id} className="flex items-start gap-2 py-2 border-t border-[#eceef2] first:border-t-0">
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[14.5px] text-[#15171c] whitespace-pre-wrap break-words">{s.contentUrl}</span>
-                  <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">{ago(s.createdAt)}</span>
+                  <StatusBody story={s} compact />
+                  <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">
+                    {ago(s.createdAt)} · {s.audienceSize ? `${s.audienceSize} ${s.audienceSize === 1 ? 'contact' : 'contacts'}` : 'All my contacts'}
+                  </span>
                 </span>
-                <IconButton label="Delete status" onClick={() => remove(s.id)} className="text-[#727a88] hover:text-[#d93036]">
-                  <Trash2 size={16} strokeWidth={1.8} />
+                <IconButton label="Delete status" onClick={() => remove(s.id)} className="text-[#727a88] hover:text-[#FF3B30]">
+                  {G.trash}
                 </IconButton>
               </li>
             ))}
@@ -160,7 +224,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
         <p className="px-4 py-6 text-[14px] text-[#a3a9b4]">Loading</p>
       ) : Object.keys(byAuthor).length === 0 ? (
         <EmptyState
-          icon={<CircleDot size={20} strokeWidth={1.8} />}
+          icon={G.ring}
           title="No updates yet"
           text="When people who saved you as a contact share a status, it shows up here for 24 hours."
         />
@@ -170,10 +234,10 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             <li key={author}>
               <button
                 type="button"
-                onClick={() => onOpenChat(author)}
+                onClick={() => setViewing(author)}
                 className="w-full flex items-start gap-3 px-2 py-2.5 rounded-xl hover:bg-[#f7f8fa] text-left transition-colors"
               >
-                <span className="rounded-full p-[2px] ring-2 ring-[#15171c] shrink-0">
+                <span className="rounded-full p-[2px] ring-2 ring-[#5200FF] shrink-0">
                   <PeerAvatar address={author} name={nameOf(author)} size={42} />
                 </span>
                 <span className="flex-1 min-w-0">
@@ -193,18 +257,74 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
       )}
 
       <Sheet
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing ? nameOf(viewing) : ''}
+        subtitle="Status, for 24 hours"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <SecondaryButton onClick={() => setViewing(null)}>Close</SecondaryButton>
+            <PrimaryButton onClick={() => { const a = viewing; setViewing(null); if (a) onOpenChat(a); }}>Reply in chat</PrimaryButton>
+          </div>
+        }
+      >
+        <ul className="px-5 pb-4 space-y-4">
+          {(viewing ? byAuthor[viewing] || [] : []).map(s => (
+            <li key={s.id}>
+              <StatusBody story={s} />
+              <span className="block text-[12.5px] text-[#a3a9b4] mt-1">{ago(s.createdAt)}</span>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
+
+      <Sheet
         open={composer}
-        onClose={() => setComposer(false)}
+        onClose={resetComposer}
         title="New status"
         subtitle="Visible for 24 hours"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <SecondaryButton onClick={() => setComposer(false)}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={post} disabled={!draft.trim() || posting}>{posting ? 'Posting' : 'Post'}</PrimaryButton>
+            <SecondaryButton onClick={resetComposer}>Cancel</SecondaryButton>
+            <PrimaryButton onClick={post} disabled={!canPost || posting}>{posting ? 'Posting' : 'Post'}</PrimaryButton>
           </div>
         }
       >
         <div className="px-5 pb-4">
+          <div role="tablist" aria-label="Status type" className="flex gap-2 mb-3">
+            {([['text', 'Text'], ['image', 'Photo'], ['video', 'Video']] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={mode === id}
+                onClick={() => { setMode(id); setFile(null); setPreview(null); }}
+                className={`h-8 px-3 rounded-full text-[13px] font-medium border transition-colors ${mode === id ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#e4e7ec] text-[#15171c]'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode !== 'text' ? (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                accept={mode === 'image' ? 'image/jpeg,image/png,image/webp,image/gif,image/avif' : 'video/mp4,video/webm,video/quicktime'}
+                onChange={e => pickFile(e.target.files?.[0])}
+              />
+              {preview ? (
+                mode === 'video'
+                  ? <video src={preview} className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" controls muted playsInline />
+                  : <img src={preview} alt="Selected photo" className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" />
+              ) : null}
+              <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 h-10 w-full rounded-xl border border-[#e4e7ec] bg-white text-[14px] font-medium text-[#15171c]">
+                {file ? 'Choose another' : mode === 'image' ? 'Choose a photo' : `Choose a video (up to ${STATUS_VIDEO_MAX_SECONDS} s)`}
+              </button>
+              <p className="text-[12.5px] text-[#a3a9b4] mt-1">Up to 20 MB.</p>
+            </>
+          ) : (<>
           <textarea
             autoFocus
             value={draft}
@@ -214,9 +334,43 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             className="w-full text-[15.5px] text-[#15171c] placeholder:text-[#a3a9b4] resize-none outline-none border border-[#d9dde3] rounded-xl p-3 focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10"
           />
           <p className="text-[12.5px] text-[#a3a9b4] text-right tabular-nums mt-1">{draft.length} / {MAX}</p>
+          </>)}
+
+          <fieldset className="mt-4">
+            <legend className="text-[13px] font-semibold text-[#15171c] mb-2">Who can see it</legend>
+            <label className="flex items-center gap-2 py-1 text-[14px] text-[#15171c]">
+              <input type="radio" name="status-audience" checked={picked === null} onChange={() => setPicked(null)} />
+              All my contacts who saved me
+            </label>
+            <label className="flex items-center gap-2 py-1 text-[14px] text-[#15171c]">
+              <input type="radio" name="status-audience" checked={picked !== null} onChange={() => setPicked(new Set())} disabled={contacts.length === 0} />
+              Only some contacts
+            </label>
+            {picked !== null && (
+              <ul className="mt-1 max-h-40 overflow-y-auto rounded-xl border border-[#e4e7ec]">
+                {contacts.map(c => {
+                  const a = c.peerAddress.toLowerCase();
+                  return (
+                    <li key={a}>
+                      <label className="flex items-center gap-2 px-3 py-2 text-[14px] text-[#15171c]">
+                        <input
+                          type="checkbox"
+                          checked={picked.has(a)}
+                          onChange={e => setPicked(prev => { const n = new Set(prev || []); if (e.target.checked) n.add(a); else n.delete(a); return n; })}
+                        />
+                        <span className="truncate">{c.name || shortAddr(c.peerAddress)}</span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="text-[12.5px] text-[#a3a9b4] mt-1">Only people who saved you as a contact can ever see your status.</p>
+          </fieldset>
+
           <p className="mt-3 flex items-start gap-2 text-[13.5px] text-[#4a505c] leading-relaxed">
-            <Info size={15} strokeWidth={1.9} className="mt-[2px] shrink-0 text-[#727a88]" aria-hidden="true" />
-            People who saved you as a contact can see it. Statuses are stored on our server and are not end to end encrypted.
+            <span className="mt-[2px] shrink-0 text-[#727a88]">{G.info}</span>
+            Status is stored on our server and is not end-to-end encrypted. Photos and videos are encrypted at rest, but the server holds their key.
           </p>
         </div>
       </Sheet>

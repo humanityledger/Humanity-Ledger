@@ -193,7 +193,7 @@ export const guide: DocPage = {
       t: "ul",
       items: [
         "**Communities** have channels, roles, announcements, polls, voice rooms and invite links you can switch off at any time. Everyone accepts the community guidelines when they join. Community posts are stored on our server; see [Communities](/docs/communities).",
-        "**Status** posts are short texts, up to 700 characters, that disappear after 24 hours. They are shown to people who saved you as a contact. They are stored on our server, readable by it, and are not end-to-end encrypted. Photos and videos in Status are not available yet.",
+        "**Status** is a short text (up to 700 characters), a photo or a video of up to 30 seconds (up to 20 MB), and it disappears after 24 hours. Only people who saved you as a contact can see it, and you can narrow that to contacts you pick. Status is stored on our server and is not end-to-end encrypted: photos and videos are encrypted at rest, but the key is kept in the status record on the server.",
       ],
     },
 
