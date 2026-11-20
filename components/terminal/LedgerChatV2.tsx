@@ -1,5 +1,6 @@
 "use client";
 import { WalletGlyph } from '@/components/chat/WalletGlyph';
+import { RowLock, RowTicks } from '@/components/chat/ChatRowMeta';
 import { BellIcon, CallsIcon, ChatsIcon, CommunitiesIcon, ContactsIcon, NewGroupIcon, PaymentsIcon, PlusIcon, SettingsIcon, StatusIcon } from '@/components/chat/icons/LedgerIcons';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { walletAddressFromQr } from '@/lib/chat/wallet-qr';
@@ -7039,9 +7040,26 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                               preview = '';
                             }
                           }
+                          // Discreet state: the lock only on direct messages (MLS); ticks only when the
+                          // last message in the chat is yours.
+                          const rowConvId = `dm-${conv.peerAddress.toLowerCase()}`;
+                          const myInbox = String(client?.inboxId || '').toLowerCase();
+                          let lastMine: { status?: string } | null = null;
+                          for (let i = messages.length - 1; i >= 0; i--) {
+                            const m = messages[i];
+                            if (m.conversationId?.toLowerCase() !== rowConvId || typeof m.content !== 'string' || isSystemSignal(m.content)) continue;
+                            if (!survivesClear(m.sentAtNs, cut)) break;
+                            lastMine = myInbox && m.senderInboxId?.toLowerCase() === myInbox ? (m as { status?: string }) : null;
+                            break;
+                          }
+                          const rowIsDm = /^0x[0-9a-f]{40}$/i.test(conv.peerAddress);
                           return preview ? (
                             <div className="flex items-center justify-between gap-2">
-                              <p className="text-[14px] text-[#5b606b] truncate">{preview}</p>
+                              <p className="flex items-center gap-1 min-w-0 text-[14px] text-[#5b606b]">
+                                {rowIsDm && <RowLock />}
+                                {lastMine && <RowTicks status={lastMine.status} readReceipts={ledgerSettings?.show_read_receipts !== false} />}
+                                <span className="truncate">{preview}</span>
+                              </p>
                               {conv.unreadCount && conv.unreadCount > 0 && !isMuted ? (
                                 <div className="min-w-[20px] h-5 bg-[#2456e6] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={`${conv.unreadCount} unread`}>
                                   <span className="text-[11px] font-bold text-white tabular-nums">
