@@ -10,9 +10,11 @@
  * Keyboard (focus the window)
  *   Arrow keys  move to the next corner      Enter   open the full call
  *   + / -       larger / smaller (video)     Escape  put it back in the island
- * Browser picture in picture
- *   Where the browser offers it, the video can leave the page. The <video> stays mounted while it
- *   is out (closing it would close picture in picture) and the window shows the controls only.
+ * Browser picture in picture (components/activities/callPip.ts)
+ *   Where the browser offers it, the call leaves the page with BOTH faces: the other person fills the
+ *   floating window and our camera is an inset in its corner (Document Picture-in-Picture on Chrome
+ *   and Edge desktop, a composed video on Safari and Chrome on Android). Where neither exists the
+ *   button is not shown. While it is out, this window shows the controls only.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue, type PanInfo } from 'framer-motion';
@@ -22,7 +24,7 @@ import { windowCall } from '@/lib/activities/priority';
 import { attachStream, hasLiveVideo, useCallMedia } from '@/lib/activities/call-media';
 import { CORNER_LABEL, cornerByKey, cornerPoint, nearestCorner, windowBox, type Corner, type WindowSize } from '@/lib/activities/geometry';
 import { formatElapsed, spokenDuration } from '@/lib/activities/values';
-import { canBrowserPip, enterBrowserPip, watchBrowserPip } from './browserPip';
+import { callPipMode, enterCallPip, exitCallPip, updateCallPip } from './callPip';
 import { setAutoPip } from './mediaSession';
 import { CALL_SURFACE_ID } from './Island';
 import { initials } from './presentations';
@@ -83,23 +85,33 @@ export function CallWindow({ announce }: { announce: (text: string) => void }) {
   useEffect(() => { attachStream(selfRef.current, hasLiveVideo(local) ? local : null); }, [ready, local, size, video, inBrowserPip]);
 
   const [pipAvailable, setPipAvailable] = useState(false);
-  useEffect(() => { setPipAvailable(video && canBrowserPip(videoRef.current)); }, [ready, video]);
+  useEffect(() => { setPipAvailable(video && callPipMode() !== null); }, [ready, video]);
 
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    return watchBrowserPip(el, (on) => {
-      setInBrowserPip(on);
-      announce(on ? 'The call video is in picture in picture' : 'The call video is back in the window');
+  // Both faces, always: the floating window gets the remote video AND our camera (callPip.ts).
+  const openPip = useCallback(() => {
+    void enterCallPip({
+      remote,
+      local,
+      controls,
+      onChange: (on) => {
+        setInBrowserPip(on);
+        announce(on ? 'The call is in picture in picture, with both cameras' : 'The call is back in the window');
+      },
     });
-  }, [ready, video, setInBrowserPip, announce]);
+  }, [remote, local, controls, setInBrowserPip, announce]);
 
-  // Chrome and Edge can move the video to picture in picture by themselves when the tab is hidden.
+  // Keep the floating window on the current streams (camera toggled, remote renegotiated).
+  useEffect(() => { if (inBrowserPip) updateCallPip(video ? remote : null, hasLiveVideo(local) ? local : null); }, [inBrowserPip, remote, local, video]);
+  // The call ended or stopped being a video call: close the floating window with it.
+  useEffect(() => { if ((!call || !video) && inBrowserPip) exitCallPip(); }, [call, video, inBrowserPip]);
+  useEffect(() => () => exitCallPip(), []);
+
+  // Chrome and Edge can open picture in picture by themselves when the tab is hidden.
   useEffect(() => {
     if (!video) return;
-    setAutoPip(() => { if (videoRef.current) void enterBrowserPip(videoRef.current); });
+    setAutoPip(openPip);
     return () => setAutoPip(null);
-  }, [ready, video]);
+  }, [ready, video, openPip]);
 
   const moveTo = useCallback((c: Corner) => {
     setCorner(c);
@@ -204,7 +216,7 @@ export function CallWindow({ announce }: { announce: (text: string) => void }) {
               </button>
             )}
             {pipAvailable && (
-              <button type="button" className={s.barBtn} onClick={() => videoRef.current && enterBrowserPip(videoRef.current)} aria-label="Picture in picture">
+              <button type="button" className={s.barBtn} onClick={openPip} aria-label="Picture in picture, with both cameras">
                 <PictureInPicture2 {...I} />
               </button>
             )}
