@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Phone, CircleDot, Users } from 'lucide-react';
+import { CallsIcon, ChatsIcon, CommunitiesIcon, StatusIcon } from '@/components/chat/icons/LedgerIcons';
 
 export type NavTab = 'updates' | 'calls' | 'communities' | 'chats';
 
@@ -12,10 +12,10 @@ interface CrystalNavBarProps {
 }
 
 const TABS: { id: NavTab; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
-  { id: 'chats', label: 'Chats', Icon: MessageCircle },
-  { id: 'calls', label: 'Calls', Icon: Phone },
-  { id: 'updates', label: 'Updates', Icon: CircleDot },
-  { id: 'communities', label: 'Communities', Icon: Users },
+  { id: 'chats', label: 'Chats', Icon: ChatsIcon },
+  { id: 'calls', label: 'Calls', Icon: CallsIcon },
+  { id: 'updates', label: 'Status', Icon: StatusIcon },
+  { id: 'communities', label: 'Communities', Icon: CommunitiesIcon },
 ];
 
 /** The four sections of Ledger Chat, shown as tabs above the list. */

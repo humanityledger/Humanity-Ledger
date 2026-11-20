@@ -1,4 +1,6 @@
 "use client";
+import { WalletGlyph } from '@/components/chat/WalletGlyph';
+import { BellIcon, CallsIcon, ChatsIcon, CommunitiesIcon, ContactsIcon, NewGroupIcon, PaymentsIcon, PlusIcon, SettingsIcon, StatusIcon } from '@/components/chat/icons/LedgerIcons';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { walletAddressFromQr } from '@/lib/chat/wallet-qr';
 import { BootMark } from '@/components/layout/BootMark';
@@ -199,19 +201,9 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
     );
   }
 
-  // Initials on a soft tint of a colour derived from the address, so the
-  // same person always looks the same and the text stays readable.
-  const initials = address ? address.slice(2, 4).toUpperCase() : '';
-  const hue = address ? parseInt(address.slice(2, 8), 16) % 360 : 220;
-  return (
-    <div
-      className="rounded-full flex items-center justify-center font-semibold shrink-0"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.36), background: `hsl(${hue} 55% 91%)`, color: `hsl(${hue} 42% 28%)` }}
-      aria-hidden="true"
-    >
-      {initials}
-    </div>
-  );
+  // No photo: a geometric glyph derived from the wallet address (WalletGlyph), the same for the
+  // same person everywhere, instead of two letters on a tinted circle.
+  return <WalletGlyph address={address} size={size} />;
 }
 
 const shortAddr = (addr: string) => formatAddress(addr);
@@ -6614,12 +6606,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           <HLLogo variant="mark" size={40} />
         </Link>
         {([
-          { id: 'chats', label: 'Chats', icon: <MessageSquare size={21} strokeWidth={1.8} />, badge: conversations.reduce((n, c) => n + (c.unreadCount || 0), 0) },
-          { id: 'calls', label: 'Calls', icon: <Phone size={21} strokeWidth={1.8} />, badge: 0 },
-          { id: 'updates', label: 'Updates', icon: <CircleDot size={21} strokeWidth={1.8} />, badge: 0 },
-          { id: 'communities', label: 'Communities', icon: <Users size={21} strokeWidth={1.8} />, badge: 0 },
+          { id: 'chats', label: 'Chats', icon: <ChatsIcon />, badge: conversations.reduce((n, c) => n + (c.unreadCount || 0), 0) },
+          { id: 'calls', label: 'Calls', icon: <CallsIcon />, badge: 0 },
+          { id: 'updates', label: 'Status', icon: <StatusIcon />, badge: 0 },
+          { id: 'contacts', label: 'Contacts', icon: <ContactsIcon />, badge: 0 },
+          // Payments opens the Aztec wallet sheet rather than a list, so it is never "current".
+          { id: 'payments', label: 'Private payments on Aztec', icon: <PaymentsIcon />, badge: 0 },
+          { id: 'communities', label: 'Communities', icon: <CommunitiesIcon />, badge: 0 },
         ] as const).map((t) => {
-          const on = (t.id === 'chats' ? sidebarTab === 'chats' || sidebarTab === 'contacts' : sidebarTab === t.id);
+          const on = t.id !== 'payments' && sidebarTab === t.id;
           return (
             <button
               key={t.id}
@@ -6628,6 +6623,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               title={t.label}
               aria-current={on ? 'page' : undefined}
               onClick={() => {
+                if (t.id === 'payments') { setShowZkWallet(true); return; }
                 if (t.id === 'communities') { setSidebarTab('communities'); setActivePeer(null); }
                 else { setSidebarTab(t.id); setActiveCommunity(null); }
                 setShowList(true);
@@ -6643,18 +6639,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             </button>
           );
         })}
-        <span className="w-7 h-px bg-[#e6e8ec] my-2.5" aria-hidden="true" />
-        <button type="button" onClick={() => setShowZkWallet(true)} aria-label="Private wallet" title="Private wallet" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
-          <Wallet size={21} strokeWidth={1.8} />
-        </button>
-        <button type="button" onClick={() => openStudio()} aria-label="Ledger Studio" title="Ledger Studio" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
-          <StudioIcon size={21} strokeWidth={1.8} />
-        </button>
+        {/* Order: Chats, Calls, Status, Contacts, Payments, Communities, then Settings at the foot.
+            Ledger Studio is closed (every /api/studio route answers 410), so it has no place in the rail. */}
         <div className="flex-1" />
         {/* Live round trip from this device. Same reading on phone, tablet and computer. */}
         <LiveLatency />
         <button type="button" onClick={() => setShowFullSettings(true)} aria-label="Settings" title="Settings" className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
-          <Settings size={21} strokeWidth={1.8} />
+          <SettingsIcon />
         </button>
         <button type="button" onClick={() => setShowFullSettings(true)} aria-label="Your profile" title={effectiveAddress || 'Your profile'} className="relative mt-1 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
           <Avatar address={effectiveAddress} isMe={true} size={40} />
@@ -6670,7 +6661,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           {/* Wide screens: the section's name and its actions (identity and Studio live in the rail). */}
           <div className="hidden md:flex items-center justify-between gap-3 pt-2">
             <h1 className="text-[26px] font-bold tracking-[-0.03em] text-[#15171c]">
-              {sidebarTab === 'calls' ? 'Calls' : sidebarTab === 'updates' ? 'Updates' : sidebarTab === 'communities' ? 'Communities' : 'Chats'}
+              {sidebarTab === 'calls' ? 'Calls' : sidebarTab === 'updates' ? 'Status' : sidebarTab === 'communities' ? 'Communities' : sidebarTab === 'contacts' ? 'Contacts' : 'Chats'}
             </h1>
             {(sidebarTab === 'chats' || sidebarTab === 'contacts') && (
               <div className="flex items-center gap-1.5">
@@ -6681,7 +6672,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   title="Contact requests"
                   aria-label={pendingRequestCount > 0 ? `Contact requests, ${pendingRequestCount} new` : 'Contact requests'}
                 >
-                  <Bell size={17} strokeWidth={1.8} />
+                  <BellIcon size={18} />
                   {pendingRequestCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#e5484d] text-white text-[10px] font-semibold leading-4 text-center tabular-nums ring-2 ring-white" aria-hidden="true">
                       {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
@@ -6689,10 +6680,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   )}
                 </button>
                 <button type="button" onClick={() => setShowCreateGroup(true)} className="w-10 h-10 rounded-xl border border-[#e6e8ec] bg-white hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors" title="New group" aria-label="New group">
-                  <UserPlus size={17} strokeWidth={1.8} />
+                  <NewGroupIcon size={18} />
                 </button>
                 <button type="button" onClick={() => document.getElementById('ledger-new-chat-input')?.focus()} className="w-10 h-10 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] flex items-center justify-center text-white transition-colors" title="New chat" aria-label="New chat">
-                  <Plus size={18} strokeWidth={2} />
+                  <PlusIcon size={18} weight={2} />
                 </button>
               </div>
             )}
@@ -7361,7 +7352,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
                   <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
                   <span>
-                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and both people; the account that pays the network fee is public.' : ''}{' '}
+                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and the recipient; the account that pays the network fee is public.' : ''}{' '}
                     <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
                   </span>
                 </button>
