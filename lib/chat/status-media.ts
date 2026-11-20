@@ -2,7 +2,8 @@
  * Photo and short-video Status.
  *
  * The file is encrypted in the browser (AES-256-GCM, the chat attachment scheme) and the
- * ciphertext is uploaded to /api/chat/attachments. The key travels in the Status record itself,
+ * ciphertext is uploaded to /api/chat/attachments (R2), or, when no bucket is configured, to
+ * /api/chat/stories/media (Postgres, 24 hours). The key travels in the Status record itself,
  * in the URL fragment, and the Status record is stored on our server. So Status media is
  * encrypted at rest, but the server can read it: it is NOT end-to-end encrypted, and the
  * composer says so.
@@ -16,7 +17,7 @@ export const STATUS_VIDEO_MAX_SECONDS = 30;
 export const STATUS_MEDIA_MAX_BYTES = MAX_ATTACHMENT_BYTES;
 export const STATUS_AUDIENCE_MAX = 256;
 
-const PATH_RE = /^\/api\/chat\/attachments\/[0-9a-f]{32}$/;
+const PATH_RE = /^\/api\/chat\/(?:attachments|stories\/media)\/[0-9a-f]{32}$/;
 const HEX64 = /^[0-9a-f]{64}$/;
 const HEX24 = /^[0-9a-f]{24}$/;
 const MIME_RE = /^(image\/(jpeg|png|webp|gif|avif)|video\/(mp4|webm|quicktime))$/;
@@ -77,30 +78,47 @@ export function videoSeconds(file: Blob): Promise<number> {
     const v = document.createElement('video');
     v.preload = 'metadata';
     v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(v.duration); };
-    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('This video cannot be read')); };
+    v.onerror = () => { URL.revokeObjectURL(url); reject(new StatusMediaError('This video cannot be read here. Try an MP4.')); };
     v.src = url;
   });
 }
 
 /** Encrypts and uploads a photo or short video; returns the Status media URL to post. */
 export async function uploadStatusMedia(file: File, fetchImpl: typeof fetch = fetch): Promise<{ url: string; kind: 'image' | 'video' }> {
-  if (!MIME_RE.test(file.type)) throw new Error('Use a JPEG, PNG, WebP, GIF or AVIF photo, or an MP4, WebM or MOV video');
-  if (file.size === 0 || file.size > STATUS_MEDIA_MAX_BYTES) throw new Error('Files can be up to 20 MB');
+  if (!MIME_RE.test(file.type)) throw new StatusMediaError('Use a JPEG, PNG, WebP, GIF or AVIF photo, or an MP4, WebM or MOV video.');
+  if (file.size === 0 || file.size > STATUS_MEDIA_MAX_BYTES) throw new StatusMediaError('Files can be up to 20 MB.');
   if (file.type.startsWith('video/')) {
     const secs = await videoSeconds(file);
-    if (!(secs > 0) || secs > STATUS_VIDEO_MAX_SECONDS + 0.5) throw new Error(`Videos can be up to ${STATUS_VIDEO_MAX_SECONDS} seconds`);
+    if (!(secs > 0) || secs > STATUS_VIDEO_MAX_SECONDS + 0.5) throw new StatusMediaError(`Videos can be up to ${STATUS_VIDEO_MAX_SECONDS} seconds.`);
   }
   const enc = await encryptAttachment(new Uint8Array(await file.arrayBuffer()));
-  const res = await fetchImpl('/api/chat/attachments', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: enc.ciphertext as BodyInit,
-    credentials: 'same-origin',
-  });
-  const data = await res.json().catch(() => ({} as Record<string, unknown>));
-  if (!res.ok || typeof data.url !== 'string') throw new Error(typeof data.error === 'string' ? data.error : 'Upload failed');
+  const put = async (path: string) => {
+    const res = await fetchImpl(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: enc.ciphertext as BodyInit,
+      credentials: 'same-origin',
+    });
+    return { res, data: (await res.json().catch(() => ({}))) as Record<string, unknown> };
+  };
+  // R2 first; without a bucket (503 storage_unavailable) the Status store in Postgres. This was
+  // the "Could not post your status" of 20 Nov 2026: production has no bucket.
+  let { res, data } = await put('/api/chat/attachments');
+  if (res.status === 503) ({ res, data } = await put('/api/chat/stories/media'));
+  if (!res.ok || typeof data.url !== 'string') throw new StatusMediaError(uploadErrorText(res.status, data.error));
   const media: StatusMedia = { path: data.url, mime: file.type, contentDigest: enc.contentDigest, secret: enc.secret, salt: enc.salt, nonce: enc.nonce };
   return { url: encodeStatusMedia(media, window.location.origin), kind: statusKindOf(media) };
+}
+
+export class StatusMediaError extends Error {}
+
+/** The sentence the composer shows for a failed upload. */
+export function uploadErrorText(status: number, error: unknown): string {
+  if (status === 401) return 'Your session has expired. Sign in again to post.';
+  if (status === 413) return 'Files can be up to 20 MB.';
+  if (status === 429) return error === 'Too many active statuses' ? 'You have 30 active statuses. Delete one first.' : 'Too many uploads. Wait a moment.';
+  if (status === 503) return 'Photos and videos cannot be stored right now. Try again later, or post a text.';
+  return 'The upload did not finish. Try again.';
 }
 
 /** Fetches the same-origin ciphertext, checks it and decrypts it into a blob: URL. */

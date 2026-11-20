@@ -31,6 +31,13 @@ describe('rail', () => {
     for (let i = 1; i < seq.length; i++) expect(at(seq[i - 1])).toBeLessThan(at(seq[i]));
     expect(at(seq[0])).toBeGreaterThan(-1);
   });
+  it('the settings icon is a gear outline with a hub, not a sun of spokes', () => {
+    const icons = fs.readFileSync('components/chat/icons/LedgerIcons.tsx', 'utf8');
+    const gear = icons.slice(icons.indexOf('export const SettingsIcon'), icons.indexOf('export const BellIcon'));
+    expect((gear.match(/A9 9 0 0 1/g) || []).length).toBe(8);
+    expect(gear).toMatch(/<circle cx="12" cy="12" r="2.75" \/>/);
+    expect(gear).not.toMatch(/M12 3v2/);
+  });
   it('has no entry to the closed Ledger Studio', () => {
     expect(rail).not.toMatch(/openStudio|Ledger Studio"/);
   });

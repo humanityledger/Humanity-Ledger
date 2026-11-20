@@ -1,6 +1,7 @@
 "use client";
 import { WalletGlyph } from '@/components/chat/WalletGlyph';
 import { RowLock, RowTicks } from '@/components/chat/ChatRowMeta';
+import { BUSY_HEARTBEAT_MS, BUSY_TTL_MS, CALL_TABS_CHANNEL, busyElsewhere, isAnswerDial, readCallTabsMessage, ringMayPlay, stopsRingHere } from '@/lib/calls/ring-guard';
 import { BellIcon, CallsIcon, ChatsIcon, CommunitiesIcon, ContactsIcon, NewGroupIcon, PaymentsIcon, PlusIcon, SettingsIcon, StatusIcon } from '@/components/chat/icons/LedgerIcons';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { walletAddressFromQr } from '@/lib/chat/wallet-qr';
@@ -1362,6 +1363,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const ringtoneRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ringtoneCtxRef = useRef<AudioContext | null>(null);
   const ringtoneStopped = useRef(true);
+  // Other windows of this browser (a tab and the installed app): who is in a call with whom.
+  const busyPeersRef = useRef<Map<string, number>>(new Map());
+  const callTabsRef = useRef<BroadcastChannel | null>(null);
   // ─── Backward compat shims so existing JSX works unchanged ──────────────────
   const callActive = callState === 'active' || callState === 'calling' || callState === 'connecting';
   const incomingCall = callState === 'ringing';
@@ -1515,6 +1519,36 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         ringtoneCtxRef.current = null;
       }
     }
+  }, [callState]);
+
+  // ─── Windows of this browser (lib/calls/ring-guard.ts) ───────────────────────
+  // A window in a call says so every 10 s; the others do not ring for that caller, and stop if
+  // they are ringing. A decline in one window stops the others too.
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const ch = new BroadcastChannel(CALL_TABS_CHANNEL);
+    callTabsRef.current = ch;
+    ch.onmessage = (e) => {
+      const m = readCallTabsMessage(e.data);
+      if (!m) return;
+      if (m.t === 'busy') busyPeersRef.current.set(m.peer, Date.now() + BUSY_TTL_MS);
+      if (callStateRef.current === 'ringing' && !isCallerRef.current && callPeerAddrRef.current?.toLowerCase() === m.peer) {
+        performEndCallRef.current(); // local only: stops the ring and drops the pending connection
+        toast(m.t === 'busy' ? 'Answered in another window' : 'Declined in another window');
+      }
+    };
+    return () => { ch.close(); callTabsRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    if (callState !== 'connecting' && callState !== 'active') return;
+    const say = () => {
+      const peer = callPeerAddrRef.current?.toLowerCase();
+      if (peer) callTabsRef.current?.postMessage({ t: 'busy', peer });
+    };
+    say();
+    const id = setInterval(say, BUSY_HEARTBEAT_MS);
+    return () => clearInterval(id);
   }, [callState]);
 
   const toggleBlock = (peer: string) => {
@@ -2111,6 +2145,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   // to avoid TDZ with the safety useEffect. Do NOT re-declare them here.
 
   const startRingtone = useCallback(() => {
+    // One ring at a time: a second start used to leave the first timer and AudioContext running.
+    if (ringtoneRef.current) { clearInterval(ringtoneRef.current); ringtoneRef.current = null; }
+    if (ringtoneCtxRef.current) { ringtoneCtxRef.current.close().catch(() => {}); ringtoneCtxRef.current = null; }
     ringtoneStopped.current = false;
     let ctx: AudioContext | null = null;
     try {
@@ -2118,8 +2155,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       ringtoneCtxRef.current = ctx;
     } catch { return; }
     const playRing = () => {
-      // Check the shared ref — stopRingtone sets this to true immediately
-      if (ringtoneStopped.current || !ctx) return;
+      // Plays only while the call is ringing (lib/calls/ring-guard.ts). Answered, declined, ended
+      // or in a call: the ring stops itself at the next beat, even if a stop was missed.
+      if (!ctx || !ringMayPlay(ringtoneStopped.current, callStateRef.current)) {
+        ringtoneStopped.current = true;
+        if (ringtoneRef.current) { clearInterval(ringtoneRef.current); ringtoneRef.current = null; }
+        if (ringtoneCtxRef.current === ctx && ctx) { ctx.close().catch(() => {}); ringtoneCtxRef.current = null; }
+        return;
+      }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
@@ -2323,6 +2366,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           return;
         }
 
+        // The callee's answer dial (answerCall's fallback). Only a caller who is still calling takes
+        // it; after a hang-up it used to ring the caller's device as if for a new call.
+        if (isAnswerDial(connection.metadata) && callStateRef.current !== 'calling' && callStateRef.current !== 'connecting') {
+          try { connection.close(); } catch {}
+          return;
+        }
+
         if (callStateRef.current === 'ringing' || callStateRef.current === 'idle') {
           // Receiver gets the call before clicking Answer — store it for answerCall()
           // If we were idle, the WebRTC packet beat the XMTP packet. Trigger ringing.
@@ -2342,6 +2392,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              const baseId = hintedRaw ? derivePeerId(hintedRaw) : '';
              const hinted = hintedRaw && (connection.peer === baseId || String(connection.peer).startsWith(`${baseId}-r`)) ? hintedRaw : null;
              if (hinted && blockedPeersRef.current.has(hinted)) {
+               pendingConnectionRef.current = null;
+               try { connection.close(); } catch {}
+               return;
+             }
+             if (busyElsewhere(busyPeersRef.current, hinted)) {
                pendingConnectionRef.current = null;
                try { connection.close(); } catch {}
                return;
@@ -3160,7 +3215,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         }
 
         const conn = livePeer.call(targetPeerId, stream, {
-          metadata: { callType: callTypeRef.current, from: (address || '').toLowerCase() },
+          metadata: { kind: 'answer', callType: callTypeRef.current, from: (address || '').toLowerCase() },
           ...CALL_SDP,
         });
         if (!conn) {
@@ -3385,6 +3440,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   // ─── declineCall: Receiver declines ─────────────────────────────────────────
   const declineCall = useCallback(async () => {
     sendDirectHangupRef.current('decline');
+    if (callPeerAddrRef.current) callTabsRef.current?.postMessage({ t: 'handled', peer: callPeerAddrRef.current.toLowerCase() });
     try {
       if (executeSendRef.current) await executeSendRef.current('__CALL_DECLINE__', { to: callPeerAddrRef.current || undefined });
     } catch {}
@@ -4804,10 +4860,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             // is ringing for an incoming call and our other device answered or
             // declined it, stop ringing here quietly, the way WhatsApp does.
             if (!fromPeer && typeof content === 'string' && content.startsWith('__CALL_')) {
-              const handledElsewhere = content.startsWith('__CALL_ANSWER__') || content === '__CALL_DECLINE__';
-              const signalAge = Date.now() - sentAtNs;
-              const sameCall = !!msgConvPeer && msgConvPeer.toLowerCase() === activePeerRef.current?.toLowerCase();
-              if (handledElsewhere && sameCall && signalAge > -120000 && signalAge < 60000 && callStateRef.current === 'ringing') {
+              // The ringing caller decides, not the open chat: with another chat open this device
+              // used to keep ringing for 45 s after the call was answered elsewhere.
+              if (stopsRingHere({
+                signal: content,
+                signalAgeMs: Date.now() - sentAtNs,
+                state: callStateRef.current,
+                signalPeer: msgConvPeer,
+                ringingPeer: callPeerAddrRef.current,
+                openPeer: activePeerRef.current,
+              })) {
                 const sigId = msg.id || `self-${sentAtNs}`;
                 if (!processedSignalIds.current.has(sigId)) {
                   processedSignalIds.current.add(sigId);
@@ -4842,6 +4904,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               // who is calling, and replaces the hint.
               if (callStateRef.current === 'ringing' && !isCallerRef.current && /^0x[0-9a-f]{40}$/i.test(String(msgConvPeer))) {
                 setCallPeer(String(msgConvPeer).toLowerCase());
+              }
+              if (callStateRef.current === 'idle' && busyElsewhere(busyPeersRef.current, msgConvPeer)) {
+                continue; // another window of this browser already has this call
               }
               if (callStateRef.current === 'idle') {
                 // The chat that is open stays open while it rings; answering opens the caller's chat.
