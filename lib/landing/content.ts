@@ -193,9 +193,9 @@ export const PROTECTS = {
 };
 
 export const STACK = [
-  { name: 'Ledger Chat', detail: 'On your device: the app, your keys, your proofs.', href: tree('components/chat') },
-  { name: 'XMTP with MLS', detail: 'Direct messages, end-to-end encrypted.', href: tree('lib/xmtp') },
-  { name: 'Aztec Network', detail: 'PXE in the browser, client-side proofs, contracts in Noir with aztec-nr.', href: tree('contracts/aztec') },
+  { name: 'Ledger Chat', detail: 'On your device: the app, your keys, your proofs. You sign in with your Ethereum wallet (Sign-In with Ethereum, EIP-4361).', href: tree('components/chat') },
+  { name: 'XMTP with MLS', detail: 'Direct messages and call ringing, end-to-end encrypted with MLS (RFC 9420) over the XMTP network. Community posts and Status are not.', href: tree('lib/xmtp') },
+  { name: 'Aztec Network', detail: 'A PXE in your browser proves each private transaction on your device. Balances are notes; spending one publishes a nullifier, so amount and recipient stay hidden. Each account pays its own fee in Fee Juice, publicly. Contracts in Noir with aztec-nr.', href: tree('contracts/aztec') },
   { name: 'Ethereum', detail: 'Where Aztec settles.', href: 'https://ethereum.org' },
 ];
 
@@ -215,6 +215,8 @@ export const FAQ = [
   { q: 'What if I lose my phone?', a: 'Your account is your wallet. Private Aztec balances depend on keys in your browser: read the wallet’s Security view before holding funds.' },
   { q: 'Does it work on iPhone and Android?', a: 'Yes, as a web app installed from Safari or Chrome. It also runs on Mac, Windows and Linux.' },
   { q: 'Is it open source?', a: 'Yes, under MIT or Apache-2.0. The code, the contracts and the CI runs are public on GitHub.' },
+  { q: 'How do I know a payment address belongs to the person in the chat?', a: 'Before value moves, Ledger Chat checks a proof that the person’s Ethereum account controls that Aztec address. The proof names the network, so one made for the test network is refused on Aztec Alpha.' },
+  { q: 'What are the current limits?', a: 'The account that pays a fee is public. Aztec Alpha is early. There is no external audit yet. Community posts and Status are stored on our server, not end-to-end encrypted. Calls across two strict networks need the relay. Escrow and payment streams are not open on Alpha yet.' },
   { q: 'How do I report a security issue?', a: 'Privately first, as the Report a vulnerability page explains.' },
 ];
 

@@ -139,7 +139,7 @@ export const brand: DocPage = {
           width: 2880,
           height: 1800,
           alt: "Ledger Chat on desktop: status updates, a post composer with an audience picker, and the feed",
-          caption: "Updates. Status, posts for chosen audiences, polls and private tips.",
+          caption: "Status. Short texts for 24 hours, posts for chosen audiences, polls and private tips.",
         },
         {
           src: "/landing/desktop/communities-2880.webp",

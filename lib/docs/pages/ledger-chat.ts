@@ -149,7 +149,7 @@ export const communities: DocPage = {
         "Create channels for different topics, including announcement channels where only some members can post.",
         "Give members a role: owner, administrator, moderator or member. Each role has its own permissions.",
         "Invite people with links that you can revoke at any time. Invite links are signed by our server, so they cannot be forged.",
-        "Post updates, run polls, share voice notes and start a group call.",
+        "Post updates, run polls and share voice notes. Group calls are not available.",
         "Report a post to the moderators.",
       ],
     },
