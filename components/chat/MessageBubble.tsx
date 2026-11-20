@@ -1,5 +1,6 @@
 "use client";
 
+import { InlineVideo } from './InlineVideo';
 import { revealMessage } from '@/lib/chat/reveal-message';
 import { sendStatusLabel } from '@/lib/chat/optimistic-send';
 import { stickerRef } from '@/lib/chat/stickers';
@@ -980,7 +981,7 @@ export const MessageBubble = React.memo(({
                   </button>
                 )}
                 {isVideoFile ? (
-                  <video src={attachment.url} controls playsInline preload="metadata" className="max-w-[260px] max-h-[240px] block bg-[#15171c]" />
+                  <InlineVideo src={attachment.url} className="max-w-[260px] max-h-[240px] block bg-[#15171c]" />
                 ) : isImageFile ? (
                   <button type="button" onClick={() => onOpenLightbox(attachment.url)} aria-label={`Open ${attachment.name}`} className="block">
                     <img src={attachment.url} alt={attachment.name} className="max-w-[260px] max-h-[300px] object-cover block" />
