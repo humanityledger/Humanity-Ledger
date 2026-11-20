@@ -216,7 +216,7 @@ const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     <div className="px-6 pb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[20px] font-semibold text-[#15171c]">Blocked addresses</h3>
-        <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
+        <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
       </div>
       {blocked === null ? (
         <p className="text-[14px] text-[#727a88] text-center py-10">Loading…</p>
@@ -229,7 +229,7 @@ const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       ) : (
         <div className="max-h-[320px] overflow-y-auto">
           {blocked.map(addr => (
-            <div key={addr} className="flex items-center justify-between bg-[#f2f4f7] rounded-2xl px-4 py-3 mb-2">
+            <div key={addr} className="flex items-center justify-between bg-white border border-[#e4e7ec] rounded-2xl px-4 py-3 mb-2">
               <p className="text-[14px] font-semibold text-[#15171c] tabular-nums" title={addr}>{addr.length > 16 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr}</p>
               <button type="button" onClick={() => unblock(addr)} className="text-[13px] text-[#15171c] font-semibold px-3 py-1.5 rounded-xl hover:bg-black/5">Unblock</button>
             </div>
@@ -258,7 +258,7 @@ const CustomRpcModalContent: React.FC<{
         value={rpcVal}
         onChange={e => { setRpcVal(e.target.value); setRpcErr(null); }}
         placeholder="https://mainnet.infura.io/v3/your-key"
-        className={`w-full bg-[#f2f4f7] rounded-2xl px-4 py-4 text-[14px] tabular-nums text-[#15171c] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-black/30'}`}
+        className={`w-full bg-white border border-[#e4e7ec] rounded-2xl px-4 py-4 text-[14px] tabular-nums text-[#15171c] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-black/30'}`}
       />
       {rpcErr && <p className="text-[12px] text-[#d93036] mb-3 px-1">{rpcErr}</p>}
       <div className="flex gap-3 mt-4">
@@ -319,7 +319,7 @@ const NukeModalContent: React.FC<{
         value={nukeConfirm}
         onChange={e => setNukeConfirm(e.target.value)}
         placeholder="DELETE"
-        className="w-full bg-[#f2f4f7] rounded-2xl px-4 py-3 text-[15px] tabular-nums font-semibold text-[#15171c] outline-none focus:ring-2 focus:ring-red-400 mb-4"
+        className="w-full bg-white border border-[#e4e7ec] rounded-2xl px-4 py-3 text-[15px] tabular-nums font-semibold text-[#15171c] outline-none focus:ring-2 focus:ring-red-400 mb-4"
         autoCapitalize="characters"
       />
       <button
@@ -626,7 +626,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         value={displayName}
                         onChange={e => setDisplayName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && saveDisplayName()}
-                        className="flex-1 text-center text-[20px] font-semibold text-[#15171c] bg-[#f2f4f7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30"
+                        className="flex-1 text-center text-[20px] font-semibold text-[#15171c] bg-white border border-[#e4e7ec] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30"
                         placeholder="Display name"
                         maxLength={32}
                       />
@@ -651,7 +651,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         value={bio}
                         onChange={e => setBio(e.target.value)}
                         rows={2}
-                        className="flex-1 text-center text-[14px] text-[#727a88] bg-[#f2f4f7] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30 resize-none"
+                        className="flex-1 text-center text-[14px] text-[#727a88] bg-white border border-[#e4e7ec] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30 resize-none"
                         placeholder="About / bio"
                         maxLength={100}
                       />
@@ -670,7 +670,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   <button
                     type="button"
                     onClick={copyAddress}
-                    className="flex items-center gap-2 bg-[#f2f4f7] rounded-xl px-4 py-2 hover:bg-[#e4e7ec] transition-colors"
+                    className="flex items-center gap-2 bg-white border border-[#e4e7ec] rounded-xl px-4 py-2 hover:bg-[#e4e7ec] transition-colors"
                   >
                     <Wallet size={13} className="text-[#727a88]" />
                     <span className="text-[12px] tabular-nums text-[#727a88]">{shortAddr(myAddress)}</span>
@@ -679,7 +679,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
                   {/* ETH balance */}
                   {balance && (
-                    <div className="flex items-center gap-2 bg-[#f2f4f7] rounded-xl px-4 py-2">
+                    <div className="flex items-center gap-2 bg-white border border-[#e4e7ec] rounded-xl px-4 py-2">
                       <span className="text-[13px] font-semibold text-[#627EEA]">Ξ</span>
                       <span className="text-[13px] font-semibold text-[#15171c]">
                         {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
@@ -776,7 +776,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       ref={rootRef}
       data-testid="settings-root"
       data-layout={phone ? 'phone' : wide ? 'two-panes' : 'one-pane'}
-      className={`${phone ? 'fixed inset-0 z-[1000] w-screen h-[100dvh]' : 'absolute inset-0 z-[200] md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]'} bg-[#f4f5f7] flex flex-col overflow-hidden`}
+      className={`${phone ? 'fixed inset-0 z-[1000] w-screen h-[100dvh]' : 'absolute inset-0 z-[200] md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)]'} bg-white border border-[#e4e7ec] flex flex-col overflow-hidden`}
     >
       {/* ── Header ── */}
       <div
@@ -798,7 +798,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {/* Rendered only when it is to be seen (both panes, or the list screen): never hidden by a
           display class that a global rule could override (see app/globals.css, nav centering). */}
       {(wide || activeTab === 'home') && (
-      <nav aria-label="Settings sections" className={`flex flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-[#f7f8fa]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)', alignItems: 'stretch' }}>
+      <nav aria-label="Settings sections" className={`flex flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-white border border-[#e4e7ec]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)', alignItems: 'stretch' }}>
           <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
             {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
             <ProfileHeaderCard
@@ -819,11 +819,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       onClick={() => setActiveTab(item.id)}
                       data-settings-item={item.id}
                       aria-current={activeTab === item.id ? 'page' : undefined}
-                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-[#eef0f3]' : 'hover:bg-[#f7f8fa]'} ${
+                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors ${activeTab === item.id ? 'bg-white shadow-[inset_3px_0_0_#5200FF]' : 'hover:bg-[#f7f8fa]'} ${
                         idx < section.items.length - 1 ? 'border-b border-[#f0f1f4]' : ''
                       }`}
                     >
-                      <span className="w-9 h-9 rounded-xl bg-[#f4f5f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                      <span className="w-9 h-9 rounded-xl bg-white border border-[#e4e7ec] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
                         <item.icon size={17} strokeWidth={1.8} />
                       </span>
                       <div className="flex-1 min-w-0 pr-3">
@@ -1095,7 +1095,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     value={recordPass}
                     onChange={e => setRecordPass(e.target.value)}
                     placeholder="Passphrase, at least 8 characters"
-                    className="h-11 px-3 rounded-xl bg-[#f4f5f7] text-[15px] text-[#15171c] outline-none"
+                    className="h-11 px-3 rounded-xl bg-white border border-[#e4e7ec] text-[15px] text-[#15171c] outline-none"
                   />
                   <button
                     type="button"
@@ -1120,7 +1120,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   >Protect record keys</button>
                   <button
                     type="button"
-                    className="h-10 rounded-xl bg-[#f4f5f7] text-[#15171c] text-[14px] font-semibold"
+                    className="h-10 rounded-xl bg-white border border-[#e4e7ec] text-[#15171c] text-[14px] font-semibold"
                     onClick={async () => {
                       try {
                         const { passkeyKek } = await import('@/lib/chat/record-passkey');
@@ -1274,7 +1274,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         {parseFloat(mb) < 0.1 ? 'KB' : 'MB'}
                       </p>
                     </div>
-                    <div className="w-full bg-[#f2f4f7] rounded-full h-2">
+                    <div className="w-full bg-[#e4e7ec] rounded-full h-2">
                       <div
                         className="bg-[#15171c] h-2 rounded-full transition-all"
                         style={{ width: `${Math.min((parseFloat(mb) / 50) * 100, 100)}%` }}
@@ -1341,14 +1341,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           onChange={e => setNewZkTag(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
                           placeholder="newhandle"
                           maxLength={32}
-                          className="flex-1 px-3.5 py-2 rounded-xl bg-[#f2f4f7] text-[13px] tabular-nums outline-none focus:ring-1 focus:ring-black/30"
+                          className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-[#e4e7ec] text-[13px] tabular-nums outline-none focus:ring-1 focus:ring-black/30"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setEditingZkTag(false)}
-                          className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold bg-[#f2f4f7] text-gray-600 hover:bg-[#e4e7ec]"
+                          className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold bg-white border border-[#e4e7ec] text-gray-600 hover:bg-[#e4e7ec]"
                         >
                           Cancel
                         </button>
@@ -1503,7 +1503,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       type="button"
                       key={opt}
                       onClick={() => { updateSetting(modal as any, opt); setModal(null); toast.success('Privacy updated'); }}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${current === opt ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec]'}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${current === opt ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e4e7ec]'}`}
                     >
                       <span className="font-semibold">{label}</span>
                       {current === opt && <Check size={18} />}
@@ -1518,7 +1518,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="px-6 pb-6 max-h-[80vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-[20px] font-semibold text-[#15171c]">How your chats are protected</h3>
-                    <button type="button" onClick={() => setModal(null)} aria-label="Close" className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center shrink-0">
+                    <button type="button" onClick={() => setModal(null)} aria-label="Close" className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center shrink-0">
                       <X size={16} className="text-[#727a88]" />
                     </button>
                   </div>
@@ -1547,7 +1547,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       type="button"
                       key={opt}
                       onClick={() => { updateSetting('auto_delete_timer', (opt === 'off' ? 'off' : opt) as any); setModal(null); toast.success('Timer saved'); }}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.auto_delete_timer || 'off') === opt ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec]'}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.auto_delete_timer || 'off') === opt ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e4e7ec]'}`}
                     >
                       <span className="font-semibold">{opt === 'off' ? 'Disabled' : opt}</span>
                       {(settings.auto_delete_timer || 'off') === opt && <Check size={18} />}
@@ -1560,7 +1560,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'font_size' && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Font size</h3>
-                  <div className="bg-[#f2f4f7] rounded-2xl p-4 mb-5">
+                  <div className="bg-white border border-[#e4e7ec] rounded-2xl p-4 mb-5">
                     <p style={{ fontSize: `${chatTextPx(settings.text_size ?? DEFAULT_TEXT_SIZE_LEVEL)}px` }} className="text-[#15171c] text-center">
                       Preview text at this size
                     </p>
@@ -1607,7 +1607,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           toast.success(`Font set to ${font.label}`);
                         }}
                         className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${
-                          isSel ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e9ecf0]'
+                          isSel ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e9ecf0]'
                         }`}
                       >
                         <div className="text-left">
@@ -1677,9 +1677,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   <div className="px-6 pb-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-[20px] font-semibold text-[#15171c]">Manage media</h3>
-                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
+                      <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
                     </div>
-                    <div className="bg-[#f2f4f7] rounded-2xl p-5 mb-5">
+                    <div className="bg-white border border-[#e4e7ec] rounded-2xl p-5 mb-5">
                       <p className="text-[13px] text-[#727a88] mb-1">Cached media storage</p>
                       <p className="text-[28px] font-semibold text-[#15171c]">{mb} <span className="text-[16px] font-medium text-[#727a88]">MB</span></p>
                       <p className="text-[12px] text-[#727a88] mt-1">{mediaCount} media item{mediaCount !== 1 ? 's' : ''}</p>
