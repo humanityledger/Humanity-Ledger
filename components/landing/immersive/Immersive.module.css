@@ -416,12 +416,14 @@
 
 /* How it works: the layers on one line of dots, then the parts */
 .stack { list-style: none; padding: 0; margin: 0; display: grid; }
-.stack li { position: relative; display: grid; grid-template-columns: 32px 1fr; gap: var(--s16); padding-bottom: var(--s32); }
-.stack li::before { content: ''; position: absolute; left: 15.5px; top: 32px; bottom: 0; width: 1px; background: var(--line); }
+/* The layers sit on a thin rail with an unnumbered marker each. The text always takes the wide
+   column: the 32 px column only holds the marker (::after), never content. */
+.stack li { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s16); padding-bottom: var(--s32); }
+.stack li > div { grid-column: 2; min-width: 0; }
+.stack li::before { content: ''; position: absolute; left: 15.5px; top: 22px; bottom: 0; width: 1px; background: var(--line); }
+.stack li::after { content: ''; position: absolute; left: 11px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1.5px rgba(82, 0, 255, 0.55); }
 .stack li:last-child { padding-bottom: 0; }
 .stack li:last-child::before { display: none; }
-.n { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px rgba(82, 0, 255, 0.45);
-  color: var(--violet); font-weight: 600; font-size: var(--t12); font-variant-numeric: tabular-nums; }
 .stack b { font-size: var(--t18); color: var(--ink); }
 .stack a { color: var(--ink); }
 .stack li p { margin: var(--s4) 0 0; color: var(--text); font-size: var(--t16); }

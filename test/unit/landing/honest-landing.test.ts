@@ -9,6 +9,17 @@ describe('landing without numbered indicators', () => {
   });
 });
 
+describe('stack layout without numbers', () => {
+  // Regression, 20 Nov 2026: with the number span gone, each layer's text fell into the 32 px
+  // marker column and wrapped one word per line. The text must always sit in the wide column.
+  const css = fs.readFileSync('components/landing/immersive/Immersive.module.css', 'utf8');
+  it('pins the text to the second column and draws the marker in CSS', () => {
+    expect(css).toMatch(/\.stack li > div \{ grid-column: 2; min-width: 0; \}/);
+    expect(css).toMatch(/\.stack li \{[^}]*grid-template-columns: 32px minmax\(0, 1fr\)/);
+    expect(css).toMatch(/\.stack li::after \{ content: ''/);
+  });
+});
+
 describe('technical honesty', () => {
   const text = JSON.stringify([C.STACK, C.FAQ]);
   it('names SIWE, MLS, the PXE, notes and nullifiers, Fee Juice and peer binding', () => {
