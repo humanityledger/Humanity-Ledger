@@ -74,10 +74,27 @@ install.sh
 
 # Logs
 *.log
+*.log.*
 tsc-output.txt
 tsc_output.txt
 tmp_diff.txt
 tsconfig.tsbuildinfo
+
+# Backup / build artifacts not needed at runtime
+*.bak
+
+# Audit reports (documentation, not runtime)
+audits/
+
+# Vendor (not imported by any runtime module)
+vendor/
+
+# Foundry / Aderyn / Forge config (smart-contract tooling, not Next.js runtime)
+foundry.toml
+aderyn.toml
+remappings.txt
+docker-compose.yml
+docker-compose.yaml
 
 # Misc dev files
 bulk_replace_org.js

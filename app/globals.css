@@ -216,6 +216,18 @@ body:has([data-page="chat"]) {
   background-color: #FFFFFF !important;
 }
 
+/* ── MOBILE LANDING: white background, no double safe-area padding ───────────
+   The phone landing (.page in mobile.module.css) has background:#fff and its
+   own footer already applies env(safe-area-inset-bottom).  Without this rule
+   the body's global padding-bottom:env(safe-area-inset-bottom) adds a second
+   gap at the very bottom, showing the #f4f6fa body background as a visible
+   bar beneath the white footer.  Match the page, kill the double inset.    */
+html:has([data-landing="mobile"]),
+body:has([data-landing="mobile"]) {
+  background-color: #FFFFFF !important;
+  padding-bottom: 0 !important;
+}
+
 
 /* 
    Enterprise LAYOUT SYSTEM
