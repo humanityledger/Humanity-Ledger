@@ -2474,3 +2474,234 @@ ol.list li::marker {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ── Diagrams (Diagram.tsx, lib/docs/diagram.ts) ────────────────────────── */
+
+.diagram {
+  margin: 24px 0 32px;
+}
+
+.diagramTitle {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hl-ink);
+}
+
+.diagramScroll {
+  overflow-x: auto;
+  border: 1px solid var(--hl-border);
+  border-radius: 16px;
+  background: var(--hl-bg-subtle);
+  padding: 22px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  .diagramScroll {
+    padding: 16px 12px;
+  }
+}
+
+.diagramSvg {
+  display: block;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--hl-font);
+  overflow: visible;
+}
+
+.dgNode rect,
+.dgNode path,
+.dgNode ellipse {
+  fill: #ffffff;
+  stroke: #d0d5dd;
+  stroke-width: 1;
+}
+
+.dgTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  fill: var(--hl-ink);
+  letter-spacing: -0.005em;
+}
+
+.dgSub {
+  font-size: 12px;
+  fill: #5b606b;
+}
+
+.dgAccent rect,
+.dgAccent path,
+.dgAccent ellipse {
+  stroke: #5200ff;
+  stroke-width: 1.5;
+}
+
+.dgOk rect,
+.dgOk path,
+.dgOk ellipse {
+  stroke: #10b981;
+  stroke-width: 1.5;
+}
+
+.dgDanger rect,
+.dgDanger path,
+.dgDanger ellipse {
+  stroke: #ff3b30;
+  stroke-width: 1.5;
+}
+
+.dgMuted rect,
+.dgMuted path,
+.dgMuted ellipse {
+  fill: #f2f4f7;
+  stroke: #e4e7ec;
+}
+
+.dgDashed rect,
+.dgDashed path,
+.dgDashed ellipse {
+  fill: #fbfbfc;
+  stroke: #98a2b3;
+  stroke-dasharray: 4 4;
+}
+
+.dgDark rect,
+.dgDark path,
+.dgDark ellipse {
+  fill: #15171c;
+  stroke: #15171c;
+}
+
+.dgDark .dgTitle {
+  fill: #ffffff;
+}
+
+.dgDark .dgSub {
+  fill: rgba(255, 255, 255, 0.72);
+}
+
+.dgEdge {
+  fill: none;
+  stroke: #15171c;
+  stroke-width: 1.25;
+}
+
+.dgEdgeDashed {
+  stroke: #98a2b3;
+  stroke-dasharray: 4 4;
+}
+
+.dgEdgeThick {
+  stroke-width: 2.4;
+}
+
+.dgHead {
+  fill: #15171c;
+}
+
+.dgHeadMuted {
+  fill: #98a2b3;
+}
+
+.dgCross {
+  stroke: #ff3b30;
+  stroke-width: 1.8;
+  fill: none;
+}
+
+.dgLabel rect {
+  fill: #ffffff;
+  stroke: #e4e7ec;
+}
+
+.dgLabel text {
+  font-size: 11.5px;
+  fill: #475061;
+}
+
+.dgGroup rect {
+  fill: rgba(255, 255, 255, 0.55);
+  stroke: #d0d5dd;
+  stroke-dasharray: 2 4;
+}
+
+.dgGroup text {
+  font-size: 11.5px;
+  font-weight: 600;
+  fill: #727a88;
+  letter-spacing: 0.01em;
+}
+
+.dgLifeline {
+  stroke: #c4cad4;
+  stroke-dasharray: 3 5;
+}
+
+.dgMsg {
+  font-size: 12.5px;
+  fill: #2f3440;
+}
+
+.dgNote rect {
+  fill: #f1ebff;
+  stroke: #ddd0ff;
+}
+
+.dgNote text {
+  font-size: 12.5px;
+  fill: #3d00bf;
+}
+
+.dgNum circle {
+  fill: #15171c;
+}
+
+.dgNum text {
+  font-size: 10px;
+  font-weight: 700;
+  fill: #ffffff;
+}
+
+.dgFrame rect {
+  fill: rgba(255, 255, 255, 0.4);
+  stroke: #c4cad4;
+}
+
+.dgFrameTab {
+  fill: #eef0f3;
+  stroke: #c4cad4;
+}
+
+.dgFrameKind {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #475061;
+}
+
+.dgFrameLabel {
+  font-size: 11.5px;
+  fill: #5b606b;
+}
+
+.dgFrameSplit {
+  stroke: #c4cad4;
+  stroke-dasharray: 4 4;
+}
+
+.diagramSource {
+  margin-top: 8px;
+}
+
+.diagramSource > summary {
+  width: max-content;
+  margin: 0 auto;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--hl-ink-3);
+}
+
+.diagramSource[open] > summary {
+  margin-bottom: 10px;
+}

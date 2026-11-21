@@ -121,7 +121,9 @@ import { EncryptedMediaEngine } from '@/lib/chat/media';
 import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
 import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal';
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
-import { clearCutoff, clearedAtMs, lineWasCleared, markCleared, previewAfterClear, previewAfterDelete, survivesClear } from '@/lib/chat/cleared-chats';
+import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
+import { canMove as canMoveCall } from '@/lib/calls/machine';
+import { clearCutoff, clearedAtMs, deletedAtMs, hiddenAfterDelete, lineWasCleared, markCleared, markDeleted, previewAfterClear, previewAfterDelete, survivesClear } from '@/lib/chat/cleared-chats';
 
 
 
@@ -177,23 +179,15 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
     return () => window.removeEventListener('ledger_settings_update', handler);
   }, [isMe]);
 
+  // A contact's photo comes from one shared cache (lib/chat/peerProfiles.ts): batched requests,
+  // refreshed after five minutes and when the tab comes back, and never cleared by an error.
   useEffect(() => {
-    if (!isMe && address && typeof window !== 'undefined') {
-      // Show the saved photo at once, then refresh it so a new photo appears.
-      const cacheKey = 'peer_avatar_' + address.toLowerCase();
-      let cached = '';
-      try { cached = localStorage.getItem(cacheKey) || ''; } catch {}
-      setSavedAvatar(cached);
-      let live = true;
-      fetch(`/api/user/search?q=${encodeURIComponent(address)}`).then(res => res.json()).then(data => {
-        if (!live) return;
-        const me = (data.users || []).find((u: any) => (u.address || '').toLowerCase() === address.toLowerCase());
-        const url = me?.avatarUrl || '';
-        setSavedAvatar(url);
-        try { url ? localStorage.setItem(cacheKey, url) : localStorage.removeItem(cacheKey); } catch {}
-      }).catch(() => {});
-      return () => { live = false; };
-    }
+    if (isMe || !address || typeof window === 'undefined') return;
+    const sync = () => setSavedAvatar(getPeerProfile(address)?.avatarUrl || '');
+    sync();
+    const off = subscribePeerProfile(address, sync);
+    requestPeerProfile(address);
+    return off;
   }, [address, isMe]);
 
   if (savedAvatar) {
@@ -845,6 +839,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     fetch(`/api/user/profile?walletAddress=${encodeURIComponent(lower)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
+        // The same answer feeds every avatar of this person (lib/chat/peerProfiles.ts).
+        if (data && typeof data === 'object' && !data.error) setPeerProfile(lower, { avatarUrl: data.avatarUrl, displayName: data.displayName || data.chatName });
         const name = data?.displayName || data?.nickname || data?.name || data?.username;
         if (name && !name.startsWith('0x')) {
           setProfileNames(prev => {
@@ -1241,6 +1237,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const [callState, _setCallState] = useState<'idle'|'calling'|'ringing'|'connecting'|'active'>('idle');
   const callStateRef = useRef<'idle'|'calling'|'ringing'|'connecting'|'active'>('idle');
   const setCallState = useCallback((s: 'idle'|'calling'|'ringing'|'connecting'|'active') => {
+    // Every change is checked against the call's state machine (lib/calls/machine.ts). A jump it
+    // does not allow is reported in development; the state still follows, as before.
+    if (process.env.NODE_ENV !== 'production' && !canMoveCall(callStateRef.current, s)) {
+      console.warn(`[calls] unexpected state change ${callStateRef.current} -> ${s}`);
+    }
     callStateRef.current = s;
     _setCallState(s);
   }, []);
@@ -1700,12 +1701,39 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     setSidebarMenu(null);
   };
 
-  // Phase 4: Delete conversation from sidebar entirely (local only)
+  // Delete a conversation on this device (and on your other devices, through the synced state).
+  // It used to leave the screen only, and came back with every message on the next sync. Now the
+  // deletion is recorded (lib/chat/cleared-chats.ts, markDeleted): old messages never show again,
+  // and the conversation stays out of the list until a newer message arrives.
   const deleteConversation = (peer: string) => {
-    setConversations(prev => prev.filter(c => c.peerAddress.toLowerCase() !== peer.toLowerCase()));
-    const dmId = `dm-${peer.toLowerCase()}`;
-    setMessages(prev => prev.filter(m => m.conversationId !== dmId));
-    if (activePeer?.toLowerCase() === peer.toLowerCase()) setActivePeer(null);
+    const peerLower = peer.toLowerCase();
+    const dmId = `dm-${peerLower}`;
+    const myAddr = (effectiveAddress || address || '').toLowerCase();
+    const listLine = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === peerLower);
+    const cut = clearCutoff(Date.now(), [
+      ...messagesRef.current.filter(m => (m.conversationId || '').toLowerCase() === dmId).map(m => m.sentAtNs),
+      listLine?.lastAt,
+    ]);
+    if (!markDeleted(peerLower, [myAddr, address], cut)) {
+      setSidebarMenu(null);
+      toast.error('Could not delete this chat on this device. Nothing was removed.');
+      return;
+    }
+    if (myAddr) {
+      try { setSynced(myAddr, { [`cleared:${peerLower}`]: cut, [`deleted:${peerLower}`]: cut }); } catch {}
+    }
+    setConversations(prev => {
+      const next = prev.filter(c => c.peerAddress.toLowerCase() !== peerLower);
+      persistToLocal(next);
+      return next;
+    });
+    setMessages(prev => prev.filter(m => (m.conversationId || '').toLowerCase() !== dmId));
+    try { localStorage.removeItem(`ledger_pinned_${peerLower}`); } catch {}
+    import('@/lib/chat/indexeddb').then(({ chatDB }) => {
+      chatDB.clearConversation(dmId).catch(() => {});
+      chatDB.clearConversation(peerLower).catch(() => {});
+    }).catch(() => {});
+    if (activePeer?.toLowerCase() === peerLower) setActivePeer(null);
     setSidebarMenu(null);
     toast.success('Chat deleted');
   };
@@ -1886,6 +1914,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           readPeers.includes(c.peerAddress.toLowerCase()) && c.unreadCount ? { ...c, unreadCount: 0 } : c
         ));
       }
+      // A chat deleted on another device: recorded here too, and taken out of the list.
+      const deleted = keys.filter(k => k.startsWith('deleted:'));
+      for (const k of deleted) {
+        const ts = Number(store.get(k) || 0);
+        if (ts > 0) markDeleted(k.slice(8), [me], ts);
+      }
+      if (deleted.length) setConversations(prev => prev.filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [me]))));
       // A chat cleared on another device: its list line is re-checked against the cut-off.
       if (keys.some(k => k.startsWith('cleared:'))) setConversations(prev => [...prev]);
       const active = activePeerRef.current?.toLowerCase();
@@ -4055,7 +4090,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              }
           }
 
-          merged = merged.map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [address])));
+          merged = merged.map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [address]))).filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [address])));
           if (merged.length > 0) {
             localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: merged.map((c: any) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
           }
@@ -4329,7 +4364,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const contactsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistToLocal = useCallback((arr: ConversationMeta[]) => {
     if (!address) return;
-    const stored = arr.map((c) => previewAfterClear(c, clearedAtMs(c.peerAddress, [address])));
+    const stored = arr.map((c) => previewAfterClear(c, clearedAtMs(c.peerAddress, [address]))).filter((c) => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [address])));
     localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: stored.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
     
     // Backup of the contact list to the server, debounced: this runs on every new message and
@@ -7022,6 +7057,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               const list = conversations
                 // A chat cleared on this device shows no line until a newer message arrives.
                 .map(conv => previewAfterClear(conv, clearedAtMs(conv.peerAddress, [effectiveAddress, address])))
+                // A deleted chat stays out of the list until a message newer than the deletion.
+                .filter(conv => !hiddenAfterDelete(conv, deletedAtMs(conv.peerAddress, [effectiveAddress, address])))
                 .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase())
                 .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase()))
                 .filter(conv => chatFilter === 'all' ? true
@@ -7455,18 +7492,21 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 <span>Confidential</span>
               </div>
               
-              {/* End-to-end encryption notice */}
-              <div className="flex justify-center pt-4 pb-1 px-4">
-                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
-                  <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
-                  <span>
-                    Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and the recipient; the account that pays the network fee is public.' : ''}{' '}
-                    <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
-                  </span>
-                </button>
-              </div>
-
               {(() => {
+                // The end-to-end encryption notice is the first item of the conversation and scrolls
+                // with it. 21 November 2026: it sat above the scrolling list, so messages were cut off
+                // under it, in the middle of the screen, instead of at the top of the chat.
+                const encryptionNotice = (
+                  <div className="flex justify-center pt-4 pb-1 px-4">
+                  <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
+                    <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
+                    <span>
+                      Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{ledgerSettings?.payments_enabled !== false ? ' Private payments on Aztec hide the amount and the recipient; the account that pays the network fee is public.' : ''}{' '}
+                      <span className="text-[#15171c] font-medium underline underline-offset-2">Details</span>
+                    </span>
+                  </button>
+                </div>
+                );
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;
                 const peerLowerForFilter = activePeer!.toLowerCase();
@@ -7514,14 +7554,19 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 if (filteredMsgs.length === 0) {
                   if (isFetchingChat) {
                     return (
+                      <>
+                      {encryptionNotice}
                       <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-[#727a88]" role="status">
                         <LoaderCircle size={22} strokeWidth={2} className="animate-spin" aria-hidden="true" />
                         <p className="text-[14px]">Loading messages</p>
                       </div>
+                      </>
                     );
                   }
                   return (
-                    // Keyed by the person, so it plays its entrance again for each empty chat and after Clear chat.
+                    <>
+                    {encryptionNotice}
+                    {/* Keyed by the person, so it plays its entrance again for each empty chat and after Clear chat. */}
                     <div key={`new-${activePeer}`} className="flex-1 flex flex-col items-center justify-center p-6" data-testid="new-conversation">
                       <div className="hl-empty-enter bg-white rounded-[24px] px-7 pt-6 pb-7 max-w-[320px] text-center border border-[#e4e7ec] shadow-[0_12px_32px_-18px_rgba(16,24,40,0.25)]">
                         {/* Only while this conversation has no message: the first one replaces this card with the thread. */}
@@ -7532,10 +7577,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         <p className="hl-empty-enter-text text-[14px] text-[#5b606b] leading-relaxed" style={{ animationDelay: '160ms' }}>Send the first message. It is encrypted on this device and only you and {getDisplayName(activePeer!)} can read it.</p>
                       </div>
                     </div>
+                    </>
                   );
                 }
                 return (
                   <VirtualizedMessageList
+                    header={encryptionNotice}
                     messages={filteredMsgs}
                     activePeer={activePeer}
                     myAddress={address || ''}

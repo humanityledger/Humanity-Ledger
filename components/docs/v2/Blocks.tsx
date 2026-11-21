@@ -6,6 +6,7 @@ import { headingId } from "@/lib/docs/registry";
 import { Inline, isExternal } from "./inline";
 import { CopyButton } from "./CopyButton";
 import { Figure } from "./Figures";
+import { Diagram } from "./Diagram";
 import { DOC_ICONS } from "./icons";
 import s from "./Docs.module.css";
 
@@ -215,6 +216,8 @@ export function BlockView({ block }: { block: Block }) {
       );
     case "figure":
       return <Figure kind={block.kind} caption={block.caption} />;
+    case "diagram":
+      return <Diagram code={block.code} caption={block.caption} title={block.title} />;
     case "person":
       return (
         <div className={s.person}>

@@ -16,6 +16,8 @@ interface VirtualizedMessageListProps {
   isTyping?: boolean;
   typingLabel?: string;
   isSending?: boolean;
+  /** Shown above the first message, inside the scrolling list (the encryption notice). */
+  header?: React.ReactNode;
 }
 
 /**
@@ -87,6 +89,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   isTyping,
   typingLabel,
   isSending,
+  header,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
@@ -234,6 +237,8 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
           </button>
         </div>
       )}
+      {/* The notice belongs to the start of the conversation: shown once the oldest messages are. */}
+      {header && hiddenCount === 0 ? <div className="shrink-0 -mt-2 mb-1">{header}</div> : null}
       {isLoadingMore && (
         <div className="h-10 w-full flex items-center justify-center shrink-0" role="status">
           <div className="text-xs text-black/40 font-medium">Loading previous messages…</div>

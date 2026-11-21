@@ -161,3 +161,62 @@ export function previewAfterDelete(
   const prev = visible[visible.length - 2];
   return prev ? { kind: 'previous', content: prev.content, atMs: toMs(prev.sentAtNs) } : { kind: 'empty' };
 }
+
+/*
+ * "Delete chat" (21 November 2026). It used to remove the conversation from the screen only: on
+ * the next sync the person and every message came back. Deleting now records two things:
+ *   - the same cut-off as "Clear chat", so no message from before it is shown again;
+ *   - a deletion time (`ledger_deleted_<account>_<peer>`, and `deleted:<peer>` in the synced
+ *     device state), so the conversation stays out of the list until a message newer than the
+ *     deletion arrives. Then it comes back with that message only, as in other messengers.
+ */
+
+function deletedKeysFor(peer: string, owners: ReadonlyArray<string | null | undefined>): string[] {
+  const p = peer.toLowerCase();
+  const keys = [`ledger_deleted_${p}`];
+  for (const o of owners) if (o) keys.push(`ledger_deleted_${o.toLowerCase()}_${p}`);
+  return [...new Set(keys)];
+}
+
+/** When this conversation was deleted on this device (ms), or 0. */
+export function deletedAtMs(
+  peer: string | null | undefined,
+  owners: ReadonlyArray<string | null | undefined>,
+  s: Storage | undefined = storage(),
+): number {
+  if (!peer || !s) return 0;
+  let max = 0;
+  for (const k of deletedKeysFor(peer, owners)) {
+    try {
+      const v = parseInt(s.getItem(k) || '0', 10);
+      if (Number.isFinite(v) && v > max) max = v;
+    } catch { /* unreadable key: ignored */ }
+  }
+  return max;
+}
+
+/**
+ * Records a deletion at `atMs`: the clear cut-off and the deletion time. Returns false when it
+ * could not be written, so the caller can say so instead of a deletion that comes back.
+ */
+export function markDeleted(
+  peer: string,
+  owners: ReadonlyArray<string | null | undefined>,
+  atMs: number,
+  s: Storage | undefined = storage(),
+): boolean {
+  if (!s || !peer || !(atMs > 0)) return false;
+  if (!markCleared(peer, owners, atMs, s)) return false;
+  try {
+    for (const k of deletedKeysFor(peer, owners)) s.setItem(k, String(atMs));
+    return deletedAtMs(peer, owners, s) >= atMs;
+  } catch {
+    return false;
+  }
+}
+
+/** True when a list line belongs to a deleted conversation with nothing newer than the deletion. */
+export function hiddenAfterDelete(c: PreviewLine, deletedAt: number): boolean {
+  if (!(deletedAt > 0)) return false;
+  return !survivesClear(c.lastAt, deletedAt);
+}

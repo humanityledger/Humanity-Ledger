@@ -156,12 +156,35 @@ export async function PUT(req: NextRequest) {
       });
       return NextResponse.json({ success: true, data: user });
     } catch {
+      // A preference column may be missing in this database: save the public profile (name,
+      // username, photo, bio) on its own before giving up on it. 21 November 2026: the photo was
+      // dropped silently here, and the person was told it was saved.
+      try {
+        const publicOnly = {
+          ...(displayName !== undefined && { displayName }),
+          ...(chatName !== undefined && { chatName }),
+          ...(avatarUrl !== undefined && { avatarUrl: avatarUrl === '' ? null : avatarUrl }),
+          ...(bio !== undefined && { bio: bio === '' ? null : bio }),
+        };
+        const user = await (prisma as any).user.upsert({
+          where: { walletAddress: walletAddress.toLowerCase() },
+          update: publicOnly,
+          create: { walletAddress: walletAddress.toLowerCase(), ...publicOnly },
+          select: { walletAddress: true, displayName: true, chatName: true, avatarUrl: true, bio: true },
+        });
+        return NextResponse.json({ success: true, data: user, warning: 'Preferences were not saved: their columns are missing in this database.' });
+      } catch { /* fall through */ }
+      const askedPublic = displayName !== undefined || chatName !== undefined || avatarUrl !== undefined || bio !== undefined;
       // Extended columns don't exist yet  minimal fallback (walletAddress only)
       const fallbackUser = await prisma.user.upsert({
         where:  { walletAddress: walletAddress.toLowerCase() },
         update: {},
         create: { walletAddress: walletAddress.toLowerCase() }
       });
+      if (askedPublic) {
+        // Nothing the person asked for was saved: say so, so the app does not claim others can see it.
+        return NextResponse.json({ error: 'Your profile could not be saved on the server yet.' }, { status: 503 });
+      }
       return NextResponse.json({ success: true, data: fallbackUser, warning: 'Profile columns not yet in DB  run /api/admin/sync-db' });
     }
   } catch (error: any) {

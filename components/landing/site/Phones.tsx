@@ -1,27 +1,14 @@
 /**
- * The app's screens, drawn in HTML and CSS inside a phone frame (server components, no images).
- * They show the product as it looks, and they never carry real data: no addresses, hashes or
- * token names. Shared by the landing (feature rows) and the hero.
+ * The app's screens, drawn in HTML and CSS on the display of a real photograph of a phone in a
+ * hand (PhotoMockup). They show the product as it looks, and they never carry real data: no
+ * addresses, hashes or token names. The QR code is the app's own (BrandedQr), pointing to the site.
  */
 import React from 'react';
 import s from './site.module.css';
 import type { Screen } from '@/lib/landing/chapters';
-
-export function PhoneFrame({ children, dark, label }: { children: React.ReactNode; dark?: boolean; label: string }) {
-  return (
-    <div className={s.phone} role="img" aria-label={label}>
-      <div className={`${s.phoneScreen} ${dark ? s.phoneDark : ''}`}>
-        <div className={s.statusBar} aria-hidden="true">
-          <span>9:41</span>
-          <span className={s.statusIcons}>
-            <i /><i /><i />
-          </span>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
+import type { MockupId } from '@/lib/landing/mockups';
+import { BrandedQr } from '@/components/chat/profile/BrandedQr';
+import { DeviceScreen, PhotoMockup } from './PhotoMockup';
 
 const Lock = ({ size = 11 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5.2a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>
@@ -42,31 +29,6 @@ function AppBar({ title, back }: { title: string; back?: boolean }) {
   );
 }
 
-/** A deterministic pattern that reads as a QR code without being one. */
-function QrPattern() {
-  const n = 21;
-  const cells: React.ReactNode[] = [];
-  const finder = (x: number, y: number) => {
-    const inF = (fx: number, fy: number) => x >= fx && x < fx + 7 && y >= fy && y < fy + 7;
-    for (const [fx, fy] of [[0, 0], [14, 0], [0, 14]]) {
-      if (inF(fx, fy)) {
-        const dx = x - fx;
-        const dy = y - fy;
-        return dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4);
-      }
-    }
-    return null;
-  };
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) {
-      const f = finder(x, y);
-      const on = f === null ? ((x * 7 + y * 13 + x * y) % 5 < 2) : f;
-      if (on) cells.push(<rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" />);
-    }
-  }
-  return <svg viewBox="0 0 21 21" className={s.qr} aria-hidden="true">{cells}</svg>;
-}
-
 function ProfileScreen() {
   return (
     <div className={s.scr}>
@@ -76,7 +38,7 @@ function ProfileScreen() {
         <b className={s.profName}>Amara</b>
         <span className={s.handle}>@amara</span>
         <div className={s.qrCard}>
-          <QrPattern />
+          <div className={s.qrBox}><BrandedQr value="https://ledgerchat.org" title="QR code for ledgerchat.org" /></div>
           <span>Scan to start a private chat</span>
         </div>
         <span className={s.pillBtn}>Share profile</span>
@@ -221,20 +183,22 @@ function TimerScreen() {
   );
 }
 
-const SCREENS: Record<Screen, { el: () => React.ReactElement; label: string; dark?: boolean }> = {
-  profile: { el: ProfileScreen, label: 'A Ledger Chat profile with an @username and a QR code, without a phone number' },
-  chats: { el: ChatsScreen, label: 'The chat list of Ledger Chat, every conversation end-to-end encrypted' },
-  call: { el: CallScreen, label: 'A video call in Ledger Chat, encrypted in transit device to device', dark: true },
-  pay: { el: PayScreen, label: 'Sending a private payment inside a conversation' },
-  file: { el: FileScreen, label: 'Large files sent in a conversation, encrypted on the device' },
-  timer: { el: TimerScreen, label: 'Choosing when messages disappear' },
+const SCREENS: Record<Screen, { el: () => React.ReactElement; label: string; dark?: boolean; photo: MockupId }> = {
+  profile: { el: ProfileScreen, photo: 'hand-wall', label: 'A hand holding a phone with a Ledger Chat profile: an @username and a QR code, without a phone number' },
+  chats: { el: ChatsScreen, photo: 'hand-tilt-l', label: 'A hand holding a phone with the chat list of Ledger Chat, every conversation end-to-end encrypted' },
+  call: { el: CallScreen, photo: 'hand-tilt', label: 'A hand holding a phone with a video call in Ledger Chat, encrypted in transit device to device', dark: true },
+  pay: { el: PayScreen, photo: 'hand-front-l', label: 'A hand holding a phone sending a private payment inside a conversation' },
+  file: { el: FileScreen, photo: 'hand-wall-l', label: 'A hand holding a phone with large files sent in a conversation, encrypted on the device' },
+  timer: { el: TimerScreen, photo: 'hand-front', label: 'A hand holding a phone choosing when messages disappear' },
 };
 
 export function PhoneScreen({ screen }: { screen: Screen }) {
-  const { el: El, label, dark } = SCREENS[screen];
+  const { el: El, label, dark, photo } = SCREENS[screen];
   return (
-    <PhoneFrame label={label} dark={dark}>
-      <El />
-    </PhoneFrame>
+    <PhotoMockup id={photo} label={label}>
+      <DeviceScreen dark={dark}>
+        <El />
+      </DeviceScreen>
+    </PhotoMockup>
   );
 }

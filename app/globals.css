@@ -1717,18 +1717,10 @@ html.light {
   background-color: #FFFFFF !important;
 }
 
-/* ANTI-VOID ZONE: Ensure nothing below the last section shows black.
-   The html element background is the ultimate fallback for any empty space
-   below the last component. Force it permanently white. */
-html::after {
-  content: '';
-  display: block;
-  position: fixed;
-  inset: 0;
-  background: #FFFFFF;
-  z-index: -999;
-  pointer-events: none;
-}
+/* The white below the last section comes from the html background above (html.light), not from
+   a fixed layer. 21 November 2026: a full-screen `position: fixed` html::after was taken by
+   Safari on iOS 26 as a fixed bar at the bottom edge, and Safari painted a solid white band
+   beside its floating toolbar, cutting the page off above it. */
 
 /* Neutralize the dark-body text inversion */
 html.dark body {
