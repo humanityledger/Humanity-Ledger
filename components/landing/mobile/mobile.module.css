@@ -24,6 +24,14 @@
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   overflow-wrap: break-word;
+
+  /* ── KILL THE WHITE BAR ────────────────────────────────────────────────
+     The body has a global padding-bottom:env(safe-area-inset-bottom) that
+     creates a ~34 px gap below .page on Face ID iPhones.  This negative
+     margin makes .page overlap that gap so its white background covers the
+     full viewport and no coloured strip peeks between content and the
+     Safari toolbar.  No :has() required — works on every iOS version.   */
+  margin-bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
 }
 
 .page a { color: inherit; }
