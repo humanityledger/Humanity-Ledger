@@ -191,6 +191,8 @@ export default function ConnectPage() {
   // request yet. Until it does, the button waits: leaving for the wallet earlier is what lost the request.
   const [signLink, setSignLink] = useState<WalletOpenLink | null>(null);
   const [signReady, setSignReady] = useState(true);
+  /** The exact SIWE text the wallet is asked to sign, shown in full before the person approves it. */
+  const [signPreview, setSignPreview] = useState<string | null>(null);
 
   const [qrSession, setQrSession] = useState<string | null>(null);
   const [qrData, setQrData] = useState("");
@@ -557,6 +559,7 @@ export default function ConnectPage() {
           issuedAt: new Date().toISOString(),
         });
         const message = siwe.prepareMessage();
+        setSignPreview(message);
 
         // On mobile (iOS / Android), when WalletConnect requests a signature:
         // 1. If in an in-app browser (e.g. MetaMask in-app browser), do NOT redirect
@@ -891,6 +894,7 @@ export default function ConnectPage() {
         mobileDeepLink={mobileDeepLink}
         signLink={signLink}
         signReady={signReady}
+        signPreview={stage === "signing" ? signPreview : null}
         qr={qrData ? <BrandedQr value={qrData} title="Sign-in QR code" /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}

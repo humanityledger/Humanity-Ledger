@@ -1,0 +1,61 @@
+/* /brief: one A4 page for events. Screen: the sheet centred on a wash; print: the sheet alone. */
+
+.desk { min-height: 100%; padding: 32px 16px 64px; background: #eef0f3; font-family: var(--font-inter), system-ui, sans-serif; color: #15171c; }
+.bar { max-width: 210mm; margin: 0 auto 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #5f6673; }
+.bar a { color: #15171c; text-decoration: none; font-weight: 600; }
+.print { height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #15171c; background: #15171c; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 14mm 14mm 12mm;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 16px 40px -24px rgba(16, 24, 40, 0.35);
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 6mm;
+  font-size: 9pt;
+  line-height: 1.45;
+}
+.top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 5mm; border-bottom: 1px solid #15171c; }
+.lock { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 11pt; }
+.asOf { font-family: var(--font-aztec-mono), ui-monospace, monospace; font-size: 8pt; color: #5f6673; }
+.title { margin: 0; font-family: var(--font-display), 'Times New Roman', serif; font-weight: 400; font-size: 25pt; line-height: 1.04; letter-spacing: -0.01em; }
+.title em { display: block; color: #5f6673; }
+.lede { margin: 3mm 0 0; max-width: 160mm; font-size: 10pt; color: #3f4552; }
+.cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7mm; }
+.h { margin: 0 0 2.5mm; font-size: 8.5pt; font-weight: 650; color: #5200ff; }
+.cols p { margin: 0; color: #3f4552; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 8pt; }
+.tbl th,
+.tbl td { padding: 1.6mm 3mm 1.6mm 0; text-align: left; vertical-align: top; border-bottom: 0.5pt solid #e4e7ec; }
+.tbl thead th { font-family: var(--font-aztec-mono), ui-monospace, monospace; font-weight: 400; font-size: 7.5pt; color: #5f6673; border-bottom-color: #15171c; }
+.tbl tbody th { font-weight: 600; }
+.e2e { color: #10b981; }
+.srv { color: #ff3b30; }
+.twin { display: grid; grid-template-columns: 1.35fr 1fr; gap: 8mm; align-content: start; }
+.status { display: grid; gap: 2.5mm; margin: 0; padding: 0; list-style: none; }
+.status li { display: grid; grid-template-columns: 27mm 1fr; gap: 3mm; padding-bottom: 2mm; border-bottom: 0.5pt solid #e4e7ec; font-size: 8.5pt; }
+.status b { font-family: var(--font-aztec-mono), ui-monospace, monospace; font-weight: 500; font-size: 8pt; }
+.bottom { display: grid; grid-template-columns: 1fr auto; gap: 8mm; align-items: end; padding-top: 5mm; border-top: 1px solid #15171c; }
+.fine { margin: 0; font-size: 7.5pt; color: #5f6673; }
+.qr { display: grid; justify-items: center; gap: 1.5mm; font-family: var(--font-aztec-mono), ui-monospace, monospace; font-size: 7.5pt; }
+.qr svg { width: 26mm; height: 26mm; }
+
+@media screen and (max-width: 820px) {
+  .sheet { width: 100%; min-height: 0; padding: 24px 20px; font-size: 14px; }
+  .cols,
+  .twin { grid-template-columns: 1fr; }
+}
+
+@page { size: A4; margin: 0; }
+@media print {
+  .desk { padding: 0; background: #fff; }
+  .bar { display: none; }
+  .sheet { box-shadow: none; margin: 0; width: 210mm; height: 297mm; overflow: hidden; position: absolute; left: 0; top: 0; }
+  :global(body *) { visibility: hidden; }
+  .sheet,
+  .sheet * { visibility: visible; }
+}

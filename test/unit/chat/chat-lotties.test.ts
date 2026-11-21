@@ -60,8 +60,10 @@ describe('chat animations', () => {
     }
   });
 
-  it('the welcome animation is on the Ledger Chat home and the empty list', () => {
+  it('the Ledger Chat home and the empty list are quiet panels, without an illustration (21 November 2026)', () => {
     const chat = read('components/terminal/LedgerChatV2.tsx');
-    expect((chat.match(/<WelcomeLottie \/>/g) || []).length).toBe(2);
+    expect(chat).not.toMatch(/<WelcomeLottie \/>/);
+    expect(chat).toContain('No conversation selected');
+    expect(chat).toContain('Start a private conversation');
   });
 });

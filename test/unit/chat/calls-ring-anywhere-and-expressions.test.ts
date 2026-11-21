@@ -45,7 +45,9 @@ describe('hanging up ends both sides in every state', () => {
 describe('call screens', () => {
   it('answer is one tap and the screens say the call is encrypted device to device', () => {
     expect(screens).toMatch(/const once = \(fn: \(\) => void\) => \(\) => \{\s*if \(busy\) return;/);
-    expect(screens).toMatch(/Encrypted end to end, device to device/);
+    // Claims register, row "calls": encrypted in transit (DTLS-SRTP), never "end-to-end encrypted calls".
+    expect(screens).toMatch(/Encrypted in transit, device to device \(DTLS-SRTP\)/);
+    expect(screens).not.toMatch(/Encrypted end to end/);
   });
   it('a phone browser gets no screen-share button that can only fail', () => {
     expect(chat).toMatch(/getDisplayMedia\(\{ video: true, audio: false \}\)/);

@@ -1,0 +1,32 @@
+image:
+  repository: ledger-relay
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# Plain settings. Secrets (RELAY_TURN_SECRET, RELAY_VAPID_PRIVATE_KEY, RELAY_ACCESS_TOKENS,
+# RELAY_METRICS_TOKEN) go in the Kubernetes Secret named by existingSecret.
+env:
+  RELAY_NAME: "Ledger Relay"
+  RELAY_OPERATOR: ""
+  RELAY_ALLOWED_ORIGINS: "https://ledgerchat.org"
+  RELAY_TRUST_PROXY: "1"
+  RELAY_TURN_URLS: ""
+  RELAY_VAPID_PUBLIC_KEY: ""
+  RELAY_VAPID_SUBJECT: ""
+existingSecret: ledger-relay
+
+# Blob storage. Signalling keeps state in memory, so with more than one replica use sticky
+# sessions for /peerjs/ or keep one replica per region.
+persistence:
+  enabled: true
+  size: 10Gi
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests: { cpu: 100m, memory: 128Mi }
+  limits: { cpu: "1", memory: 512Mi }

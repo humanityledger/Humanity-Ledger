@@ -18,6 +18,8 @@
  */
 
 import { hasStun, shapeIceServers } from './ice';
+import { relayEnabled } from '@/lib/relay/relays';
+import { iceFromRelays } from '@/lib/relay/client';
 
 export const CALL_AUDIO: MediaTrackConstraints = {
   echoCancellation: true,
@@ -167,6 +169,19 @@ export const FALLBACK_ICE: RTCIceServer[] = [
  * every new connection, so a long session keeps working TURN).
  */
 export async function loadIceConfig(fetchImpl: typeof fetch = fetch): Promise<{ iceServers: RTCIceServer[]; refreshInMs: number; own: boolean }> {
+  // Ledger Relay (flag NEXT_PUBLIC_LEDGER_RELAY, off by default): TURN from the organisation's or
+  // the user's relays first, so calls do not depend on our backend. Any failure falls through to
+  // the path below, unchanged.
+  if (relayEnabled()) {
+    const fromRelay = await iceFromRelays(fetchImpl).catch(() => null);
+    if (fromRelay) {
+      const own = shapeIceServers(fromRelay.iceServers);
+      if (own.length) {
+        const refreshInMs = Math.max(5 * 60_000, (fromRelay.ttl - 15 * 60) * 1000);
+        return { iceServers: hasStun(own) ? own : [...own, ...FALLBACK_ICE], refreshInMs, own: true };
+      }
+    }
+  }
   try {
     const res = await fetchImpl('/api/calls/ice', { credentials: 'include', cache: 'no-store' });
     if (res.ok) {

@@ -225,8 +225,13 @@ function validate(m: any): m is AttachmentMessage {
   );
 }
 
-/** Cheap prefix test, safe to call on every message. */
+/**
+ * True for every message that carries an attachment key: "hl.attachment" and the pieces of a
+ * large file ("hl.largefile", lib/chat/large-file.ts). A large-file message is recognised by its
+ * prefix alone, so even a malformed one is never shown, sent through moderation or previewed as text.
+ */
 export function isAttachmentMessage(content: unknown): boolean {
+  if (typeof content === 'string' && content.trimStart().startsWith('{"type":"hl.largefile"')) return true;
   return parseAttachmentMessage(content) !== null;
 }
 

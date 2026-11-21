@@ -13,6 +13,7 @@ import type { Block, DocPage, NavGroup } from "./types";
 import { overview, quickstart, identity, pin } from "./pages/getting-started";
 import { messaging, routing, communities, calls, payments, devices } from "./pages/ledger-chat";
 import { architecture, cryptography, ecosystem, zeroKnowledge, whitepaper } from "./pages/protocol";
+import { zkHistory } from "./pages/zk-history";
 import { securityModel, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
 import { about, blog, contact, status, BLOG_POSTS } from "./pages/company";
@@ -25,7 +26,7 @@ import { communityGuidelines } from "./pages/community-guidelines";
 export const NAV: NavGroup[] = [
   { title: "Getting started", pages: [overview, quickstart, identity, pin] },
   { title: "Ledger Chat", pages: [guide, messaging, routing, communities, calls, payments, devices] },
-  { title: "Protocol", pages: [architecture, ecosystem, cryptography, zeroKnowledge, whitepaper] },
+  { title: "Protocol", pages: [architecture, ecosystem, cryptography, zeroKnowledge, zkHistory, whitepaper] },
   { title: "Security", pages: [securityModel, audits, bugBounty] },
   { title: "Developers", pages: [developers] },
   { title: "Company", pages: [about, brand, blog, changelog, status, contact] },

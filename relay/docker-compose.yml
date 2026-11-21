@@ -1,0 +1,29 @@
+# Run your own Ledger Relay: the relay service and a coturn TURN server.
+#   cp .env.example .env    # fill in the values
+#   docker compose up -d
+# Put the relay behind TLS (a reverse proxy or a load balancer): browsers only talk to https/wss.
+services:
+  relay:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - relay-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf", "--static-auth-secret=${RELAY_TURN_SECRET}", "--realm=${RELAY_TURN_REALM:-relay.local}"]
+
+volumes:
+  relay-data:

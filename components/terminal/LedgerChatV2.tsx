@@ -98,6 +98,7 @@ import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/li
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
+import { formatBytes, parseLargeFileMessage } from '@/lib/chat/large-file';
 import { isRecordMessage, legacyPreview, parseLegacyMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
 import { RecordSendError, sealFileMessage, sealNoteInsideMessage, sealNoteMessage } from '@/lib/chat/seal-record';
 import { epochForPeer, RecordEpochError, setRecordEpochProvider } from '@/lib/chat/record-epoch';
@@ -111,7 +112,7 @@ import { getSelfLink, remoteSign, RemoteSignError } from '@/lib/link/channel';
 import type { ExpressionTab } from '@/components/chat/ExpressionPicker';
 import { LinkedDeviceApprover } from '@/components/link/LinkedDeviceApprover';
 import { LottieSendButton } from '@/components/chat/LottieSendButton';
-import { NewConversationLottie, SendConfirmationBurst, WelcomeLottie, preloadSendConfirmation } from '@/components/chat/ChatLottie';
+import { NewConversationLottie, SendConfirmationBurst, preloadSendConfirmation } from '@/components/chat/ChatLottie';
 import { useActivities } from '@/lib/activities/store';
 import { useCallMedia } from '@/lib/activities/call-media';
 import { notifyMessage, notifyPaymentReceived, useCallActivitySync, useRecordingActivitySync } from '@/lib/activities/hooks';
@@ -295,8 +296,10 @@ export const formatMessagePreview = (content: string): string => {
   const agreementKind = agreementMessageKind(cleanContent);
   if (agreementKind) return agreementPreview(agreementKind);
   // Encrypted attachments carry their decryption key: never preview or notify their text.
-  const remoteAttachment = parseAttachmentMessage(cleanContent);
+  const remoteAttachment = parseAttachmentMessage(cleanContent) ?? parseLargeFileMessage(cleanContent);
   if (remoteAttachment) return attachmentPreview(remoteAttachment);
+  // A large-file message that does not parse still carries a key: never show its text.
+  if (isAttachmentMessage(cleanContent)) return 'File';
   if (isRecordMessage(cleanContent)) {
     const modern = parseRecordMessage(cleanContent);
     if (modern) return recordPreview(modern);
@@ -550,6 +553,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const [client, setClient] = useState<Client | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isWaitingForSignature, setIsWaitingForSignatureState] = useState(false);
+  /** The exact text XMTP asks the wallet to sign to unlock this device, shown before approval (SignaturePreview). */
+  const [unlockText, setUnlockText] = useState<string | null>(null);
   // Read by the start-up safety timer: time spent waiting for a signature (wallet app, or the
   // phone approving for a linked computer) does not count as a hang.
   const waitingSigRef = useRef(false);
@@ -4111,6 +4116,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             }
         }
         try {
+          {
+            const text = typeof msg === 'string' ? msg : new TextDecoder().decode(msg as Uint8Array);
+            // Shown only when it is readable text; a binary challenge is described, not printed.
+            setUnlockText(/^[\x09\x0a\x0d\x20-\x7e\u00a0-\uffff]{1,4000}$/.test(text) ? text : null);
+          }
           let finalMsg = msg;
           if (typeof msg !== 'string') {
               const hex = Array.from(msg as Uint8Array).map((b: number) => b.toString(16).padStart(2, '0')).join('');
@@ -6185,15 +6195,31 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       return;
     }
     setIsUploading(true);
+    // Above 20 MB the file goes in encrypted pieces (lib/chat/large-file.ts): show how far it is.
+    const big = file.size > 20 * 1024 * 1024;
+    const progressId = big ? `upload-${Date.now()}` : undefined;
+    if (progressId) toast.loading(`Encrypting ${sanitizeFilename(file.name)}`, { id: progressId, description: 'On this device, before anything is uploaded.' });
     try {
-      const { message } = await prepareAttachmentMessage(file, {
-        filename: sanitizeFilename(file.name),
-        mimeType: file.type || 'application/octet-stream',
-      });
+      const { message } = await prepareAttachmentMessage(
+        file,
+        { filename: sanitizeFilename(file.name), mimeType: file.type || 'application/octet-stream' },
+        fetch,
+        progressId
+          ? {
+              onProgress: (p) => {
+                const pct = p.total ? Math.floor((p.done / p.total) * 100) : 0;
+                toast.loading(`Sending ${sanitizeFilename(file.name)}, ${pct}%`, { id: progressId, description: `${formatBytes(p.done)} of ${formatBytes(p.total)}, encrypted on this device` });
+              },
+            }
+          : {},
+      );
       await executeSend(message);
+      if (progressId) toast.success('File sent', { id: progressId, description: `${formatBytes(file.size)}, end-to-end encrypted` });
     } catch (err) {
       console.error('[Attachment] send failed:', err instanceof Error ? err.message : err);
-      toast.error(err instanceof AttachmentError ? err.message : 'Could not attach the file');
+      const text = err instanceof AttachmentError ? err.message : 'Could not attach the file';
+      if (progressId) toast.error(text, { id: progressId, description: undefined });
+      else toast.error(text);
     } finally {
       setIsUploading(false);
       resetFileInputs(e);
@@ -6495,6 +6521,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         isInitializing={isInitializing}
         isWaitingForSignature={isWaitingForSignature}
         signLink={signLink}
+        signText={unlockText}
         initError={initError}
         onActivate={initClient}
         onClearAndRetry={() => {
@@ -6661,8 +6688,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         interrupts it, and no <video> plays the same audio a second time (videos are muted). */}
     <audio ref={remoteAudioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
 
-    {/* Solid white container — two-panel layout: sidebar (left) + chat (right) */}
-      <div className={`relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22),0_0_0_1px_rgba(16,24,40,0.06)] ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
+    {/* The workspace: rail, list and conversation, edge to edge, separated by hairlines. */}
+      <div className={`relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       background: '#ffffff',
       fontFamily,
     }}>
@@ -6979,12 +7006,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 </button>
               )}
               {conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 gap-2 p-8 text-center">
-                  <WelcomeLottie />
-                  <div>
-                    <p className="text-[16px] font-semibold text-[#15171c] mb-1">No conversations yet</p>
-                    <p className="text-[14px] text-[#727a88] leading-relaxed max-w-[240px]">Search for a name or paste a wallet address above to start your first chat.</p>
-                  </div>
+                <div className="flex flex-col flex-1 px-6 py-10">
+                  <p className="font-[family-name:var(--font-aztec-mono)] text-[12px] text-[#5b606b]">No conversations yet</p>
+                  <p className="mt-2 text-[15px] font-semibold tracking-[-0.01em] text-[#15171c]">Your inbox is empty</p>
+                  <p className="mt-1 text-[14px] text-[#475061] leading-relaxed max-w-[280px]">Search for a name or an @username, or paste a wallet address above, to start your first conversation.</p>
                 </div>
               ) : (
             (() => {
@@ -7761,44 +7786,60 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         role="menu"
                         aria-label="Attach"
                       >
-                        <div className="flex flex-col">
-                          {[
-                            // ── Media ──────────────────────────────────────────────
-                            { id: 'camera',    color: '#FF3B30', iconPath: <Camera size={19} strokeWidth={1.8} />,  label: 'Camera',        sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'gallery',   color: '#5856D6', iconPath: <ImageIcon size={19} strokeWidth={1.8} />,   label: 'Photos and videos', sublabel: 'Choose from your library',   onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'attach',    color: '#34C759', iconPath: <FileText size={19} strokeWidth={1.8} />,  label: 'Document',       sublabel: 'Any file up to 20 MB',    onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
-                            { id: 'record-note', color: '#15171c', iconPath: <Lock size={19} strokeWidth={1.8} />, label: 'Seal this note', sublabel: 'A record of the text you wrote', onClick: () => { void sealDraftAsRecord(); } },
-                            { id: 'record-file', color: '#15171c', iconPath: <Lock size={19} strokeWidth={1.8} />, label: 'Sealed file', sublabel: 'Ciphertext only, up to 20 MB', onClick: () => { recordFileRef.current?.click(); setShowAppDrawer(false); } },
-
-                            // ── Interactive ──────────────────────────────────────────
-                            { id: 'poll',      color: '#10B981', iconPath: <ListChecks size={19} strokeWidth={1.8} />,  label: 'Poll',           sublabel: 'Create a poll',          onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
-                            { id: 'meeting',   color: '#15171c', iconPath: <CalendarPlus size={19} strokeWidth={1.8} />, label: 'Schedule a call', sublabel: 'Voice or video, at a set time', onClick: () => { setShowMeetingSheet(true); setShowAppDrawer(false); } },
-                            { id: 'schedule',  color: '#15171c', iconPath: <CalendarClock size={19} strokeWidth={1.8} />, label: 'Schedule a message', sublabel: 'Write now, send later', onClick: () => { setShowScheduleSheet(true); setShowAppDrawer(false); } },
-                            // ── Crypto & Aztec Private Payments ──────────────────────────
-                            { id: 'zkmoney',   color: '#1C1C1E', iconPath: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: networkLabel(), onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
-                            { id: 'agreement', color: '#1C1C1E', iconPath: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: `Escrow or payment stream, ${networkLabel()}`, onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
-                            { id: 'zkinvoice', color: '#1C1C1E', iconPath: <Receipt size={19} strokeWidth={1.8} />, label: 'Private invoice', sublabel: 'Request a private payment', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
-                            { id: 'payment',   color: '#1C1C1E', iconPath: <CreditCard size={19} strokeWidth={1.8} />,     label: 'Payment',        sublabel: 'Send tokens from your wallet',            onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
-                            // ── Security ──────────────────────────────────────────────
-                            { id: 'burn',      color: '#FF6B00', iconPath: <Timer size={19} strokeWidth={1.8} />,      label: burnTimer ? `Disappearing after ${burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`}` : 'Disappearing messages', sublabel: burnTimer ? 'Tap to change duration' : 'Messages vanish after they are read', onClick: () => { setShowBurnSheet(true); setShowAppDrawer(false); } },
-                          ].filter(app => (ledgerSettings as any)?.payments_enabled !== false || !PAYMENT_DRAWER_IDS.has(app.id)).map((app) => (
-                            <button 
-                              key={app.id} 
-                              type="button" 
-                              onClick={app.onClick} 
-                              role="menuitem"
-                              className="flex items-center gap-3 h-[52px] px-2.5 w-full hover:bg-[#f2f4f7] active:bg-[#e9ecf0] rounded-xl transition-colors select-none text-left"
-                            >
-                              <span className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-[#eff1f4] text-[#15171c]" aria-hidden="true">
-                                {(app as any).iconPath || (app as any).icon}
-                              </span>
-                              <span className="flex flex-col min-w-0">
-                                <span className="text-[14.5px] font-medium text-[#15171c] leading-tight">{app.label}</span>
-                                {(app as any).sublabel && <span className="text-[12.5px] text-[#727a88] truncate">{(app as any).sublabel}</span>}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
+                        {(() => {
+                          // Grouped by what the person wants to do. Payment items need a person with a wallet at the
+                          // other end: a group conversation has no single recipient, so they are not offered there.
+                          const peerIsWallet = !!activePeer && /^0x[0-9a-fA-F]{40}$/.test(activePeer);
+                          const hasDraft = inputText.trim().length > 0;
+                          type Item = { id: string; group: 'Share' | 'Plan' | 'Pay' | 'Privacy'; icon: React.ReactNode; label: string; sublabel?: string; onClick: () => void; disabled?: boolean };
+                          const allItems: Item[] = [
+                            { id: 'camera', group: 'Share', icon: <Camera size={19} strokeWidth={1.8} />, label: 'Camera', sublabel: 'Take a photo or video', onClick: () => { cameraRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'gallery', group: 'Share', icon: <ImageIcon size={19} strokeWidth={1.8} />, label: 'Photos and videos', sublabel: 'Choose from your library', onClick: () => { galleryRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'attach', group: 'Share', icon: <FileText size={19} strokeWidth={1.8} />, label: 'File', sublabel: 'Any file up to 32 GB, encrypted here', onClick: () => { fileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'record-note', group: 'Share', icon: <Lock size={19} strokeWidth={1.8} />, label: 'Seal this note', sublabel: hasDraft ? 'A record of the text you wrote' : 'Write the note in the field first', disabled: !hasDraft, onClick: () => { void sealDraftAsRecord(); } },
+                            { id: 'record-file', group: 'Share', icon: <Lock size={19} strokeWidth={1.8} />, label: 'Sealed file', sublabel: 'A record of a file, up to 20 MB', onClick: () => { recordFileRef.current?.click(); setShowAppDrawer(false); } },
+                            { id: 'poll', group: 'Plan', icon: <ListChecks size={19} strokeWidth={1.8} />, label: 'Poll', sublabel: 'Ask a question with options', onClick: () => { setShowPollCreator(true); setShowAppDrawer(false); } },
+                            { id: 'meeting', group: 'Plan', icon: <CalendarPlus size={19} strokeWidth={1.8} />, label: 'Schedule a call', sublabel: 'Voice or video, at a set time', onClick: () => { setShowMeetingSheet(true); setShowAppDrawer(false); } },
+                            { id: 'schedule', group: 'Plan', icon: <CalendarClock size={19} strokeWidth={1.8} />, label: 'Schedule a message', sublabel: 'Write now, send later', onClick: () => { setShowScheduleSheet(true); setShowAppDrawer(false); } },
+                            ...(peerIsWallet ? [
+                              { id: 'zkmoney', group: 'Pay' as const, icon: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: `Amount and recipient hidden, ${networkLabel()}`, onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
+                              { id: 'zkinvoice', group: 'Pay' as const, icon: <Receipt size={19} strokeWidth={1.8} />, label: 'Request a payment', sublabel: 'A private invoice in this chat', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
+                              { id: 'agreement', group: 'Pay' as const, icon: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: `Escrow or payment stream, ${networkLabel()}`, onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
+                              { id: 'payment', group: 'Pay' as const, icon: <CreditCard size={19} strokeWidth={1.8} />, label: 'Public payment', sublabel: 'From your Ethereum wallet, visible on chain', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
+                            ] : []),
+                            { id: 'burn', group: 'Privacy', icon: <Timer size={19} strokeWidth={1.8} />, label: burnTimer ? `Disappearing after ${burnTimer >= 60 ? `${Math.floor(burnTimer / 60)}m` : `${burnTimer}s`}` : 'Disappearing messages', sublabel: burnTimer ? 'Tap to change the timer' : 'Messages vanish after they are read', onClick: () => { setShowBurnSheet(true); setShowAppDrawer(false); } },
+                          ];
+                          const items = allItems.filter(app => (ledgerSettings as any)?.payments_enabled !== false || !PAYMENT_DRAWER_IDS.has(app.id));
+                          const groups = (['Share', 'Plan', 'Pay', 'Privacy'] as const).map((g) => ({ g, list: items.filter((i) => i.group === g) })).filter((x) => x.list.length);
+                          return (
+                            <div className="flex flex-col">
+                              {groups.map(({ g, list }, gi) => (
+                                <div key={g} role="group" aria-label={g} className={gi ? 'mt-1 pt-1 border-t border-[#eef0f3]' : ''}>
+                                  <p className="px-2.5 pt-2 pb-1 text-[11.5px] font-semibold text-[#727a88]">{g}</p>
+                                  {list.map((app) => (
+                                    <button
+                                      key={app.id}
+                                      type="button"
+                                      onClick={app.onClick}
+                                      disabled={app.disabled}
+                                      aria-disabled={app.disabled || undefined}
+                                      role="menuitem"
+                                      className="flex items-center gap-3 h-[52px] px-2.5 w-full hover:bg-[#f2f4f7] active:bg-[#e9ecf0] rounded-xl transition-colors select-none text-left disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                    >
+                                      <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${g === 'Pay' ? 'bg-[#f1ebff] text-[#5200ff]' : 'bg-[#eff1f4] text-[#15171c]'}`} aria-hidden="true">
+                                        {app.icon}
+                                      </span>
+                                      <span className="flex flex-col min-w-0">
+                                        <span className="text-[14.5px] font-medium text-[#15171c] leading-tight">{app.label}</span>
+                                        {app.sublabel && <span className="text-[12.5px] text-[#727a88] truncate">{app.sublabel}</span>}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </motion.div>
                     </>
                   )}
@@ -8002,38 +8043,49 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           )}
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] relative overflow-y-auto p-6 md:p-12">
-            <ChatCredit align="end" className="hidden md:flex absolute bottom-6 right-7 max-w-[340px]" />
-            <div className="w-full max-w-md flex flex-col items-center text-center">
-              <div className="mb-3" data-testid="welcome-lottie">
-                <WelcomeLottie />
+          <div className="flex-1 flex flex-col bg-[#f7f8fa] relative overflow-y-auto">
+            {/* No conversation open (21 November 2026): a quiet workspace panel, no illustration.
+                What the product does is stated as a short specification, each line true today. */}
+            <div className="flex-1 flex items-center justify-center p-6 md:p-12">
+              <div className="w-full max-w-[520px]">
+                <p className="font-[family-name:var(--font-aztec-mono)] text-[12px] text-[#5b606b]">No conversation selected</p>
+                <h1 className="mt-2 text-[26px] md:text-[30px] leading-[1.15] font-semibold tracking-[-0.025em] text-[#15171c]">Start a private conversation</h1>
+                <p className="mt-3 text-[15px] leading-relaxed text-[#475061] max-w-[440px]">
+                  Write to a name, an @username or a wallet address. Direct messages are end-to-end encrypted on your device before they leave it.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('ledger-new-chat-input')?.focus()}
+                    className="inline-flex items-center gap-2 h-10 px-4 bg-[#15171c] text-white rounded-lg text-[14px] font-medium hover:bg-[#2b2f38] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5200ff]"
+                  >
+                    <Plus size={16} strokeWidth={2} />
+                    New chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateGroup(true)}
+                    className="inline-flex items-center gap-2 h-10 px-4 bg-white border border-[#d0d5dd] text-[#15171c] rounded-lg text-[14px] font-medium hover:bg-[#f2f4f7] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5200ff]"
+                  >
+                    <Users size={16} strokeWidth={1.8} />
+                    New group
+                  </button>
+                </div>
+                <dl className="mt-10 border-t border-[#e4e7ec] text-[13px]">
+                  {[
+                    { k: 'Messages', v: 'MLS (RFC 9420) over XMTP' },
+                    { k: 'Calls', v: 'Peer to peer, DTLS-SRTP in transit' },
+                    { k: 'Payments', v: `Private wallet on ${networkLabel()}` },
+                  ].map((row) => (
+                    <div key={row.k} className="grid grid-cols-[112px_minmax(0,1fr)] gap-3 py-2.5 border-b border-[#e4e7ec]">
+                      <dt className="text-[#5b606b]">{row.k}</dt>
+                      <dd className="font-[family-name:var(--font-aztec-mono)] text-[12.5px] text-[#15171c]">{row.v}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
-              <h1 className="text-[24px] md:text-[28px] font-bold tracking-[-0.03em] text-[#15171c] mb-2">Ledger Chat</h1>
-              <p className="text-[15px] text-[#727a88] leading-relaxed max-w-[320px]">
-                Select a chat, or start a new one with a name, an @username or a wallet address.
-              </p>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('ledger-new-chat-input')?.focus()}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#15171c] text-white rounded-xl text-[14px] font-medium hover:bg-[#2d2f36] transition-colors active:scale-95"
-                >
-                  <Plus size={16} strokeWidth={2.2} />
-                  New chat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateGroup(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e4e7ec] text-[#15171c] rounded-xl text-[14px] font-medium hover:bg-[#f7f8fa] transition-colors active:scale-95"
-                >
-                  <Users size={16} strokeWidth={1.8} />
-                  New group
-                </button>
-              </div>
-              {/* The four feature cards that sat here were removed (18 November 2026): a cleaner
-                  entry with the two actions only. What each feature does is in the docs. */}
-              <p className="mt-6 text-[12px] text-[#727a88]">Messaging by XMTP · Private wallet on {networkLabel()}</p>
             </div>
+            <ChatCredit align="end" className="hidden md:flex absolute bottom-6 right-7 max-w-[340px]" />
           </div>
         )}
 

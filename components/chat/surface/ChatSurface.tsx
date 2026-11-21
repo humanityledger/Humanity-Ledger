@@ -26,7 +26,7 @@ const harnessOn = () => E2E && typeof window !== 'undefined' && new URLSearchPar
 // The same mark as the PIN check before it and the channel screen after it (BootMark).
 function ChatLoading() {
   return (
-    <div className="flex-1 w-full h-full min-h-[400px] flex items-center justify-center bg-white md:rounded-[28px] lg:rounded-[32px] md:border md:border-black/[0.08] md:shadow-lg">
+    <div className="flex-1 w-full h-full min-h-[400px] flex items-center justify-center bg-white md:bg-[#f7f8fa]">
       <BootMark />
     </div>
   );
@@ -56,17 +56,16 @@ export function ChatSurface({ visible, onRequestVisible }: { visible: boolean; o
       {visible && <KeyboardViewport />}
       {debugDelivery && <DeliveryDebugPanel />}
       <ChatEngineProvider>
-        {/* On desktop Ledger Chat floats as a rounded card on a plain, light background; on phones it
-            fills the screen. The margin around the card follows the window (clamp on vw and vh), so
-            zooming in or out never squeezes the card or pushes it off screen: past 768 px of CSS width
-            (about 250 % zoom on a laptop) it becomes the full-screen phone layout. The card is wider
-            than before (up to 1680 px). The small Aztec wordmark above it was removed (18 November 2026). */}
+        {/* Ledger Chat is a workspace: it fills the window on every screen, edge to edge, with
+            hairlines between its columns (21 November 2026). The floating rounded card on a grey
+            field (18 November 2026) read as a consumer app; a full-bleed frame is what people who
+            work in a messenger all day expect, and it gives the conversation the width. */}
         <div
           data-chat-page="true"
-          className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white md:bg-[#f4f6fa] md:[padding:clamp(12px,3vh,56px)_clamp(16px,3.2vw,72px)]"
+          className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden bg-white"
           style={{ height: '100%', minHeight: '100%', flex: '1 1 0%' }}
         >
-          <div data-glyph-anchor className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0 max-w-[1680px] md:max-h-[min(1100px,100dvh)] mx-auto md:my-auto md:shadow-[0_24px_70px_-16px_rgba(16,24,40,0.22)]">
+          <div data-glyph-anchor className="relative z-[1] flex flex-col w-full h-full flex-1 min-h-0">
             <LedgerChat forceAutoInit={true} surfaceVisible={visible} onRequestVisible={onRequestVisible} />
           </div>
         </div>
