@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ledger-relay
+description: Ledger Relay, a stateless relay for Ledger Chat calls, encrypted files and notifications.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

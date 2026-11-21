@@ -2,6 +2,7 @@
 
 import React from 'react';
 import s from './PadlockLoader.module.css';
+import { SignaturePreview } from '@/components/auth/SignaturePreview';
 import { detectConnectedMobileWallet, openMobileWalletApp, isMobileDevice } from '@/lib/wallet/mobileWallet';
 import { safeNativeWalletLink } from '@/lib/auth/wallet-links';
 import type { WalletOpenLink } from '@/lib/auth/wc-sign-request';
@@ -21,18 +22,19 @@ function openSignLink(link: WalletOpenLink | null | undefined): boolean {
 }
 
 /**
- * PadlockLoader: the screen Ledger Chat shows before the encrypted channel is
- * open. The name is kept so LedgerChatV2 does not change; the padlock is gone.
+ * PadlockLoader: the screen Ledger Chat shows before the encrypted channel is open. The name is
+ * kept so LedgerChatV2 does not change.
  *
- * The emblem is the company mark (the world map disc, see HLLogo) with one thin
- * arc that turns while the channel opens; three real steps show where it is
- * (wallet, the unlock signature, the inbox). Pure CSS motion, stopped under
- * prefers-reduced-motion.
+ * Design (21 November 2026): a session panel, not a splash. The company mark sits small in a
+ * lockup with the product name; under it a three-part rule shows how far the session has opened,
+ * and a ledger of three rows names each real step (wallet, device key, inbox) with its state in
+ * monospace. No spinning emblem, no illustration: the screen reads like the sign-in of a system a
+ * security team would deploy. Motion is one sliding segment in the active part of the rule, off
+ * under prefers-reduced-motion.
  *
- * Copy rules: the status names what is actually happening, never a made up
- * stage, and nothing here claims more than the product does. "End to end
- * encrypted" alone would overstate it while the fallback path exists, so the
- * idle text says where encryption happens instead.
+ * Copy rules: the status names what is actually happening, never a made up stage, and nothing
+ * here claims more than the product does. "End to end encrypted" alone would overstate it while
+ * the fallback path exists, so the text says where decryption happens instead.
  */
 
 interface PadlockLoaderProps {
@@ -49,6 +51,8 @@ interface PadlockLoaderProps {
   connectorName?: string;
   /** Phone over WalletConnect: the link to this request once the relay has it (null: not yet). */
   signLink?: WalletOpenLink | null;
+  /** The exact text the wallet is asked to sign, when it is readable; shown field by field. */
+  signText?: string | null;
 }
 
 /** The app session exists but no usable wallet signer: offer reconnect or sign out, never a local wipe. */
@@ -66,44 +70,51 @@ export function isWalletInitError(initError: string): boolean {
   );
 }
 
-/**
- * The emblem: the company mark in a plain white disc. While the channel opens, one thin arc turns
- * around it; on an error the ring turns red. Nothing else moves.
- */
-function Emblem({ state }: { state: 'idle' | 'working' | 'error' }) {
+type Step = 'done' | 'active' | 'todo';
+
+/** The lockup: the company mark, small, beside the product name. */
+function Lockup() {
   return (
-    <div className={`${s.emblem} ${s[state] ?? ""}`} aria-hidden="true">
-      <span className={s.arc} />
-      <span className={s.mark}>
-        <img src="/boot-mark.webp" alt="" width={72} height={72} draggable={false} />
+    <div className={s.lockup}>
+      <span className={s.mark} aria-hidden="true">
+        <img src="/boot-mark.webp" alt="" width={28} height={28} draggable={false} />
       </span>
+      <span className={s.product}>Ledger Chat</span>
     </div>
   );
 }
 
-type Step = 'done' | 'active' | 'todo';
-
-function Steps({ items }: { items: { label: string; note: string; state: Step }[] }) {
+/** Three parts, one per step: filled when done, a sliding segment while active, a hairline before. */
+function Rule({ steps, tone }: { steps: Step[]; tone?: 'error' }) {
   return (
-    <ol className={s.steps}>
-      {items.map((it) => (
-        <li key={it.label} className={`${s.step} ${s[it.state]}`} aria-current={it.state === 'active' ? 'step' : undefined}>
-          <span className={s.dot} aria-hidden="true">
-            {it.state === 'done' ? (
-              <svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.4l2.9 2.9 6.1-6.6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            ) : null}
-          </span>
-          <span className={s.stepText}>
-            <span className={s.stepLabel}>{it.label}</span>
-            <span className={s.stepNote}>{it.note}</span>
-          </span>
-        </li>
-      ))}
-    </ol>
+    <div className={`${s.rule} ${tone === 'error' ? s.ruleError : ''}`} aria-hidden="true">
+      {steps.map((st, i) => <span key={i} className={`${s.part} ${s[st]}`} />)}
+    </div>
   );
 }
 
-const PROMISES = ['Free, no transaction', 'Encrypted on this device', 'MLS over XMTP'];
+function Ledger({ rows }: { rows: { label: string; value: string; state: Step }[] }) {
+  return (
+    <dl className={s.ledger}>
+      {rows.map((r) => (
+        <div key={r.label} className={`${s.row} ${s[r.state]}`} aria-current={r.state === 'active' ? 'step' : undefined}>
+          <dt>{r.label}</dt>
+          <dd>
+            <span className={s.state} aria-hidden="true" />
+            {r.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const SPEC = [
+  { label: 'Encryption', value: 'MLS (RFC 9420) over XMTP' },
+  { label: 'Signature', value: 'Free, sends no transaction' },
+  { label: 'Custody', value: 'Non-custodial' },
+];
+
 
 export function PadlockLoader({
   isInitializing,
@@ -117,6 +128,7 @@ export function PadlockLoader({
   onSignOut,
   connectorName,
   signLink,
+  signText,
 }: PadlockLoaderProps) {
   const walletInfo = detectConnectedMobileWallet(connectorName);
 
@@ -153,14 +165,21 @@ export function PadlockLoader({
     onActivate();
   }, [onActivate]);
 
+  const signed = !isWaitingForSignature;
+  const steps: Step[] = state === 'working'
+    ? ['done', signed ? 'done' : 'active', signed ? 'active' : 'todo']
+    : state === 'error' ? ['done', 'done', 'todo'] : ['todo', 'todo', 'todo'];
+
   return (
     <div className={s.root}>
-      <Emblem state={state} />
+      <section className={s.panel} aria-labelledby="hl-session-title">
+        <Lockup />
+        <Rule steps={steps} tone={state === 'error' ? 'error' : undefined} />
 
-      <div className={s.content}>
         {state === 'error' && (
           <div key="error" className={s.fade} role="alert">
-            <p className={s.title}>We could not open your channel</p>
+            <p className={s.kicker}>Session not opened</p>
+            <h1 id="hl-session-title" className={s.title}>We could not open your channel</h1>
             <p className={s.errorText}>{initError}</p>
             <div className={s.actions}>
               {isLimitError ? (
@@ -188,7 +207,7 @@ export function PadlockLoader({
                     Refresh session
                   </button>
                   {/* Was "Sign in with new wallet", which wiped this device's message database instead. */}
-                  <button type="button" className={s.secondary} style={{ marginTop: '8px' }} onClick={onSignOut}>
+                  <button type="button" className={s.quiet} onClick={onSignOut}>
                     Sign out and connect again
                   </button>
                 </>
@@ -210,17 +229,15 @@ export function PadlockLoader({
 
         {state === 'working' && (
           <div key="work" className={s.fade} aria-live="polite" aria-busy="true">
-            <p className={s.kicker}>Opening your channel</p>
-            <p className={s.title}>Ledger Chat</p>
-            <Steps
-              items={[
-                { label: 'Wallet connected', note: walletInfo.name && walletInfo.name !== 'Wallet App' ? walletInfo.name : 'Your account', state: 'done' },
-                {
-                  label: 'Unlock this device',
-                  note: isWaitingForSignature ? 'Approve the signature in your wallet. It is free and sends no transaction.' : 'Signed',
-                  state: isWaitingForSignature ? 'active' : 'done',
-                },
-                { label: 'Open your encrypted inbox', note: 'Messages are decrypted here, on your device', state: isWaitingForSignature ? 'todo' : 'active' },
+            <p className={s.kicker}>{isWaitingForSignature ? 'Unlock this device' : 'Opening your channel'}</p>
+            <h1 id="hl-session-title" className={s.title}>
+              {isWaitingForSignature ? 'Approve the signature in your wallet' : 'Decrypting your inbox on this device'}
+            </h1>
+            <Ledger
+              rows={[
+                { label: 'Wallet', value: walletInfo.name && !/^wallet( app)?$/i.test(walletInfo.name) ? `${walletInfo.name}, connected` : 'Connected', state: 'done' },
+                { label: 'Device key', value: isWaitingForSignature ? 'Signature requested' : 'Unlocked', state: isWaitingForSignature ? 'active' : 'done' },
+                { label: 'Encrypted inbox', value: isWaitingForSignature ? 'Waiting' : 'Opening on this device', state: isWaitingForSignature ? 'todo' : 'active' },
               ]}
             />
             {isWaitingForSignature && isMobileDevice() && (
@@ -234,33 +251,42 @@ export function PadlockLoader({
                 {preparing ? 'Sending the request to your wallet…' : `Open ${walletName} to approve`}
               </button>
             )}
+            {isWaitingForSignature && signText ? <SignaturePreview text={signText} kind="unlock" /> : null}
             {isWaitingForSignature && (
               <p className={s.guard}>
-                Your wallet should name <strong>ledgerchat.org</strong>. Never sign this message on any other site.
+                The request is free and sends no transaction. Your wallet should name <strong>ledgerchat.org</strong>; never sign this message on any other site.
               </p>
             )}
-            <div className={s.bar} role="progressbar" aria-label={isWaitingForSignature ? 'Waiting for your wallet' : 'Opening your encrypted inbox'} />
+            <span className={s.srOnly} role="progressbar" aria-label={isWaitingForSignature ? 'Waiting for your wallet' : 'Opening your encrypted inbox'} />
           </div>
         )}
 
         {state === 'idle' && (
           <div key="idle" className={s.fade}>
-            <p className={s.kicker}>Private by design</p>
-            <p className={`${s.title} ${s.titleLg}`}>Ledger Chat</p>
-            <p className={s.lede}>Messages encrypted on your device. Private payments in the same conversation.</p>
+            <p className={s.kicker}>Secure session</p>
+            <h1 id="hl-session-title" className={s.title}>Your messages are decrypted only on this device</h1>
+            <p className={s.lede}>Unlocking this device takes one signature from your wallet. Nothing is sent to the chain.</p>
             <div className={s.actions}>
               <button type="button" className={`${s.primary} ${s.cta}`} onClick={activate}>
                 Enter Ledger Chat
-                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 10h11M11 5.5 15.5 10 11 14.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 10h11M11 5.5 15.5 10 11 14.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             </div>
-            <ul className={s.promises}>
-              {PROMISES.map((p) => <li key={p}>{p}</li>)}
-            </ul>
-            <p className={s.foot}>Non-custodial. Early access.</p>
+            <dl className={s.spec}>
+              {SPEC.map((p) => (
+                <div key={p.label}>
+                  <dt>{p.label}</dt>
+                  <dd>{p.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         )}
-      </div>
+      </section>
+      <p className={s.domain}>
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4.5 7V5.2a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
+        Check that the address bar reads ledgerchat.org
+      </p>
     </div>
   );
 }

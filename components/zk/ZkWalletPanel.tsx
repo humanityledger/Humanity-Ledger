@@ -32,8 +32,9 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  ArrowDownLeft, ArrowUpRight, Droplets, Fuel, Lock, Plus, RefreshCw, ShieldCheck, LockOpen, X,
+  ArrowDownLeft, ArrowUpRight, Droplets, Eye, EyeOff, Fuel, Lock, Plus, RefreshCw, ShieldCheck, LockOpen, X,
 } from 'lucide-react';
+import { FEE_PRIVACY } from '@/lib/landing/content';
 import { PasskeyCard, PasskeyOpen } from './wallet/PasskeyCard';
 import { ReceiversCard } from './wallet/ReceiversCard';
 import { SecurityCenter } from './wallet/SecurityCenter';
@@ -46,7 +47,7 @@ import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
 import { WalletCreation } from '@/components/zk/WalletCreation';
 import {
-  ActionTile, BigAmount, Card, CardHead, CopyKV, Figure, FOCUS, HideAmountsButton, IconButton, INK, INK_2, INK_3, KV, NetworkChip, Notice,
+  Card, CardHead, CopyKV, Figure, FOCUS, IconButton, INK, INK_2, INK_3, KV, NetworkChip, Notice,
   PrimaryButton, Segmented, Sheet as SheetFrame, Spinner, TextButton, cleanAmount, shortHex, useHiddenAmounts,
 } from '@/components/zk/wallet/WalletUI';
 import { ActivityList, NotesCard, isInFlight } from '@/components/zk/wallet/WalletActivity';
@@ -205,20 +206,18 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
               feeJuice={ALPHA ? state.feeJuice : undefined}
               onShield={hasPrivateTokens() && main && main.publicUnits > 0n ? () => setSheet('shield') : undefined}
             />
-            {/* Send and Receive first and wide; then the three ways money moves between balances. */}
-            <div className="mt-4 space-y-2" role="group" aria-label="Wallet actions">
-              <div className="grid grid-cols-2 gap-2">
-                {hasPrivateTokens() && <WideAction primary label="Send" icon={<ArrowUpRight size={19} strokeWidth={2.2} />} onClick={() => setSheet('send')} />}
-                <WideAction primary={!hasPrivateTokens()} label="Receive" icon={<ArrowDownLeft size={19} strokeWidth={2.2} />} onClick={() => setSheet('receive')} />
-              </div>
-              {(ALPHA || hasPrivateTokens()) && (
-                <div className={`grid gap-2 ${ALPHA && hasPrivateTokens() ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                  {ALPHA && <ActionTile label="Add funds" icon={<Plus size={18} strokeWidth={2.2} />} onClick={() => setSheet('fees')} />}
-                  {hasPrivateTokens() && <ActionTile label="Shield" icon={<Lock size={17} strokeWidth={2.1} />} onClick={() => setSheet('shield')} />}
-                  {hasPrivateTokens() && <ActionTile label="Unshield" icon={<LockOpen size={17} strokeWidth={2.1} />} onClick={() => setSheet('unshield')} />}
-                </div>
-              )}
-            </div>
+            {/* One row of actions under the card: Send first and solid, then the ways money moves. */}
+            <ActionDock
+              actions={[
+                ...(hasPrivateTokens() ? [{ id: 'send', label: 'Send', primary: true, icon: <ArrowUpRight size={20} strokeWidth={2.1} />, onClick: () => setSheet('send') }] : []),
+                { id: 'receive', label: 'Receive', primary: !hasPrivateTokens(), icon: <ArrowDownLeft size={20} strokeWidth={2.1} />, onClick: () => setSheet('receive') },
+                ...(ALPHA ? [{ id: 'fees', label: 'Add funds', icon: <Plus size={20} strokeWidth={2.1} />, onClick: () => setSheet('fees') }] : []),
+                ...(hasPrivateTokens() ? [
+                  { id: 'shield', label: 'Shield', icon: <Lock size={18} strokeWidth={2.1} />, onClick: () => setSheet('shield') },
+                  { id: 'unshield', label: 'Unshield', icon: <LockOpen size={18} strokeWidth={2.1} />, onClick: () => setSheet('unshield') },
+                ] : []),
+              ]}
+            />
           </div>
         )}
 
@@ -398,18 +397,45 @@ export default ZkWalletPanel;
 
 /* --------------------------------------------------------------- pieces */
 
-/** Send and Receive: wide, icon and word side by side. */
-function WideAction({ label, icon, onClick, primary }: { label: string; icon: React.ReactNode; onClick: () => void; primary?: boolean }) {
+/** The actions under the balance card: round keys with a word under each, like a bank app's. */
+function ActionDock({ actions }: { actions: { id: string; label: string; icon: React.ReactNode; onClick: () => void; primary?: boolean }[] }) {
+  return (
+    <div className="mt-5 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(actions.length, 1)}, minmax(0, 1fr))` }} role="group" aria-label="Wallet actions">
+      {actions.map((a) => (
+        <button
+          key={a.id}
+          type="button"
+          onClick={a.onClick}
+          className={`group flex flex-col items-center gap-2 py-1 rounded-2xl ${FOCUS}`}
+        >
+          <span
+            className={`w-[54px] h-[54px] rounded-full flex items-center justify-center transition-[background-color,transform] duration-150 group-active:scale-95 ${
+              a.primary ? 'bg-[#15171c] text-white group-hover:bg-[#262932]' : 'bg-[#f2f4f7] text-[#15171c] group-hover:bg-[#e8ebef]'
+            }`}
+            aria-hidden="true"
+          >
+            {a.icon}
+          </span>
+          <span className="text-[13px] font-semibold tracking-[-0.005em]" style={{ color: INK }}>{a.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A round key on the dark balance card. */
+function CardKey({ label, onClick, disabled, pressed, children }: { label: string; onClick: () => void; disabled?: boolean; pressed?: boolean; children: React.ReactNode }) {
   return (
     <button
       type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
       onClick={onClick}
-      className={`h-[60px] rounded-2xl flex items-center justify-center gap-2.5 text-[16px] font-semibold tracking-[-0.01em] transition-[background-color,transform] duration-150 active:scale-[0.98] ${FOCUS} ${
-        primary ? 'bg-[#15171c] text-white hover:bg-[#262932]' : 'bg-white text-[#15171c] border-2 border-[#15171c] hover:bg-[#f7f8fa]'
-      }`}
+      disabled={disabled}
+      className="w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
     >
-      <span aria-hidden="true">{icon}</span>
-      {label}
+      {children}
     </button>
   );
 }
@@ -445,78 +471,81 @@ function BalanceHero({
 }) {
   const main = balances[0];
   const runway = feeJuice ? feeRunway(feeJuice.balance, feeJuice.minForTx) : null;
+  const [whole, frac] = main ? splitAmountText(formatUnits(main.privateUnits, main.decimals)) : ['0', ''];
+  const muted = 'rgba(255,255,255,0.62)';
   return (
-    <div className="relative rounded-[28px] border border-[#e4e7ec] bg-white px-5 pt-4 pb-5 overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.10)]">
-      {/* A fine engraved grid, the only ornament: ink at 4 %. */}
+    <div className="relative rounded-[24px] bg-[#15171c] text-white px-5 pt-4 pb-5 overflow-hidden shadow-[0_1px_2px_rgba(21,23,28,0.2),0_24px_48px_-28px_rgba(21,23,28,0.7)]">
+      {/* One quiet light, in the brand violet, from the top right. The only ornament. */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.6]"
-        style={{
-          backgroundImage: 'linear-gradient(to right, rgba(21,23,28,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(21,23,28,0.04) 1px, transparent 1px)',
-          backgroundSize: '22px 22px',
-          maskImage: 'radial-gradient(120% 90% at 100% 0%, black, transparent 70%)',
-          WebkitMaskImage: 'radial-gradient(120% 90% at 100% 0%, black, transparent 70%)',
-        }}
+        className="pointer-events-none absolute inset-0"
+        style={{ background: 'radial-gradient(110% 80% at 100% 0%, rgba(82,0,255,0.38), rgba(82,0,255,0) 62%)' }}
         aria-hidden="true"
       />
       <div className="relative">
         <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: INK_2 }}>
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: muted }}>
             <ShieldCheck size={15} strokeWidth={2} aria-hidden="true" />
             Private balance
           </span>
-          <span className="flex items-center -mr-2">
-            <HideAmountsButton hidden={hidden} onToggle={onToggleHidden} />
-            <IconButton label={refreshing ? 'Syncing' : 'Sync'} onClick={onRefresh} disabled={refreshing} size={40}>
-              {refreshing ? <Spinner size={16} /> : <RefreshCw size={17} strokeWidth={2} />}
-            </IconButton>
+          <span className="flex items-center -mr-1.5">
+            <CardKey label={hidden ? 'Show amounts' : 'Hide amounts'} onClick={onToggleHidden} pressed={hidden}>
+              {hidden ? <EyeOff size={17} strokeWidth={1.9} /> : <Eye size={17} strokeWidth={1.9} />}
+            </CardKey>
+            <CardKey label={refreshing ? 'Syncing' : 'Sync'} onClick={onRefresh} disabled={refreshing}>
+              {refreshing ? <Spinner size={15} /> : <RefreshCw size={16} strokeWidth={2} />}
+            </CardKey>
           </span>
         </div>
 
-        <div className="mt-2" data-testid="wallet-balance">
-          {!main ? (
-            <BigAmount text="0" symbol="" muted hidden={hidden} />
-          ) : (
-            <BigAmount text={formatUnits(main.privateUnits, main.decimals)} symbol={main.symbol} hidden={hidden} />
-          )}
+        <div className="mt-3 flex items-baseline gap-2 min-w-0" data-testid="wallet-balance" aria-label={hidden ? 'Balance hidden' : `${whole}${frac} ${main?.symbol ?? ''}`}>
+          <span className="font-semibold tracking-[-0.04em] tabular-nums leading-none text-[46px] sm:text-[54px] truncate" aria-hidden="true">
+            {hidden ? '••••' : whole}
+            {!hidden && frac ? <span className="text-[28px] sm:text-[32px] tracking-[-0.03em]" style={{ color: muted }}>{frac}</span> : null}
+          </span>
+          {main ? <span className="text-[17px] font-semibold shrink-0" style={{ color: muted }} aria-hidden="true">{main.symbol}</span> : null}
         </div>
         {main && isTestToken(main.symbol) && (
-          <p className="mt-1 text-[12.5px] font-semibold" style={{ color: INK_3 }} data-testid="test-token-note">
+          <p className="mt-1.5 text-[12.5px] font-semibold" style={{ color: muted }} data-testid="test-token-note">
             {TEST_TOKEN_NOTE}
           </p>
         )}
 
-        <p className="mt-2 text-[13px] tabular-nums" style={{ color: INK_3 }} role="status" aria-live="polite">
+        <p className="mt-2 text-[12.5px] tabular-nums" style={{ color: 'rgba(255,255,255,0.5)' }} role="status" aria-live="polite">
           {refreshing ? 'Syncing with Aztec…' : syncedAt ? `Synced at ${new Date(syncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet'}
         </p>
 
         {main && main.publicUnits > 0n && (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-[#f7f8fa] border border-[#eceef2] pl-4 pr-3 py-2">
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-white/[0.07] border border-white/[0.09] pl-4 pr-2 py-2">
             <span className="min-w-0">
-              <span className="block text-[14px] font-semibold tabular-nums" style={{ color: INK }}>
-                <Figure text={formatUnits(main.publicUnits, main.decimals)} hidden={hidden} strong /> {main.symbol} public
+              <span className="block text-[14px] font-semibold tabular-nums">
+                {hidden ? '••••' : formatUnits(main.publicUnits, main.decimals)} {main.symbol} public
               </span>
-              <span className="block text-[12.5px]" style={{ color: INK_3 }}>
+              <span className="block text-[12.5px]" style={{ color: muted }}>
                 Not yet shielded, visible on the network
               </span>
             </span>
-            {onShield && <TextButton onClick={onShield}>Shield</TextButton>}
+            {onShield && (
+              <button type="button" onClick={onShield} className="h-9 px-3.5 rounded-full bg-white text-[#15171c] text-[13px] font-semibold hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                Shield
+              </button>
+            )}
           </div>
         )}
 
         {balances.length > 1 && (
-          <ul className="mt-3 divide-y divide-[#eef0f3] border-t border-[#eef0f3]">
+          <ul className="mt-4 divide-y divide-white/10 border-t border-white/10">
             {balances.slice(1).map((b) => (
               <li key={b.key} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-[14px] font-semibold" style={{ color: INK }}>
+                <span className="text-[14px] font-semibold">
                   {b.symbol}
                   {isTestToken(b.symbol) && (
-                    <span className="block text-[12px] font-medium" style={{ color: INK_3 }}>{TEST_TOKEN_NOTE}</span>
+                    <span className="block text-[12px] font-medium" style={{ color: muted }}>{TEST_TOKEN_NOTE}</span>
                   )}
                 </span>
                 <span className="text-right">
-                  <Figure text={formatUnits(b.privateUnits, b.decimals)} hidden={hidden} strong className="block text-[16px]" />
+                  <span className="block text-[16px] font-semibold tabular-nums">{hidden ? '••••' : formatUnits(b.privateUnits, b.decimals)}</span>
                   {b.publicUnits > 0n && (
-                    <span className="block text-[12.5px] tabular-nums" style={{ color: INK_3 }}>
+                    <span className="block text-[12.5px] tabular-nums" style={{ color: muted }}>
                       {hidden ? '••••' : formatUnits(b.publicUnits, b.decimals)} public, not yet shielded
                     </span>
                   )}
@@ -527,23 +556,33 @@ function BalanceHero({
         )}
 
         {feeJuice && (
-          <div className="mt-3 flex items-center gap-3 pt-3 border-t border-[#eef0f3]">
-            <span className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center shrink-0" aria-hidden="true">
-              <Fuel size={15} strokeWidth={2} style={{ color: INK }} />
+          <div className="mt-4 flex items-center gap-3 pt-3 border-t border-white/10">
+            <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0" aria-hidden="true">
+              <Fuel size={15} strokeWidth={2} />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block text-[14px] font-semibold" style={{ color: INK }}>
-                <Figure text={formatUnits(feeJuice.balance, 18, 4)} hidden={hidden} strong /> Fee Juice
+              <span className="block text-[14px] font-semibold tabular-nums">
+                {hidden ? '••••' : formatUnits(feeJuice.balance, 18, 4)} Fee Juice
               </span>
-              <span className="block text-[12.5px]" style={{ color: INK_3 }}>
+              <span className="block text-[12.5px]" style={{ color: muted }}>
                 {runway === null ? 'Pays the network fee, publicly' : runway === 0 ? 'Not enough for the next transaction' : `Enough for at least ${runway} transaction${runway === 1 ? '' : 's'}`}
               </span>
             </span>
           </div>
         )}
+
+        <p className="mt-4 pt-3 border-t border-white/10 text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          {FEE_PRIVACY.short}
+        </p>
       </div>
     </div>
   );
+}
+
+/** "1,234.56" into "1,234" and ".56", for a smaller fraction. */
+function splitAmountText(text: string): [string, string] {
+  const i = text.lastIndexOf('.');
+  return i > 0 ? [text.slice(0, i), text.slice(i)] : [text, ''];
 }
 
 /** What stays private and what the network can see, side by side. */

@@ -2045,40 +2045,41 @@ html.hl-kb-open [data-chat-root] {
   .hl-empty-enter, .hl-empty-enter-art, .hl-empty-enter-text { animation: none; }
 }
 
-/* ── Boot mark (components/layout/BootMark.tsx): the same emblem on every opening screen ── */
+/* ── Boot mark (components/layout/BootMark.tsx): one lockup on every opening screen ── */
 .hl-boot {
-  position: relative;
-  width: 88px;
-  height: 88px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   animation: hl-boot-in 180ms ease-out both;
 }
-.hl-boot-arc {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid rgba(16, 24, 40, 0.08);
-  border-top-color: #15171c;
-  animation: hl-boot-spin 1.1s linear infinite;
-}
+.hl-boot-lockup { display: inline-flex; align-items: center; gap: 10px; color: #15171c; }
 .hl-boot-logo {
-  position: relative;
-  width: 72px;
-  height: 72px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   overflow: hidden;
   background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.08), 0 6px 18px -8px rgba(16, 24, 40, 0.25);
+  box-shadow: inset 0 0 0 1px #e4e7ec;
   display: grid;
   place-items: center;
 }
 .hl-boot-logo img { width: 118%; height: 118%; object-fit: cover; pointer-events: none; }
-@keyframes hl-boot-spin { to { transform: rotate(360deg); } }
+.hl-boot-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.hl-boot-line { position: relative; width: 120px; height: 2px; background: #e4e7ec; overflow: hidden; }
+.hl-boot-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 36%;
+  background: #15171c;
+  animation: hl-boot-slide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes hl-boot-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(290%); } }
 /* A short fade only: a screen that lasts a fraction of a second should not blink. */
 @keyframes hl-boot-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .hl-boot, .hl-boot-arc { animation: none; }
+  .hl-boot, .hl-boot-line::after { animation: none; }
 }
 
 /* Emoji panel (components/chat/ExpressionPicker.tsx), 18 November 2026: one continuous grid with

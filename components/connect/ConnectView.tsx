@@ -1,5 +1,7 @@
 "use client";
 
+import { SignaturePreview } from "@/components/auth/SignaturePreview";
+
 import React from "react";
 import Link from "next/link";
 import {
@@ -57,6 +59,8 @@ export interface ConnectViewProps {
    */
   signLink?: { href: string; target: "_self" | "_blank" } | null;
   signReady?: boolean;
+  /** The exact sign-in message the wallet is asked to sign (EIP-4361), shown field by field. */
+  signPreview?: string | null;
   /** The rendered QR code, supplied by the container. */
   qr?: React.ReactNode;
   qrPin?: string | null;
@@ -356,6 +360,7 @@ function Signing(p: ConnectViewProps) {
           : "Your wallet will ask you to sign a message. Signing is free and does not send a transaction."}
       </p>
       <p className={s.subtitle}>If your wallet says “simulation failed”, that is expected: this is a signature, not a transaction.</p>
+      {p.signPreview ? <SignaturePreview text={p.signPreview} kind="sign-in" /> : null}
 
       <ol className={s.steps} aria-label="Progress">
         {STEP_LABELS.map((label, i) => {

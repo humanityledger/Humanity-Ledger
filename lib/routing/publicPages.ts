@@ -20,6 +20,10 @@ export const PUBLIC_CONTENT_PAGES = [
   '/whitepaper',
   '/security/audits',
   '/network/status',
+  '/record',
+  '/brief',
+  '/security',
+  '/trust',
 ] as const;
 
 /** True for a public content page or anything beneath it. */

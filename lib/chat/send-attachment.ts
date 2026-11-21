@@ -15,6 +15,7 @@
  * Plaintext never leaves this function except inside that inline XMTP message.
  */
 import { isCompressiblePhoto, shrinkPhoto } from './compress-image';
+import { LargeFileError, MAX_LARGE_FILE_BYTES, sendLargeFile, type Progress } from './large-file';
 import {
   MAX_ATTACHMENT_BYTES,
   encodeAttachmentMessage,
@@ -35,6 +36,7 @@ export interface AttachmentInput {
 }
 
 export interface PreparedAttachment {
+  /** "hl.attachment" up to 20 MB, "hl.largefile" above (lib/chat/large-file.ts). */
   message: string;
   /** 'encrypted' = ciphertext on our storage; 'inline' = inside the XMTP message only. */
   mode: 'encrypted' | 'inline';
@@ -85,6 +87,7 @@ export async function prepareAttachmentMessage(
   original: Blob,
   originalInput: AttachmentInput,
   fetchImpl: typeof fetch = fetch,
+  opts: { onProgress?: (p: Progress) => void; signal?: AbortSignal } = {},
 ): Promise<PreparedAttachment> {
   if (original.size === 0) throw new AttachmentError('The file is empty');
 
@@ -100,7 +103,17 @@ export async function prepareAttachmentMessage(
       input = { ...originalInput, mimeType: 'image/jpeg', filename: (originalInput.filename || 'photo').replace(/\.[A-Za-z0-9]{1,5}$/, '') + '.jpg' };
     }
   }
-  if (file.size > MAX_ATTACHMENT_BYTES) throw new AttachmentError('Files can be up to 20 MB');
+  // Larger than one attachment: encrypted and sent in 16 MiB pieces (lib/chat/large-file.ts).
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    if (input.isVoiceNote) throw new AttachmentError('Voice messages can be up to 20 MB');
+    if (file.size > MAX_LARGE_FILE_BYTES) throw new AttachmentError('Files can be up to 32 GB');
+    try {
+      const message = await sendLargeFile(file, { filename: input.filename, mimeType: input.mimeType || file.type }, { fetchImpl, ...opts });
+      return { mode: 'encrypted', message };
+    } catch (e) {
+      throw new AttachmentError(e instanceof LargeFileError ? e.message : 'Could not send the file');
+    }
+  }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const mime = (input.mimeType || file.type || 'application/octet-stream').split(';')[0].trim().toLowerCase();

@@ -94,7 +94,7 @@ function Secure({ dark }: { dark?: boolean }) {
   return (
     <p className={`${s.secure} ${dark ? s.secureDark : ''}`}>
       <Lock size={12} strokeWidth={2.25} aria-hidden="true" />
-      Encrypted end to end, device to device
+      Encrypted in transit, device to device (DTLS-SRTP)
     </p>
   );
 }

@@ -6,6 +6,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Landing, second pass; signing, wallet, files and trust (21 November 2026)
+
+- Landing rebuilt product first: a clean sans system, the app's own screens drawn in phone frames
+  (profile, chats, call, private payment, large files, disappearing messages), "Why use Ledger
+  Chat?", how it protects you, the private payment and zero-knowledge explainers, what our server
+  can see, the architecture, organisations (Ledger Relay), open and verifiable, roadmap, questions.
+  No monospace labels, no dates, no token names. `/record` drops the token section and names
+  transactions plainly; `/brief` drops its date.
+- `/security` (cryptography and keys, what each party sees, threat model, limits) and `/trust`
+  (assurance, disclosure policy, networks and providers, what we store and why).
+  `docs/security/THREAT_MODEL.md`, `SECURITY-CHANGELOG.md`, `security.txt` updated.
+- Signing: sign-in and device unlock show what the wallet will sign, field by field, with the exact
+  text and a check of the website against the page (`components/auth/SignaturePreview.tsx`).
+- Large files up to 32 GB, encrypted on the device in 16 MiB pieces through the existing attachment
+  route (`lib/chat/large-file.ts`, `components/chat/LargeFileBubble.tsx`). Needs file storage (R2).
+- Private wallet: the balance on a dark card with one violet light, and one row of round actions.
+- The plus menu is grouped (Share, Plan, Pay, Privacy); payment items appear only in a chat with a
+  person's wallet, and "Seal this note" is disabled until there is a note.
+- Calls say "encrypted in transit" (DTLS-SRTP), as the claims register requires.
+- `docs/ops/xmtp-network.md`: the Browser SDK in use (5.2.0) is below the documented minimum for
+  XMTP's decentralized network (6.0.0), which also needs a Gateway Service and a funded payer wallet.
+
+### Institutional redesign, claims register and Ledger Relay v0 (21 November 2026)
+
+- Landing: one responsive tree for every screen (`components/landing/site`), fourteen named chapters
+  from `lib/landing/chapters.ts`, with four client islands (the hero conversation seen from inside and
+  outside, the private payment in four steps, the two-balls zero-knowledge example, and the
+  architecture diagram with its "Today" and "With Ledger Relay, in design" states). Native scroll, no
+  scroll library, transform and opacity only, reduced-motion final states.
+- Claims register as data (`lib/landing/claims.ts`): the four status words, evidence paths and
+  switches. `test/unit/landing/claims-register.test.ts` fails on a missing evidence path, a Live row
+  behind a switch that is off, or a banned word or item on the page.
+- `/record` (Ledger Record): deployments and the first private payments, read from
+  `deployments/*.json`, with explorer links. `/brief`: a one-page A4 summary with a QR code.
+  `/docs/zero-knowledge-history`: the timeline with its primary sources. A designed Open Graph image.
+- App: the opening screen is a session panel (lockup, three-part progress rule, a ledger of the real
+  steps) instead of a spinning emblem; the boot mark is the same lockup. The chat is a full-bleed
+  workspace instead of a floating card, and the empty states are quiet panels without illustrations.
+- Ledger Relay v0 (`relay/`, in design, not deployed): TURN REST credentials for coturn,
+  PeerJS-compatible signalling, an expiring ciphertext-only blob store, opaque Web Push wake-ups,
+  Docker, Compose and Helm. Client in `lib/relay` behind `NEXT_PUBLIC_LEDGER_RELAY` (off): relay
+  lists with organisation pinning, signed-list verification and failover; calls take TURN from a
+  relay first when the flag is on. Design note: `docs/design/ledger-relay.md`.
+
 ### Phone landing, second pass (19 November 2026)
 
 - No slide numbers: each section opens with its eyebrow only.

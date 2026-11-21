@@ -27,6 +27,8 @@ import { parseMeeting } from '@/lib/chat/meeting';
 import { MeetingCard } from './MeetingCard';
 import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { RemoteAttachmentBubble } from './RemoteAttachmentBubble';
+import { LargeFileBubble } from './LargeFileBubble';
+import { parseLargeFileMessage } from '@/lib/chat/large-file';
 import { isRecordMessage } from '@/vendor/ledger-record/src/index';
 import { RecordCard } from './RecordCard';
 
@@ -699,7 +701,9 @@ export const MessageBubble = React.memo(({
   // Encrypted voice notes, photos, videos and files (lib/chat/remote-attachment.ts).
   // The message carries the decryption key: it is never shown as text.
   const remoteAttachment = isAgreement ? null : parseAttachmentMessage(content);
-  const recordMessage = isAgreement || remoteAttachment ? null : (isRecordMessage(content) ? content : null);
+  // Files above 20 MB, in encrypted pieces (lib/chat/large-file.ts). Also carry a key: never text.
+  const largeFile = isAgreement || remoteAttachment ? null : parseLargeFileMessage(content);
+  const recordMessage = isAgreement || remoteAttachment || largeFile ? null : (isRecordMessage(content) ? content : null);
   // Scheduled calls (lib/chat/meeting.ts).
   const meeting = isAgreement ? null : parseMeeting(content);
   const isPremium    = content.startsWith('[PREMIUM:') || content.startsWith('__STICKER__[PREMIUM:');
@@ -894,6 +898,8 @@ export const MessageBubble = React.memo(({
               <MeetingCard invite={meeting} isMe={isMe} />
             ) : remoteAttachment ? (
               <RemoteAttachmentBubble att={remoteAttachment} isMe={isMe} onOpenLightbox={onOpenLightbox} />
+            ) : largeFile ? (
+              <LargeFileBubble file={largeFile} isMe={isMe} />
             ) : recordMessage ? (
               <RecordCard message={recordMessage} members={recordMembers ?? []} arrive={enter} />
             ) : isSticker ? (

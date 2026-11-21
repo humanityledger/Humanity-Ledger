@@ -49,14 +49,12 @@ describe('chat on a phone', () => {
     expect(chat).not.toMatch(/ w-full lg:w-96 flex-col border-r/);
   });
 
-  it('the card frame is for wide screens only: on a phone the chat fills the screen', () => {
+  it('the chat is a full-bleed workspace on every screen: no floating card, no margins', () => {
     const page = read('components/chat/surface/ChatSurface.tsx');
-    // The card's limits and margins apply from md up only; the margins follow the window, so zoom
-    // never pushes the card off screen.
-    expect(page).toContain('md:max-h-[min(1100px,100dvh)]');
-    expect(page).toContain('md:[padding:clamp(12px,3vh,56px)_clamp(16px,3.2vw,72px)]');
-    expect(page).toContain('max-w-[1680px]');
-    expect(page).not.toMatch(/ max-h-\[min\(1100px/);
+    // 21 November 2026: the rounded card on a grey field is gone; the frame fills the window.
+    expect(page).not.toMatch(/md:\[padding:clamp|max-w-\[1680px\]|md:max-h-\[min\(1100px/);
+    expect(page).not.toMatch(/md:rounded-\[28px\]|md:shadow-/);
+    expect(read('components/terminal/LedgerChatV2.tsx')).not.toMatch(/md:rounded-\[28px\] lg:rounded-\[32px\] md:border/);
     expect(page).not.toContain('aztec-wordmark');
   });
 

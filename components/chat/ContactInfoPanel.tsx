@@ -45,7 +45,7 @@ export function countShared(messages: { content?: unknown }[]) {
     if (typeof m.content !== 'string') continue;
     const c = inner(m.content);
     if (PAYMENT_PREFIXES.some((p) => c.startsWith(p)) || isAgreementMessage(c)) payments++;
-    else if (parseAttachmentMessage(c) || c.startsWith('[ATTACHMENT') || c.startsWith('__MEDIA__') || c.startsWith('[GIF]')) files++;
+    else if (parseAttachmentMessage(c) || c.startsWith('{"type":"hl.largefile"') || c.startsWith('[ATTACHMENT') || c.startsWith('__MEDIA__') || c.startsWith('[GIF]')) files++;
     else if (/https?:\/\/\S+/i.test(c) && !c.startsWith('__')) links++;
   }
   return { payments, files, links };
