@@ -145,10 +145,7 @@ body {
   /* Safe Area / Notch Support */
   padding-left:   env(safe-area-inset-left, 0px);
   padding-right:  env(safe-area-inset-right, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-
-  /*  LANDING PAGE BOUNDARY SEAL: no empty space or scroll past footer  */
-  overscroll-behavior: none;
+  padding-bottom: 0;
 
   /* ANTI BLACK VOID: Ensure the document background is always white.
      The UniversalEliteWallpaper is an absolutely-positioned overlay.
@@ -216,16 +213,15 @@ body:has([data-page="chat"]) {
   background-color: #FFFFFF !important;
 }
 
-/* ── MOBILE LANDING: white background, no double safe-area padding ───────────
+/* ── MOBILE LANDING: white background, full bleed, native floating bar ───────
    The phone landing (.page in mobile.module.css) has background:#fff and its
-   own footer already applies env(safe-area-inset-bottom).  Without this rule
-   the body's global padding-bottom:env(safe-area-inset-bottom) adds a second
-   gap at the very bottom, showing the #f4f6fa body background as a visible
-   bar beneath the white footer.  Match the page, kill the double inset.    */
+   own footer applies minimal safe area padding. Full-bleed body with native
+   overscroll allows Safari's floating navigation bar to detach cleanly.    */
 html:has([data-landing="mobile"]),
 body:has([data-landing="mobile"]) {
   background-color: #FFFFFF !important;
   padding-bottom: 0 !important;
+  overscroll-behavior-y: auto !important;
 }
 
 
@@ -647,10 +643,9 @@ body,
    240HZ MOBILE HARDWARE ACCELERATION (AZTEC SMOOTH SCROLL)
    ============================================================ */
 @media (max-width: 768px) {
-  /* Enforce extreme scroll smoothing and disable bounce boundaries */
+  /* Enforce smooth scrolling on mobile without locking Safari's viewport */
   html, body {
     -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior-y: none !important;
     scroll-behavior: smooth !important;
   }
 

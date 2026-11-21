@@ -243,8 +243,6 @@ export const viewport = {
   // meta-viewport audit.
   viewportFit: 'cover',
 
-  interactiveWidget: 'resizes-content',
-
 }
 
 
@@ -354,7 +352,7 @@ export default async function RootLayout({
 var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);
 var named=/MetaMaskMobile|TrustWallet|Trust\\/|CoinbaseWallet|CoinbaseBrowser|Rainbow|OKApp|Phantom|imToken|TokenPocket|BitKeep|Bitget|Zerion|BinanceWeb3|Rabby|SafePal|Uniswap/i.test(ua);
 var ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
-if(ios&&!(named||window.ethereum)){var ci='width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, shrink-to-fit=no, interactive-widget=resizes-content';var si=function(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=ci;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)if(m[i].getAttribute('content')!==ci)m[i].setAttribute('content',ci)};si();document.addEventListener('DOMContentLoaded',si,{once:true});try{new MutationObserver(si).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']})}catch(e){}return}
+if(ios&&!(named||window.ethereum)){var ci='width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover';var si=function(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=ci;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)if(m[i].getAttribute('content')!==ci)m[i].setAttribute('content',ci)};si();document.addEventListener('DOMContentLoaded',si,{once:true});try{new MutationObserver(si).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']})}catch(e){}return}
 if(!mobile||!(named||window.ethereum))return;
 document.documentElement.setAttribute('data-wallet-browser','1');
 var c='width=device-width, initial-scale=0.9, viewport-fit=cover, interactive-widget=resizes-content';

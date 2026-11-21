@@ -525,7 +525,7 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
         </button>
       </div>
 
-      <div className="mt-4 flex gap-2.5 relative">
+      <div className="mt-4 flex gap-2.5">
         <button
           type="button"
           disabled={busy}
@@ -556,32 +556,33 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
           onClick={() => setColorOpen((o) => !o)}
           aria-haspopup="true"
           aria-expanded={colorOpen}
-          className={`w-[76px] h-[60px] rounded-2xl bg-white border border-[#e6e8ec] hover:bg-[#f7f8fa] flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium ${FOCUS}`}
+          className={`w-[76px] h-[60px] rounded-2xl bg-white border ${colorOpen ? 'border-[#15171c] bg-[#f7f8fa]' : 'border-[#e6e8ec] hover:bg-[#f7f8fa]'} flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium transition-colors ${FOCUS}`}
           style={{ color: INK }}
         >
           <Palette size={17} strokeWidth={1.9} aria-hidden="true" />
           Color
         </button>
-        {colorOpen && (
-          <div role="radiogroup" aria-label="QR code colour" className="absolute top-[68px] left-1/2 -translate-x-1/2 z-20 bg-white rounded-2xl border border-[#e4e7ec] shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28)] p-3 grid grid-cols-4 gap-2.5">
-            {QR_COLORS.map((k) => (
-              <button
-                key={k.id}
-                type="button"
-                role="radio"
-                aria-checked={k.id === colorId}
-                aria-label={k.name}
-                title={k.name}
-                onClick={() => pick(k.id)}
-                className={`w-10 h-10 rounded-full grid place-items-center ring-offset-2 ${k.id === colorId ? 'ring-2 ring-[#15171c]' : 'ring-1 ring-black/10'} ${FOCUS}`}
-                style={{ background: k.card }}
-              >
-                {k.id === colorId && <Check size={16} strokeWidth={2.4} style={{ color: k.text }} aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
+
+      {colorOpen && (
+        <div role="radiogroup" aria-label="QR code colour" className="mt-3 w-full max-w-[280px] bg-white rounded-2xl border border-[#e4e7ec] shadow-[0_4px_20px_-4px_rgba(16,24,40,0.12)] p-3 grid grid-cols-4 gap-2.5 transition-all">
+          {QR_COLORS.map((k) => (
+            <button
+              key={k.id}
+              type="button"
+              role="radio"
+              aria-checked={k.id === colorId}
+              aria-label={k.name}
+              title={k.name}
+              onClick={() => pick(k.id)}
+              className={`w-10 h-10 rounded-full mx-auto grid place-items-center ring-offset-2 ${k.id === colorId ? 'ring-2 ring-[#15171c]' : 'ring-1 ring-black/10 hover:scale-105'} transition-all ${FOCUS}`}
+              style={{ background: k.card }}
+            >
+              {k.id === colorId && <Check size={16} strokeWidth={2.4} style={{ color: k.text }} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
 
       <button
         type="button"
