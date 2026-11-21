@@ -1,19 +1,10 @@
 import type { DocPage, GalleryItem } from "../types";
 
 /**
- * The plain language guide to Ledger Chat, for anyone, with the iPhone
- * mockups from the landing page and the desktop screens from the brand kit.
+ * The plain language guide to Ledger Chat, for anyone, with diagrams of each part and the
+ * desktop screens from the brand kit.
  * Every sentence describes what the app does today.
  */
-
-const phone = (name: string, alt: string, caption: string): GalleryItem => ({
-  src: `/brand/ledger-chat/iphone/ledger-chat-iphone-${name}.webp`,
-  download: `/brand/ledger-chat/iphone/ledger-chat-iphone-${name}.png`,
-  width: 828,
-  height: 1038,
-  alt,
-  caption,
-});
 
 const desktop = (name: string, alt: string, caption: string): GalleryItem => ({
   src: `/landing/desktop/${name}-2880.webp`,
@@ -52,12 +43,16 @@ export const guide: DocPage = {
       text: "Ledger Chat is a messenger where your wallet is your account. There is no phone number, no email and no password. Messages, calls and payments happen in the same conversation, and what you write is encrypted on your device before it leaves.",
     },
     {
-      t: "gallery",
-      columns: 2,
-      items: [
-        phone("messages", "Ledger Chat on iPhone: a conversation with encrypted messages", "A conversation on iPhone."),
-        phone("payments", "Ledger Chat on iPhone: a private invoice paid inside the chat", "Paying a private invoice inside the chat."),
-      ],
+      t: "diagram",
+      title: "One conversation for words, calls and payments",
+      caption: "Everything happens in the same conversation. Messages and calls are encrypted between the two devices; a private payment is proved on your device and checked by Aztec without learning the amount or the recipient.",
+      code: `flowchart LR
+  You[You]:::accent --> Msg[Message]
+  You --> Call[Call]
+  You --> Pay[Private payment]
+  Msg -->|encrypted on your device| Them[The person you talk to]
+  Call -->|encrypted device to device| Them
+  Pay -->|proof checked by Aztec| Them`,
     },
 
     { t: "h2", text: "Getting started", id: "start" },
@@ -116,12 +111,14 @@ export const guide: DocPage = {
 
     { t: "h2", text: "Voice and video calls", id: "calls" },
     {
-      t: "gallery",
-      columns: 2,
-      items: [
-        phone("voice-call", "Ledger Chat on iPhone: an encrypted voice call", "A voice call."),
-        phone("video-call", "Ledger Chat on iPhone: a video call", "A video call."),
-      ],
+      t: "diagram",
+      title: "A call, step by step",
+      caption: "Ledger Chat connects the two devices directly when it can. When it cannot, an encrypted relay carries the call; the relay cannot decode it.",
+      code: `flowchart LR
+  A[You press call] --> R[Their phone rings]
+  R -->|they answer| P{Direct path?}
+  P -->|yes| D[Device to device]:::ok
+  P -->|no| T[Through a relay,<br/>still encrypted]:::muted`,
     },
     {
       t: "ul",
@@ -158,12 +155,13 @@ export const guide: DocPage = {
 
     { t: "h2", text: "Payments", id: "payments" },
     {
-      t: "gallery",
-      columns: 2,
-      items: [
-        phone("private-wallet", "Ledger Chat on iPhone: the private wallet with balance, fees and activity", "The private wallet."),
-        phone("payments", "Ledger Chat on iPhone: a private invoice in a conversation", "A private invoice, paid in the chat."),
-      ],
+      t: "diagram",
+      title: "Your private wallet in three steps",
+      caption: "The wallet you already use creates your private account; nobody else holds its key. Payments are proved on your phone or computer.",
+      code: `flowchart LR
+  W[Your wallet signs once] --> A[Your private account<br/>appears, same on every device]:::accent
+  A --> F[Add Fee Juice<br/>to pay network fees]
+  F --> P[Pay people in chats,<br/>amount and recipient hidden]:::ok`,
     },
     {
       t: "ul",
@@ -182,12 +180,14 @@ export const guide: DocPage = {
 
     { t: "h2", text: "Communities and updates", id: "communities" },
     {
-      t: "gallery",
-      columns: 2,
-      items: [
-        phone("communities", "Ledger Chat on iPhone: a community with channels and pinned posts", "A community."),
-        phone("themes", "Ledger Chat on iPhone: choosing a theme for a chat", "Choosing how a chat looks."),
-      ],
+      t: "diagram",
+      title: "Communities today",
+      caption: "Communities are kept on our server, which checks every member's role. Their posts are not end-to-end encrypted yet; direct messages are.",
+      code: `flowchart LR
+  M[Members] --> S[Our server<br/>roles and channels]
+  I[Invite link<br/>cannot be forged] --> S
+  S --> P[Posts and channels]
+  P -.-> N[Not end-to-end<br/>encrypted yet]:::danger`,
     },
     {
       t: "ul",
@@ -203,9 +203,18 @@ export const guide: DocPage = {
       text: "Choose a theme, a wallpaper and a bubble style for all chats in **Settings, Chat appearance**, or for one chat from its menu. **Ledger Studio**, from the sparkle button, builds a page or a small app from a description, without leaving Ledger Chat.",
     },
     {
-      t: "gallery",
-      columns: 2,
-      items: [phone("studio", "Ledger Studio on iPhone", "Ledger Studio.")],
+      t: "diagram",
+      title: "One Studio turn",
+      caption: "Studio sends your conversation, kept on your device, with each turn. Our server checks your session and allowance and keeps none of it. Studio is not end-to-end encrypted: the provider processes what you send.",
+      code: `sequenceDiagram
+  participant B as Your browser
+  participant S as Our server
+  participant G as Model provider
+  B->>S: Your conversation, from your device
+  Note over S: Checks session, plan and allowance, keeps nothing
+  S->>G: The turn, fitted to the provider's limit
+  G-->>S: The answer
+  S-->>B: The answer, stored on your device`,
     },
 
     { t: "h2", text: "Settings", id: "settings" },

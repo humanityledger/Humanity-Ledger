@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Moment 1: the hero conversation. Messages arrive, then a payment. For the two people it reads
+ * Moment 1: the hero conversation, on the display of a phone in a hand (PhotoMockup). Messages arrive, then a payment. For the two people it reads
  * as words and an amount; for everyone else, as MLS ciphertext and a verified proof. Both layers
  * are always rendered in the same grid cell, so switching never moves the layout.
  *
@@ -12,6 +12,7 @@
 import React from 'react';
 import s from './site.module.css';
 import { StatusLabel } from './StatusLabel';
+import { DeviceScreen, PhotoMockup } from './PhotoMockup';
 import type { ClaimLabel } from '@/lib/landing/claims';
 
 interface Thread {
@@ -53,6 +54,9 @@ export function HeroConversation({ thread }: { thread: Thread }) {
 
   const { people, messages, payment, after, observer, views } = thread;
   return (
+    <div className={s.heroMock}>
+    <PhotoMockup id="hand-front" size="hero" priority>
+    <DeviceScreen>
     <figure className={s.conv} data-view={view} aria-label="A conversation in Ledger Chat with a private payment">
       <div className={s.convHead}>
         <span className={s.avatars} aria-hidden="true">
@@ -106,14 +110,22 @@ export function HeroConversation({ thread }: { thread: Thread }) {
 
         <Bubble from={after.from} text={after.text} cipher={observer.message} />
       </div>
+      <div className={s.composer} aria-hidden="true">
+        <span className={s.cRound}><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg></span>
+        <span className={s.cField}>Message</span>
+        <span className={`${s.cRound} ${s.cInk}`}><svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 2.5a2 2 0 0 0-2 2v4a2 2 0 0 0 4 0v-4a2 2 0 0 0-2-2zM4 8a4 4 0 0 0 8 0M8 12v2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg></span>
+      </div>
+    </figure>
+    </DeviceScreen>
+    </PhotoMockup>
 
-      <div className={s.seg} role="group" aria-label="Who is looking">
+      <div className={`${s.seg} ${s.segOut}`} role="group" aria-label="Who is looking">
         <button type="button" className={s.segBtn} aria-pressed={view === 'inside'} onClick={() => pick('inside')}>{views.inside}</button>
         <button type="button" className={s.segBtn} aria-pressed={view === 'outside'} onClick={() => pick('outside')}>{views.outside}</button>
         <p className={s.segHint} aria-live="polite">
           {view === 'inside' ? 'What the two people in the conversation see.' : 'What the network and any observer see.'}
         </p>
       </div>
-    </figure>
+    </div>
   );
 }

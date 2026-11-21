@@ -6,6 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Photo mockups, profile photos, deleted chats and 56 diagrams (21 November 2026, evening)
+
+- Landing: the drawn phone frames are gone. The product is shown on three photographs of a hand
+  holding an iPhone (and their mirror images), with the app laid out at the display's size and
+  projected onto it with one matrix3d fitted to the display edges; a mask cut from each photo keeps
+  the fingers in front of the screen (`components/landing/site/PhotoMockup.tsx`,
+  `lib/landing/mockups.ts`, `scripts/landing/mockups.py`). No script runs for it.
+- The profile screen on the landing and `/brief` use the app's own QR code (`BrandedQr`).
+- Profile photos: the people you chat with now see your photo. One cache serves every avatar,
+  asks for many people in one request (`POST /api/user/profiles`), refreshes after five minutes and
+  when the tab comes back, and no longer clears a photo when a request fails
+  (`lib/chat/peerProfiles.ts`). The older profile screen now publishes the photo it saves, and the
+  profile route no longer reports a photo as saved when it was not.
+- Delete chat is recorded: the conversation and its messages no longer come back on the next sync,
+  and it returns only with a newer message (`lib/chat/cleared-chats.ts`). Synced to your devices.
+- The encryption notice is the first item of the conversation and scrolls with it; messages are no
+  longer cut off under it in the middle of the chat.
+- iPhone Safari: removed a full-screen fixed layer on `<html>` that made Safari paint a white band
+  beside its floating toolbar.
+- Docs: 56 diagrams in Mermaid syntax, drawn on the server in the house style, on four new pages
+  (system, messages files and calls, payments, security), plus five in the guide, which no longer
+  shows the old iPhone mockups (`lib/docs/diagram.ts`, `components/docs/v2/Diagram.tsx`).
+- Calls: the call's states and the events between them are written down in
+  `lib/calls/machine.ts`; the chat checks every state change against it in development.
+- `scripts/repro/hash-build.mjs` and `docs/ops/reproducible-builds.md`: compare two builds of one
+  commit.
+
 ### Landing, second pass; signing, wallet, files and trust (21 November 2026)
 
 - Landing rebuilt product first: a clean sans system, the app's own screens drawn in phone frames

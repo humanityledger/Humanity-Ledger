@@ -4,7 +4,7 @@
  *
  * Inter everywhere; large, tight headings; generous space; white and #F7F8FA bands; ink for text,
  * violet for the one primary action and for links; green and red only as markers. The product is
- * shown in phone frames drawn in HTML. Specifications are tables, diagrams are SVG. Motion is
+ * shown on real photographs of a phone in a hand, with the app drawn on the display (PhotoMockup). Specifications are tables, diagrams are SVG. Motion is
  * transform and opacity only, and every animation has a reduced-motion final state.
  */
 
@@ -130,15 +130,6 @@
 
 /* ── Phone frame and screens ──────────────────────────────────────── */
 
-.phone { width: min(320px, 84vw); aspect-ratio: 320 / 660; padding: 11px; border-radius: 52px; background: #0f1014; box-shadow: 0 0 0 1px #2a2c33 inset, 0 2px 4px rgba(16, 24, 40, 0.08), 0 40px 80px -36px rgba(16, 24, 40, 0.45); }
-.phoneScreen { position: relative; height: 100%; border-radius: 42px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
-.phoneDark { background: #15171c; color: #fff; }
-.statusBar { display: flex; justify-content: space-between; align-items: center; padding: 14px 26px 6px; font-size: 13px; font-weight: 650; flex: none; }
-.statusIcons { display: inline-flex; gap: 4px; align-items: flex-end; }
-.statusIcons i { display: block; width: 4px; background: currentColor; border-radius: 1px; }
-.statusIcons i:nth-child(1) { height: 5px; }
-.statusIcons i:nth-child(2) { height: 8px; }
-.statusIcons i:nth-child(3) { height: 11px; }
 .scr { flex: 1; min-height: 0; display: flex; flex-direction: column; font-size: 13px; }
 .appBar { display: flex; align-items: center; gap: 8px; padding: 8px 18px 12px; border-bottom: 1px solid #eef0f3; font-size: 16px; }
 .appBar b { font-weight: 650; letter-spacing: -0.01em; }
@@ -153,8 +144,8 @@
 .profile { display: grid; justify-items: center; gap: 4px; padding: 22px 18px; }
 .profName { margin-top: 10px; font-size: 20px; font-weight: 650; letter-spacing: -0.02em; }
 .handle { font-size: 14px; color: var(--ink-3); }
-.qrCard { display: grid; justify-items: center; gap: 8px; margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; font-size: 11.5px; color: var(--ink-3); }
-.qr { width: 120px; height: 120px; fill: #15171c; shape-rendering: crispEdges; }
+.qrCard { display: grid; justify-items: center; gap: 9px; margin-top: 14px; padding: 12px 12px 10px; border-radius: 20px; background: #f2f4f7; font-size: 11px; color: var(--ink-3); }
+.qrBox { width: 132px; padding: 6px; border-radius: 16px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06); }
 .pillBtn { margin-top: 12px; padding: 10px 18px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 600; font-size: 13px; }
 .kvList { width: 100%; margin-top: 14px; border-top: 1px solid #eef0f3; }
 .kvList > div { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid #eef0f3; font-size: 12.5px; }
@@ -221,7 +212,7 @@
 .row:nth-child(even) .rowText { order: 2; }
 .rowText { max-width: 520px; }
 .rowText .body { font-size: clamp(17px, 1.5vw, 20px); }
-.rowArt { display: grid; justify-items: center; padding: clamp(28px, 4vw, 56px) 0; border-radius: 32px; background: var(--wash); }
+.rowArt { display: grid; justify-items: center; }
 .rowNote { display: flex; gap: 10px; align-items: flex-start; margin: 20px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-3); }
 .rowNote svg { flex: none; margin-top: 2px; }
 .rowLabel { margin-top: 18px; }
@@ -271,9 +262,9 @@
 .bars { display: grid; gap: 5px; align-content: center; }
 .bars i { display: block; height: 6px; border-radius: 3px; background: currentColor; opacity: 0.18; }
 .bars i:nth-child(2) { width: 70%; }
-.pay { align-self: flex-end; display: grid; width: 84%; padding: 13px; border-radius: 18px; background: #fff; border: 1.5px solid var(--violet); box-shadow: 0 10px 24px -16px rgba(82, 0, 255, 0.45); }
+.pay { align-self: flex-end; display: grid; width: 90%; padding: 13px; border-radius: 18px; background: #fff; border: 1.5px solid var(--violet); box-shadow: 0 10px 24px -16px rgba(82, 0, 255, 0.45); }
 .payTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
-.payTop .label { height: 22px; padding: 0 8px; font-size: 11px; }
+.payTop .label { height: 20px; gap: 5px; padding: 0 7px; font-size: 10.5px; }
 .payTop > span:first-child { white-space: nowrap; }
 .payAmount { margin-top: 8px; font-size: 32px; font-weight: 700; line-height: 1; letter-spacing: -0.04em; }
 .payNote { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); }
@@ -558,3 +549,34 @@
 @media (prefers-reduced-motion: reduce) {
   .layer, .ballA, .ballB, .rounds, .pv, .fold, .lattice, .packet, .check, .gToday, .gRelay, .goal, .card, .arrow { transition: none !important; }
 }
+
+/* ── Photo mockups (PhotoMockup.tsx) ──────────────────────────────────
+   Each mock has a fixed width per breakpoint, so the stage (in photo pixels) is scaled by a fixed
+   factor: --w-* and --k-* are set inline from lib/landing/mockups.ts. */
+.mock { position: relative; margin: 0; width: var(--w-xs); max-width: 100%; border-radius: 28px; overflow: hidden; background: #c9d2d5; isolation: isolate; contain: layout paint; }
+.mockPhoto { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mockStage { position: absolute; left: 0; top: 0; transform-origin: 0 0; transform: scale(var(--k-xs)); }
+.mockClip { position: absolute; inset: 0; }
+.mockScreen { position: absolute; left: 0; top: 0; transform-origin: 0 0; backface-visibility: hidden; }
+@media (min-width: 380px) { .mock { width: var(--w-sm); } .mockStage { transform: scale(var(--k-sm)); } }
+@media (min-width: 768px) { .mock { width: var(--w-md); } .mockStage { transform: scale(var(--k-md)); } }
+@media (min-width: 1100px) { .mock { width: var(--w-xl); } .mockStage { transform: scale(var(--k-xl)); } }
+
+/* The display: an iPhone 16 Pro screen (402 x 874 pt) laid out at 300 px wide. */
+.handset { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 46.9px; background: #fff; color: var(--ink); font-family: var(--sans); font-size: 13px; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+.handsetDark { background: #15171c; color: #fff; }
+.dStatus { position: relative; flex: none; height: 41px; font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
+.dClock { position: absolute; left: 0; width: 103px; top: 14px; text-align: center; line-height: 16px; }
+.dIsland { position: absolute; left: 50%; top: 8.2px; width: 94px; height: 27.6px; margin-left: -47px; border-radius: 14px; background: #000; }
+.dIcons { position: absolute; right: 0; width: 103px; top: 16px; display: flex; justify-content: center; align-items: center; gap: 4px; }
+.dIcons svg { display: block; fill: currentColor; }
+.dHome { position: absolute; left: 50%; bottom: 6px; width: 100px; height: 4px; margin-left: -50px; border-radius: 2px; background: currentColor; opacity: 0.88; pointer-events: none; }
+.handset > .scr, .handset > .conv { flex: 1; min-height: 0; }
+.heroMock { display: grid; justify-items: center; gap: 18px; }
+.segOut { width: min(380px, 100%); margin: 0; }
+.segOut .segBtn { font-size: 13.5px; height: 38px; }
+.segOut .segHint { font-size: 12.5px; }
+.composer { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px 24px; background: #fff; border-top: 1px solid #eef0f3; }
+.cRound { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #f2f4f7; color: var(--ink-2); }
+.cInk { background: var(--ink); color: #fff; }
+.cField { flex: 1; height: 32px; display: flex; align-items: center; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line); color: #98a1b0; font-size: 13px; }

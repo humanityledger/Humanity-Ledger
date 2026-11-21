@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
+import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import React from 'react';
-import QRCode from 'qrcode';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { EXTERNAL_LINKS } from '@/lib/constants/links';
 import { LEGAL_ENTITY } from '@/lib/constants/legalEntity';
@@ -12,7 +12,8 @@ import s from './brief.module.css';
 /**
  * /brief: a printable one-page A4 summary for events (landing brief, "Also build"). The same
  * claims as the landing, read from lib/landing/chapters.ts, so the paper never says more than the
- * page. The QR code is drawn on the server as SVG and points to the site.
+ * page. The QR code is the app's own (round dots, rounded eyes, the mark in the centre) and points
+ * to the site.
  */
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 const SITE = 'https://ledgerchat.org';
 
-export default async function BriefPage() {
+export default function BriefPage() {
   const row = (id: string) => FEATURES_ROWS.find((r) => r.id === id)!;
   type StatusRow = { label: ClaimLabel; items: string[] };
   const rows: StatusRow[] = [
@@ -36,7 +37,6 @@ export default async function BriefPage() {
     })),
   ];
   const status = rows.filter((c) => c.items.length);
-  const qr = await QRCode.toString(SITE, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#15171c', light: '#ffffff' } });
 
   return (
     <div className={s.desk}>
@@ -108,7 +108,7 @@ export default async function BriefPage() {
             </p>
           </div>
           <div className={s.qr}>
-            <span dangerouslySetInnerHTML={{ __html: qr }} />
+            <BrandedQr value={SITE} title="QR code for ledgerchat.org" style={{ width: "26mm", height: "26mm" }} />
             <span>ledgerchat.org</span>
           </div>
         </footer>

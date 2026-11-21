@@ -60,6 +60,8 @@ export type Block =
   | { t: "cards"; items: { title: string; text: string; href: string; icon: IconName; external?: boolean }[] }
   | { t: "status"; items: { label: string; state: FeatureState; text: string }[] }
   | { t: "figure"; kind: FigureKind; caption: string }
+  /** A diagram in Mermaid syntax, drawn on the server (lib/docs/diagram.ts). */
+  | { t: "diagram"; code: string; caption: string; title?: string }
   | { t: "person"; name: string; role: string; photo?: string; links: { label: string; href: string }[] }
   | { t: "gallery"; columns?: 1 | 2 | 3; items: GalleryItem[] };
 

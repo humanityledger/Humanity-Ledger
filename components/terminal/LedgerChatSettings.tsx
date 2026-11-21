@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { toast } from 'sonner';
+import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { vault } from '@/lib/core/SecureVault';
 import { getCallHistory, CallRecord } from '@/lib/wallet/callHistory';
 import {
@@ -292,16 +293,22 @@ function EditProfileView({ address, s, update, updateBatch, goBack }: any) {
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // The photo is made small enough for the server (lib/chat/profileSync.ts) and published, so the
+  // people you chat with see it, not only this device (21 November 2026: this screen saved it locally).
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string;
-      await update('avatar_url', dataUrl);
-      toast.success('Avatar updated.');
-    };
-    reader.readAsDataURL(file);
+    if (!file.type.startsWith('image/')) { toast.error('Choose an image file.'); return; }
+    let dataUrl: string;
+    try { dataUrl = await downscaleAvatar(file); } catch (err: any) { toast.error(err?.message || 'Could not open that photo.'); return; }
+    await update('avatar_url', dataUrl);
+    try { localStorage.setItem('ledger_avatar', dataUrl); } catch {}
+    window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: dataUrl } }));
+    const r = address ? await pushPublicProfile(address, { avatarUrl: dataUrl }) : { ok: false, error: 'no account' };
+    if (r.ok) toast.success('Profile photo updated.');
+    else if (r.error === 'offline') toast.message('Saved on this device. It will be shared once you are back online.');
+    else toast.error(`Saved on this device, but others cannot see it yet: ${r.error}`);
   };
 
   const handleSave = async () => {

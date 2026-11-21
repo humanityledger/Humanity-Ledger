@@ -17,7 +17,7 @@ import { HeroConversation } from './HeroConversation';
 import { ProofSequence } from './ProofSequence';
 import { ZkAnalogy } from './ZkAnalogy';
 import { Architecture } from './Architecture';
-import { PhoneFrame, PhoneScreen } from './Phones';
+import { PhoneScreen } from './Phones';
 import { GlyphIcon } from './Glyphs';
 import s from './site.module.css';
 
@@ -70,9 +70,7 @@ export function SiteLanding() {
                 </ul>
               </div>
               <div className={s.heroPhone}>
-                <PhoneFrame label="A conversation in Ledger Chat with a private payment, as the two people see it and as everyone else sees it">
-                  <HeroConversation thread={K.HERO_THREAD} />
-                </PhoneFrame>
+                <HeroConversation thread={K.HERO_THREAD} />
               </div>
             </div>
             <p className={s.builtOn}>
