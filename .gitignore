@@ -183,3 +183,14 @@ _to_delete/
 /cache-foundry/
 /foundry-lib/
 /gambit_out/
+
+
+# Claude internal prompts / session artifacts
+docs/CLAUDE_OPUS_*.md
+docs/*.local.md
+
+# Backup files
+*.bak
+
+# PDFs (forum posts, etc.)
+*.pdf

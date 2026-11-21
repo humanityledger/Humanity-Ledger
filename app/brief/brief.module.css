@@ -55,7 +55,7 @@
   .desk { padding: 0; background: #fff; }
   .bar { display: none; }
   .sheet { box-shadow: none; margin: 0; width: 210mm; height: 297mm; overflow: hidden; position: absolute; left: 0; top: 0; }
-  :global(body *) { visibility: hidden; }
+  .desk :global(*) { visibility: hidden; }
   .sheet,
-  .sheet * { visibility: visible; }
+  .sheet :global(*) { visibility: visible; }
 }
