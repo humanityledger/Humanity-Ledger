@@ -18,7 +18,7 @@
  */
 
 import { hasStun, shapeIceServers } from './ice';
-import { relayEnabled } from '@/lib/relay/relays';
+import { organisationRelays, relayEnabled } from '@/lib/relay/relays';
 import { iceFromRelays } from '@/lib/relay/client';
 
 export const CALL_AUDIO: MediaTrackConstraints = {
@@ -213,9 +213,21 @@ export function peerServerOptions(env: Record<string, string | undefined> = {
   NEXT_PUBLIC_PEERJS_PORT: process.env.NEXT_PUBLIC_PEERJS_PORT,
   NEXT_PUBLIC_PEERJS_PATH: process.env.NEXT_PUBLIC_PEERJS_PATH,
   NEXT_PUBLIC_PEERJS_KEY: process.env.NEXT_PUBLIC_PEERJS_KEY,
+  NEXT_PUBLIC_LEDGER_RELAY: process.env.NEXT_PUBLIC_LEDGER_RELAY,
+  NEXT_PUBLIC_LEDGER_RELAYS: process.env.NEXT_PUBLIC_LEDGER_RELAYS,
 }): { host?: string; port?: number; path?: string; key?: string; secure?: boolean } {
   const host = (env.NEXT_PUBLIC_PEERJS_HOST || '').trim();
-  if (!host || !/^[a-z0-9.-]+$/i.test(host)) return {};
+  if (!host || !/^[a-z0-9.-]+$/i.test(host)) {
+    // No PeerServer of our own: the organisation's Ledger Relay, when it is switched on, carries the
+    // call set-up instead of the public PeerJS cloud (relay/src/signalling.mjs, PeerJS protocol at
+    // /peerjs/peerjs). Its first listed relay is used; https only (lib/relay/relays.ts).
+    const relay = relayEnabled({ NEXT_PUBLIC_LEDGER_RELAY: env.NEXT_PUBLIC_LEDGER_RELAY })
+      ? organisationRelays({ NEXT_PUBLIC_LEDGER_RELAYS: env.NEXT_PUBLIC_LEDGER_RELAYS })[0]
+      : undefined;
+    if (!relay) return {};
+    const u = new URL(relay.url);
+    return { host: u.hostname, port: u.port ? Number(u.port) : 443, path: '/peerjs/', key: 'peerjs', secure: true };
+  }
   const port = Number(env.NEXT_PUBLIC_PEERJS_PORT || 443);
   const path = (env.NEXT_PUBLIC_PEERJS_PATH || '/').trim() || '/';
   const key = (env.NEXT_PUBLIC_PEERJS_KEY || '').trim();

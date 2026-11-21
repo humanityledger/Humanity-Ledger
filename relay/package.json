@@ -1,6 +1,6 @@
 {
   "name": "@humanityledger/ledger-relay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ledger Relay: a small, stateless, self-hostable service for Ledger Chat calls, encrypted files and notifications. It never holds plaintext and never carries payments.",
   "license": "MIT OR Apache-2.0",
   "private": true,

@@ -229,6 +229,11 @@ export const CASES = [
         assert.equal((await fetch(`${base}/v0/blobs/not-a-hash`)).status, 400);
         assert.equal((await fetch(`${base}/v0/push/register`, { method: 'POST', body: '{}' })).status, 404, 'push not configured');
         assert.equal((await fetch(`${base}/nope`)).status, 404);
+        // PeerJS compatibility: an id on request, never the list of peers.
+        const id = await fetch(`${base}/peerjs/peerjs/id`);
+        assert.equal(id.status, 200);
+        assert.match(await id.text(), /^[0-9a-f-]{36}$/);
+        assert.equal((await fetch(`${base}/peerjs/peerjs/peers`)).status, 401);
       } finally {
         await relay.close();
       }
@@ -240,6 +245,50 @@ export const CASES = [
         assert.equal((await fetch(`http://127.0.0.1:${lp}/v0/turn`, { headers: { Authorization: 'Bearer org-token' } })).status, 200);
       } finally {
         await locked.close();
+      }
+    },
+  },
+  {
+    name: 'server: two PeerJS clients reach each other through the relay over WebSocket',
+    async fn() {
+      let WebSocket;
+      try {
+        ({ WebSocket } = await import('ws'));
+      } catch {
+        return; // signalling needs the ws package; the hub itself is tested above
+      }
+      const relay = createRelay(readConfig({}));
+      assert.equal(await relay.attachSignalling(), true);
+      await new Promise((r) => relay.server.listen(0, () => r(undefined)));
+      const port = /** @type {any} */ (relay.server.address()).port;
+      const open = (/** @type {string} */ id) => new Promise((resolve, reject) => {
+        const ws = new WebSocket(`ws://127.0.0.1:${port}/peerjs/peerjs?key=peerjs&id=${id}&token=t${id}`);
+        /** @type {any[]} */
+        const inbox = [];
+        ws.on('message', (d) => inbox.push(JSON.parse(String(d))));
+        ws.on('error', reject);
+        const t = setInterval(() => {
+          if (inbox.some((m) => m.type === 'OPEN')) { clearInterval(t); resolve({ ws, inbox }); }
+        }, 10);
+        setTimeout(() => { clearInterval(t); reject(new Error(`no OPEN for ${id}`)); }, 3000);
+      });
+      try {
+        const a = /** @type {any} */ (await open('alice-device'));
+        const b = /** @type {any} */ (await open('bob-device'));
+        a.ws.send(JSON.stringify({ type: 'OFFER', dst: 'bob-device', payload: { sdp: 'v=0' } }));
+        const got = await new Promise((resolve, reject) => {
+          const t = setInterval(() => {
+            const m = b.inbox.find((x) => x.type === 'OFFER');
+            if (m) { clearInterval(t); resolve(m); }
+          }, 10);
+          setTimeout(() => { clearInterval(t); reject(new Error('offer not delivered')); }, 3000);
+        });
+        assert.equal(/** @type {any} */ (got).src, 'alice-device');
+        assert.deepEqual(/** @type {any} */ (got).payload, { sdp: 'v=0' });
+        a.ws.close();
+        b.ws.close();
+      } finally {
+        await relay.close();
       }
     },
   },

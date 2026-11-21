@@ -7,9 +7,10 @@ describe('wallet glyph', () => {
     const a = '0x5012aa3c9d0e44f1b6d9';
     expect(walletCells(a)).toEqual(walletCells(a));
     const c = walletCells(a);
-    for (let r = 0; r < 5; r++) {
-      expect(c[r * 5 + 0]).toBe(c[r * 5 + 4]);
-      expect(c[r * 5 + 1]).toBe(c[r * 5 + 3]);
+    // 10 x 10: all 100 squares, the right half mirroring the left
+    expect(c).toHaveLength(100);
+    for (let r = 0; r < 10; r++) {
+      for (let k = 0; k < 5; k++) expect(c[r * 10 + k]).toBe(c[r * 10 + 9 - k]);
     }
     expect(walletCells('0x0000000000000000').some(Boolean)).toBe(true);
     expect(walletCells('0xffffffffffffffff').every(Boolean)).toBe(false);
