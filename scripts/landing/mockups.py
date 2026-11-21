@@ -160,10 +160,16 @@ def build(fit=False):
             print(name, 'corners', quad, 'residuals px (top, right, bottom, left)', res)
             print('  check the overlay before keeping these: a finger on an edge raises its residual')
         dm = display_mask(im.shape, quad)
-        grown = np.maximum(dm, cv2.GaussianBlur(cv2.dilate(dm, np.ones((2, 2), np.uint8)), (0, 0), 0.5))
-        hm = hand_mask(im, grown, erode=(name == 'hand-tilt')) if hands else np.zeros_like(dm)
-        alpha = np.clip(grown * (1 - hm), 0, 1)
-        clean = im.astype(np.float32) * (1 - alpha[..., None]) + 255 * alpha[..., None]
+        hm = hand_mask(im, dm, erode=(name == 'hand-tilt')) if hands else np.zeros_like(dm)
+        # The app is drawn exactly over the display (no growth into the border: 21 November 2026,
+        # a grown edge painted white showed as a jagged white outline on the dark border).
+        alpha = np.clip(dm * (1 - hm), 0, 1)
+        # The stock screen content is covered with the screen's own colour, well inside the edge,
+        # so the anti-aliased edge keeps the photo's real pixels.
+        inner = cv2.erode((alpha > 0.99).astype(np.uint8), np.ones((7, 7), np.uint8)).astype(bool)
+        fill = np.median(im[inner], axis=0)
+        soft = cv2.GaussianBlur(inner.astype(np.float32), (0, 0), 1.2)[..., None]
+        clean = im.astype(np.float32) * (1 - soft) + fill[None, None, :] * soft
         x0, y0, x1, y1 = crop
         W, H = x1 - x0, y1 - y0
         for mirror in (False, True):

@@ -19,7 +19,7 @@
  * live in memory only, for the rate limiter's one-minute window.
  */
 import http from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { readConfig, capabilities } from './config.mjs';
 import { turnCredentials } from './turn.mjs';
@@ -28,7 +28,7 @@ import { PushRegistry } from './push.mjs';
 import { PeerHub } from './signalling.mjs';
 
 export const PROTOCOL = 'ledger-relay/0';
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 /** A token bucket per client address, in memory, forgotten after a minute of silence. */
 export class RateLimiter {
@@ -160,6 +160,18 @@ export function createRelay(config, deps = {}) {
       });
     }
 
+    // PeerJS clients ask the server for an id when they have none, and may list peers. Ledger Chat
+    // uses ids derived on the device, but any PeerJS client can connect, so both are answered: an
+    // id is a random UUID, and the peer list is never disclosed.
+    if (caps.signalling && req.method === 'GET' && /^\/peerjs\/[^/]+\/id$|^\/peerjs\/id$/.test(p)) {
+      count('peer_id');
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(randomUUID());
+    }
+    if (caps.signalling && req.method === 'GET' && /^\/peerjs\/[^/]+\/peers$|^\/peerjs\/peers$/.test(p)) {
+      return json(res, 401, { error: 'This relay does not list its peers.' });
+    }
+
     if (p === '/v0/turn' && req.method === 'GET') {
       if (!caps.turn) return json(res, 404, { error: 'This relay offers no TURN service.' });
       if (!authorised(req)) return json(res, 401, { error: 'This relay needs an access token.' });
@@ -266,6 +278,9 @@ export function createRelay(config, deps = {}) {
   if (push) timers.push(setInterval(() => void push.sweep().catch(() => {}), 60 * 60_000));
   for (const t of timers) t.unref();
 
+  /** @type {any} */
+  let sockets = null;
+
   /** Attaches PeerJS-compatible signalling. `ws` is the relay's one dependency. */
   async function attachSignalling() {
     if (!hub) return false;
@@ -277,6 +292,7 @@ export function createRelay(config, deps = {}) {
       return false;
     }
     const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+    sockets = wss;
     server.on('upgrade', (req, socket, head) => {
       const url = new URL(req.url ?? '/', 'http://relay');
       if (url.pathname !== '/peerjs/peerjs') return socket.destroy();
@@ -296,9 +312,17 @@ export function createRelay(config, deps = {}) {
     return true;
   }
 
+  /** Stops timers, ends every WebSocket (upgraded sockets are not tracked by the HTTP server) and closes. */
   function close() {
     for (const t of timers) clearInterval(t);
-    return new Promise((resolve) => server.close(() => resolve(undefined)));
+    if (sockets) {
+      for (const ws of sockets.clients) { try { ws.terminate(); } catch { /* already gone */ } }
+      try { sockets.close(); } catch { /* already closed */ }
+    }
+    return new Promise((resolve) => {
+      server.close(() => resolve(undefined));
+      /** @type {any} */ (server).closeAllConnections?.();
+    });
   }
 
   return { server, attachSignalling, close, hub, blobs, push, caps, counters };

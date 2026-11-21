@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Mockup edge, 100-square avatars, Ledger Relay 0.2 (21 November 2026, night)
+
+- Photo mockups: the app is drawn exactly over the display, without growing into the border, and
+  the stock screen is covered only well inside its edge. The jagged white outline around the tilted
+  phone is gone.
+- Contacts without a photo: the wallet glyph is a 10 x 10 mosaic (100 squares, all drawn) instead
+  of 5 x 5 (`components/chat/WalletGlyph.tsx`).
+- Ledger Relay 0.2: when the relay is switched on, call set-up goes through the organisation's
+  relay instead of the public PeerJS cloud (`peerServerOptions`); PeerJS clients can ask the relay
+  for an id; shutting down ends open WebSockets; a test connects two clients through a running
+  relay.
+
 ### Photo mockups, profile photos, deleted chats and 56 diagrams (21 November 2026, evening)
 
 - Landing: the drawn phone frames are gone. The product is shown on three photographs of a hand

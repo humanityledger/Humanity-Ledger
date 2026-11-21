@@ -1,6 +1,6 @@
 # Ledger Relay
 
-`Status: in design. Reference implementation v0.1.0, not deployed for users. Internal review only.`
+`Status: in design. Reference implementation v0.2.0, not deployed for users. Internal review only.`
 
 Ledger Relay is a small, stateless service that anyone can run: a company on its own domain, a community, or Humanity Ledger. It carries only what Ledger Chat cannot end-to-end encrypt away, and never plaintext:
 
@@ -55,15 +55,16 @@ The client support is behind a flag that is off by default (`lib/relay/relays.ts
 | `NEXT_PUBLIC_LEDGER_RELAY=1` | Use relays at all |
 | `NEXT_PUBLIC_LEDGER_RELAYS=https://relay.example.org` | The organisation's relays, comma separated |
 | `NEXT_PUBLIC_LEDGER_RELAY_PIN=1` | Use only those relays, for data residency |
-| `NEXT_PUBLIC_PEERJS_HOST`, `_PATH=/peerjs/`, `_KEY` | Signalling through the relay instead of the public PeerJS cloud |
+| `NEXT_PUBLIC_PEERJS_HOST`, `_PATH`, `_KEY` | A PeerServer of your own; when set it wins over the relay |
 
-With the flag on, the app asks the first healthy relay for TURN credentials and falls back to `/api/calls/ice`, then to STUN only, exactly as before.
+With the flag on, the app asks the first healthy relay for TURN credentials and falls back to `/api/calls/ice`, then to STUN only, exactly as before. Call set-up also goes through the first organisation relay (PeerJS protocol at `/peerjs/peerjs`, key `peerjs`) instead of the public PeerJS cloud, unless `NEXT_PUBLIC_PEERJS_HOST` names another server (`lib/calls/media.ts`, `peerServerOptions`). Add the app's origin to `RELAY_ALLOWED_ORIGINS`, or the relay refuses its WebSocket.
 
 ## API, protocol `ledger-relay/0`
 
 | Method and path | Body | Answer |
 |---|---|---|
 | `GET /health` | | `{ ok: true }` |
+| `GET /peerjs/peerjs/id` | | A random id, for PeerJS clients that ask for one. The list of peers is never given (`/peers` answers 401) |
 | `GET /v0/info` | | Name, operator, protocol, capabilities, limits, signalling path and key, push public key |
 | `GET /v0/turn` | | `{ iceServers: [{ urls, username, credential }], ttl }` |
 | `PUT /v0/blobs/{sha256}` | Ciphertext. Optional `X-Relay-TTL` in seconds | `201 { hash, expiresAt, deleteToken }`; `422` if the body does not match its hash or looks like an unencrypted file; `507` when full |
