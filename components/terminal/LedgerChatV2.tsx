@@ -95,6 +95,7 @@ const ZkStreamManager = dynamic(() => import('@/components/zk/ZkStreamManager').
 const ZkInvoiceModal = dynamic(() => import('@/components/zk/ZkInvoiceModal').then(m => m.ZkInvoiceModal), { ssr: false });
 import { encodeStreamPayload, type ZkPaymentStream } from '@/lib/zk/zkStreaming';
 import { agreementMessageKind, agreementPreview, isAgreementMessage } from '@/lib/aztec/agreement-message';
+import { PAY_REQUEST_EVENT, isPayPrefill, type PayPrefill } from '@/lib/payments/request-draft';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
@@ -105,6 +106,7 @@ import { epochForPeer, RecordEpochError, setRecordEpochProvider } from '@/lib/ch
 import { installRecordWorker } from '@/lib/chat/record-worker';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
+const PaymentRequestComposer = dynamic(() => import('@/components/chat/PaymentRequestComposer').then(m => m.PaymentRequestComposer), { ssr: false });
 import { encodeInvoicePayload, parseInvoicePayload, type ZkInvoice } from '@/lib/zk/zkInvoice';
 import { SLASH_COMMANDS, transformClientCommand, isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
@@ -997,6 +999,20 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const [zkWalletInitialSheet, setZkWalletInitialSheet] = useState<'shield' | 'unshield' | 'send' | 'receive' | null>(null);
   const [showZkStreamModal, setShowZkStreamModal] = useState(false);
   const [showAgreementComposer, setShowAgreementComposer] = useState(false);
+  // Payment requests (lib/payments/payment-message.ts): the composer, and the request being paid.
+  const [showRequestComposer, setShowRequestComposer] = useState(false);
+  const [payPrefill, setPayPrefill] = useState<PayPrefill | null>(null);
+  useEffect(() => {
+    // "Pay privately" on a request card opens the payment form with its token and amount fixed.
+    const onPay = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!isPayPrefill(detail)) return;
+      setPayPrefill(detail);
+      setShowZkModal(true);
+    };
+    window.addEventListener(PAY_REQUEST_EVENT, onPay);
+    return () => window.removeEventListener(PAY_REQUEST_EVENT, onPay);
+  }, []);
   // Declared after pendingValue, activePeer and the modal state: the deps array is read during render (TDZ otherwise).
   useEffect(() => {
     if (!pendingValue || !activePeer || activePeer.toLowerCase() !== pendingValue.peer.toLowerCase()) return;
@@ -7851,7 +7867,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                             { id: 'schedule', group: 'Plan', icon: <CalendarClock size={19} strokeWidth={1.8} />, label: 'Schedule a message', sublabel: 'Write now, send later', onClick: () => { setShowScheduleSheet(true); setShowAppDrawer(false); } },
                             ...(peerIsWallet ? [
                               { id: 'zkmoney', group: 'Pay' as const, icon: <ShieldCheck size={19} strokeWidth={1.8} />, label: 'Private payment', sublabel: `Amount and recipient hidden, ${networkLabel()}`, onClick: () => { setShowZkModal(true); setShowAppDrawer(false); } },
-                              { id: 'zkinvoice', group: 'Pay' as const, icon: <Receipt size={19} strokeWidth={1.8} />, label: 'Request a payment', sublabel: 'A private invoice in this chat', onClick: () => { setShowZkInvoiceModal(true); setShowAppDrawer(false); } },
+                              { id: 'zkinvoice', group: 'Pay' as const, icon: <Receipt size={19} strokeWidth={1.8} />, label: 'Request a payment', sublabel: 'Ask privately in this chat', onClick: () => { setShowRequestComposer(true); setShowAppDrawer(false); } },
                               { id: 'agreement', group: 'Pay' as const, icon: <Waves size={19} strokeWidth={1.8} />, label: 'Private agreement', sublabel: `Escrow or payment stream, ${networkLabel()}`, onClick: () => { setShowAgreementComposer(true); setShowAppDrawer(false); } },
                               { id: 'payment', group: 'Pay' as const, icon: <CreditCard size={19} strokeWidth={1.8} />, label: 'Public payment', sublabel: 'From your Ethereum wallet, visible on chain', onClick: () => { setShowWalletTransfer(true); setShowAppDrawer(false); } },
                             ] : []),
@@ -9103,15 +9119,17 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
        {showZkModal && activePeer && (
          <ZkMoneyModal
            isOpen={showZkModal}
-           onClose={() => setShowZkModal(false)}
+           onClose={() => { setShowZkModal(false); setPayPrefill(null); }}
            myAddress={address || ''}
            recipientAddress={activePeer}
+           prefill={payPrefill ?? undefined}
            recipientName={getDisplayName(activePeer)}
            dmPeerInboxId={activePeerInboxIdRef.current || activePeer}
            selfInboxId={(client as any)?.inboxId}
            onSuccess={(paymentPayload, _result) => {
              executeSend(paymentPayload);
              setShowZkModal(false);
+             setPayPrefill(null);
            }}
          />
        )}
@@ -9148,6 +9166,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
            onClose={() => setShowAgreementComposer(false)}
            onSend={(message: string) => executeSend(message)}
            onOpenWallet={() => { setShowAgreementComposer(false); setShowZkWallet(true); }}
+         />
+       )}
+
+       {/* ── Payment request: amount, token, note and expiry; paid to the address verified in this chat ── */}
+       {showRequestComposer && activePeer && (
+         <PaymentRequestComposer
+           peerName={getDisplayName(activePeer)}
+           onClose={() => setShowRequestComposer(false)}
+           onSend={(message: string) => executeSend(message)}
          />
        )}
 
