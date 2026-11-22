@@ -22,14 +22,20 @@ export interface BetaStore {
   findMember(wallet: string): Promise<BetaMemberRow | null>;
   /**
    * In one transaction, under a lock: if fewer than `capacity` members exist, claim the unused,
-   * unrevoked, unexpired invite with this hash for `wallet` and create the member with the notice
-   * confirmation. Returns 'full', 'bad' (no such usable code) or the new member.
+   * unrevoked, unexpired invite with this hash whose operator checks are recorded (sanctions clear,
+   * 18 or older: scripts/beta/cusdc-invites.mjs assign) for `wallet` and create the member with the
+   * notice confirmation. Returns 'full', 'inactive' (a usable code whose checks are not recorded
+   * yet), 'bad' (no such usable code) or the new member.
    */
-  redeem(input: { wallet: string; codeHash: string; capacity: number; noticeVersion: string; at: Date }): Promise<'full' | 'bad' | BetaMemberRow>;
+  redeem(input: { wallet: string; codeHash: string; capacity: number; noticeVersion: string; at: Date }): Promise<'full' | 'inactive' | 'bad' | BetaMemberRow>;
+  /** Members ever admitted, revoked ones included: the same count the capacity check uses. */
+  countMembers(): Promise<number>;
   confirmNotice(wallet: string, noticeVersion: string, at: Date): Promise<BetaMemberRow>;
 }
 
 export const BAD_CODE = 'This invitation code does not work. Check it, or ask for a new one.';
+export const NOT_ACTIVE = 'This invitation is not active yet. Ask the person who invited you to activate it, then try again.';
+export const BETA_FULL = 'The cUSDC beta is full: all 100 places are taken.';
 
 export type RedeemAnswer =
   | { status: 200; body: { member: true } }
@@ -63,9 +69,28 @@ export async function redeemBetaInvite(
     noticeVersion: BETA_NOTICE_VERSION,
     at: input.now,
   });
-  if (result === 'full') return { status: 409, body: { error: 'The cUSDC beta is full.' } };
+  if (result === 'full') return { status: 409, body: { error: BETA_FULL } };
+  if (result === 'inactive') return { status: 403, body: { error: NOT_ACTIVE } };
   if (result === 'bad') return { status: 400, body: { error: BAD_CODE } };
   return { status: 200, body: { member: true } };
+}
+
+/**
+ * Whether a DM peer can receive cUSDC: an active member (not revoked). Only an active member may
+ * ask, so the endpoint cannot be used by others to list who is in the beta. A non-member's cUSDC
+ * notes are not lost, but they cannot see them until they join, so the payment form stops first.
+ */
+export function recipientAnswer(
+  caller: BetaMemberRow | null,
+  target: BetaMemberRow | null,
+): { status: 200; body: { member: boolean } } | { status: 403; body: { error: string } } {
+  if (!caller || caller.revokedAt) return { status: 403, body: { error: 'Only members of the cUSDC beta can check this.' } };
+  return { status: 200, body: { member: !!target && !target.revokedAt } };
+}
+
+/** Places left, never below zero; null when the count is not available. */
+export function remainingPlaces(capacity: number, members: number | null): number | null {
+  return members === null ? null : Math.max(0, capacity - members);
 }
 
 export async function confirmBetaNotice(

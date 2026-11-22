@@ -19,6 +19,7 @@ type Db = {
   cusdcBetaInvite: {
     updateMany(a: unknown): Promise<{ count: number }>;
     findUnique(a: unknown): Promise<{ id: string } | null>;
+    count(a: unknown): Promise<number>;
   };
   $executeRaw(q: TemplateStringsArray, ...v: unknown[]): Promise<unknown>;
   $transaction<T>(fn: (tx: Db) => Promise<T>): Promise<T>;
@@ -33,16 +34,19 @@ export const prismaBetaStore: BetaStore = {
     db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${REDEEM_LOCK})`;
       if ((await tx.cusdcBetaMember.count()) >= capacity) return 'full' as const;
+      const usable = { codeHash, redeemedBy: null, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] };
       const claimed = await tx.cusdcBetaInvite.updateMany({
-        where: { codeHash, redeemedBy: null, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] },
+        where: { ...usable, sanctionsResult: 'clear', adultCheckedAt: { not: null } },
         data: { redeemedBy: wallet, redeemedAt: at },
       });
-      if (claimed.count !== 1) return 'bad' as const;
+      if (claimed.count !== 1) return (await tx.cusdcBetaInvite.count({ where: usable })) > 0 ? ('inactive' as const) : ('bad' as const);
       const invite = await tx.cusdcBetaInvite.findUnique({ where: { codeHash } });
       return tx.cusdcBetaMember.create({
         data: { walletAddress: wallet, inviteId: invite!.id, noticeVersion, noticeAckAt: at },
       });
     }),
+
+  countMembers: () => db.cusdcBetaMember.count(),
 
   confirmNotice: (wallet, noticeVersion, at) =>
     db.cusdcBetaMember.update({ where: { walletAddress: wallet }, data: { noticeVersion, noticeAckAt: at } }),

@@ -195,3 +195,6 @@ docs/*.local.md
 # PDFs (forum posts, etc.)
 *.pdf
 Claude outputs/
+
+# cUSDC beta invitation codes in clear (scripts/beta/generate-100-codes.mjs): operator-only, never committed
+docs/beta/100_BETA_INVITE_CODES.md
