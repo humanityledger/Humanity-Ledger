@@ -26,6 +26,7 @@ import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel } from '@/lib/aztec/wa
 import { ProvingStatus } from './ProvingStatus';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
+import { PaymentCard } from './PaymentCard';
 
 const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
 const BTN = 'h-9 px-3.5 rounded-full text-[13.5px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
@@ -130,6 +131,7 @@ export interface AgreementCardProps {
 
 export const AgreementCard = React.memo(function AgreementCard({ raw, isMe, dmPeerInboxId, senderInboxId, selfInboxId }: AgreementCardProps) {
   const kind = agreementMessageKind(raw);
+  if (kind === 'payment') return <PaymentCard raw={raw} isMe={isMe} />;
   if (kind === 'address') return <AddressAnnouncement raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} selfInboxId={selfInboxId} />;
   return <InviteCard raw={raw} isMe={isMe} dmPeerInboxId={dmPeerInboxId} senderInboxId={senderInboxId} selfInboxId={selfInboxId} />;
 });
