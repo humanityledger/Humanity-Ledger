@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Unused API routes retired (22 November 2026)
+
+- Eight live handlers with no caller in the repository and no known outside caller answer 410 at the
+  edge (`lib/security/retiredRoutes.ts`): a duplicate GIF search, prices, news, mempool, the bots
+  listing, a forum route, on-chain balances and subscription status. The routes the chat calls stay
+  served; `test/unit/security/retired-routes-2026-11-22.test.ts` checks both lists.
+- Left to an owner's decision (D-7 in `docs/plan/status-and-phases.md`), because an outside caller
+  may use them: the golden ticket routes, the Stripe plan routes and webhook, `/api/geo`, the
+  duplicate SIWE session routes, `/api/network/ledger/watch` (scheduled), `/api/v1/*`,
+  `/api/notifications/ingest`, and Stripe for Ledger Studio.
+
 ### Footer links, build arguments, relay claim (22 November 2026)
 
 - `/protocol`, `/security` and `/status` render again. They were retired on 10 November and rebuilt
