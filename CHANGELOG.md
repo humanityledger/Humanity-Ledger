@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relay.
 - Calls fall back to the public PeerJS service when the relay's `/health` does not answer within
   2.5 s, or answers with anything but `{ ok: true }` (`pickPeerServer`).
+- Ledger Relay on Railway: the image no longer declares a `VOLUME` (Railway refuses it), and
+  `relay/railway.toml` sets the Dockerfile build, `node src/server.mjs` and the `/health` check.
+  The README says which repository, root directory and config path the service needs.
 
 ### Photo mockups, profile photos, deleted chats and 56 diagrams (21 November 2026, evening)
 

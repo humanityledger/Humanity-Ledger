@@ -10,7 +10,8 @@ COPY src ./src
 RUN mkdir -p /data/blobs && chown -R node:node /data
 USER node
 ENV PORT=8080 RELAY_BLOB_DIR=/data/blobs RELAY_PUSH_FILE=/data/push.json
-VOLUME ["/data"]
+# No volume declared here: some hosts (Railway) refuse that instruction. Mount /data yourself to keep blobs and
+# push subscriptions across restarts (docker compose and the Helm chart already do).
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:8080/health || exit 1
 CMD ["node", "src/server.mjs"]
