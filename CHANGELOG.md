@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Closed cUSDC beta: switch and invitations (22 November 2026)
+
+- New switch `cusdcBeta` in `deployments/aztec-mainnet.json`, shipped off (`enabled: false`,
+  `maxTesters: 100`, no end date). A separate path from `CUSDC_GATES`, which stay unmet and keep
+  hiding cUSDC from everyone else (`lib/beta/cusdc-beta.ts`).
+- A wallet sees and sends cUSDC only with the switch on, an end date, the on-chain confirmation of
+  the cUSDC contract, a cap per payment, and an active membership with the current notice confirmed.
+  A revoked member or a paused beta keeps exits: the balance stays visible and own funds can move.
+- Invitations: `CusdcBetaInvite` and `CusdcBetaMember` (additive migration), the alpha's code format
+  and HMAC, the same per-person sanctions and age checks (`scripts/beta/cusdc-invites.mjs`), at most
+  100 members under a database lock (`/api/beta/cusdc/redeem`, `/api/beta/cusdc/status`).
+- `docs/beta/CUSDC_BETA.md`: what the beta requires, the gates deferred by the operator, and the
+  switch-on order. The wallet and screens use this in the next pull requests.
+
 ### Unused API routes retired (22 November 2026)
 
 - Eight live handlers with no caller in the repository and no known outside caller answer 410 at the
