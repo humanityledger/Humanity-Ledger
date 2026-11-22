@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Closed cUSDC beta: wallet and join page (22 November 2026)
+
+- The wallet lists cUSDC for closed beta members only (`lib/beta/cusdc-beta-client.ts`): every
+  refresh asks `/api/beta/cusdc/status` (at most once a minute) and sets send, exits or hidden. No
+  answer never grants send and never hides a balance already shown. The public list is unchanged
+  and still built through `withoutGatedTokens` (`lib/aztec/wallet/config.ts`).
+- Shield, send and a payment out to someone else ask the server again, uncached, before anything is
+  proved; exits (to your own public balance) are never asked.
+- `scripts/aztec/check-alpha-config.mjs` accepts a `CUSDC` slot only for the cUSDC address in
+  `plannedTokens`, with its symbol and decimals, and warns until the preflight confirms it.
+- `/beta`: sign in, read the technical beta notice, confirm it and join with an invitation code.
+
 ### Closed cUSDC beta: switch and invitations (22 November 2026)
 
 - New switch `cusdcBeta` in `deployments/aztec-mainnet.json`, shipped off (`enabled: false`,

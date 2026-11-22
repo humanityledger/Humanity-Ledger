@@ -62,3 +62,28 @@ describe('checkAlphaConfig', () => {
     expect(warnings.join('\n')).toMatch(/EXPLORER/);
   });
 });
+
+describe('checkAlphaConfig, cUSDC slot (closed beta)', () => {
+  const C = '0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38';
+  const withPlanned = (verifiedOnChain: boolean) => ({ ...registry, plannedTokens: [{ symbol: 'cUSDC', decimals: 6, address: C, verifiedOnChain }] });
+  const env = (t: unknown, caps: unknown = { [C]: '5000000' }) => ({ ...base, NEXT_PUBLIC_AZTEC_TOKENS: JSON.stringify(t), NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: JSON.stringify(caps) });
+
+  it('accepts the planned cUSDC address in its slot, with its cap', () => {
+    const r = checkAlphaConfig(env({ CUSDC: { address: C, symbol: 'cUSDC', decimals: 6 } }), withPlanned(true));
+    expect(r.errors).toEqual([]);
+  });
+  it('warns while the preflight has not confirmed it', () => {
+    const r = checkAlphaConfig(env({ CUSDC: { address: C, symbol: 'cUSDC', decimals: 6 } }), withPlanned(false));
+    expect(r.errors).toEqual([]);
+    expect(r.warnings.join('\n')).toMatch(/not confirmed on the network yet/);
+  });
+  it('refuses any other address, symbol or decimals in the cUSDC slot', () => {
+    expect(checkAlphaConfig(env({ CUSDC: { address: A, symbol: 'cUSDC', decimals: 6 } }), withPlanned(true)).errors.join('\n')).toMatch(/not the cUSDC address/);
+    expect(checkAlphaConfig(env({ CUSDC: { address: C, symbol: 'USDC', decimals: 6 } }), withPlanned(true)).errors.join('\n')).toMatch(/symbol/);
+    expect(checkAlphaConfig(env({ CUSDC: { address: C, symbol: 'cUSDC', decimals: 18 } }), withPlanned(true)).errors.join('\n')).toMatch(/decimals/);
+  });
+  it('still refuses unknown slots, and the cUSDC address in an operator slot', () => {
+    expect(checkAlphaConfig(env({ XYZ: { address: C, symbol: 'cUSDC', decimals: 6 } }), withPlanned(true)).errors.join('\n')).toMatch(/unknown slot/);
+    expect(checkAlphaConfig(env({ USDC: { address: C, symbol: 'cUSDC', decimals: 6 } }), withPlanned(true)).errors.join('\n')).toMatch(/not recorded/);
+  });
+});
