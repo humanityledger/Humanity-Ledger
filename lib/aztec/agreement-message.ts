@@ -13,12 +13,15 @@
  * agreementPreview gives the words to show instead.
  */
 
-export type AgreementMessageKind = 'escrow' | 'stream' | 'address';
+export type AgreementMessageKind = 'escrow' | 'stream' | 'address' | 'payment';
 
 const TYPES: Record<string, AgreementMessageKind> = {
   'hl.escrow_invite': 'escrow',
   'hl.stream_invite': 'stream',
   'hl.aztec_address': 'address',
+  // A private payment posted by the payer (lib/payments/payment-message.ts). It carries no secret,
+  // but it is structured: sent exactly as built and previewed as words, like the others.
+  'hl.payment': 'payment',
 };
 
 /** Largest message considered (an invitation is about 1 KB; MAX_INVITE_BYTES is 4096). */
@@ -45,6 +48,7 @@ export function isAgreementMessage(content: unknown): boolean {
 export function agreementPreview(kind: AgreementMessageKind): string {
   if (kind === 'escrow') return 'Private escrow';
   if (kind === 'stream') return 'Private payment stream';
+  if (kind === 'payment') return 'Private payment';
   return 'Shared an Aztec address';
 }
 
