@@ -146,6 +146,11 @@ describe.skipIf(!LIVE)(`Aztec Alpha mainnet preflight (${NODE_URL})`, () => {
       const instance: any = await n.getContract(addr).catch(() => undefined);
       report.push(`planned ${p.symbol}: instance ${instance ? 'found' : 'NOT FOUND'}${instance ? `, class ${instance.currentContractClassId.toString()}, deployer ${instance.deployer?.toString?.() ?? 'unknown'}` : ''}`);
       if (!instance) return;
+      // The same check the wallet runs on Alpha before it uses a token (G3). If it refuses, the wallet
+      // never loads cUSDC, so the closed beta cannot work until that is resolved (docs/beta/CUSDC_BETA.md).
+      const { checkTokenInstance } = await import('@/lib/aztec/token-check');
+      const g3 = await checkTokenInstance(n, p.address, [TokenContractArtifact]).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : 'error' }));
+      report.push(`planned ${p.symbol}: checkTokenInstance ${g3.ok ? `ok (${(g3 as { artifact?: string }).artifact ?? 'Token'})` : `REFUSED: ${(g3 as { reason?: string }).reason}`}`);
       try {
         const meta = await readTokenMeta(TokenContractArtifact, async (slot) => BigInt((await n.getPublicStorageAt('latest', addr, new Fr(slot))).toString()));
         report.push(`planned ${p.symbol}: name "${meta.name}" (recorded "${p.name}"), symbol "${meta.symbol}", decimals ${meta.decimals} (recorded ${p.decimals})`);
