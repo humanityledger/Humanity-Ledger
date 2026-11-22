@@ -1,0 +1,13 @@
+# Railway settings for the Ledger Relay service.
+# In the service settings: Source repo humanityledger/Humanity-Ledger, Root Directory "relay",
+# and Config-as-code path "/relay/railway.toml" (Railway does not look inside the root directory
+# for this file, and without it the repository's root railway.toml for the web app would apply).
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+startCommand = "node src/server.mjs"
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

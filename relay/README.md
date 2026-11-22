@@ -46,6 +46,15 @@ You need a host with a public address, Docker, and a TLS certificate for the rel
 
 On Kubernetes, the chart in [`helm/ledger-relay`](helm/ledger-relay) runs the same image as a non-root, read-only container; put secrets in a Secret named `ledger-relay`.
 
+On Railway, create a service from this repository (not from a copy of it) and set, in its settings:
+
+- Root Directory: `relay`
+- Config-as-code path: `/relay/railway.toml` (Railway reads this path from the repository root, not from the root directory)
+- Variables: `PORT=8080` and `RELAY_ALLOWED_ORIGINS` with the origins your users open Ledger Chat from
+- Custom domain on port 8080
+
+The deploy is healthy when `https://<your relay domain>/health` answers `{"ok":true}`. If it answers with a web page instead, the service is building something other than `relay/`. Railway runs one replica without a volume, so stored blobs and push subscriptions are lost on restart unless you attach a volume at `/data`.
+
 ## Point Ledger Chat at it
 
 The client support is behind a flag that is off by default (`lib/relay/relays.ts`):
