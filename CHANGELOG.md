@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Notice for incoming payments (22 November 2026)
+
+- When the private wallet finds a new settled incoming payment, the chat shows a notice with the
+  amount, and a system notification without it while the app is in the background
+  (`components/chat/IncomingPaymentNotifier.tsx`, `lib/payments/incoming.ts`). Each payment is
+  announced once; history already on a wallet the first time it is seen is never announced. Do not
+  disturb, the private messages toggle and hidden notification content are respected.
+- Payment requests are announced like any message, as "Payment request", never their content.
+
 ### Payment requests in the chat (22 November 2026)
 
 - "Request a payment" in the attach menu now opens `PaymentRequestComposer`: token, amount, an

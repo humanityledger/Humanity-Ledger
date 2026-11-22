@@ -107,6 +107,7 @@ import { installRecordWorker } from '@/lib/chat/record-worker';
 import { prepareAttachmentMessage, AttachmentError } from '@/lib/chat/send-attachment';
 const AgreementComposer = dynamic(() => import('@/components/chat/AgreementComposer').then(m => m.AgreementComposer), { ssr: false });
 const PaymentRequestComposer = dynamic(() => import('@/components/chat/PaymentRequestComposer').then(m => m.PaymentRequestComposer), { ssr: false });
+const IncomingPaymentNotifier = dynamic(() => import('@/components/chat/IncomingPaymentNotifier').then(m => m.IncomingPaymentNotifier), { ssr: false });
 import { encodeInvoicePayload, parseInvoicePayload, type ZkInvoice } from '@/lib/zk/zkInvoice';
 import { SLASH_COMMANDS, transformClientCommand, isBotCommand, executeBotCommand } from '@/lib/bots/botInterceptor';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
@@ -9114,6 +9115,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
            }}
          />
        )}
+
+       {/* Incoming private payments found by the wallet (lib/payments/incoming.ts): a notice with the amount in the app, none outside it. */}
+       <IncomingPaymentNotifier muted={!!(ledgerSettings as any)?.do_not_disturb || (ledgerSettings as any)?.notifications_private === false} hideContent={!!(ledgerSettings as any)?.hide_notification_content} />
 
        {/* Private payment (Aztec, experimental) */}
        {showZkModal && activePeer && (
