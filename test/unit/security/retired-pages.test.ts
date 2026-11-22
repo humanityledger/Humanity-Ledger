@@ -16,7 +16,7 @@ describe('retiredPageTarget', () => {
     expect(retiredPageTarget('/zero-knowledge')).toBe('/docs/zero-knowledge');
   });
   it('leaves Ledger Chat routes alone and matches whole segments only', () => {
-    for (const p of ['/', '/chat', '/communities', '/connect', '/docs/overview', '/settings', '/scan', '/studio', '/join/ABC', '/legal/privacy', '/privacy', '/terms', '/hubris', '/constructor']) {
+    for (const p of ['/', '/chat', '/communities', '/connect', '/docs/overview', '/settings', '/scan', '/studio', '/join/ABC', '/legal/privacy', '/privacy', '/terms', '/hubris', '/constructor', '/protocol', '/security', '/status', '/trust', '/record', '/brief']) {
       expect(retiredPageTarget(p)).toBeNull();
     }
   });

@@ -147,6 +147,24 @@ ARG NEXT_PUBLIC_PEERJS_KEY
 ARG NEXT_PUBLIC_LEDGER_RELAY
 ARG NEXT_PUBLIC_LEDGER_RELAYS
 ARG NEXT_PUBLIC_LEDGER_RELAY_PIN
+# Ledger Chat client settings. Without an ARG the Railway variable never reaches `next build` and the
+# bundle silently uses the code default (web push, for one, needs NEXT_PUBLIC_VAPID_PUBLIC_KEY here).
+# Names read by the code but deliberately not passed to the build are listed, with the reason, in
+# test/unit/relay/dockerfile-args.test.ts (NOT_PASSED).
+ARG NEXT_PUBLIC_AZTEC_NODE_RELAY
+ARG NEXT_PUBLIC_AZTEC_PXE_URL
+ARG NEXT_PUBLIC_AZTEC_RPC_URL
+ARG NEXT_PUBLIC_DOMAIN
+ARG NEXT_PUBLIC_ENCLAVE_PIN_LOCK
+ARG NEXT_PUBLIC_LEDGER_RELAY_LIST_KEY
+ARG NEXT_PUBLIC_R2_PUBLIC_URL
+ARG NEXT_PUBLIC_RP_ID
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_TURN_DOMAIN
+ARG NEXT_PUBLIC_TURN_URLS
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ARG NEXT_PUBLIC_XMTP_ENV
+ARG NEXT_PUBLIC_ZK_MODE
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
 # Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.

@@ -391,6 +391,9 @@ export function isRetiredApiRoute(pathname: string): boolean {
  * removed; old links and bookmarks are sent somewhere that exists instead of
  * a 404. Matching is by whole path segment, so /hubris is not /hub.
  */
+// /protocol, /security and /status were retired on 10 November 2026 and rebuilt afterwards as
+// public Ledger Chat pages (app/protocol, app/security, app/status, listed as public in
+// middleware.ts). They are served again; the landing footer links to them.
 const RETIRED_PAGES: Record<string, string> = {
   hub: '/chat', terminal: '/chat', dashboard: '/chat', portfolio: '/chat', markets: '/chat', governance: '/chat',
   network: '/chat', qds: '/chat', predictions: '/chat', sequencer: '/chat', forum: '/communities', news: '/chat',
@@ -398,12 +401,12 @@ const RETIRED_PAGES: Record<string, string> = {
   bridge: '/chat', ledger: '/chat', ledgerpost: '/chat', passport: '/chat', registry: '/chat', 'gold-registry': '/chat',
   'sovereign-intel': '/chat', 'voss-supremacy': '/chat', 'zk-sandbox': '/chat', sandbox: '/chat', demo: '/chat',
   canary: '/chat', clearance: '/chat', 'mobile-kyc': '/chat', 'test-qd-flow': '/chat', 'test-xmtp': '/chat',
-  infrastructure: '/chat', directory: '/chat', ecosystem: '/', product: '/', protocol: '/', vision: '/', story: '/',
+  infrastructure: '/chat', directory: '/chat', ecosystem: '/', product: '/', vision: '/', story: '/',
   manifesto: '/', 'open-letter': '/', partnership: '/', team: '/', 'use-cases': '/', accessibility: '/',
-  architecture: '/docs/architecture', security: '/docs/security-model', roadmap: '/docs/changelog',
+  architecture: '/docs/architecture', roadmap: '/docs/changelog',
   login: '/connect', 'sign-up': '/connect',
   'zero-knowledge': '/docs/zero-knowledge', whitepaper: '/docs/whitepaper', blog: '/docs/blog', changelog: '/docs/changelog',
-  company: '/docs/about', contact: '/docs/contact', support: '/docs/contact', status: '/docs/status',
+  company: '/docs/about', contact: '/docs/contact', support: '/docs/contact',
   developers: '/docs/developers', developer: '/docs/developers', 'api-docs': '/docs/developers',
   faq: '/docs/overview', 'how-it-works': '/docs/overview',
 };

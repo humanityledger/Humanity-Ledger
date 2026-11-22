@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   duplicate SIWE session routes, `/api/network/ledger/watch` (scheduled), `/api/v1/*`,
   `/api/notifications/ingest`, and Stripe for Ledger Studio.
 
+### Footer links, build arguments, relay claim (22 November 2026)
+
+- `/protocol`, `/security` and `/status` render again. They were retired on 10 November and rebuilt
+  later as public pages, but the old redirect still sent the footer links elsewhere
+  (`lib/security/retiredRoutes.ts`).
+- The Dockerfile declares every `NEXT_PUBLIC_*` name the Ledger Chat code reads, web push and the
+  XMTP environment included. Names that must not reach a build (test harness, static TURN secrets,
+  provider URLs that may carry keys, retired code) are listed with their reason, and
+  `test/unit/relay/dockerfile-args.test.ts` fails on any new undeclared name.
+- Claims register: call set-up runs on Ledger Relay for users; files and notifications through it
+  stay in design.
+
 ### Ledger Relay reaches the build (22 November 2026)
 
 - The Dockerfile declares `NEXT_PUBLIC_LEDGER_RELAY`, `NEXT_PUBLIC_LEDGER_RELAYS` and
