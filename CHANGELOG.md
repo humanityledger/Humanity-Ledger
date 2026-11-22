@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Two-session payments test (22 November 2026)
+
+- `scripts/ui/payments-e2e.mjs` and the `Payments e2e` workflow run the payment flow between two
+  browser sessions in Chromium: Alice requests 1.5, Bob pays it, both request cards show Paid, Bob's
+  card goes from sent to confirmed, Alice's card waits for her wallet and then shows received, and
+  Alice gets one notice with the amount. The real chat components run against a simulated wallet
+  and network (`components/chat/e2e/PaymentsHarness.tsx`, test builds only); proving on a real
+  network stays with the G6 two-account session.
+
 ### Notice for incoming payments (22 November 2026)
 
 - When the private wallet finds a new settled incoming payment, the chat shows a notice with the
