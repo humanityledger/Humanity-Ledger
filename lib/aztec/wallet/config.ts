@@ -20,6 +20,7 @@
 import { AZTEC_NETWORKS } from '../sequencer/networks';
 import { WALLET_TYPED_DATA, WALLET_TYPED_DATA_ALPHA, type WalletTypedData } from './keys';
 import { withoutGatedTokens } from '../../payments/assets';
+import type { BetaVisibility } from '../../beta/cusdc-beta';
 
 export type WalletNetwork = 'testnet' | 'mainnet';
 
@@ -96,6 +97,43 @@ export function parseAgreementCaps(raw: Record<string, unknown> | null): Readonl
   return Object.freeze(out);
 }
 
+/** Every token configured in NEXT_PUBLIC_AZTEC_TOKENS, before the gates. */
+const CONFIGURED_TOKENS = TOKEN_ORDER.flatMap((key) => {
+  if (key === 'CUSDC' && NETWORK !== 'mainnet') return [];
+  const t = TOKENS_RAW?.[key];
+  return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
+}) as TokenConfig[];
+
+/** What everyone may use: the configured tokens without the gated ones (CUSDC_GATES). */
+const PUBLIC_TOKENS: readonly TokenConfig[] = Object.freeze(withoutGatedTokens(CONFIGURED_TOKENS));
+
+/**
+ * The configured cUSDC slot that the gates hide. Listed only for members of the closed cUSDC beta,
+ * on Alpha, after the server confirms it (lib/beta/cusdc-beta-client.ts). Never any other token.
+ */
+export const BETA_TOKENS: readonly TokenConfig[] = Object.freeze(
+  NETWORK === 'mainnet' ? CONFIGURED_TOKENS.filter((t) => t.key === 'CUSDC' && !PUBLIC_TOKENS.includes(t)) : [],
+);
+
+const WITH_BETA_TOKENS: readonly TokenConfig[] = Object.freeze([...PUBLIC_TOKENS, ...BETA_TOKENS]);
+
+let betaVisibility: BetaVisibility = 'hidden';
+
+/** The token list for a beta visibility. Two stable arrays, so the list identity changes only when it does. */
+export function tokensFor(visibility: BetaVisibility, lists = { public: PUBLIC_TOKENS, withBeta: WITH_BETA_TOKENS }): readonly TokenConfig[] {
+  return visibility === 'hidden' ? lists.public : lists.withBeta;
+}
+
+/** Set from the server's answer only (lib/beta/cusdc-beta-client.ts). Off the Alpha network or without a slot it stays hidden. */
+export function setCusdcBetaVisibility(v: BetaVisibility): BetaVisibility {
+  betaVisibility = NETWORK === 'mainnet' && BETA_TOKENS.length > 0 && (v === 'send' || v === 'exits') ? v : 'hidden';
+  return betaVisibility;
+}
+
+export function getCusdcBetaVisibility(): BetaVisibility {
+  return betaVisibility;
+}
+
 export const AZTEC_WALLET_CONFIG = {
   network: NETWORK,
   alphaEnabled: ALPHA_ENABLED,
@@ -105,12 +143,11 @@ export const AZTEC_WALLET_CONFIG = {
   sponsoredFpc: NETWORK === 'testnet' ? SPONSORED_FPC : '',
   explorer: EXPLORER,
   rpcMaxBatch: Number(process.env.NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH || 3),
-  // cUSDC and any other planned token stay out until every gate is met (lib/payments/assets.ts).
-  tokens: withoutGatedTokens(TOKEN_ORDER.flatMap((key) => {
-    if (key === 'CUSDC' && NETWORK !== 'mainnet') return [];
-    const t = TOKENS_RAW?.[key];
-    return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
-  }) as TokenConfig[]),
+  // cUSDC and any other planned token stay out until every gate is met (lib/payments/assets.ts),
+  // except for members of the closed cUSDC beta (lib/beta/cusdc-beta.ts, setCusdcBetaVisibility).
+  get tokens(): readonly TokenConfig[] {
+    return tokensFor(betaVisibility);
+  },
   agreementCaps: parseAgreementCaps(CAPS_RAW),
   // Test tokens only: there is never a faucet on Alpha.
   faucet: NETWORK === 'testnet' && FAUCET_RAW?.address ? FAUCET_RAW : null,

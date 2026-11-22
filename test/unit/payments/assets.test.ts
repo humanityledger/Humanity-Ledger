@@ -56,7 +56,8 @@ describe('payment assets (PA-1)', () => {
       expect(withoutGatedTokens([hlc, cusdc], gates), CUSDC_GATES[i].id).toEqual([hlc]);
     }
     expect(withoutGatedTokens([hlc, cusdc], CUSDC_GATES.map((g) => ({ ...g, met: true })))).toEqual([hlc, cusdc]);
-    expect(fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8')).toMatch(/tokens: withoutGatedTokens\(/);
+    // The public list goes through the gates; the closed cUSDC beta is a separate, members-only path (lib/beta).
+    expect(fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8')).toMatch(/PUBLIC_TOKENS: readonly TokenConfig\[\] = Object\.freeze\(withoutGatedTokens\(CONFIGURED_TOKENS\)\)/);
   });
 
   it('the build check refuses cUSDC if someone configures it before it is recorded in tokens', () => {

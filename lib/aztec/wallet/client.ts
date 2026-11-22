@@ -37,6 +37,7 @@ import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
 import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
 import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
+import { assertCusdcBetaAllows, refreshCusdcBeta } from '../../beta/cusdc-beta-client';
 import { BINDING_SCHEME_V2, bindingStatement, networkTagOf, sdkBindingCrypto, valueBindingContext, verifyAddressProof, type AddressProof, type BindingNetworkContext } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
@@ -1138,6 +1139,8 @@ class PrivateWallet {
     if (!this.wallet || !this.me) return;
     // Contacts pinned since the last refresh become known senders, so their payments are found.
     await this.registerChatPeers().catch(() => 0);
+    // Closed cUSDC beta: lists cUSDC for members only (lib/beta/cusdc-beta-client.ts), before tokens load.
+    await refreshCusdcBeta().catch(() => 'hidden');
     // A token left out at open time is tried again on every sync.
     const tokenIssues = this.tokens.size < AZTEC_WALLET_CONFIG.tokens.length ? await this.ensureTokens() : [];
     const balances: TokenBalance[] = [];
@@ -1211,6 +1214,7 @@ class PrivateWallet {
   /** Moves tokens from the public balance into private notes. */
   async shield(key: TokenKey, amount: string) {
     await assertNewValueAllowed();
+    await assertCusdcBetaAllows(key);
     const units = parseUnits(amount, tokenConfig(key).decimals);
     return this.run('shield', key, units, undefined, (c) => c.methods.transfer_to_private(this.me, units));
   }
@@ -1220,13 +1224,14 @@ class PrivateWallet {
     const units = parseUnits(amount, tokenConfig(key).decimals);
     const target = to ? await this.validAddress(to) : this.me;
     // To your own public balance is an exit; to anyone else it is a payment.
-    if (!(target.equals?.(this.me) ?? target === this.me)) await assertNewValueAllowed();
+    if (!(target.equals?.(this.me) ?? target === this.me)) { await assertNewValueAllowed(); await assertCusdcBetaAllows(key); }
     return this.run('unshield', key, units, to?.toLowerCase(), (c) => c.methods.transfer_to_public(this.me, target, units, 0));
   }
 
   /** Sends a private payment. Only the recipient can see the amount and the sender. */
   async send(key: TokenKey, amount: string, to: string) {
     await assertNewValueAllowed();
+    await assertCusdcBetaAllows(key);
     const units = parseUnits(amount, tokenConfig(key).decimals);
     const target = await this.validAddress(to);
     if (target.equals?.(this.me)) throw new Error('That is your own address.');

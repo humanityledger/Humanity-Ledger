@@ -28,6 +28,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SLOTS = ['USDC', 'DAI', 'ETH'];
+// The cUSDC slot is checked against plannedTokens (third-party issuer), never against tokens. The wallet
+// lists it only when every CUSDC_GATE is met or, before that, for members of the closed cUSDC beta
+// (lib/beta/cusdc-beta.ts), and only after the preflight sets verifiedOnChain.
+const PLANNED_SLOTS = { CUSDC: 'cUSDC' };
 const HEX32 = /^0x[0-9a-fA-F]{64}$/;
 
 function parseJson(raw, label, errors) {
@@ -58,6 +62,8 @@ export function checkAlphaConfig(env, registry) {
 
   const recorded = Array.isArray(registry?.tokens) ? registry.tokens : [];
   const byAddress = new Map(recorded.map((t) => [String(t.address).toLowerCase(), t]));
+  const planned = Array.isArray(registry?.plannedTokens) ? registry.plannedTokens : [];
+  const plannedByAddress = new Map(planned.map((t) => [String(t.address).toLowerCase(), t]));
   for (const t of recorded) {
     if (!t.deployBlock || t.status === 'pending-preflight') {
       warnings.push(`${t.symbol} (${t.address}) is recorded but not yet confirmed by the preflight (deployBlock ${t.deployBlock}, classId ${t.classId})`);
@@ -72,9 +78,18 @@ export function checkAlphaConfig(env, registry) {
       errors.push('NEXT_PUBLIC_AZTEC_TOKENS must be an object keyed by wallet slot (USDC, DAI, ETH), not an array');
     } else {
       for (const [slot, t] of Object.entries(tokens)) {
-        if (!SLOTS.includes(slot)) { errors.push(`NEXT_PUBLIC_AZTEC_TOKENS: unknown slot "${slot}" (expected ${SLOTS.join(', ')})`); continue; }
+        if (!SLOTS.includes(slot) && !(slot in PLANNED_SLOTS)) { errors.push(`NEXT_PUBLIC_AZTEC_TOKENS: unknown slot "${slot}" (expected ${[...SLOTS, ...Object.keys(PLANNED_SLOTS)].join(', ')})`); continue; }
         if (!isPlainObject(t) || !HEX32.test(String(t.address))) { errors.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot}: address must be 0x + 64 hex`); continue; }
         const addr = t.address.toLowerCase();
+        if (slot in PLANNED_SLOTS) {
+          const p = plannedByAddress.get(addr);
+          if (!p || p.symbol !== PLANNED_SLOTS[slot]) { errors.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot} (${t.address}) is not the ${PLANNED_SLOTS[slot]} address in plannedTokens`); continue; }
+          if (p.symbol !== t.symbol) errors.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot}: symbol "${t.symbol}", planned "${p.symbol}"`);
+          if (Number(p.decimals) !== Number(t.decimals)) errors.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot}: decimals ${t.decimals}, planned ${p.decimals}`);
+          if (p.verifiedOnChain !== true) warnings.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot}: ${p.symbol} is not confirmed on the network yet (verifiedOnChain); the wallet will not list it`);
+          configured.add(addr);
+          continue;
+        }
         const rec = byAddress.get(addr);
         if (!rec) { errors.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot} (${t.address}) is not recorded in deployments/aztec-mainnet.json`); continue; }
         if (rec.key !== slot) errors.push(`NEXT_PUBLIC_AZTEC_TOKENS.${slot}: recorded under slot ${rec.key}`);
@@ -93,7 +108,7 @@ export function checkAlphaConfig(env, registry) {
     } else {
       for (const [addr, v] of Object.entries(caps)) {
         if (!HEX32.test(addr)) { errors.push(`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: key "${addr}" is not a 32-byte token address (0x + 64 hex)`); continue; }
-        if (!byAddress.has(addr.toLowerCase())) errors.push(`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: ${addr} is not a recorded token`);
+        if (!byAddress.has(addr.toLowerCase()) && !plannedByAddress.has(addr.toLowerCase())) errors.push(`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: ${addr} is not a recorded token`);
         else if (!configured.has(addr.toLowerCase())) warnings.push(`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS: ${addr} is recorded but not in NEXT_PUBLIC_AZTEC_TOKENS`);
         if (typeof v !== 'string' || !/^[0-9]{1,39}$/.test(v) || BigInt(v) <= 0n) errors.push(`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS[${addr}]: cap must be a positive decimal string in base units`);
       }

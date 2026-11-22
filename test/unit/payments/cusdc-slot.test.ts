@@ -27,7 +27,9 @@ describe('cUSDC slot', () => {
   it('the config builds the slot only on Alpha and always through withoutGatedTokens', () => {
     const src = fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8');
     expect(src).toMatch(/if \(key === 'CUSDC' && NETWORK !== 'mainnet'\) return \[\];/);
-    expect(src).toMatch(/tokens: withoutGatedTokens\(TOKEN_ORDER\.flatMap/);
+    expect(src).toMatch(/const PUBLIC_TOKENS: readonly TokenConfig\[\] = Object\.freeze\(withoutGatedTokens\(CONFIGURED_TOKENS\)\);/);
+    // The only other path is the closed cUSDC beta, for members only (lib/beta/cusdc-beta.ts).
+    expect(src).toMatch(/return tokensFor\(betaVisibility\);/);
   });
   it('the planned record is still unverified on chain', () => {
     const m = JSON.parse(fs.readFileSync('deployments/aztec-mainnet.json', 'utf8'));
