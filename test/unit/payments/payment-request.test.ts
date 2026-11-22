@@ -61,7 +61,7 @@ describe('in the chat', () => {
   it('paying a request fixes token and amount, names the request, and records it as paid', () => {
     const modal = fs.readFileSync('components/chat/ZkMoneyModal.tsx', 'utf8');
     expect(modal).toMatch(/requestId: prefill\?\.requestId/);
-    expect(modal).toMatch(/rememberPaidRequest\(prefill\.requestId\)/);
+    expect(modal).toMatch(/rememberPaidRequest\(prefill\.requestId, txHash\)/);
     expect(modal).toMatch(/disabled=\{busy \|\| !!prefill\}/);
   });
   it('the chat opens the payment form from a request and the composer from the menu', () => {
