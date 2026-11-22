@@ -1,0 +1,68 @@
+# The payment flow between two sessions (request, pay, notice, statuses) with the real chat
+# components, a simulated wallet and a simulated network (components/chat/e2e/PaymentsHarness.tsx).
+# Proving and the Aztec network are covered by the G6 two-account session (docs/chat/G6_SESSION_CHECKLIST.md).
+
+name: Payments e2e
+
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'components/chat/**'
+      - 'components/terminal/LedgerChatV2.tsx'
+      - 'lib/payments/**'
+      - 'lib/aztec/agreement-message.ts'
+      - 'scripts/ui/payments-e2e.mjs'
+      - '.github/workflows/payments-e2e.yml'
+  pull_request:
+    paths:
+      - 'components/chat/**'
+      - 'lib/payments/**'
+      - 'lib/aztec/agreement-message.ts'
+      - 'scripts/ui/payments-e2e.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: payments-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  payments:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+      ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+      ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --legacy-peer-deps
+      - name: Build (test harness on, test-network tokens)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_E2E_HARNESS: '1'
+          NEXT_PUBLIC_ZK_MODE: testnet
+          NEXT_PUBLIC_AZTEC_NETWORK: testnet
+          # Placeholder addresses for the simulated wallet; nothing is sent to a network.
+          NEXT_PUBLIC_AZTEC_TOKENS: '{"USDC":{"address":"0x1111111111111111111111111111111111111111111111111111111111111111","symbol":"USDC","decimals":6}}'
+      - name: Playwright (Chromium)
+        run: npm install --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Request, pay, notice and statuses between two sessions
+        run: |
+          npx next start -p 3100 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
+          node scripts/ui/payments-e2e.mjs http://localhost:3100 payments-e2e
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payments-e2e
+          path: |
+            payments-e2e
+            next.log
