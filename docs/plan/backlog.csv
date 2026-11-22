@@ -1,0 +1,52 @@
+id,phase,area,title,files,acceptance,size,depends_on,stefan_decision
+P0-01,0,B13,Fix footer links that redirect away from their pages,components/landing/site/Chrome.tsx;lib/security/retiredRoutes.ts;app/protocol;app/security;app/status,Every footer link lands on a page that renders; landing tests pass,S,,D-1
+P0-02,0,B13,Update the Ledger Relay row of the claims register,lib/landing/claims.ts;lib/landing/chapters.ts,claims-register test passes; row cites relay/ and lib/calls/media.ts,S,,D-2
+P0-03,0,B12,Declare every Ledger Chat NEXT_PUBLIC variable as a Docker ARG,Dockerfile;test/unit/relay/dockerfile-args.test.ts,Test lists every client NEXT_PUBLIC name used by Ledger Chat code and passes,S,,
+P0-04,0,B12,Move legacy NEXT_PUBLIC names out of Ledger Chat code or delete their readers,lib/store/wallet-store.ts;lib/chains.ts;app/api/relayer;next.config.js,No undeclared NEXT_PUBLIC read remains outside retired code,M,P0-06,D-7
+P0-05,0,B11,Retire the 19 active API routes with no caller,lib/security/retiredRoutes.ts;docs/plan/api-inventory.csv,Routes answer 410 at the edge; regenerated inventory shows none active and unreferenced except agreed webhooks,S,,D-7
+P0-06,0,B11,Retire or justify legacy active surfaces,lib/security/retiredRoutes.ts;app/api/golden-ticket;app/api/payments;app/api/subscription;app/api/market;app/api/mempool;app/api/news;app/api/bots;app/api/bridge;app/api/v1,Each surface either has an owner in docs or answers 410,M,,D-7
+P0-07,0,B11,Delete handlers already answering 410 one release after edge retirement,app/api,No handler file remains for a route listed in retiredRoutes.ts,M,P0-05;P0-06,
+P0-08,0,B11,Delete old landing trees after an import graph check,components/landing/immersive;components/landing/mobile;components/landing/*.tsx;lib/landing/facts.ts,tsc and landing tests pass; no import of the removed files,S,,
+P0-09,0,B13,Translate non-English strings in code UI and tests,lib/community-apps/templates.ts;components/zk/ZkSequencerDashboard.tsx;components/chat/community-apps/CommunityApps.tsx;test/gate/j-skeleton.test.ts;test/unit/contracts/HumanityTimeLockVault.adversarial.test.ts;test/unit/aztec/fee-router.adversarial.test.ts,Non-English scan reports no code UI or test file,M,,D-11
+P0-10,0,B13,Translate non-English documents,docs/communities/MLS_MIGRATION.md;docs/zk;docs/l1;docs/GLOSSARY.md;docs/SECURITY.md,Non-English scan reports only the files Stefan chose to keep,M,,D-11
+P0-11,0,B12,Resolve Dependabot alerts and P-13,package.json;package-lock.json,No open Dependabot alert on main; npm audit clean for production deps,S,,
+P0-12,0,B8,Archive or make private the public copy repository,humanityledger/ledger-relay,Repository archived or private,S,,D-10
+P0-13,0,B14,Remove or rewrite skipped suites for designs not being built,test/unit/aztec/fee-router.adversarial.test.ts;test/gate/j-skeleton.test.ts,No it.skip without an issue reference,S,,
+P1-01,1,B1,Redeploy HLC with a neutral on-chain name,docs/alpha/HLC_REDEPLOY_RUNBOOK.md;deployments/aztec-mainnet.json,Preflight confirms the new instance; old one moved to retiredTokens,M,,Stefan runs it
+P1-02,1,B1,G2 real run by a fresh user,docs/MAINNET_READINESS.md,Recorded run with block numbers from the preflight,S,P1-01,Stefan runs it
+P1-03,1,B1,G6 and G7 two-browser sessions,docs/chat/G6_SESSION_CHECKLIST.md;docs/MAINNET_READINESS.md,Recorded sessions linked in the readiness table,S,P1-01,Stefan runs it
+P1-04,1,B1,Set closedAlpha.distributor and enabled,deployments/aztec-mainnet.json,Stefan's PR merged,S,P1-01,D-3
+P1-05,1,B12,Create the alpha purge service and fee juice budget,docs/alpha/PURGE_CRON.md,Service running; budget variable set,S,,Stefan
+P1-06,1,B1,Tester guide in the docs,lib/docs/pages,Guide page published and linked from /alpha,S,,
+P2-01,2,B1,Structured hl.payment message type,lib/payments/direct-private.ts;components/chat/MessageBubble.tsx,Unit tests for parse and version; old text payments still render,M,P0-03,
+P2-02,2,B1,Payment status lifecycle in the bubble,lib/aztec/wallet/payment-report.ts;components/chat/MessageBubble.tsx,States attempted to mined shown; failed shows a reason code,M,P2-01,
+P2-03,2,B1,Receiver card verified against the receiver's own wallet history,lib/aztec/wallet/history.ts;components/chat/MessageBubble.tsx,Card shows received only after the wallet sees the transfer,M,P2-01,
+P2-04,2,B1,Payment requests with expiry,lib/payments;components/chat/ZkMoneyModal.tsx,Request card opens a prefilled payment; expired requests cannot be paid,M,P2-01,
+P2-05,2,B1,Double-send guard while a payment is in flight,lib/payments/direct-private.ts,Second send for the same request is refused until the first settles,S,P2-01,
+P2-06,2,B1,In-app recovery guide,components/zk;lib/docs/pages,Guide states what is recoverable and what is not,S,,
+P2-07,2,B14,Two-browser Playwright test for request pay confirm on testnet,test;.github/workflows,Green in CI,L,P2-04,
+P3-01,3,B1,Extend the read-only preflight to the cUSDC instance,test/live/aztec-mainnet-preflight.live.test.ts,Run reports class name symbol decimals of cUSDC,S,,
+P3-02,3,B1,Record cUSDC in tokens and set verifiedOnChain,deployments/aztec-mainnet.json,PR cites the preflight run,S,P3-01,Stefan merges
+P3-03,3,B1,Fill the CUSDC wallet slot with issuer label and Shield links,lib/aztec/wallet/config.ts;scripts/aztec/check-alpha-config.mjs;components/zk,Slot stays empty while any gate is unmet (test),S,P3-02,
+P3-04,3,B1,Cap per cUSDC payment,NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS,Cap signed by Stefan and enforced by policy tests,S,P3-03,Stefan
+P3-05,3,B1,Bridged FPC decision and implementation,lib/aztec/fee-juice.ts;lib/aztec/fees.ts,Fee path tests for the chosen option,M,,D-5
+P3-06,3,B1,Meet every CUSDC gate with evidence,lib/payments/assets.ts,All nine gates met in Stefan's PR,L,P1-04,Stefan and counsel
+P3-07,3,B13,Switch the landing copy for USDC,lib/landing/claims.ts;lib/landing/chapters.ts,Same PR as P3-06; register test passes,S,P3-06,
+P4-01,4,B2,Deploy PrivateEscrow and PaymentStream on Alpha,docs/CONTRACT_DEPLOY_CHECKLIST.md;deployments/aztec-mainnet.json,Preflight checks the instances,M,,Stefan (P-02)
+P4-02,4,B2,External security review of the agreement contracts,audits;deployments/aztec-mainnet.json,Report recorded in audit,L,P4-01,Stefan
+P4-03,4,B2,Add agreement classes to closedAlpha.classes,deployments/aztec-mainnet.json,Agreement gate allows members only,S,P4-02,Stefan
+P5-01,5,B8,TURN on the relay with coturn,relay/coturn;relay/src,Call succeeds on a TURN-only network,M,,
+P5-02,5,B9,Web push with VAPID,app/api/push;lib/push;Dockerfile;relay/src,Push wakes a closed PWA; payload is opaque,M,P0-03,D-6
+P5-03,5,B8,Persistent volume for the relay,relay/railway.toml,Blobs and push subscriptions survive a restart,S,,Stefan
+P5-04,5,B6,Large files on the chosen store,lib/relay/client.ts;lib/chat/large-file.ts;lib/storage/r2.ts,Files row in the register becomes Live only when the store is on,M,P5-03,D-4
+P5-05,5,B8,Relay access policy and monitoring,relay/src;docs/ops,Rate limits reviewed; uptime alert on /health,S,,
+P5-06,5,B8,User-chosen relays UI,lib/relay/relays.ts;components/chat,Users can add and remove relays; organisation pin respected,M,,
+P5-07,5,B8,Retire the peerjs-server service,Railway,Service stopped after two weeks of relay signalling,S,,Stefan
+P6-01,6,B3,XMTP 6.x migration plan,docs;lib/xmtp,Plan lists breaking changes and data migration,M,,D-8
+P6-02,6,B3,Upgrade to XMTP 6.x,package.json;lib/xmtp,Chat regression and two-browser chat tests green,L,P6-01,
+P7-01,7,B4,Contacts on devices design and migration,lib/chat;prisma/schema.prisma;app/api/chat/contacts,No ChatContact rows for migrated users,L,P6-02,
+P8-01,8,B5,Communities and Status on MLS,docs/communities/MLS_MIGRATION.md;app/api/chat/communities;app/api/chat/stories,Posts of migrated communities never reach CommunityPost,L,P6-02,Stefan sets communityMls
+P9-01,9,B14,Staging environment and release checklist,docs/ops,Every release passes staging first,M,,D-9
+P9-02,9,B7,Incoming calls through push,lib/calls;lib/push,A locked phone rings for an incoming call,M,P5-02,
+P9-03,9,B14,Two-browser end-to-end tests for chat and calls in CI,test;.github/workflows,Green in CI,M,,
+P9-04,9,B12,Revisit minification and boot time,next.config.js;start.sh,Bundle size and first healthcheck time measured before and after,M,,

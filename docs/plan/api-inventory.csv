@@ -1,0 +1,457 @@
+route,methods,state,referenced_in_repo,kind,recommendation
+/api/academy/parse-document,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/academy/progress,GET|POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/academy/submissions,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/academy/sync,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/clean-posts,POST,active,referenced,app,in use; review authentication and rate limits
+/api/admin/emails,GET,active,referenced,app,in use; review authentication and rate limits
+/api/admin/enclave-emergency-unlock,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/admin/heartbeat,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/launch-checklist,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/login,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/logout,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/nuke-tickets,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/purge-forum,POST,active,referenced,app,in use; review authentication and rate limits
+/api/admin/reset-forum,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/security-events,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/seed-forum,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/admin/sync-db,GET|POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ai/analyze,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ai/concierge,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ai/forensic,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/alpha/fee-juice-grants,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/alpha/gate,GET,active,referenced,app,in use; review authentication and rate limits
+/api/alpha/redeem,POST,active,referenced,app,in use; review authentication and rate limits
+/api/alpha/status,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/analytics/download-click,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/analytics/dune/export,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/analytics/dune/queries,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/assets,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/[...nextauth],,active,referenced,app,in use; review authentication and rate limits
+/api/auth/complete-signup,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/csrf,GET,active,referenced,app,in use; review authentication and rate limits
+/api/auth/custom-signin,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/enclave-pin,POST|GET|PUT|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/auth/enclave-pin-reset,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/export-jwt,GET,active,referenced,app,in use; review authentication and rate limits
+/api/auth/kyc-init,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/kyc-qr-poll,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/kyc-qr-session,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/kyc-verify,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/link,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/logout,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/me,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/nonce,GET,active,referenced,app,in use; review authentication and rate limits
+/api/auth/passkey,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/passkey/generate-options,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/passkey/verify-registration,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/qr-hydrate,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/qr-init,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/qr-mobile-link,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/qr-poll,GET,active,referenced,app,in use; review authentication and rate limits
+/api/auth/qr-session,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/qr-session-key,GET,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/auth/qr-sync,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/qr-sync-seed,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/refresh,POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/session,GET,active,referenced,app,in use; review authentication and rate limits
+/api/auth/session-heal,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/auth/signup,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/siwe/session,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/auth/siwe/verify,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/auth/studio,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/system-verify,POST|GET,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/auth/verify,POST|GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/auth/verify-session,GET,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/account,GET,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/airdrop,POST,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/aztec/airdrop/calendar,GET|POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/aztec/anchor,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/balance,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/deploy,GET,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/deploy-token,POST|GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/derive-address,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/fhe-router,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/identity-status,GET,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/migrate-identity,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/node,POST,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/passkeys,GET|PUT|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/purchase-qd,POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/aztec/restore-session,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/sequencer/health,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/sequencer/overview,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/session,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/test-flow,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/aztec/transactions,GET,active,referenced,app,in use; review authentication and rate limits
+/api/aztec/transfer,POST|GET,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/aztec/value-mode,GET,active,referenced,app,in use; review authentication and rate limits
+/api/bots,GET,active,referenced,app,in use; review authentication and rate limits
+/api/bots/command,POST,active,referenced,app,in use; review authentication and rate limits
+/api/brc,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/bridge/generate,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/bridge/status,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/bsv/broadcast,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/bsv/paymail/resolve,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/call/join/[roomId],GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/call/room,POST|GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/call/room/[roomId],GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/call/room/[roomId]/join,POST|DELETE,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/call/room/[roomId]/moderate,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/call/token,GET|POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/calls/ice,GET,active,referenced,app,in use; review authentication and rate limits
+/api/careers/apply,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/attachments,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/attachments/[id],GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities,GET|POST|PATCH|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id],GET|PATCH|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/analytics,GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/apps,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/apps/[appId],GET|PATCH|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/apps/[appId]/frame,GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/apps/[appId]/state,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/apps/generate,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/gate,GET|POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/communities/[id]/invite,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/communities/[id]/members,GET|POST|PATCH|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/posts,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/[id]/proposals,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/join,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/communities/posts,POST|GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/chat/community-posts,GET|POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/chat/contacts,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/contacts/request,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/contacts/request/[action],POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/delivery-report,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/direct,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/onion/queue,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/onion/register,GET|POST|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/onion/relay,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/pending,GET|POST,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/chat/pin,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/presence,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/queue,GET|POST|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/queue/consume,GET|POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/chat/report,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/send,POST|GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/settings,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/stories,GET|POST|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/stories/media,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/stories/media/[id],GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/stream/[channelId],GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/telemetry,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/updates,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/chat/username,GET|PUT|POST|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/chat/username/link,POST,active,referenced,app,in use; review authentication and rate limits
+/api/chat/username/lookup,GET,active,referenced,app,in use; review authentication and rate limits
+/api/chat/users/search,GET,active,referenced,app,in use; review authentication and rate limits
+/api/checkpoint-image,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/communities,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/communities/[slug],GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/communities/[slug]/join,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/communities/reports,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/cookies,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/dashboard,GET|PUT,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/defi/copy-trading,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/defi/deposit,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/defi/yields,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/dev/deploy,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/dev/testpxe,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/early-access,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/execution/mev,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/admin/queue,GET|PUT,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/categories,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/categories/[slug],GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/forum/categories/init,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/likes,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/notifications,GET|PUT,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/posts,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/posts/[id],DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/search,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/settings,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/forum/tags,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/telemetry,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/telemetry/live,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/topics,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/topics/[id],GET|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/upload,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/user/[address],GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/user/[address]/settings,PUT,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/user/[address]/summary,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/user/preferences,GET|PUT,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/users,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/forum/users/leaderboard,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/gamification/leaderboard,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/gamification/xp,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/geo,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/gif/search,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/gifs,GET,active,referenced,app,in use; review authentication and rate limits
+/api/golden-ticket/claim,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/golden-ticket/count,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/golden-ticket/stats,GET,active,referenced,app,in use; review authentication and rate limits
+/api/grok-manifest,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/health,GET,active,referenced,app,in use; review authentication and rate limits
+/api/identity,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/identity/token,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/institutional,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/institutional/ledger,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/institutional/stats,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/intelligence/graph,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/intelligence/ledgers,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/intelligence/mass-transfers,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/intelligence/sonar,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/internal/audit,POST,active,unreferenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/internal/cleanup,POST,active,referenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/internal/etherscan,GET,active,referenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/internal/moonpay/sign,POST,active,referenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/internal/rpc,POST,retired-at-edge,unreferenced,webhook/cron,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger-stream,GET,active,referenced,app,in use; review authentication and rate limits
+/api/ledger/activities,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/activity,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/alerts/check,GET,active,referenced,app,in use; review authentication and rate limits
+/api/ledger/infrastructure,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/intel/[id],POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/multi-chain,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/presence,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/smart-analysis,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledger/stats,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledgers/live,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledgers/mempool-sse,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledgers/sse,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/ledgers/stream,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/link-preview,GET,active,referenced,app,in use; review authentication and rate limits
+/api/liquidation/heatmap,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/lottie,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market-pulse,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/binance,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/global,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/new-pairs,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/new-pairs/live,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/new-pairs/sse,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/pool-prices,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/prices,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/signals,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/market/ticker,GET,active,referenced,app,in use; review authentication and rate limits
+/api/matrix/stream,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/mempool,GET,active,referenced,app,in use; review authentication and rate limits
+/api/mempool/stream,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/metrics/online,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/metrics/users,GET,active,referenced,app,in use; review authentication and rate limits
+/api/mica/compliance,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/moderation/report,POST,active,referenced,app,in use; review authentication and rate limits
+/api/moderation/status,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/monitor/relayer,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/[...slug],GET,active,referenced,app,in use; review authentication and rate limits
+/api/network/base-status,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/bridges/migration,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/btc-status,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/dark-forest,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/evm/recent,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/forensics,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/forensics/history,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/getblock-health,GET,active,referenced,app,in use; review authentication and rate limits
+/api/network/global-logins,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger-flows,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/activity,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/alert-stats,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/alpha-events,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/entity-nexus,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/inflow-outflow,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/leaderboard,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/liquidations,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/market/history,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/mempool-stream,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/satoshi-detector,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/top-ledgers,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/ledger/watch,GET|POST,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/network/live,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/live-ticker,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/mempool,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/mempool/recent,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/multiverse/health,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/multiverse/portfolio,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/polymarket/ledgers,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/search,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/v1/address/[address],GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/v1/analytics/on-chain,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/v1/difficulty-adjustment,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/v1/hashrate,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/v1/lightning/stats,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/v1/mining/pools,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/network/wallet-connections,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/news,GET,active,referenced,app,in use; review authentication and rate limits
+/api/news/crypto,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/news/share,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/news/sync,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/newsletter/subscribe,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/notifications/broadcast,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/notifications/discord,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/notifications/email,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/notifications/inbox,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/notifications/ingest,POST,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/notifications/telegram,POST|GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/oracle,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/oracle/verify,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/oracle/zk-biometrics,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/payment/confirm,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/payment/create-subscription,POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/payment/portal,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/payments/checkout,POST,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/payments/customer-portal,POST,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/payments/provision-owner,POST,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/payments/webhook,POST,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/ping,GET,active,referenced,app,in use; review authentication and rate limits
+/api/polymarket/markets,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/polymarket/trade,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/portfolio/chain-activity,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/portfolio/onchain,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/powered-by,GET|POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/defi-positions,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/news,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/paymaster,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/prover,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/sovereign-intel,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/wallet-analytics,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/wallet-history,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/wallet-networth,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/wallet-profitability,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/watched-wallets,POST|GET|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/premium/webhooks,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/prices,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/prices/historical,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/projects/[id],PATCH|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/protocol/metrics,GET,active,referenced,app,in use; review authentication and rate limits
+/api/provenance/log,POST,active,referenced,app,in use; review authentication and rate limits
+/api/proxy-image,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/proxy/binance,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/push/send,POST,active,referenced,app,in use; review authentication and rate limits
+/api/push/subscribe,POST,active,referenced,app,in use; review authentication and rate limits
+/api/qds/balance,GET,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/qds/earn,POST,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/referrals,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/registry/real-users,GET,active,referenced,app,in use; review authentication and rate limits
+/api/relayer/execute,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/relayer/zap,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/scanner/btc/utxos,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/scanner/status,GET,active,referenced,app,in use; review authentication and rate limits
+/api/security/csp-report,POST,active,referenced,app,in use; review authentication and rate limits
+/api/security/integrity,GET,active,referenced,app,in use; review authentication and rate limits
+/api/security/scan,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/session-logs,GET|POST,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/session-logs/sse,GET|POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/settings,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/setup-assets,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/signals/[symbol],GET|DELETE,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/siwe/logout,POST,active,referenced,app,in use; review authentication and rate limits
+/api/siwe/nonce,GET,active,referenced,app,in use; review authentication and rate limits
+/api/siwe/session,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/siwe/verify,POST,active,referenced,app,in use; review authentication and rate limits
+/api/sovereign-seed,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/stats/live,GET,active,referenced,app,in use; review authentication and rate limits
+/api/stats/visit,POST,active,referenced,app,in use; review authentication and rate limits
+/api/status/alpha,GET,active,referenced,app,in use; review authentication and rate limits
+/api/status/health,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/storage/upload,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/studio/chat,POST,active,referenced,app,in use; review authentication and rate limits
+/api/studio/checkout,POST,active,referenced,app,in use; review authentication and rate limits
+/api/studio/github,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/studio/github/callback,GET,active,referenced,app,in use; review authentication and rate limits
+/api/studio/title,POST,active,referenced,app,in use; review authentication and rate limits
+/api/studio/usage,GET,active,referenced,app,in use; review authentication and rate limits
+/api/subscribe,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/subscription/create-checkout,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/subscription/status,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/test-log,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/token-logo,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/transactions,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/api-keys,POST|GET|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/card,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/export,GET,active,referenced,app,in use; review authentication and rate limits
+/api/user/intelligence,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/nuke,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/pnl,GET,active,referenced,app,in use; review authentication and rate limits
+/api/user/portfolio,GET,active,referenced,app,in use; review authentication and rate limits
+/api/user/privacy,GET,active,referenced,app,in use; review authentication and rate limits
+/api/user/profile,GET|PUT,active,referenced,app,in use; review authentication and rate limits
+/api/user/profiles,POST,active,referenced,app,in use; review authentication and rate limits
+/api/user/register,POST,active,referenced,app,in use; review authentication and rate limits
+/api/user/search,GET,active,referenced,app,in use; review authentication and rate limits
+/api/user/sessions,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/settings,GET|PATCH|PUT,active,referenced,app,in use; review authentication and rate limits
+/api/user/settings/apply,POST,active,referenced,app,in use; review authentication and rate limits
+/api/user/snx-account,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/status,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/usage,GET,active,referenced,app,in use; review authentication and rate limits
+/api/user/wallet,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/user/watched-wallets,GET|POST|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/user/watchlist,GET|POST|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/v1/data,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/v1/ledger,GET,active,referenced,app,in use; review authentication and rate limits
+/api/v1/ledger/export,GET,active,referenced,app,in use; review authentication and rate limits
+/api/v1/ledger/intelligence,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/v1/user/keys/update,POST,active,referenced,app,in use; review authentication and rate limits
+/api/variables,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/verify-human,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/vip/liquidations-24h,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/vip/oi-history,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/activity,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/address-book,GET|POST|PATCH|DELETE,active,referenced,app,in use; review authentication and rate limits
+/api/wallet/create,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/deadman/ping,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/deadman/setup,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/deadman/status,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/deadman/trigger,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/estimate-gas,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/execute,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/history,GET,active,referenced,app,in use; review authentication and rate limits
+/api/wallet/history/deep,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/history/enriched,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/intelligence/[address],GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/mixer/donate,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/moonpay/sign,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/nfts,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/onchain-balances,GET,active,unreferenced,app,no caller in the repository; retire unless a planned feature needs it
+/api/wallet/pass/google,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/payment-report,POST,active,referenced,app,in use; review authentication and rate limits
+/api/wallet/portfolio,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/portfolio/history,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/portfolio/history-real,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/portfolio/live,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/positions,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/quote,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/rebalance/execute,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/rebalance/plan,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/rebalance/status,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/recovery/approve,POST|GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/recovery/guardians,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/recovery/setup,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/send,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/swap,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/swap/quote,POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/sync,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/timelock/create,POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/timelock/list,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/tokens,GET|POST,active,referenced,app,in use; review authentication and rate limits
+/api/wallet/tokens/institutional,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/transaction/status,GET,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallet/transactions,GET|POST,retired-at-edge,referenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/wallets/sync,POST|GET,active,referenced,app,in use; review authentication and rate limits
+/api/watchlist,GET|POST|DELETE,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/webhooks/alchemy,POST,active,unreferenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/webhooks/ledger-transfers,POST,active,unreferenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/webhooks/moonpay,POST|GET,active,referenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/webhooks/stripe,POST,active,referenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/webhooks/sumsub,POST,active,unreferenced,webhook/cron,"called from outside the repository; confirm the caller is still in use, else retire"
+/api/world-map,GET,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/zk/balance,GET|POST,410-in-handler,referenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/compile,POST|GET,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/history,GET,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/identity,GET|POST|PATCH,active,referenced,app,in use; review authentication and rate limits
+/api/zk/pxe-sync,GET|POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/sequencer,GET,active,referenced,app,in use; review authentication and rate limits
+/api/zk/shield,POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/transfer,GET|POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/treasury,GET|POST,retired-at-edge,unreferenced,app,"keep retired (410 at the edge, lib/security/retiredRoutes.ts); delete the handler file"
+/api/zk/unshield,POST,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/verify,POST|GET,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/verify-identity,POST|GET,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
+/api/zk/witness,POST|GET,410-in-handler,unreferenced,app,handler already answers 410; add to lib/security/retiredRoutes.ts and delete the handler file
