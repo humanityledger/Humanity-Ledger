@@ -359,6 +359,19 @@ export const RETIRED_API_ROUTES: readonly string[] = [
   '/api/chat/communities/[id]/gate',
   '/api/chat/telemetry',
   '/api/moderation/status',
+  // 2026-11-22 (status audit, docs/plan/status-and-phases.md B11): live handlers that nothing in the
+  // repository calls and no outside caller is known for (prices, news, mempool, bots listing, a forum
+  // route, on-chain balances, subscription status, a duplicate GIF search). /api/gifs stays: the chat's
+  // GIF picker uses it. Routes an outside caller may use (webhooks, scheduled jobs, SIWE and chat
+  // routes, golden ticket, Stripe, geo) are left to an owner's decision, not retired here.
+  '/api/forum/categories/[slug]',
+  '/api/gif/search',
+  '/api/prices',
+  '/api/subscription/status',
+  '/api/wallet/onchain-balances',
+  '/api/news',
+  '/api/mempool',
+  '/api/bots',
 ];
 
 const PATTERNS = RETIRED_API_ROUTES.map(u => new RegExp("" + toRegex(u)));
