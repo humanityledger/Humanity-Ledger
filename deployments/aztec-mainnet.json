@@ -29,6 +29,10 @@
     ]
   },
   "$cusdcBetaComment": "Closed technical beta of private cUSDC payments, at most 100 members (docs/beta/CUSDC_BETA.md, lib/beta/cusdc-beta.ts). A separate path from CUSDC_GATES, which stay unmet. A wallet sees cUSDC only when enabled is true, before until, plannedTokens cUSDC has verifiedOnChain true, a cUSDC cap is configured, and it is an active member who confirmed the current notice. Stefan changes enabled and until in a PR.",
+  "$cusdcPublicComment": "cUSDC for everyone in the private wallet, replacing the HLC test token (lib/payments/cusdc-public.ts). Off by default; only Stefan turns it on, in a pull request. It does not mark any of CUSDC_GATES as met: those stay a record of facts. The wallet lists cUSDC for everyone only when enabled is true, plannedTokens cUSDC has verifiedOnChain true, the CUSDC slot in NEXT_PUBLIC_AZTEC_TOKENS is that address with symbol cUSDC and 6 decimals, and a cUSDC cap is configured.",
+  "cusdcPublic": {
+    "enabled": false
+  },
   "cusdcBeta": {
     "enabled": false,
     "until": null,
