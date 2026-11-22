@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Closed cUSDC beta: closing check (22 November 2026)
+
+- The read-only mainnet preflight also reports `checkTokenInstance` for planned tokens, the check the
+  wallet runs on Alpha before it uses a token. `verifiedOnChain` for cUSDC needs it ok, or the
+  wallet would never load cUSDC and the beta could not work.
+- `test/unit/beta/cusdc-beta-closure.test.ts` checks that every piece holds together: the switch off
+  for 100, the nine gates unmet, the on-chain confirmation and the cap required, exits-only before
+  the beta check, the build check of the cUSDC slot, and every route, page, script and card present.
+- `docs/beta/CUSDC_BETA.md` rewritten with what is built, the real state of the nine gates and which
+  ones the beta still requires, the operator's steps to switch on, and how to pause or close it.
+
 ### Two-session payments test (22 November 2026)
 
 - `scripts/ui/payments-e2e.mjs` and the `Payments e2e` workflow run the payment flow between two
