@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Payments hardening, cUSDC for everyone behind a switch, private wallet polish (22 November 2026)
+
+- A payment request is paid for the person who asked only when their own wallet finds a settled
+  receive of that transaction, token and amount; a chat message alone never marks it paid.
+- Beta mutations accept JSON only. Escrows and streams refuse cUSDC while their contracts have no
+  external audit. A direct payment on Alpha never exceeds 100 tokens, whatever the cap.
+- `cusdcPublic.enabled` (off) replaces HLC with cUSDC for everyone once the contract is confirmed,
+  the slot and its cap are configured. CUSDC_GATES are unchanged.
+- Private wallet: a clearer "How it works" card, the open card first, and no dashes in its texts.
+
 ### Closed cUSDC beta: 100 invitation codes, the /beta gate and payment checks (22 November 2026)
 
 - `scripts/beta/generate-100-codes.mjs`: generates at most 100 codes, stores only their HMAC and

@@ -161,6 +161,36 @@ Two people, A and B, each with their own wallet and device, both redeemed at `/b
 - **The device:** proving needs memory; an old phone may fail where a computer succeeds. Private notes live in the browser's storage on that device.
 - **Not in this beta:** cUSDC for anyone outside it, or on any public page. The landing keeps saying "Not enabled yet".
 
+## Security review (22 November 2026)
+
+What an attacker could try, and what stops it:
+
+| Attempt | Defence |
+| --- | --- |
+| Guess an invitation code | 80 random bits per code, only 100 assigned; 5 tries per wallet per hour; one answer for every bad code |
+| Redeem a generated code nobody checked | Redeem requires the sanctions and age checks recorded by `assign` (403 otherwise) |
+| Join past 100 | Members are counted under a database lock in the same transaction (409) |
+| Make a signed-in person redeem or confirm the notice from another site | CSRF check in the middleware, and the beta mutations accept `application/json` only (415) |
+| List who is in the beta | `/api/beta/cusdc/member` answers only active members, one address at a time, 120 checks per hour |
+| Mark a payment request paid with a fake message | A request is paid for the person who asked only when their own wallet finds a settled receive of that transaction, in that token, for at least the amount |
+| Send a large payment through a mistyped cap | A hard ceiling of 100 tokens per direct payment on Alpha, whatever the cap says, plus the cap itself |
+| Lock real value in an unaudited contract | Escrows and streams refuse cUSDC while the contracts have no external audit |
+| Pay a lookalike or substituted address | The payee is the address verified in the chat (G7) with its fingerprint; never typed, never taken from a request |
+| Keep sending after revocation or a pause | Every cUSDC send asks the server again, uncached; exits-only mode stops new value at once |
+
+What no code here can promise: the beta controls what Ledger Chat shows and sends, not the cUSDC contract. Anyone holding cUSDC on Aztec can move it with other software. Aztec Alpha, the cUSDC contract, and each person's device and Ethereum wallet are outside this repository; there is no external audit yet.
+
+## cUSDC for everyone (operator switch)
+
+`cusdcPublic.enabled` in `deployments/aztec-mainnet.json` (off) replaces HLC with cUSDC for everyone in the private wallet (`lib/payments/cusdc-public.ts`). It does not mark any of the nine gates as met; they stay a factual record. The wallet lists cUSDC for everyone only when, together:
+
+1. `cusdcPublic.enabled` is `true` (a pull request by Stefan);
+2. `plannedTokens[cUSDC].verifiedOnChain` is `true` after the preflight;
+3. the `CUSDC` slot in `NEXT_PUBLIC_AZTEC_TOKENS` is that address, symbol `cUSDC`, 6 decimals;
+4. a cUSDC cap is set in `NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS`.
+
+Then HLC disappears from the token list, the closed beta stops applying (no invitation needed), the landing row for USDC reads "Live", with the cap stated, and the wallet texts name cUSDC. Exits-only mode, the cap, the 100 token ceiling, G7 and the risk acknowledgement still apply to every payment. Escrows and streams stay closed to cUSDC until an external audit. Before switching it on, update the landing pages that still describe HLC, and keep in mind that the gates listed above (legal note, company, sanctions policy, insurance) are still open.
+
 ## Pausing and switching off
 
 | To | Do | Effect |

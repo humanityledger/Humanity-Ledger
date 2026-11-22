@@ -318,7 +318,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                     {[
                       { label: 'Total Txs', value: txHistory.length },
                       { label: 'Shields', value: txHistory.filter(a => a.kind === 'shield').length },
-                      { label: 'Privacy Score', value: 'N/A — on-chain' },
+                      { label: 'Privacy Score', value: 'Not measured yet' },
                     ].map(({ label, value }) => (
                       <div key={label} className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-3 text-center">
                         <div className="text-[20px] font-black text-gray-900">{value}</div>
@@ -355,7 +355,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                               <div>
                                 <div className="text-[12px] font-bold text-gray-900 capitalize">{tx.kind}</div>
                                 <div className="text-[10px] text-gray-400 font-mono">
-                                  {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—'}
+                                  {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'Unknown date'}
                                 </div>
                               </div>
                             </div>
@@ -434,7 +434,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                           autoFocus
                         />
                       </div>
-                      <div className="text-[11px] text-gray-400">3–32 chars, lowercase letters, numbers, _.-</div>
+                      <div className="text-[11px] text-gray-400">3 to 32 characters: lowercase letters, numbers, underscore, dot or hyphen</div>
                       <div className="flex gap-2">
                         <button
                           onClick={handleSaveHandle}
@@ -470,10 +470,10 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 {/* Identity Details */}
                 <div className="space-y-2">
                   {[
-                    { label: 'Display Name', value: identity?.displayName || '—', editable: true },
-                    { label: 'ENS Name', value: identity?.ensName || '—', editable: false },
+                    { label: 'Display Name', value: identity?.displayName || 'Not set', editable: true },
+                    { label: 'ENS Name', value: identity?.ensName || 'Not set', editable: false },
                     { label: 'Total Transactions', value: identity?.totalTransactions?.toString() || '0', editable: false },
-                    { label: 'Created', value: identity ? new Date(identity.createdAt).toLocaleDateString() : '—', editable: false },
+                    { label: 'Created', value: identity ? new Date(identity.createdAt).toLocaleDateString() : 'Not set', editable: false },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center justify-between bg-[#FAFAFA] border border-black/[0.06] rounded-xl px-4 py-2.5">
                       <span className="text-[12px] text-gray-500 font-medium">{label}</span>

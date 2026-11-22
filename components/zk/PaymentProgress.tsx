@@ -60,7 +60,7 @@ const TYPICAL: Record<Exclude<PaymentStage, 'failed'>, number> = { preparing: 6,
 export function feeJuiceGuidance(error?: string): string | null {
   if (!error) return null;
   if (/fee juice|insufficient fee|fee payer/i.test(error)) {
-    return 'This account needs more Fee Juice. Add it in the wallet — your Ethereum wallet bridges AZTEC — then try again. Nothing was sent.';
+    return 'This account needs more Fee Juice. Add it in the wallet (your Ethereum wallet bridges AZTEC), then try again. Nothing was sent.';
   }
   return null;
 }

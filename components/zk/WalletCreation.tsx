@@ -64,8 +64,8 @@ export function WalletCreation(p: WalletCreationProps) {
   else sentence = 'Your wallet asks you to sign a message. It is free and sends no transaction. Some wallets label it “simulation failed”; that is expected for a signature.';
 
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.06] px-5 pt-4 pb-5" aria-live="polite">
-      <div className="text-[16px] font-semibold" style={{ color: INK }}>{title}</div>
+    <div className="bg-white rounded-2xl border border-[#E4E7EC] px-5 pt-5 pb-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]" aria-live="polite">
+      <div className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>{title}</div>
       <p className={`mt-1.5 text-[13.5px] leading-relaxed break-words ${failed ? 'text-[#b42318]' : 'text-[#475061]'}`} role={failed ? 'alert' : undefined}>
         {failed && <AlertTriangle size={14} className="inline -mt-0.5 mr-1.5" aria-hidden />}
         {sentence}

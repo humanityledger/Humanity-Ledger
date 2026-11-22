@@ -99,7 +99,7 @@ function ZkPrivacyScoreInner({
           Privacy Score: <strong className="text-gray-700">N/A</strong>
           {txHash ? (
             <>
-              {' — tx '}
+              {' · transaction '}
               <a
                 href={txUrl!}
                 target="_blank"
@@ -111,7 +111,7 @@ function ZkPrivacyScoreInner({
               </a>
             </>
           ) : (
-            ' — no transaction selected'
+            ' · no transaction selected'
           )}
         </span>
       </div>
@@ -135,7 +135,7 @@ function ZkPrivacyScoreInner({
                 </p>
                 <p className="text-[11px] text-gray-500 leading-relaxed">
                   Once the indexer is live, scores will reflect your real anonymity-set size,
-                  note maturity, and nullifier age — no simulated values.
+                  note maturity and nullifier age, never simulated values.
                 </p>
               </div>
 
