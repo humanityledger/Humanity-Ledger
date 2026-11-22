@@ -141,6 +141,12 @@ ARG NEXT_PUBLIC_PEERJS_HOST
 ARG NEXT_PUBLIC_PEERJS_PORT
 ARG NEXT_PUBLIC_PEERJS_PATH
 ARG NEXT_PUBLIC_PEERJS_KEY
+# Ledger Relay (relay/README.md): switch, the organisation's relays, and the optional pin. Without these
+# ARGs the Railway variables never reach `next build`: the relay is never used and, with no PeerJS host,
+# calls go through the public PeerJS cloud.
+ARG NEXT_PUBLIC_LEDGER_RELAY
+ARG NEXT_PUBLIC_LEDGER_RELAYS
+ARG NEXT_PUBLIC_LEDGER_RELAY_PIN
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
 # Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.
