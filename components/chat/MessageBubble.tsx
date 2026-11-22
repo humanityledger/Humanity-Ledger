@@ -74,7 +74,7 @@ function DemoNote() {
   return (
     <p className="mt-3 flex items-start gap-2 text-[13px] leading-snug text-[#7a5a12] bg-[#fdf6e3] border border-[#f3e3b5] rounded-xl px-3 py-2">
       <Info size={14} strokeWidth={2} className="mt-[1px] shrink-0" aria-hidden="true" />
-      This chat card does not move funds. A private HLC payment is the wallet transfer, not this message.
+      This chat card does not move funds. A private payment is the wallet transfer, not this message.
     </p>
   );
 }

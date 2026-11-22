@@ -1,69 +1,114 @@
 /**
- * lib/payments/paid-requests.ts: which payment requests this device has paid, and with which
- * transaction, kept in localStorage (no server copy).
+ * lib/payments/paid-requests.ts: which payment requests are paid, kept in localStorage on this
+ * device (no server copy).
  *
- * A request counts as paid while its payment has not failed in this device's own wallet activity:
- * a payment that is dropped or reverted reopens the request, so it can be paid again. Entries
- * written before the transaction was kept (v1, ids only) stay paid.
+ * Two kinds of record, because a chat message proves nothing by itself:
+ *  - `me`: this device paid the request. It counts as paid unless that payment failed in this
+ *    wallet's own activity; then the request opens again and can be paid again.
+ *  - `peer`: the other person posted a payment that names the request. It counts as paid only when
+ *    this wallet has found a settled receive with that transaction hash, in the requested token and
+ *    for at least the requested amount. A message alone, a smaller payment or another token never
+ *    marks a request paid.
+ * Records written before the transaction was kept (v1, ids only) stay paid, so nobody pays twice.
  */
-const KEY = 'hl.payments.paidRequests.v2';
+const KEY = 'hl.payments.paidRequests.v3';
+const KEY_V2 = 'hl.payments.paidRequests.v2';
 const LEGACY_KEY = 'hl.payments.paidRequests.v1';
 const MAX = 500;
 const EVENT = 'hl:paid-requests';
 
-type Entry = { id: string; txHash: string | null };
-type Activity = { kind: string; txHash?: string; status: string };
+export type PaidBy = 'me' | 'peer';
+type Entry = { id: string; txHash: string | null; by: PaidBy | 'legacy' };
+type Activity = { kind: string; txHash?: string; status: string; token?: string; amount?: string };
+type Read = Pick<Storage, 'getItem'> | null;
 
-function load(storage: Pick<Storage, 'getItem'> | null): Entry[] {
-  const out: Entry[] = [];
+function parse(storage: Read, key: string): unknown[] {
   try {
-    const legacy = JSON.parse(storage?.getItem(LEGACY_KEY) || '[]');
-    if (Array.isArray(legacy)) for (const id of legacy) if (typeof id === 'string') out.push({ id, txHash: null });
+    const v = JSON.parse(storage?.getItem(key) || '[]');
+    return Array.isArray(v) ? v : [];
   } catch {
-    /* unreadable: ignored */
+    return [];
   }
-  try {
-    const list = JSON.parse(storage?.getItem(KEY) || '[]');
-    if (Array.isArray(list)) {
-      for (const e of list) {
-        if (e && typeof e.id === 'string') out.push({ id: e.id, txHash: typeof e.txHash === 'string' ? e.txHash.toLowerCase() : null });
-      }
+}
+
+function load(storage: Read): Entry[] {
+  const out: Entry[] = [];
+  for (const id of parse(storage, LEGACY_KEY)) if (typeof id === 'string') out.push({ id, txHash: null, by: 'legacy' });
+  // v2 kept only this device's own payments.
+  for (const e of parse(storage, KEY_V2) as { id?: unknown; txHash?: unknown }[]) {
+    if (e && typeof e.id === 'string') out.push({ id: e.id, txHash: typeof e.txHash === 'string' ? e.txHash.toLowerCase() : null, by: 'me' });
+  }
+  for (const e of parse(storage, KEY) as { id?: unknown; txHash?: unknown; by?: unknown }[]) {
+    if (e && typeof e.id === 'string' && (e.by === 'me' || e.by === 'peer')) {
+      out.push({ id: e.id, txHash: typeof e.txHash === 'string' ? e.txHash.toLowerCase() : null, by: e.by });
     }
-  } catch {
-    /* unreadable: ignored */
   }
   return out;
 }
 
 const browserStorage = (): Storage | null => (typeof localStorage === 'undefined' ? null : localStorage);
 
-/** Requests whose own payment failed in this wallet's activity (the latest payment for each id). */
-export function failedRequestIds(activity: readonly Activity[], storage: Pick<Storage, 'getItem'> | null = browserStorage()): ReadonlySet<string> {
-  const failed = new Set(activity.filter((a) => a.kind === 'send' && a.status === 'failed' && a.txHash).map((a) => a.txHash!.toLowerCase()));
-  const latest = new Map<string, string | null>();
-  for (const e of load(storage)) latest.set(e.id, e.txHash);
-  const out = new Set<string>();
-  for (const [id, tx] of latest) if (tx && failed.has(tx)) out.add(id);
-  return out;
-}
+export type Settlement = 'paid' | 'failed' | 'announced' | null;
 
-/** Requests paid from this device, minus those whose latest payment failed. */
-export function paidRequestIds(storage: Pick<Storage, 'getItem'> | null = browserStorage(), activity: readonly Activity[] = []): ReadonlySet<string> {
-  const failed = failedRequestIds(activity, storage);
-  return new Set(load(storage).map((e) => e.id).filter((id) => !failed.has(id)));
-}
-
-export function rememberPaidRequest(id: string, txHash: string | null = null, storage: Pick<Storage, 'getItem' | 'setItem'> | null = browserStorage()): void {
-  if (!id) return;
-  let list: Entry[] = [];
-  try {
-    const raw = JSON.parse(storage?.getItem(KEY) || '[]');
-    list = Array.isArray(raw) ? raw.filter((e) => e && typeof e.id === 'string') : [];
-  } catch {
-    list = [];
+/**
+ * The state of one request on this device. `req.tokenKey` is this wallet's key for the requested
+ * token (null when the wallet does not list it); `req.amount` is in base units.
+ */
+export function requestSettlement(
+  req: { id: string; amount: string; tokenKey: string | null },
+  activity: readonly Activity[],
+  storage: Read = browserStorage(),
+): Settlement {
+  const entries = load(storage).filter((e) => e.id === req.id);
+  if (!entries.length) return null;
+  if (entries.some((e) => e.by === 'legacy')) return 'paid';
+  const tx = (a: Activity) => (a.txHash ?? '').toLowerCase();
+  const mine = entries.filter((e) => e.by === 'me');
+  const lastMine = mine[mine.length - 1];
+  if (lastMine) {
+    const failed = !!lastMine.txHash && activity.some((a) => a.kind === 'send' && a.status === 'failed' && tx(a) === lastMine.txHash);
+    if (!failed) return 'paid';
   }
-  list = list.filter((e) => e.id !== id);
-  list.push({ id, txHash: txHash ? txHash.toLowerCase() : null });
+  let want: bigint | null = null;
+  try {
+    want = BigInt(req.amount);
+  } catch {
+    want = null;
+  }
+  const announced = new Set(entries.filter((e) => e.by === 'peer' && e.txHash).map((e) => e.txHash!));
+  const received = activity.some((a) => {
+    if (a.kind !== 'receive' || a.status !== 'settled' || !announced.has(tx(a))) return false;
+    if (!req.tokenKey || a.token !== req.tokenKey || want === null) return false;
+    try {
+      return BigInt(a.amount ?? '0') >= want;
+    } catch {
+      return false;
+    }
+  });
+  if (received) return 'paid';
+  if (lastMine) return 'failed';
+  return announced.size ? 'announced' : null;
+}
+
+/** Ids of requests this device paid (legacy and own records), minus those whose latest own payment failed. */
+export function paidRequestIds(storage: Read = browserStorage(), activity: readonly Activity[] = []): ReadonlySet<string> {
+  const ids = new Set(load(storage).filter((e) => e.by !== 'peer').map((e) => e.id));
+  return new Set([...ids].filter((id) => requestSettlement({ id, amount: '0', tokenKey: null }, activity, storage) === 'paid'));
+}
+
+export function rememberPaidRequest(
+  id: string,
+  txHash: string | null = null,
+  storage: Pick<Storage, 'getItem' | 'setItem'> | null = browserStorage(),
+  by: PaidBy = 'me',
+): void {
+  if (!id) return;
+  const tx = txHash ? txHash.toLowerCase() : null;
+  let list = (parse(storage, KEY) as Entry[]).filter((e) => e && typeof e.id === 'string');
+  if (list.some((e) => e.id === id && e.by === by && e.txHash === tx)) return;
+  // One own record per request (the latest payment); every announced payment is kept.
+  if (by === 'me') list = list.filter((e) => !(e.id === id && e.by === 'me'));
+  list.push({ id, txHash: tx, by });
   try {
     storage?.setItem(KEY, JSON.stringify(list.slice(-MAX)));
   } catch {

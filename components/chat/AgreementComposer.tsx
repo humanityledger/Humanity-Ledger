@@ -13,6 +13,7 @@
  */
 
 import { FEE_PRIVACY } from '@/lib/landing/content';
+import { PLANNED_TOKENS } from '@/lib/payments/assets';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { singleFlight } from '@/lib/aztec/single-flight';
 import { X, KeyRound, Lock, Waves } from 'lucide-react';
@@ -32,6 +33,11 @@ import mainnetRecord from '@/deployments/aztec-mainnet.json';
 import pendingRecompile from '@/deployments/aztec-pending-recompile.json';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
+/** Real value (cUSDC) never goes into escrow or stream contracts without an external audit (lib/aztec/agreement-policy.ts). */
+const AGREEMENT_TOKENS = AZTEC_WALLET_CONFIG.tokens.filter(
+  (t) => !ALPHA || !!(mainnetRecord as { audit?: unknown }).audit || !PLANNED_TOKENS.some((p) => p.address.toLowerCase() === t.address.toLowerCase()),
+);
+const NO_AGREEMENT_TOKENS_MESSAGE = 'Escrows and streams in cUSDC open after an external audit of their contracts. Direct private payments work today.';
 const PENDING_CONTRACTS = ((pendingRecompile as { pending?: Array<{ contract?: string }> }).pending ?? []).map((p) => String(p.contract ?? ''));
 
 /** Why this kind of agreement cannot be deployed now (lib/protocol/agreement-gate.ts), or null. Same rule as assertCanOpen. */
@@ -81,7 +87,9 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   // No configured token (Alpha, Fee Juice only): nothing to fund an agreement with; sharing the address still works.
   const paused = !hasPrivateTokens()
     ? NO_PRIVATE_TOKENS_MESSAGE
-    : valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
+    : !AGREEMENT_TOKENS.length
+      ? NO_AGREEMENT_TOKENS_MESSAGE
+      : valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
   useEffect(() => {
     setPeerVerified(false);
     peerAztecAddress(localStoragePeerBindingStore(), dmPeerInboxId).then(setPeer).catch(() => setPeer(undefined));
@@ -97,7 +105,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   }, [dmPeerInboxId, selfInboxId]);
 
   const [kind, setKind] = useState<'escrow' | 'stream'>('escrow');
-  const [token, setToken] = useState(AZTEC_WALLET_CONFIG.tokens[0]?.address ?? '');
+  const [token, setToken] = useState(AGREEMENT_TOKENS[0]?.address ?? '');
   const [amount, setAmount] = useState('');
   const [duration, setDuration] = useState(DURATIONS.escrow[1].s);
   const [step, setStep] = useState<string | null>(null);
@@ -129,7 +137,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   };
 
   const quote = useMemo(() => {
-    const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.address === token);
+    const t = AGREEMENT_TOKENS.find((x) => x.address === token);
     if (!t || !amount.trim()) return null;
     try {
       const units = parseUnits(amount, t.decimals);
@@ -257,7 +265,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 <label className="block text-[13px] text-[#4a505c]">
                   Token
                   <select className={`${field} mt-1`} value={token} onChange={(e) => setToken(e.target.value)}>
-                    {AZTEC_WALLET_CONFIG.tokens.map((t) => (
+                    {AGREEMENT_TOKENS.map((t) => (
                       <option key={t.address} value={t.address}>{ALPHA ? t.symbol : `${t.symbol} (test)`}</option>
                     ))}
                   </select>
@@ -276,7 +284,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 </label>
                 {kind === 'stream' && (() => {
                   // Gap 2.5: the upfront part is shown before anything is proven, never left implicit.
-                  const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.address === token);
+                  const t = AGREEMENT_TOKENS.find((x) => x.address === token);
                   if (!t || !amount) return null;
                   try {
                     const { upfront } = streamTerms(parseUnits(amount, t.decimals), duration, 0);

@@ -13,6 +13,7 @@
  * session in real browsers) and G8 (no external audit).
  */
 import { checkAgreementContext, type PolicyResult } from '../aztec/agreement-policy';
+import { ALPHA_MAX_AMOUNT } from '../protocol/fees';
 import { feeNetworkFromL1ChainId, type FeeNetwork } from '../aztec/fees';
 import { parseUnits } from '../aztec/wallet/amounts';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel, tokenConfig, type TokenKey } from '../aztec/wallet/config';
@@ -40,6 +41,8 @@ export function checkDirectPaymentPolicy(p: DirectPolicyInput): PolicyResult {
   const cap = p.caps?.[p.token.toLowerCase()];
   if (cap === undefined) reasons.push('no amount cap configured for this token on mainnet');
   else if (p.amount > cap) reasons.push(`amount exceeds the mainnet cap of ${cap} base units`);
+  // OD-2: a hard ceiling on Alpha whatever the configured cap says, so a mistyped cap cannot open large payments.
+  if (p.amount > ALPHA_MAX_AMOUNT) reasons.push(`amount exceeds the Alpha maximum of ${ALPHA_MAX_AMOUNT} base units per payment`);
   return reasons.length ? { ok: false, reasons } : { ok: true };
 }
 

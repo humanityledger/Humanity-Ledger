@@ -14,6 +14,7 @@
  * switch, the switch Stefan turned on. Nothing here is a figure typed by hand.
  */
 import { cusdcReady } from '@/lib/payments/assets';
+import { CUSDC_PUBLIC } from '@/lib/aztec/wallet/config';
 import { r2ConfigFromEnv } from '@/lib/storage/r2';
 
 export type ClaimLabel = 'Live' | 'Closed alpha' | 'Not enabled yet' | 'In design';
@@ -85,11 +86,14 @@ export const CLAIMS = [
   {
     id: 'usdc',
     topic: 'USDC',
-    label: 'Not enabled yet',
-    may: 'Private USDC payments in the chat are the design.',
-    mustNot: 'That USDC works today.',
-    evidence: ['lib/payments/assets.ts'],
-    switch: { name: 'CUSDC_GATES', on: cusdcReady() },
+    // cUSDC for everyone (lib/payments/cusdc-public.ts) is the operator's switch; CUSDC_GATES stay a record.
+    label: CUSDC_PUBLIC ? 'Live' : 'Not enabled yet',
+    may: CUSDC_PUBLIC
+      ? 'Private cUSDC payments in the chat on Aztec Alpha, with a cap per payment and no external audit.'
+      : 'Private USDC payments in the chat are the design.',
+    mustNot: CUSDC_PUBLIC ? 'That payments have an external audit, no limit or no risk.' : 'That USDC works today.',
+    evidence: ['lib/payments/assets.ts', 'lib/payments/cusdc-public.ts'],
+    switch: { name: 'cusdcPublic', on: CUSDC_PUBLIC || cusdcReady() },
   },
   {
     id: 'files',

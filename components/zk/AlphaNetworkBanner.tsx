@@ -16,8 +16,9 @@
  * Design: compact, dismissible per session, never blocks interaction.
  */
 
+import { PRIVATE_ASSET } from '@/lib/payments/private-asset';
 import React, { useState } from 'react';
-import { AlertTriangle, X, ExternalLink } from 'lucide-react';
+import { AlertTriangle, X, ExternalLink, Coins, Cpu, Fuel, ShieldAlert, Undo2 } from 'lucide-react';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 
 /** True at build time when Alpha is active. Zero cost when false. */
@@ -69,12 +70,12 @@ export function AlphaNetworkBanner({ className = '', variant = 'strip' }: AlphaN
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-[#9A3412] leading-snug">
-              Aztec Alpha · HLC is a test token with no monetary value
+              {PRIVATE_ASSET.test ? 'Aztec Alpha: HLC is a test token with no monetary value' : 'Aztec Alpha: payments in cUSDC move real value'}
             </p>
             <p className="mt-1 text-[12px] text-[#92400E] leading-relaxed">
-              Private payments run on {networkLabel()} (Ethereum mainnet) with HLC, a test token. Network
+              Private payments run on {networkLabel()} (Ethereum mainnet) with {PRIVATE_ASSET.phrase}. Network
               fees are paid in Fee Juice, which does have value. This software has had an internal security
-              review, not an external audit. Transactions cannot be reversed.
+              review, not an external audit. Every payment has a cap. Transactions cannot be reversed.
             </p>
             <div className="mt-2 flex items-center gap-3">
               <a
@@ -110,7 +111,7 @@ export function AlphaNetworkBanner({ className = '', variant = 'strip' }: AlphaN
       <div className="flex items-center gap-2 min-w-0">
         <AlertTriangle size={13} strokeWidth={2} className="shrink-0" aria-hidden="true" />
         <span className="truncate">
-          <strong className="font-semibold">Aztec Alpha</strong> · HLC test token, no value · Fees in Fee Juice · No external audit
+          <strong className="font-semibold">Aztec Alpha</strong> · {PRIVATE_ASSET.test ? 'HLC test token, no value' : 'cUSDC, real value, capped'} · Fees in Fee Juice · No external audit
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -158,22 +159,32 @@ export function NetworkStatusPill({ className = '' }: { className?: string }) {
 }
 
 /**
- * Alpha gate info box — rendered inside the ZkWalletPanel when Alpha is active,
- * explaining Fee Juice and audit status at a glance.
+ * How the private wallet works on Aztec Alpha, in five plain lines: rendered inside the
+ * ZkWalletPanel overview. The token line follows the build (HLC, or cUSDC once it is on for everyone).
  */
 export function AlphaInfoBox({ className = '' }: { className?: string }) {
   if (!ALPHA) return null;
+  const rows: { icon: React.ReactNode; text: string; warn?: boolean }[] = [
+    { icon: <Coins size={15} strokeWidth={1.9} />, text: `Private payments in ${PRIVATE_ASSET.phrase}` },
+    { icon: <Cpu size={15} strokeWidth={1.9} />, text: 'Every transfer is proven on this device; amount and recipient stay private' },
+    { icon: <Fuel size={15} strokeWidth={1.9} />, text: 'Network fees in Fee Juice, bridged from Ethereum, paid by your own account' },
+    { icon: <ShieldAlert size={15} strokeWidth={1.9} />, text: 'No external audit yet. Each payment has a cap; keep amounts small', warn: true },
+    { icon: <Undo2 size={15} strokeWidth={1.9} />, text: 'Transactions cannot be reversed' },
+  ];
   return (
-    <div className={`rounded-xl border border-[#E4E7EC] bg-[#F7F8FA] px-4 py-3.5 ${className}`}>
-      <p className="text-[13px] font-semibold text-[#15171C] leading-snug">
-        Aztec Alpha · Ethereum mainnet
-      </p>
-      <ul className="mt-2 space-y-1.5 text-[12.5px] text-[#475467] leading-relaxed list-none">
-        <li>Fees paid in Fee Juice (bridged AZTEC from L1)</li>
-        <li>Private transfers are proven on your device</li>
-        <li className="text-[#92400E] font-medium">Protocol not yet externally audited — keep amounts small</li>
-        <li>Transactions are irreversible on Ethereum mainnet</li>
+    <section className={`rounded-2xl border border-[#E4E7EC] bg-white ${className}`} aria-label="How the private wallet works">
+      <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
+        <p className="text-[14px] font-semibold text-[#15171C]">How it works</p>
+        <span className="rounded-full bg-[#F7F8FA] border border-[#E4E7EC] px-2.5 py-0.5 text-[11.5px] font-medium text-[#475467]">Aztec Alpha</span>
+      </div>
+      <ul className="divide-y divide-[#F2F4F7] border-t border-[#F2F4F7]">
+        {rows.map((r) => (
+          <li key={r.text} className="flex items-start gap-3 px-4 py-2.5">
+            <span className={`mt-[1px] shrink-0 ${r.warn ? 'text-[#C2410C]' : 'text-[#5200FF]'}`} aria-hidden="true">{r.icon}</span>
+            <span className={`text-[13px] leading-snug ${r.warn ? 'text-[#9A3412] font-medium' : 'text-[#344054]'}`}>{r.text}</span>
+          </li>
+        ))}
       </ul>
-    </div>
+    </section>
   );
 }

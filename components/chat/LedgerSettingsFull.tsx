@@ -24,6 +24,7 @@ import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
 import { PrivateWalletStatus } from '@/components/zk/PrivateWalletStatus';
 import { PaymentsAvailability } from '@/components/beta/PaymentsAvailability';
+import { PRIVATE_ASSET } from '@/lib/payments/private-asset';
 import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { exportableLocalStorage } from '@/lib/settings/exportSafety';
@@ -1396,7 +1397,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Public tip token" footer="These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use HLC, and cUSDC for members of the closed beta. The network fee is Fee Juice from your own account, not USDC.">
+              <Group title="Public tip token" footer={`These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use ${PRIVATE_ASSET.test ? 'HLC, and cUSDC for members of the closed beta' : 'cUSDC'}. The network fee is Fee Juice from your own account, not USDC.`}>
                 <div className="px-4 pb-4">
                   {/* The tokens the payment sheet can actually send; it opens on this one. */}
                   {['ETH', 'USDC', 'USDT'].map((token) => (

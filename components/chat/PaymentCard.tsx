@@ -50,8 +50,8 @@ export const PaymentCard = React.memo(function PaymentCard({ raw, isMe }: { raw:
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
-    if (msg?.requestId) rememberPaidRequest(msg.requestId, msg.txHash);
-  }, [msg?.requestId, msg?.txHash]);
+    if (msg?.requestId) rememberPaidRequest(msg.requestId, msg.txHash, undefined, isMe ? 'me' : 'peer');
+  }, [msg?.requestId, msg?.txHash, isMe]);
 
   if (!msg) return null;
   const walletOpen = wallet?.phase === 'ready';

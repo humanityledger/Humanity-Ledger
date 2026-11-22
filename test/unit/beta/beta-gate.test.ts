@@ -22,7 +22,7 @@ import {
 } from '@/lib/beta/cusdc-beta-client';
 import { tokensFor, type TokenConfig } from '@/lib/aztec/wallet/config';
 import { balanceProblem, recipientProblem } from '@/lib/payments/send-checks';
-import { failedRequestIds, paidRequestIds, rememberPaidRequest } from '@/lib/payments/paid-requests';
+import { paidRequestIds, rememberPaidRequest, requestSettlement } from '@/lib/payments/paid-requests';
 import { BANNED } from '@/lib/landing/claims';
 
 const PEPPER = 'q'.repeat(40);
@@ -221,7 +221,7 @@ describe('/beta', () => {
     const settings = fs.readFileSync('components/chat/LedgerSettingsFull.tsx', 'utf8');
     expect(settings).toMatch(/<PaymentsAvailability \/>/);
     const panel = fs.readFileSync('components/beta/PaymentsAvailability.tsx', 'utf8');
-    for (const s of ['ETH, USDC or USDT on Ethereum mainnet', 'On Aztec Alpha in HLC', 'Fee Juice', "href={applies ? '/beta' : undefined}"]) expect(panel).toContain(s);
+    for (const s of ['ETH, USDC or USDT on Ethereum mainnet', 'On Aztec Alpha in ${PRIVATE_ASSET.phrase}', 'Fee Juice', "href={applies ? '/beta' : undefined}"]) expect(panel).toContain(s);
   });
   it('the new texts make no claim the landing forbids', () => {
     for (const f of ['components/beta/BetaGateView.tsx', 'components/beta/PaymentsAvailability.tsx', 'lib/beta/gate.ts', 'lib/payments/send-checks.ts', 'docs/beta/CUSDC_BETA.md']) {
@@ -312,7 +312,7 @@ describe('redeem → visibility → payment capability', () => {
     rememberPaidRequest('req_bad', '0xbb', st);
     const activity = [{ kind: 'send', txHash: '0xaa', status: 'settled' }, { kind: 'send', txHash: '0xbb', status: 'failed' }];
     expect([...paidRequestIds(st, activity)]).toEqual(['req_ok']);
-    expect([...failedRequestIds(activity, st)]).toEqual(['req_bad']);
+    expect(requestSettlement({ id: 'req_bad', amount: '1', tokenKey: 'CUSDC' }, activity, st)).toBe('failed');
     rememberPaidRequest('req_bad', '0xcc', st);
     expect([...paidRequestIds(st, activity)].sort()).toEqual(['req_bad', 'req_ok']);
     m.set('hl.payments.paidRequests.v1', JSON.stringify(['req_old']));

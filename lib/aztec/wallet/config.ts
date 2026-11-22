@@ -19,7 +19,10 @@
  */
 import { AZTEC_NETWORKS } from '../sequencer/networks';
 import { WALLET_TYPED_DATA, WALLET_TYPED_DATA_ALPHA, type WalletTypedData } from './keys';
-import { withoutGatedTokens } from '../../payments/assets';
+import { isTestToken, withoutGatedTokens } from '../../payments/assets';
+import { cusdcPublicDecision, cusdcPublicEntry } from '../../payments/cusdc-public';
+import { recordedCusdc } from '../../beta/cusdc-beta';
+import deploymentRecord from '../../../deployments/aztec-mainnet.json';
 import type { BetaVisibility } from '../../beta/cusdc-beta';
 
 export type WalletNetwork = 'testnet' | 'mainnet';
@@ -104,15 +107,30 @@ const CONFIGURED_TOKENS = TOKEN_ORDER.flatMap((key) => {
   return t?.address ? [{ key, address: t.address, symbol: t.symbol, decimals: Number(t.decimals) }] : [];
 }) as TokenConfig[];
 
-/** What everyone may use: the configured tokens without the gated ones (CUSDC_GATES). */
-const PUBLIC_TOKENS: readonly TokenConfig[] = Object.freeze(withoutGatedTokens(CONFIGURED_TOKENS));
+const CONFIGURED_CUSDC = CONFIGURED_TOKENS.find((t) => t.key === 'CUSDC');
+
+/**
+ * cUSDC for everyone, replacing HLC (lib/payments/cusdc-public.ts): the operator's switch and every
+ * technical check, on Alpha only. CUSDC_GATES are not changed by it.
+ */
+export const CUSDC_PUBLIC: boolean =
+  NETWORK === 'mainnet' &&
+  cusdcPublicDecision({
+    entry: cusdcPublicEntry(deploymentRecord),
+    planned: recordedCusdc(deploymentRecord),
+    configured: CONFIGURED_CUSDC,
+    cap: CONFIGURED_CUSDC ? parseAgreementCaps(CAPS_RAW)[CONFIGURED_CUSDC.address.toLowerCase()] : null,
+  }).ok;
+
+/** What everyone may use: with cUSDC for everyone, every configured token except test tokens (HLC); otherwise the configured tokens without the gated ones (CUSDC_GATES). */
+const PUBLIC_TOKENS: readonly TokenConfig[] = Object.freeze(CUSDC_PUBLIC ? CONFIGURED_TOKENS.filter((t) => !isTestToken(t.symbol)) : withoutGatedTokens(CONFIGURED_TOKENS));
 
 /**
  * The configured cUSDC slot that the gates hide. Listed only for members of the closed cUSDC beta,
  * on Alpha, after the server confirms it (lib/beta/cusdc-beta-client.ts). Never any other token.
  */
 export const BETA_TOKENS: readonly TokenConfig[] = Object.freeze(
-  NETWORK === 'mainnet' ? CONFIGURED_TOKENS.filter((t) => t.key === 'CUSDC' && !PUBLIC_TOKENS.includes(t)) : [],
+  NETWORK === 'mainnet' && !CUSDC_PUBLIC ? CONFIGURED_TOKENS.filter((t) => t.key === 'CUSDC' && !PUBLIC_TOKENS.includes(t)) : [],
 );
 
 const WITH_BETA_TOKENS: readonly TokenConfig[] = Object.freeze([...PUBLIC_TOKENS, ...BETA_TOKENS]);

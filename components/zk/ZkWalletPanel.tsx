@@ -243,8 +243,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             </Suspense>
           ) : (
             <>
-              {/* Alpha info box — only shown on Aztec Alpha, reminds users of unaudited status */}
-              {view === 'overview' && <AlphaInfoBox />}
+              {/* How it works on Aztec Alpha: above the balances once open, under the open card before. */}
+              {view === 'overview' && ready && <AlphaInfoBox />}
               {!ready && state.phase === 'needs-fee-juice' ? (
                 // Same card and status rows as opening the wallet (WalletCreation), at the Fee Juice step.
                 <WalletCreation
@@ -299,6 +299,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                 {(state.phase === 'idle' || state.phase === 'error') && (
                   <PasskeyOpen address={address} onOpen={openWithPasskey} disabled={!isWalletConfigured()} />
                 )}
+                {view === 'overview' && <AlphaInfoBox />}
                 </>
               ) : view === 'security' ? (
                 <>

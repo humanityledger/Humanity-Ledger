@@ -80,6 +80,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const w = await who(req);
   if (!w) return NextResponse.json({ error: 'Sign in with your Ethereum wallet.' }, { status: 401, headers: NO_STORE });
+  // JSON only: a cross-site form cannot send application/json without a preflight (CSRF defence in depth).
+  if (!(req.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
+    return NextResponse.json({ error: 'Send JSON.' }, { status: 415, headers: NO_STORE });
+  }
   const body = await req.json().catch(() => ({}));
   try {
     const r = await confirmBetaNotice(prismaBetaStore, { wallet: w, notice: body?.notice, noticeVersion: body?.noticeVersion, now: new Date() });
