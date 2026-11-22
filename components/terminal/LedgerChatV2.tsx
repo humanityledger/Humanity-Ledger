@@ -368,7 +368,7 @@ import { playReceiveSound } from '../../lib/utils/sounds';
 import { MessageBubble } from '../chat/MessageBubble';
 import { PinPrompt } from '@/components/chat/pin/PinPrompt';
 import { IncomingCallScreen, OutgoingCallScreen, AudioCallStage, CallControls, CallClock } from '@/components/chat/call/CallScreens';
-import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, peerServerOptions } from '@/lib/calls/media';
+import { callConstraints, callVideo, CALL_AUDIO, tuneOpusSdp, tuneSenders, loadIceConfig, pickPeerServer } from '@/lib/calls/media';
 import { adoptOptimistic, confirmOptimistic, createSendQueue, failOptimistic, insertOptimistic, newOptimisticId, optimisticMessage, renderKey, strongerStatus } from '@/lib/chat/optimistic-send';
 import { callMetricsDetail, callMetricsLabel, finishCallMetrics, markFirstAudio, markSetup, routeFromStats, sampleHeap, startCallMetrics, type CallMetrics, type CallRoute } from '@/lib/calls/metrics';
 import { DISCONNECTED_GRACE_MS, RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
@@ -2254,7 +2254,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const thisKey = peerInitKey; // capture for closure
 
     // ICE servers from the server (short-lived TURN credentials) while PeerJS loads.
-    Promise.all([import('peerjs'), loadIceConfig()]).then(([peerjsModule, ice]) => {
+    Promise.all([import('peerjs'), loadIceConfig(), pickPeerServer()]).then(([peerjsModule, ice, peerServer]) => {
       const iceServers = ice.iceServers;
       ownTurnRef.current = ice.own;
       if (!ice.own) console.warn('[Call] No TURN relay configured (/api/calls/ice source: none): calls between strict NATs or mobile carriers cannot connect. See docs/CALLS.md.');
@@ -2276,7 +2276,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       const peer = new Peer(stablePeerId, {
         debug: 0,
         // Our own PeerServer when NEXT_PUBLIC_PEERJS_HOST is set, else the public PeerJS cloud.
-        ...peerServerOptions(),
+        // Our relay when it is switched on and healthy, else the public PeerJS cloud (pickPeerServer).
+        ...peerServer,
         config: {
           iceTransportPolicy: ((ledgerSettings as any)?.webrtc_ip_masking ? 'relay' : 'all') as RTCIceTransportPolicy,
           // Few servers: every extra STUN/TURN server slows candidate gathering. Our TURN (from

@@ -208,6 +208,31 @@ export async function loadIceServers(fetchImpl: typeof fetch = fetch): Promise<R
  * self-hosted PeerServer (the `peerjs/peerjs-server` image, one small Railway service) removes that
  * dependency: NEXT_PUBLIC_PEERJS_HOST (+ _PORT, _PATH, _KEY). All clients must use the same one.
  */
+/**
+ * The PeerServer to use now. When the Ledger Relay is the choice, its /health must answer within
+ * `timeoutMs`; otherwise call set-up falls back to the public PeerJS cloud, so calls keep working
+ * while the relay is down or misconfigured (a relay domain serving another site fails this check).
+ */
+export async function pickPeerServer(
+  opts: { host?: string; port?: number; path?: string; key?: string; secure?: boolean } = peerServerOptions(),
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = 2500,
+): Promise<{ host?: string; port?: number; path?: string; key?: string; secure?: boolean }> {
+  if (!opts.host || opts.path !== '/peerjs/' || opts.key !== 'peerjs') return opts; // not the relay
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+  try {
+    const port = opts.port && opts.port !== 443 ? `:${opts.port}` : '';
+    const res = await fetchImpl(`https://${opts.host}${port}/health`, { cache: 'no-store', signal: ctrl?.signal });
+    const body = res.ok ? await res.json().catch(() => null) : null;
+    return body && body.ok === true ? opts : {};
+  } catch {
+    return {};
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export function peerServerOptions(env: Record<string, string | undefined> = {
   NEXT_PUBLIC_PEERJS_HOST: process.env.NEXT_PUBLIC_PEERJS_HOST,
   NEXT_PUBLIC_PEERJS_PORT: process.env.NEXT_PUBLIC_PEERJS_PORT,

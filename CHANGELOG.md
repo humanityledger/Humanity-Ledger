@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relay instead of the public PeerJS cloud (`peerServerOptions`); PeerJS clients can ask the relay
   for an id; shutting down ends open WebSockets; a test connects two clients through a running
   relay.
+- Calls fall back to the public PeerJS service when the relay's `/health` does not answer within
+  2.5 s, or answers with anything but `{ ok: true }` (`pickPeerServer`).
 
 ### Photo mockups, profile photos, deleted chats and 56 diagrams (21 November 2026, evening)
 
