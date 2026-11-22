@@ -7,30 +7,37 @@
  * opens the private payment form with the token and amount fixed. The payee is never taken from the
  * request: the form pays the address pinned and verified for this conversation (G7), with the same
  * cap, risk acknowledgement, exits-only and beta checks as any payment. A request is shown paid once
- * this device has seen a payment that names it (lib/payments/paid-requests.ts); expired requests
- * cannot be paid.
+ * this device has seen a payment that names it (lib/payments/paid-requests.ts), unless that payment
+ * failed in this device's own wallet: then it can be paid again. Expired requests cannot be paid.
+ * A request in cUSDC that this person cannot pay yet (not in the closed beta) links to /beta.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Receipt } from 'lucide-react';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
-import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
+import { AZTEC_WALLET_CONFIG, BETA_TOKENS, networkLabel } from '@/lib/aztec/wallet/config';
+import { getPrivateWallet, type WalletSnapshot } from '@/lib/aztec/wallet/client';
+import { betaApplies } from '@/lib/beta/cusdc-beta-client';
 import { parsePaymentRequest, requestCardState } from '@/lib/payments/payment-message';
-import { onPaidRequestsChange, paidRequestIds } from '@/lib/payments/paid-requests';
+import { failedRequestIds, onPaidRequestsChange, paidRequestIds } from '@/lib/payments/paid-requests';
 import { PAY_REQUEST_EVENT, plainUnits, type PayPrefill } from '@/lib/payments/request-draft';
 
 const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
 const BTN = 'h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors bg-[#15171c] text-white hover:bg-[#2a2d35] disabled:opacity-50';
 
-function usePaidIds(): ReadonlySet<string> {
-  const [ids, setIds] = useState<ReadonlySet<string>>(() => paidRequestIds());
-  useEffect(() => onPaidRequestsChange(() => setIds(paidRequestIds())), []);
-  return ids;
+function usePaidIds(): { paid: ReadonlySet<string>; failed: ReadonlySet<string> } {
+  const [tick, setTick] = useState(0);
+  const [activity, setActivity] = useState<WalletSnapshot['activity']>(() => (typeof window === 'undefined' ? [] : getPrivateWallet().state.activity));
+  useEffect(() => onPaidRequestsChange(() => setTick((n) => n + 1)), []);
+  useEffect(() => getPrivateWallet().subscribe((s) => setActivity(s.activity)), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ paid: paidRequestIds(undefined, activity), failed: failedRequestIds(activity) }), [activity, tick]);
 }
 
 export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, isMe }: { raw: string; isMe: boolean }) {
   const req = useMemo(() => parsePaymentRequest(raw), [raw]);
-  const paid = usePaidIds();
+  const { paid, failed } = usePaidIds();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
@@ -46,7 +53,8 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
     state.kind === 'paid' ? 'Paid'
       : state.kind === 'expired' ? 'Expired'
         : state.kind === 'wrongNetwork' ? `Asked on another network than ${networkLabel()}`
-          : isMe ? 'Waiting for payment' : `Open until ${expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+          : failed.has(req.id) ? 'The payment failed. Nothing was paid; you can pay again.'
+            : isMe ? 'Waiting for payment' : `Open until ${expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
 
   const pay = () => {
     if (!token) return;
@@ -66,7 +74,9 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
       {!isMe && state.kind === 'open' && (
         token
           ? <button type="button" className={`${BTN} mt-3`} onClick={pay}>Pay privately</button>
-          : <p className="mt-2 text-[12.5px] text-[#4a505c]">This token is not available in your private wallet.</p>
+          : betaApplies() && BETA_TOKENS.some((t) => t.address.toLowerCase() === req.token.address)
+            ? <p className="mt-2 text-[12.5px] text-[#4a505c]">cUSDC payments are in a closed beta. <Link href="/beta" className="font-semibold text-[#5200FF] hover:underline">Join with an invitation</Link></p>
+            : <p className="mt-2 text-[12.5px] text-[#4a505c]">This token is not available in your private wallet.</p>
       )}
     </div>
   );

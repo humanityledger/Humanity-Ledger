@@ -10,7 +10,10 @@ This is a closed technical test for at most 100 invited people. Its only purpose
 | --- | --- |
 | Switch `cusdcBeta` (off, 100 people, end date required) | `deployments/aztec-mainnet.json`, `lib/beta/cusdc-beta.ts` |
 | Invitations and members (at most 100, database lock) | `CusdcBetaInvite`, `CusdcBetaMember`, `scripts/beta/cusdc-invites.mjs`, `/api/beta/cusdc/redeem` |
-| Join page with the technical notice | `/beta` (`app/beta/page.tsx`), `/api/beta/cusdc/status` |
+| The 100 codes and the operator's table | `scripts/beta/generate-100-codes.mjs`, `lib/beta/invite-codes.mjs`, `docs/beta/100_BETA_INVITE_CODES.md` (gitignored) |
+| Join page: wallet, code, notice, unlock | `/beta` (`components/beta/BetaGateView.tsx`, `lib/beta/gate.ts`), `/api/beta/cusdc/status` |
+| Recipient and balance checks before a cUSDC proof | `/api/beta/cusdc/member`, `lib/payments/send-checks.ts`, `components/chat/ZkMoneyModal.tsx` |
+| Settings > Payments: what works today | `components/beta/PaymentsAvailability.tsx` |
 | cUSDC listed for members only, asked again before every send | `lib/aztec/wallet/config.ts`, `lib/beta/cusdc-beta-client.ts`, `lib/aztec/wallet/client.ts` |
 | Payment card with real status | `components/chat/PaymentCard.tsx`, `lib/payments/payment-message.ts` |
 | Payment requests with a locked pay form | `components/chat/PaymentRequestComposer.tsx`, `components/chat/PaymentRequestCard.tsx` |
@@ -66,15 +69,97 @@ All of these are the operator's actions. Agents change no Railway variable, depl
    - Add the cap to `NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS`, keyed by that address, in base units. For example, `"5000000"` is 5 cUSDC.
    - Redeploy. Both variables are build arguments in the `Dockerfile`.
 3. **Fee Juice.** Every tester pays network fees in Fee Juice (AZTEC bridged from L1). Ledger Chat sponsors none. Each tester bridges their own, or is given some through a fee link (the same path as the alpha, `docs/alpha`).
-4. **Invitations.** One per person, after the sanctions list and age checks:
+4. **Invitations.** The scripts need `DATABASE_URL`, `ALPHA_INVITE_PEPPER` (at least 32 characters) and `ALPHA_ADMINS`, the same as the alpha. Run them from the repository root on the operator's own machine.
+   - Generate the codes once. Only the HMAC of each code is stored; the codes in clear go to `docs/beta/100_BETA_INVITE_CODES.md` (gitignored, owner-only, never overwritten):
 
-   ```sh
-   node scripts/beta/cusdc-invites.mjs create --by 0xOPERATOR --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked --days 14
-   ```
+     ```sh
+     node scripts/beta/generate-100-codes.mjs --by 0xOPERATOR
+     ```
 
-   The script needs `DATABASE_URL`, `ALPHA_INVITE_PEPPER` and `ALPHA_ADMINS`, the same as the alpha.
+     Options: `--count N` (default 100, never more than 100 unrevoked codes in total) and `--days D` (codes expire after D days).
+   - Every code starts **Unassigned** and cannot be redeemed. Before giving a code to someone, check that person (EU consolidated sanctions list, 18 or older) and record it on one code, by its number in the table:
+
+     ```sh
+     node scripts/beta/cusdc-invites.mjs assign 7 --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked
+     ```
+
+     One code per person. A match on the sanctions list gets no code. Only the result is stored, never an identity document.
+   - Refresh the table (Status, Redeemed By Wallet, Redeemed At) and print `X / 100 redeemed`:
+
+     ```sh
+     node scripts/beta/cusdc-invites.mjs export-table
+     ```
+
+   - A single code with its checks in one step still works: `cusdc-invites.mjs create --by 0xOPERATOR --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked`.
 5. **Switch on.** In a pull request, set `cusdcBeta.enabled: true` and `cusdcBeta.until` to the end date (ISO date-time).
-6. **Testers join** at `/beta`: sign in with their wallet, read the notice, tick the box, enter the code.
+6. **Testers join** at `/beta` (below).
+
+## The gate at /beta
+
+Signed-out visitors go to `/connect` first and come back. The page shows the capacity ("Closed Beta • 100 spots total • X remaining", from `/api/beta/cusdc/status`) and asks one thing at a time:
+
+1. **Wallet.** The signed-in Ethereum address, shortened, with a green check. This is the account the server admits.
+2. **Code.** Four blocks of four characters. Lower case, spaces, hyphens and Crockford look-alikes (O, I, L) are accepted; a full code pasted into any block fills all four.
+3. **Notice.** The technical notice and one box, not ticked in advance. "Unlock cUSDC Beta" sends the code with the notice version.
+
+On success the page drops the wallet's cached beta answer, so cUSDC appears at the next wallet refresh rather than up to a minute later, and opens the chat. Every answer of `/api/beta/cusdc/redeem` has its own message (`lib/beta/gate.ts`):
+
+| Case | Answer | What the person sees |
+| --- | --- | --- |
+| Unknown, used, revoked or expired code | 400 | One message for all, so codes cannot be probed; back to the code step |
+| Code not assigned yet (no checks recorded) | 403 | "This invitation is not active yet"; ask the operator |
+| Already a member, same wallet again | 200 | Shown as a member; retrying is safe |
+| 101st person | 409 | "The cUSDC beta is full"; the counter shows 0 |
+| More than 5 tries in an hour | 429 | Try again in an hour |
+| Session expired | 401 | Back to the wallet step; the code was not used |
+| Network failure | none | Try again; the same code is safe to resend |
+| Beta switched off | 503 | "The cUSDC beta is not open" |
+
+Members see their own state instead of the form: in the beta, notice to confirm again, paused, or revoked. A payment request in cUSDC shown to someone outside the beta links to `/beta`.
+
+## The payment flow
+
+1. **Redeem.** The member row is written in the same transaction as the code, under a database lock. Visibility becomes `send` on the server at once.
+2. **Wallet refresh.** The wallet asks `/api/beta/cusdc/status` (cached for a minute, dropped by `/beta` after redeem) and lists cUSDC. On Alpha it runs `checkTokenInstance` before it loads the token.
+3. **Before a proof**, the payment form stops with a reason when: the recipient is not an active beta member (`/api/beta/cusdc/member`, asked only by members, rate limited); the amount is above the private balance; the peer's Aztec address is not verified in this chat (G7) or its fingerprint is not confirmed; the risk acknowledgement is missing; or the app is in exits-only mode.
+4. **Send.** The wallet asks the server again, uncached (`assertCusdcBetaAllows`), checks the cap (`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS`), proves on the device and submits to the Aztec node. The network fee is Fee Juice from the sender's own account.
+5. **In the chat.** A payment message with the transaction hash (never the amount) is posted. The sender's card goes sending, sent, confirmed or failed from the sender's own wallet activity. The recipient's card turns to received when their own wallet finds the settled note, and a notice appears (`IncomingPaymentNotifier`, muted by Do Not Disturb, content hidden when the person chose so).
+6. **Requests.** "Pay privately" fixes the token and amount; the payee is still the verified address. A request is shown paid once paid from this device, and opens again if that payment fails in the wallet.
+
+Errors are shown in plain words (`humanError` in `lib/aztec/wallet/client.ts`): balance too low, not enough Fee Juice, node unreachable, node limiting requests, transaction rejected or dropped, proof failed, already settled. A cUSDC note sent to someone outside the beta is not lost: it is theirs, and they see it once they join.
+
+## Settings > Payments
+
+The Payments tab opens with "What works today":
+
+- **Public tips:** ETH, USDC or USDT on Ethereum mainnet, from the person's Ethereum wallet. Public on the blockchain.
+- **Private payments:** on Aztec Alpha in HLC, a test token with no monetary value; the network fee is Fee Juice.
+- **cUSDC private payments:** the closed beta, with the person's own state (invitation only with places left, member, notice to confirm, revoked, full, not open) and a link to `/beta`.
+
+## First real transfer between two beta wallets (Stefan)
+
+Two people, A and B, each with their own wallet and device, both redeemed at `/beta`, after the steps above are done and the switch is on.
+
+1. **Both:** open the chat, then the private wallet. cUSDC is listed. Each has Fee Juice; A has a cUSDC balance at least the amount to send, below the cap.
+2. **Both:** open a direct chat with each other and share the Aztec address in it (the binding). In the payment form, A sees "Verified (G7)" and the fingerprint; A and B compare the fingerprint over another channel.
+3. **A:** private payment, token cUSDC, a small amount. Tick the fingerprint and the risk acknowledgement, then "Send privately". The proof runs on A's device.
+4. **Success looks like this:** A's card goes from sending to sent, then confirmed with the amount. On B's side, once B's wallet is open and synced, the card turns to received and a notice appears. A's private balance goes down by the amount; B's goes up. Repeat with a request from B, paid by A.
+5. **If it fails or is slow:**
+   - The card says failed: read the message under it. Fee Juice and balance are the usual causes; nothing was sent unless the wallet activity shows the transaction.
+   - Sent but not confirmed for a long time: the Aztec network can be slow; press "Check now" on the card, then check the node status. Do not resend while the first payment is pending, or both may go through.
+   - Confirmed for A but B sees nothing: B opens the wallet and waits for sync; notes are found by B's own device, not pushed by Ledger Chat.
+   - "Only members of the closed beta" or the recipient check stops A: check both rows with `cusdc-invites.mjs list` and that the notice is confirmed.
+   - cUSDC is not listed: check `verifiedOnChain`, the `CUSDC` slot and its cap in the build, `cusdcBeta.enabled` and `until`, and that `checkTokenInstance` passes in the preflight.
+
+## Limitations and external dependencies
+
+- **Aztec Alpha** (node, sequencer, proving in the browser) is outside Ledger Chat's control: delays, rejected transactions or an upgrade can stop payments. There is no external audit, so caps stay small.
+- **The cUSDC contract** on Aztec is not Ledger Chat's. The beta trusts only the planned address after the preflight confirms it.
+- **Fee Juice** comes from bridging AZTEC from Ethereum. Ledger Chat sponsors no fees (`/api/aztec/sponsor` stays retired).
+- **XMTP** carries the chat messages, including payment messages and requests. If it is down, payments still settle but cards appear late.
+- **Postgres** holds invitations and members; **Redis** holds the rate limits. If the database is down, the status fails closed: nobody gains `send`, and balances already shown stay visible.
+- **The device:** proving needs memory; an old phone may fail where a computer succeeds. Private notes live in the browser's storage on that device.
+- **Not in this beta:** cUSDC for anyone outside it, or on any public page. The landing keeps saying "Not enabled yet".
 
 ## Pausing and switching off
 

@@ -11,11 +11,13 @@ You were invited to a closed technical test of private cUSDC payments in Ledger 
 
 ## Join
 
-1. Sign in at ledgerchat.org with your wallet.
-2. Open `ledgerchat.org/beta`.
-3. Read the beta notice and tick the box.
-4. Enter your invitation code (16 characters, `XXXX-XXXX-XXXX-XXXX`) and join.
-5. Open your private wallet in the chat. cUSDC appears after the next sync, once the beta is open.
+1. Open `ledgerchat.org/beta`. If you are not signed in, sign in with your wallet first; you come back to the page.
+2. Check that the wallet shown is yours, then continue.
+3. Enter your invitation code (16 characters, `XXXX-XXXX-XXXX-XXXX`). You can paste it into any box.
+4. Read the beta notice, tick the box and press "Unlock cUSDC Beta".
+5. The page opens the chat. Open your private wallet: cUSDC appears at its next refresh.
+
+If the page says the invitation is not active yet, ask the person who invited you. Trying again with the same code is safe.
 
 ## What to try
 

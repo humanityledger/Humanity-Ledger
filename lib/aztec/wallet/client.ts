@@ -1600,6 +1600,8 @@ export function humanError(err: any): string {
   if (/dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk [\w-]+ failed|error loading dynamically imported/i.test(msg)) {
     return 'Ledger Chat was updated while this page was open. Reload the page, then open the wallet again. Nothing was sent.';
   }
+  // The node or the relay limiting requests: retrying at once makes it worse.
+  if (/Too Many Requests|\b429\b|rate.?limit/i.test(msg)) return 'The Aztec network is limiting requests right now. Wait a minute, then try again.';
   // Safari says "Load failed", Firefox "NetworkError", Chrome "Failed to fetch"; the relay (node-fetch.ts) was tried too.
   if (/Failed to fetch|fetch failed|Load failed|network connection was lost|NetworkError|Error fetching from host|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|Too Many Requests|Service Unavailable|Bad Gateway/i.test(msg)) {
     // Name the service when the error does; a browser extension or firewall blocking one host looks the same as no connection.

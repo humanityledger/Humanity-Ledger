@@ -63,6 +63,33 @@ export async function assertCusdcBetaAllows(key: TokenKey, fetchImpl: typeof fet
 }
 
 /** Tests only. */
+/**
+ * Forget the cached answer, so the next refresh asks the server. /beta calls it right after a
+ * successful redeem: cUSDC appears at the next wallet refresh, not up to a minute later.
+ */
+export function invalidateCusdcBeta(): void {
+  fetchedAt = -Infinity;
+}
+
+export type RecipientAnswer = 'member' | 'notMember' | 'unknown';
+
+/** Reads /api/beta/cusdc/member: whether a DM peer can receive cUSDC (an active beta member). */
+export function parseRecipientAnswer(ok: boolean, body: unknown): RecipientAnswer {
+  if (!ok) return 'unknown';
+  const m = (body as { member?: unknown } | null)?.member;
+  return m === true ? 'member' : m === false ? 'notMember' : 'unknown';
+}
+
+export async function checkBetaRecipient(address: string, fetchImpl: typeof fetch = fetch): Promise<RecipientAnswer> {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return 'unknown';
+  try {
+    const res = await fetchImpl(`/api/beta/cusdc/member?address=${address.toLowerCase()}`, { credentials: 'include', cache: 'no-store' });
+    return parseRecipientAnswer(res.ok, await res.json().catch(() => null));
+  } catch {
+    return 'unknown';
+  }
+}
+
 export function __resetCusdcBetaClient(): void {
   fetchedAt = -Infinity;
   setCusdcBetaVisibility('hidden');

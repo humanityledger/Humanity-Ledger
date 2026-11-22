@@ -19,6 +19,8 @@ import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/w
 import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel, tokenConfig, type TokenKey } from '@/lib/aztec/wallet/config';
 import { buildPaymentMessage } from '@/lib/payments/payment-message';
 import { rememberPaidRequest } from '@/lib/payments/paid-requests';
+import { balanceProblem, recipientProblem } from '@/lib/payments/send-checks';
+import { betaApplies, checkBetaRecipient, type RecipientAnswer } from '@/lib/beta/cusdc-beta-client';
 import type { PayPrefill } from '@/lib/payments/request-draft';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
@@ -46,7 +48,7 @@ interface ZkMoneyModalProps {
   onSuccess: (message: string, result: { txHash: string; token: TokenKey }) => void;
 }
 
-export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myAddress, recipientName, dmPeerInboxId, selfInboxId, prefill, onSuccess }) => {
+export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myAddress, recipientAddress, recipientName, dmPeerInboxId, selfInboxId, prefill, onSuccess }) => {
   const [wallet, setWallet] = useState<WalletSnapshot | null>(() => (typeof window === 'undefined' ? null : getPrivateWallet().state));
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const ready = wallet?.phase === 'ready';
@@ -58,7 +60,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
       buildPaymentMessage({ network: AZTEC_WALLET_CONFIG.network, token: { symbol: t.symbol, address: t.address }, txHash, sender: getPrivateWallet().state.aztecAddress, requestId: prefill?.requestId }),
       { txHash, token },
     );
-    if (prefill) rememberPaidRequest(prefill.requestId);
+    if (prefill) rememberPaidRequest(prefill.requestId, txHash);
   };
 
   let body: React.ReactNode;
@@ -71,7 +73,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
       </div>
     );
   } else if (dmPeerInboxId && ready) {
-    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} prefill={prefill} onClose={onClose} onPaid={posted} />;
+    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} peerAddress={recipientAddress} balances={wallet?.balances} prefill={prefill} onClose={onClose} onPaid={posted} />;
   } else if (dmPeerInboxId || !ALPHA) {
     // Wallet not open yet (DM: only to open it, no typed-address payment posted), or a test-network community.
     body = <ZkWalletPanel address={myAddress} onClose={onClose} initialSheet={dmPeerInboxId ? null : 'send'} onPaymentSent={dmPeerInboxId ? undefined : ({ txHash, token }) => posted(txHash, token)} />;
@@ -103,7 +105,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
   );
 };
 
-function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
+function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, balances, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; peerAddress?: string; balances?: WalletSnapshot['balances']; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
   const [payee, setPayee] = useState<{ address?: string; verified: boolean } | null>(null);
   const [token, setToken] = useState<TokenKey>(prefill?.token ?? AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC');
   const [amount, setAmount] = useState(prefill?.amount ?? '');
@@ -128,10 +130,26 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, prefill, onCl
     };
   }, [dmPeerInboxId, selfInboxId]);
 
+  // cUSDC in the closed beta: the recipient must be a member too, or they could not see the payment.
+  const betaToken = token === 'CUSDC' && betaApplies();
+  const [recipient, setRecipient] = useState<RecipientAnswer | null>(null);
+  useEffect(() => {
+    setRecipient(null);
+    if (!betaToken) return;
+    let live = true;
+    checkBetaRecipient(peerAddress ?? '').then((a) => live && setRecipient(a));
+    return () => {
+      live = false;
+    };
+  }, [betaToken, peerAddress]);
+  const recipientIssue = betaToken ? recipientProblem(recipient, peerName || 'This person') : null;
+  const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.key === token);
+  const lowBalance = t ? balanceProblem(amount, t, balances?.find((b) => b.key === token)) : null;
+
   // G7 on every network; the fingerprint check is an extra out-of-band confirmation, never a substitute.
   const valueMode = useValueMode();
   const paused = valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
-  const blocked = !!paused || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
+  const blocked = !!paused || !!recipientIssue || !!lowBalance || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
@@ -215,6 +233,12 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, prefill, onCl
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
       {busy && <ProvingStatus label="Checking the address, then proving the payment on this device" startedAt={startedAt || Date.now()} />}
       {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
+      {recipientIssue && (
+        <p role="status" data-testid="beta-recipient" className={recipientIssue.checking ? 'text-[13px] text-[#4a505c]' : 'rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]'}>
+          {recipientIssue.text}
+        </p>
+      )}
+      {lowBalance && !busy && <p role="status" data-testid="low-balance" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{lowBalance}</p>}
       <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
         {busy ? 'Proving on this device…' : 'Send privately'}
       </button>

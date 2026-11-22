@@ -107,9 +107,9 @@ describe('paid requests on this device', () => {
   it('remembers ids only, without duplicates', () => {
     const m = new Map<string, string>();
     const s = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
-    rememberPaidRequest('req_1', s);
-    rememberPaidRequest('req_1', s);
-    rememberPaidRequest('req_2', s);
+    rememberPaidRequest('req_1', null, s);
+    rememberPaidRequest('req_1', null, s);
+    rememberPaidRequest('req_2', null, s);
     expect([...paidRequestIds(s)]).toEqual(['req_1', 'req_2']);
     expect(paidRequestIds({ getItem: () => '{bad' }).size).toBe(0);
   });

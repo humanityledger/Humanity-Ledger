@@ -23,6 +23,7 @@ function memoryStore(codes: string[], existing: BetaMemberRow[] = []) {
       members.set(wallet, row);
       return row;
     },
+    async countMembers() { return members.size; },
     async confirmNotice(w, v, at) { const m = { ...members.get(w)!, noticeVersion: v, noticeAckAt: at }; members.set(w, m); return m; },
   };
   return { store, members, invites };

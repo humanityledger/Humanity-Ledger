@@ -72,7 +72,7 @@ export default function PaymentsHarness() {
       const txHash = hex32();
       window.__paymentsHarness!.addActivity({ id: `send-${txHash}`, kind: 'send', token: d.token, amount: parseUnits(d.amount, t.decimals).toString(), txHash, status: 'pending', createdAt: Date.now() });
       post(buildPaymentMessage({ network: AZTEC_WALLET_CONFIG.network, token: { symbol: t.symbol, address: t.address }, txHash, sender: AZTEC[as], requestId: d.requestId }));
-      rememberPaidRequest(d.requestId);
+      rememberPaidRequest(d.requestId, txHash);
     };
     window.addEventListener(PAY_REQUEST_EVENT, onPay);
     return () => window.removeEventListener(PAY_REQUEST_EVENT, onPay);
