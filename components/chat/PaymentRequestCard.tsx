@@ -7,8 +7,10 @@
  * opens the private payment form with the token and amount fixed. The payee is never taken from the
  * request: the form pays the address pinned and verified for this conversation (G7), with the same
  * cap, risk acknowledgement, exits-only and beta checks as any payment. A request is shown paid once
- * this device has seen a payment that names it (lib/payments/paid-requests.ts), unless that payment
- * failed in this device's own wallet: then it can be paid again. Expired requests cannot be paid.
+ * this device paid it (unless that payment failed in this wallet: then it can be paid again), or,
+ * for the person who asked, once their own wallet found a settled receive of at least the amount
+ * in that token (lib/payments/paid-requests.ts). A chat message alone never marks it paid.
+ * Expired requests cannot be paid.
  * A request in cUSDC that this person cannot pay yet (not in the closed beta) links to /beta.
  */
 
@@ -20,24 +22,24 @@ import { AZTEC_WALLET_CONFIG, BETA_TOKENS, networkLabel } from '@/lib/aztec/wall
 import { getPrivateWallet, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { betaApplies } from '@/lib/beta/cusdc-beta-client';
 import { parsePaymentRequest, requestCardState } from '@/lib/payments/payment-message';
-import { failedRequestIds, onPaidRequestsChange, paidRequestIds } from '@/lib/payments/paid-requests';
+import { onPaidRequestsChange, requestSettlement } from '@/lib/payments/paid-requests';
 import { PAY_REQUEST_EVENT, plainUnits, type PayPrefill } from '@/lib/payments/request-draft';
 
 const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
 const BTN = 'h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors bg-[#15171c] text-white hover:bg-[#2a2d35] disabled:opacity-50';
 
-function usePaidIds(): { paid: ReadonlySet<string>; failed: ReadonlySet<string> } {
+/** The wallet's activity, and a re-render whenever a payment is recorded on this device. */
+function useSettlementInputs(): { activity: WalletSnapshot['activity']; tick: number } {
   const [tick, setTick] = useState(0);
   const [activity, setActivity] = useState<WalletSnapshot['activity']>(() => (typeof window === 'undefined' ? [] : getPrivateWallet().state.activity));
   useEffect(() => onPaidRequestsChange(() => setTick((n) => n + 1)), []);
   useEffect(() => getPrivateWallet().subscribe((s) => setActivity(s.activity)), []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => ({ paid: paidRequestIds(undefined, activity), failed: failedRequestIds(activity) }), [activity, tick]);
+  return { activity, tick };
 }
 
 export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, isMe }: { raw: string; isMe: boolean }) {
   const req = useMemo(() => parsePaymentRequest(raw), [raw]);
-  const { paid, failed } = usePaidIds();
+  const { activity } = useSettlementInputs();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
@@ -46,15 +48,17 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
 
   if (!req) return null;
   const token = AZTEC_WALLET_CONFIG.tokens.find((t) => t.address.toLowerCase() === req.token.address);
-  const state = requestCardState(req, { network: AZTEC_WALLET_CONFIG.network, now, paidRequestIds: paid });
+  const settlement = requestSettlement({ id: req.id, amount: req.amount, tokenKey: token?.key ?? null }, activity);
+  const state = requestCardState(req, { network: AZTEC_WALLET_CONFIG.network, now, paidRequestIds: settlement === 'paid' ? new Set([req.id]) : new Set<string>() });
   const amountText = token ? `${formatUnits(BigInt(req.amount), token.decimals, token.decimals)} ${req.token.symbol}` : req.token.symbol;
   const expires = new Date(req.expiresAt);
   const status =
     state.kind === 'paid' ? 'Paid'
       : state.kind === 'expired' ? 'Expired'
         : state.kind === 'wrongNetwork' ? `Asked on another network than ${networkLabel()}`
-          : failed.has(req.id) ? 'The payment failed. Nothing was paid; you can pay again.'
-            : isMe ? 'Waiting for payment' : `Open until ${expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+          : settlement === 'failed' ? 'The payment failed. Nothing was paid; you can pay again.'
+            : settlement === 'announced' && isMe ? 'A payment was announced. It shows as paid once your wallet finds it.'
+              : isMe ? 'Waiting for payment' : `Open until ${expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
 
   const pay = () => {
     if (!token) return;

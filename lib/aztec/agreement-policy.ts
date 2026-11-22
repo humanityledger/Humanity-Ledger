@@ -20,6 +20,7 @@
  */
 import type { FeeNetwork } from './fees';
 import { ALPHA_MAX_AMOUNT } from '../protocol/fees';
+import { PLANNED_TOKENS } from '../payments/assets';
 
 export interface MainnetRecord {
   audit: null | { report: string; date: string };
@@ -128,6 +129,10 @@ export function checkAgreementPolicy(p: PolicyInput): PolicyResult {
     const current = rec.contracts.filter((c) => c.tracksCurrentArtifact && c.status !== 'do-not-use').map((c) => c.classId.toLowerCase());
     if (!current.includes(p.classId.toLowerCase())) reasons.push('contract class is not a recorded mainnet deployment');
     if (!rec.audit && !p.acknowledgedUnaudited) reasons.push('contracts are unaudited and the user has not acknowledged it');
+    // Real value (cUSDC) never goes into an escrow or stream contract that has no external audit.
+    if (!rec.audit && PLANNED_TOKENS.some((t) => t.address.toLowerCase() === p.token.toLowerCase())) {
+      reasons.push('escrows and streams in cUSDC wait for an external audit of their contracts');
+    }
   }
   if (!p.acknowledgedPublicFeePayer) reasons.push('the fee payer is public and the user has not acknowledged it');
   if (!p.peerVerified) reasons.push("the counterparty's Aztec address has no verified proof of control (G7)");
