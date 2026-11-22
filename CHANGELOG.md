@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Closed cUSDC beta: 100 invitation codes, the /beta gate and payment checks (22 November 2026)
+
+- `scripts/beta/generate-100-codes.mjs`: generates at most 100 codes, stores only their HMAC and
+  writes the operator's table to `docs/beta/100_BETA_INVITE_CODES.md` (gitignored). Codes start
+  unassigned; `cusdc-invites.mjs assign` records one person's sanctions and age checks, and
+  redemption refuses a code without them. `cusdc-invites.mjs export-table` prints "X / 100 redeemed".
+- `/beta`: one step at a time (wallet, four-block code, notice, "Unlock cUSDC Beta"), with the live
+  capacity, a message for every answer, and cUSDC listed at the next wallet refresh after joining.
+- Private payment form: a cUSDC payment stops before the proof when the recipient is not in the beta
+  (`/api/beta/cusdc/member`) or the amount is above the private balance. A request whose payment
+  failed opens again. Rate limits from the Aztec network have their own message.
+- Settings > Payments opens with "What works today": public tips, private HLC payments on Aztec
+  Alpha, and the closed cUSDC beta with the person's own state.
+- `docs/beta/CUSDC_BETA.md`: generating and assigning codes, the gate, the payment flow, the first
+  real transfer between two beta wallets, limitations and external dependencies.
+
 ### Closed cUSDC beta: tester guide and real-network session (22 November 2026)
 
 - `docs/beta/TESTER_GUIDE.md`: how a tester joins, the missions to try, what to report and what to
