@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Closed cUSDC beta: tester guide and real-network session (22 November 2026)
+
+- `docs/beta/TESTER_GUIDE.md`: how a tester joins, the missions to try, what to report and what to
+  do when something goes wrong. Not legal terms.
+- `docs/chat/G6_SESSION_CHECKLIST.md`: a closed cUSDC beta section (B1 to B8) for the operator's
+  two-account session on the Alpha network: join, request, pay, notice, cap, exits-only, revoke.
+
 ### Two-session payments test (22 November 2026)
 
 - `scripts/ui/payments-e2e.mjs` and the `Payments e2e` workflow run the payment flow between two

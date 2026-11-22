@@ -14,3 +14,18 @@ Two accounts, A and B, with different EVM wallets, each signed in with SIWE in i
 | 8 | Alpha build only: ack boxes unchecked, or peer not verified | Send, Open and Accept stay disabled; nothing is proven or sent; the policy refuses if forced |
 
 Record memory and proving time for each step on Safari iOS (R-16).
+
+## Closed cUSDC beta session (Alpha, real network)
+
+Run once the beta is switched on (`docs/beta/CUSDC_BETA.md`), with two beta members A and B, real XMTP, the Alpha node and small amounts within the cap. Record each transaction hash and block, and a screen recording.
+
+| # | Step | Expect |
+| --- | --- | --- |
+| B1 | A and B join at `/beta` with their codes and confirm the notice | `/api/beta/cusdc/status` answers `access: true`, `visibility: send`; cUSDC appears in both wallets after a sync |
+| B2 | A non-member opens the wallet on the same build | cUSDC is not listed |
+| B3 | B requests 1.5 cUSDC from A (attach menu, Request a payment) | A sees the request card with the amount, note and expiry |
+| B4 | A pays it from the card | The form opens with cUSDC and 1.5 fixed, payee verified (G7); A's card goes sending, sent, confirmed |
+| B5 | B's wallet syncs | One notice with the amount; B's payment card reads received; both request cards read Paid |
+| B6 | B tries to request more than the cap | The composer refuses before sending |
+| B7 | The operator sets `AZTEC_VALUE_MODE=exits-only` | A new cUSDC payment is refused before proving; moving one's own funds to one's own public balance still works |
+| B8 | The operator revokes B (`scripts/beta/cusdc-invites.mjs revoke-member`) | B's status answers `visibility: exits`: balance visible, new payments refused |
