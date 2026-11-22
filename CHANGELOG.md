@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Ledger Relay reaches the build (22 November 2026)
+
+- The Dockerfile declares `NEXT_PUBLIC_LEDGER_RELAY`, `NEXT_PUBLIC_LEDGER_RELAYS` and
+  `NEXT_PUBLIC_LEDGER_RELAY_PIN` as build arguments. Railway passes a variable to a Dockerfile build
+  only when it is declared, so until now the relay switch never reached `next build` and calls went
+  through the public PeerJS cloud. A test checks that the call variables stay declared.
+
 ### Mockup edge, 100-square avatars, Ledger Relay 0.2 (21 November 2026, night)
 
 - Photo mockups: the app is drawn exactly over the display, without growing into the border, and
