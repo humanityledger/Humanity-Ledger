@@ -243,7 +243,7 @@ export function stackRows(v: { xmtp: string; aztecNr: string }): { layer: string
 
 export const RELAY = {
   title: 'Run it on your own servers',
-  body: 'Ledger Relay is a small, stateless service that a company, a newsroom or a community can run on its own domain. It carries only what cannot be end-to-end encrypted away, and never plaintext.',
+  body: 'Ledger Relay is a small, stateless service that a company, a newsroom or a community can run on its own domain. It carries only what cannot be end-to-end encrypted away, and never plaintext. Ledger Chat’s own call set-up already runs on one.',
   carries: [
     { k: 'Calls', v: 'TURN with short-lived credentials, and signalling' },
     { k: 'Encrypted files', v: 'Ciphertext only, addressed by its hash, deleted on expiry' },
