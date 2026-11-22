@@ -23,6 +23,7 @@ import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
 import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
 import { PrivateWalletStatus } from '@/components/zk/PrivateWalletStatus';
+import { PaymentsAvailability } from '@/components/beta/PaymentsAvailability';
 import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { exportableLocalStorage } from '@/lib/settings/exportSafety';
@@ -1310,6 +1311,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {/* Real private wallet: balances, Fee Juice and local storage, read on this device only. */}
               <PrivateWalletStatus address={myAddress} />
 
+              {/* What works today: public tips, private HLC payments, the closed cUSDC beta. */}
+              <PaymentsAvailability />
+
               {/* Sovereign Aztec Identity */}
               <Group title="Your zk handle" footer="Stored only on this device. It is not registered on Aztec and it is not a payment address.">
                 <Row
@@ -1392,7 +1396,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Public tip token" footer="These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use HLC. The network fee is Fee Juice from your own account, not USDC.">
+              <Group title="Public tip token" footer="These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use HLC, and cUSDC for members of the closed beta. The network fee is Fee Juice from your own account, not USDC.">
                 <div className="px-4 pb-4">
                   {/* The tokens the payment sheet can actually send; it opens on this one. */}
                   {['ETH', 'USDC', 'USDT'].map((token) => (
