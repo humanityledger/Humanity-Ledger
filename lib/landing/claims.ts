@@ -137,9 +137,12 @@ export const CLAIMS = [
     id: 'relay',
     topic: 'Ledger Relay',
     label: 'In design',
-    may: 'Lets anyone run the servers Ledger Chat needs: calls, encrypted files and notifications. A reference implementation is developed in the open.',
-    mustNot: 'That it is running for users, that it carries payments, or any number of transfers.',
-    evidence: ['relay/README.md', 'lib/relay/relays.ts'],
+    // Call set-up has run on Ledger Relay for users since 22 November 2026 (relay.ledgerchat.org,
+    // lib/calls/media.ts pickPeerServer, with a fallback to the public PeerJS cloud). Files and
+    // notifications through it are still in design, so the row keeps its label.
+    may: 'Call set-up already runs on our own Ledger Relay. Running every server Ledger Chat needs, encrypted files and notifications included, on software anyone can run is in design.',
+    mustNot: 'That files or notifications run on it today, that it carries payments, or any number of users, calls or transfers.',
+    evidence: ['relay/README.md', 'lib/relay/relays.ts', 'lib/calls/media.ts'],
   },
   {
     id: 'record',
