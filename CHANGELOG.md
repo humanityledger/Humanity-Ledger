@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Payment requests in the chat (22 November 2026)
+
+- "Request a payment" in the attach menu now opens `PaymentRequestComposer`: token, amount, an
+  optional note and a validity of 1, 7 or 30 days. It posts an `hl.payment_request` message with no
+  address in it. On Alpha a request above the cap per payment, or for a token without a cap, is
+  refused before it is sent, since it could never be paid.
+- The request shows as a card (`components/chat/PaymentRequestCard.tsx`) with "Pay privately". The
+  button opens the private payment form with the token and amount fixed; the payment goes to the
+  address verified in this chat, through the same checks as any payment, and names the request it
+  pays. The card shows "Paid" once this device has seen that payment, and refuses expired requests.
+- The older invoice screen (`ZkInvoiceModal`) still opens existing invoices; new requests use the
+  new message.
+
 ### Payment card in the chat (22 November 2026)
 
 - A private payment from a conversation now posts a structured `hl.payment` message

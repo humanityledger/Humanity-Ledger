@@ -18,6 +18,8 @@ import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel, tokenConfig, type TokenKey } from '@/lib/aztec/wallet/config';
 import { buildPaymentMessage } from '@/lib/payments/payment-message';
+import { rememberPaidRequest } from '@/lib/payments/paid-requests';
+import type { PayPrefill } from '@/lib/payments/request-draft';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
@@ -38,11 +40,13 @@ interface ZkMoneyModalProps {
   dmPeerInboxId?: string;
   /** Our own XMTP inbox, for the G7 proof check. */
   selfInboxId?: string;
+  /** Paying a request (components/chat/PaymentRequestCard.tsx): token and amount fixed, the request named in the payment. */
+  prefill?: PayPrefill;
   /** Receives the chat message to post once the payment is confirmed. */
   onSuccess: (message: string, result: { txHash: string; token: TokenKey }) => void;
 }
 
-export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myAddress, recipientName, dmPeerInboxId, selfInboxId, onSuccess }) => {
+export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myAddress, recipientName, dmPeerInboxId, selfInboxId, prefill, onSuccess }) => {
   const [wallet, setWallet] = useState<WalletSnapshot | null>(() => (typeof window === 'undefined' ? null : getPrivateWallet().state));
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const ready = wallet?.phase === 'ready';
@@ -51,9 +55,10 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
   const posted = (txHash: string, token: TokenKey) => {
     const t = tokenConfig(token);
     onSuccess(
-      buildPaymentMessage({ network: AZTEC_WALLET_CONFIG.network, token: { symbol: t.symbol, address: t.address }, txHash, sender: getPrivateWallet().state.aztecAddress }),
+      buildPaymentMessage({ network: AZTEC_WALLET_CONFIG.network, token: { symbol: t.symbol, address: t.address }, txHash, sender: getPrivateWallet().state.aztecAddress, requestId: prefill?.requestId }),
       { txHash, token },
     );
+    if (prefill) rememberPaidRequest(prefill.requestId);
   };
 
   let body: React.ReactNode;
@@ -66,7 +71,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
       </div>
     );
   } else if (dmPeerInboxId && ready) {
-    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} onClose={onClose} onPaid={posted} />;
+    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} prefill={prefill} onClose={onClose} onPaid={posted} />;
   } else if (dmPeerInboxId || !ALPHA) {
     // Wallet not open yet (DM: only to open it, no typed-address payment posted), or a test-network community.
     body = <ZkWalletPanel address={myAddress} onClose={onClose} initialSheet={dmPeerInboxId ? null : 'send'} onPaymentSent={dmPeerInboxId ? undefined : ({ txHash, token }) => posted(txHash, token)} />;
@@ -98,10 +103,10 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
   );
 };
 
-function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
+function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
   const [payee, setPayee] = useState<{ address?: string; verified: boolean } | null>(null);
-  const [token, setToken] = useState<TokenKey>(AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC');
-  const [amount, setAmount] = useState('');
+  const [token, setToken] = useState<TokenKey>(prefill?.token ?? AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC');
+  const [amount, setAmount] = useState(prefill?.amount ?? '');
   const [ack, setAck] = useState(NO_ACK);
   const [confirmedFingerprint, setConfirmedFingerprint] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -196,7 +201,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
 
       <label className="block text-[13px] text-[#4a505c]">
         Token
-        <select className={`${field} mt-1`} value={token} disabled={busy} onChange={(e) => setToken(e.target.value as TokenKey)}>
+        <select className={`${field} mt-1`} value={token} disabled={busy || !!prefill} onChange={(e) => setToken(e.target.value as TokenKey)}>
           {AZTEC_WALLET_CONFIG.tokens.map((t) => (
             <option key={t.key} value={t.key}>{ALPHA ? t.symbol : `${t.symbol} (test)`}</option>
           ))}
@@ -204,7 +209,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, onClose, onPa
       </label>
       <label className="block text-[13px] text-[#4a505c]">
         Amount
-        <input className={`${field} mt-1`} inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} />
+        <input className={`${field} mt-1`} inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy || !!prefill} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} />
       </label>
       <ProvingMemoryNote />
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
