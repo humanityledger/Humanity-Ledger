@@ -6,8 +6,8 @@
  * In a DM the payee is the peer's pinned Aztec address, never typed, and the
  * payment goes through sendDirectPrivatePayment (lib/payments/direct-private.ts):
  * on Aztec Alpha it needs a G7 proof that verifies now, the risk
- * acknowledgement and a per-token cap. The posted message carries the
- * transaction hash, not the amount. Outside a DM (communities) the typed-address
+ * acknowledgement and a per-token cap. The posted message is a structured
+ * payment (lib/payments/payment-message.ts) with the transaction hash, not the amount. Outside a DM (communities) the typed-address
  * wallet sheet is offered on the test network only; on Alpha it is refused.
  */
 
@@ -16,8 +16,8 @@ import { singleFlight } from '@/lib/aztec/single-flight';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ZkWalletPanel } from '@/components/zk/ZkWalletPanel';
 import { getPrivateWallet, humanError, type WalletSnapshot } from '@/lib/aztec/wallet/client';
-import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
-import { directPaymentMessage } from '@/lib/payments/direct-private';
+import { AZTEC_WALLET_CONFIG, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, networkLabel, tokenConfig, type TokenKey } from '@/lib/aztec/wallet/config';
+import { buildPaymentMessage } from '@/lib/payments/payment-message';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
@@ -46,8 +46,15 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
   const [wallet, setWallet] = useState<WalletSnapshot | null>(() => (typeof window === 'undefined' ? null : getPrivateWallet().state));
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const ready = wallet?.phase === 'ready';
-  const posted = (txHash: string, token: TokenKey) =>
-    onSuccess(directPaymentMessage({ token, txHash, senderAztec: getPrivateWallet().state.aztecAddress }), { txHash, token });
+  // A structured payment (lib/payments/payment-message.ts): the chat shows it as a card whose status
+  // comes from each person's own wallet. The amount is never in the message.
+  const posted = (txHash: string, token: TokenKey) => {
+    const t = tokenConfig(token);
+    onSuccess(
+      buildPaymentMessage({ network: AZTEC_WALLET_CONFIG.network, token: { symbol: t.symbol, address: t.address }, txHash, sender: getPrivateWallet().state.aztecAddress }),
+      { txHash, token },
+    );
+  };
 
   let body: React.ReactNode;
   if (dmPeerInboxId && ready && !hasPrivateTokens()) {

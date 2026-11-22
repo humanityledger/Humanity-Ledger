@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Payment card in the chat (22 November 2026)
+
+- A private payment from a conversation now posts a structured `hl.payment` message
+  (`lib/payments/payment-message.ts`) instead of a sentence with the transaction hash. The chat
+  shows it as a card (`components/chat/PaymentCard.tsx`): the payer sees sending, sent, confirmed
+  or failed from their own wallet history; the receiver sees "Payment received" with the amount
+  only once their own wallet found a settled transfer with that hash, and a "Check now" button
+  until then. The amount is never in the message.
+- Payment messages are opaque like agreement messages: sent exactly as built, previewed and
+  notified as "Private payment". Older text payments still show as text.
+
 ### Unused API routes retired (22 November 2026)
 
 - Eight live handlers with no caller in the repository and no known outside caller answer 410 at the
