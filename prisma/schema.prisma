@@ -1957,3 +1957,31 @@ model VisitorTally {
 
   @@id([day, tz])
 }
+
+/// Closed technical beta of private cUSDC payments (lib/beta/cusdc-beta.ts, docs/beta/CUSDC_BETA.md).
+/// Same code format and HMAC as AlphaInvite; the operator's sanctions and age checks are stored as results only.
+model CusdcBetaInvite {
+  id                 String    @id @default(cuid())
+  codeHash           String    @unique
+  createdBy          String
+  createdAt          DateTime  @default(now())
+  expiresAt          DateTime?
+  redeemedBy         String?   @unique
+  redeemedAt         DateTime?
+  revokedAt          DateTime?
+  sanctionsCheckedAt DateTime?
+  sanctionsListDate  String?
+  sanctionsResult    String?
+  adultCheckedAt     DateTime?
+}
+
+/// A beta member: an Ethereum wallet that redeemed a cUSDC beta invitation (at most 100). Revoking
+/// keeps exits only: the balance stays visible and the person's own funds can still be moved.
+model CusdcBetaMember {
+  walletAddress String    @id
+  inviteId      String    @unique
+  joinedAt      DateTime  @default(now())
+  noticeVersion String?
+  noticeAckAt   DateTime?
+  revokedAt     DateTime?
+}
