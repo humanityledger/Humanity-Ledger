@@ -96,6 +96,14 @@ export function useSystemSignOut() {
                     // Must survive disconnect so user doesn't need to re-enter password on next visit.
                     if (lower.includes('ledger_hw_session_token')) return;
 
+                    // CRITICAL: Preserve chat deletion and message deletion/revocation records.
+                    // Without these, deleted chats and messages reappear after sign-out + sign-in
+                    // because XMTP re-syncs everything and the local deletion markers are gone.
+                    if (lower.startsWith('ledger_deleted_')) return;   // "Delete chat" records
+                    if (lower.startsWith('ledger_cleared_')) return;   // "Clear chat" records
+                    if (lower.startsWith('hl_deleted_msg_')) return;   // "Delete for me" per-message
+                    if (lower === 'hl_revoked_msg_global') return;     // "Delete for everyone" revocations
+
                     // Nuke EVERYTHING else. If clearing browsing history works, this will mimic it precisely.
                     localStorage.removeItem(key);
                 });
