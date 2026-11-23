@@ -24,7 +24,7 @@ describe('token list', () => {
   });
   it('the config builds the public list through withoutGatedTokens and the beta list from the cUSDC slot only', () => {
     const src = fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8');
-    expect(src).toMatch(/const PUBLIC_TOKENS: readonly TokenConfig\[\] = Object\.freeze\(CUSDC_PUBLIC \? CONFIGURED_TOKENS\.filter\(\(t\) => !isTestToken\(t\.symbol\)\) : withoutGatedTokens\(CONFIGURED_TOKENS\)\);/);
+    expect(src).toMatch(/const PUBLIC_TOKENS: readonly TokenConfig\[\] = Object\.freeze\(CUSDC_PUBLIC \? LISTED_TOKENS : withoutGatedTokens\(LISTED_TOKENS\)\);/);
     expect(src).toMatch(/CONFIGURED_TOKENS\.filter\(\(t\) => t\.key === 'CUSDC' && !PUBLIC_TOKENS\.includes\(t\)\)/);
     expect(src).toMatch(/NETWORK === 'mainnet' && !CUSDC_PUBLIC \? CONFIGURED_TOKENS/);
   });

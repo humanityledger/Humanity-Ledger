@@ -123,7 +123,9 @@ export const CUSDC_PUBLIC: boolean =
   }).ok;
 
 /** What everyone may use: with cUSDC for everyone, every configured token except test tokens (HLC); otherwise the configured tokens without the gated ones (CUSDC_GATES). */
-const PUBLIC_TOKENS: readonly TokenConfig[] = Object.freeze(CUSDC_PUBLIC ? CONFIGURED_TOKENS.filter((t) => !isTestToken(t.symbol)) : withoutGatedTokens(CONFIGURED_TOKENS));
+/** On Alpha no test token (HLC) is listed any more: private payments there are in cUSDC. */
+const LISTED_TOKENS: TokenConfig[] = NETWORK === 'mainnet' ? CONFIGURED_TOKENS.filter((t) => !isTestToken(t.symbol)) : CONFIGURED_TOKENS;
+const PUBLIC_TOKENS: readonly TokenConfig[] = Object.freeze(CUSDC_PUBLIC ? LISTED_TOKENS : withoutGatedTokens(LISTED_TOKENS));
 
 /**
  * The configured cUSDC slot that the gates hide. Listed only for members of the closed cUSDC beta,
@@ -197,7 +199,9 @@ export function hasPrivateTokens(cfg: Pick<typeof AZTEC_WALLET_CONFIG, 'tokens'>
 
 /** Shown wherever a token flow would be, while no private token is configured. */
 export const NO_PRIVATE_TOKENS_MESSAGE =
-  'Only Fee Juice is available for now. Private tokens will be switched on once they are configured.';
+  NETWORK === 'mainnet'
+    ? 'Private payments on Aztec Alpha are in cUSDC, open to members of the closed beta. Join with your invitation at ledgerchat.org/beta.'
+    : 'Only Fee Juice is available for now. Private tokens will be switched on once they are configured.';
 
 /** What the user signs to open the wallet; differs per network (keys.ts). */
 export function walletTypedData(): WalletTypedData {

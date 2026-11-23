@@ -97,7 +97,7 @@ describe('cUSDC for everyone', () => {
   it('public cUSDC is off in the record, beta is on; gates still unmet', () => {
     expect(cusdcPublicEntry(record)).toEqual({ enabled: false });
     expect(CUSDC_PUBLIC).toBe(false);
-    expect(PRIVATE_ASSET.symbol).toBe('HLC');
+    expect(PRIVATE_ASSET.symbol).toBe('cUSDC');
     expect(CUSDC_GATES.every((g) => g.met === false)).toBe(true);
     expect(cusdcReady()).toBe(false);
     // The closed beta is active, but the public switch stays off.
@@ -105,7 +105,8 @@ describe('cUSDC for everyone', () => {
   });
   it('replaces HLC in the token list and turns the closed beta off', () => {
     const cfg = fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8');
-    expect(cfg).toMatch(/CUSDC_PUBLIC \? CONFIGURED_TOKENS\.filter\(\(t\) => !isTestToken\(t\.symbol\)\)/);
+    expect(cfg).toMatch(/NETWORK === 'mainnet' \? CONFIGURED_TOKENS\.filter\(\(t\) => !isTestToken\(t\.symbol\)\) : CONFIGURED_TOKENS/);
+    expect(cfg).toMatch(/CUSDC_PUBLIC \? LISTED_TOKENS : withoutGatedTokens\(LISTED_TOKENS\)/);
     expect(cfg).toMatch(/NETWORK === 'mainnet' && !CUSDC_PUBLIC \? CONFIGURED_TOKENS\.filter/);
     expect(fs.readFileSync('lib/landing/claims.ts', 'utf8')).toMatch(/label: CUSDC_PUBLIC \? 'Live' : 'Not enabled yet'/);
   });
