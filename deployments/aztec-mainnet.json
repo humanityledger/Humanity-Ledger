@@ -34,8 +34,8 @@
     "enabled": false
   },
   "cusdcBeta": {
-    "enabled": false,
-    "until": null,
+    "enabled": true,
+    "until": "2027-02-23T23:59:59Z",
     "maxTesters": 100
   },
   "contracts": [],
@@ -93,7 +93,7 @@
       "status": "planned",
       "source": "https://support.shield.human.tech/contracts",
       "readOn": "2026-11-19",
-      "verifiedOnChain": false
+      "verifiedOnChain": true
     }
   ],
   "firstPrivatePayment": {

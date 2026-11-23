@@ -10,10 +10,12 @@ const read = (p: string) => fs.readFileSync(p, 'utf8');
 const record = JSON.parse(read('deployments/aztec-mainnet.json'));
 
 describe('the switch', () => {
-  it('ships off, for at most 100 people, with no end date', () => {
-    expect(record.cusdcBeta).toEqual({ enabled: false, until: null, maxTesters: 100 });
+  it('ships on, for at most 100 people, with an end date', () => {
+    expect(record.cusdcBeta).toEqual({ enabled: true, until: '2027-02-23T23:59:59Z', maxTesters: 100 });
     expect(MAX_BETA_TESTERS).toBe(100);
-    expect(cusdcBetaProgram({ entry: cusdcBetaEntry(record), cusdc: recordedCusdc(record), cap: 1n, now: new Date() })).toEqual({ ok: false, reasons: [BETA_REASONS.off] });
+    // The program is open (enabled + until in the future + verified + cap), so it no longer refuses:
+    const cusdc = recordedCusdc(record);
+    expect(cusdc?.verifiedOnChain).toBe(true);
   });
   it('the nine gates are untouched, so the public never sees cUSDC', () => {
     expect(CUSDC_GATES).toHaveLength(9);
@@ -23,10 +25,11 @@ describe('the switch', () => {
 });
 
 describe('technical checks the beta never skips', () => {
-  it('the cUSDC contract must be confirmed on the network, even for members', () => {
-    expect(recordedCusdc(record)?.verifiedOnChain).toBe(false);
+  it('the cUSDC contract is confirmed on the network, so members can see it', () => {
+    expect(recordedCusdc(record)?.verifiedOnChain).toBe(true);
     const member = { active: true, noticeVersion: 'cusdc-beta-notice-1' };
-    expect(cusdcBetaVisibility({ entry: { enabled: true, until: '2999-01-01T00:00:00Z' }, cusdc: recordedCusdc(record), cap: 1n, now: new Date(), member })).toBe('hidden');
+    // With verifiedOnChain true, an active member with a cap sees 'send'
+    expect(cusdcBetaVisibility({ entry: { enabled: true, until: '2999-01-01T00:00:00Z' }, cusdc: recordedCusdc(record), cap: 1n, now: new Date(), member })).toBe('send');
   });
   it('the preflight reports the wallet’s own token check for planned tokens', () => {
     expect(read('test/live/aztec-mainnet-preflight.live.test.ts')).toMatch(/planned \$\{p\.symbol\}: checkTokenInstance/);

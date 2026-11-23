@@ -127,15 +127,24 @@ function inAppWalletOption(): WalletOption | null {
   return { id: "injected-mobile", name: `Continue with ${name}`, hint: "Sign in here, inside the wallet app", logo: "" };
 }
 
-/** Return path after sign-in. Only same-origin paths are honoured. */
+/**
+ * Return path after sign-in. Only same-origin paths are honoured.
+ *
+ * While the closed cUSDC beta is active, every new sign-in lands on /beta so the person
+ * enters their invitation code before they reach the chat. Members who already joined go
+ * through /beta too: BetaGateView recognises them and shows "You are in the cUSDC beta"
+ * with a button to the chat. An explicit `redirect` query parameter still wins, so the
+ * middleware's ?redirect=%2Fbeta is respected and deep links into other pages keep working.
+ */
 function returnPathFromQuery(): string {
-  if (typeof window === "undefined") return "/chat";
+  if (typeof window === "undefined") return "/beta";
   const rp = new URLSearchParams(window.location.search);
   const raw = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect") || "";
   // safeReturnPath refuses other sites, "/\host" and javascript: URLs.
-  const path = safeReturnPath(raw, "/chat");
+  // Default to /beta so every sign-in goes through the beta gate first.
+  const path = safeReturnPath(raw, "/beta");
   const ok = !path.startsWith("/terminal") && path !== "/portfolio";
-  return ok ? path : "/chat";
+  return ok ? path : "/beta";
 }
 
 function readDisconnectGuard(): boolean {

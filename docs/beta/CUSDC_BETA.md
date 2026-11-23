@@ -1,6 +1,6 @@
 # Closed technical beta of private cUSDC payments
 
-Status on 22 November 2026: **built, switched off**. `cusdcBeta.enabled` is `false` in `deployments/aztec-mainnet.json`.
+Status on 23 November 2026: **switched on**. `cusdcBeta.enabled` is `true` in `deployments/aztec-mainnet.json`, `until` is `2027-02-23T23:59:59Z` (3 months). Remaining steps: confirm the cUSDC contract on-chain (`verifiedOnChain`), set Railway variables, generate and assign the 100 invitation codes.
 
 This is a closed technical test for at most 100 invited people. Its only purpose is to check that private cUSDC payments in the chat work end to end for real users. It is not a launch: the landing keeps saying "Not enabled yet" for USDC (`lib/landing/claims.ts`, row `usdc`), and nothing public changes while the beta runs. Only Stefan switches it on.
 

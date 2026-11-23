@@ -67,12 +67,13 @@ describe('capacity, cap and record', () => {
     expect(cusdcCap({ ['0x' + 'ab'.repeat(32)]: 7n }, open.cusdc)).toBeNull();
     expect(cusdcCap(null, open.cusdc)).toBeNull();
   });
-  it('the switch ships off, with a limit of 100 and no end date', () => {
+  it('the switch ships on, with a limit of 100 and an end date', () => {
     const m = JSON.parse(fs.readFileSync('deployments/aztec-mainnet.json', 'utf8'));
-    expect(m.cusdcBeta).toEqual({ enabled: false, until: null, maxTesters: 100 });
-    expect(cusdcBetaEntry(m)).toEqual({ enabled: false, until: null, maxTesters: 100 });
+    expect(m.cusdcBeta).toEqual({ enabled: true, until: '2027-02-23T23:59:59Z', maxTesters: 100 });
+    expect(cusdcBetaEntry(m)).toEqual({ enabled: true, until: '2027-02-23T23:59:59Z', maxTesters: 100 });
     expect(recordedCusdc(m)?.address).toBe(ADDR);
-    expect(cusdcBetaProgram({ entry: cusdcBetaEntry(m), cusdc: recordedCusdc(m), cap: 1n, now }).ok).toBe(false);
+    // The program is open now (but still needs a cap to pass fully)
+    expect(cusdcBetaProgram({ entry: cusdcBetaEntry(m), cusdc: recordedCusdc(m), cap: 1n, now }).ok).toBe(true);
   });
 });
 
