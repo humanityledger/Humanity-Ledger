@@ -160,7 +160,7 @@ export function NetworkStatusPill({ className = '' }: { className?: string }) {
 
 /**
  * How the private wallet works on Aztec Alpha, in five plain lines: rendered inside the
- * ZkWalletPanel overview. The token line follows the build (HLC, or cUSDC once it is on for everyone).
+ * ZkWalletPanel overview. The token line follows the build (cUSDC for beta members, or for everyone).
  */
 export function AlphaInfoBox({ className = '' }: { className?: string }) {
   if (!ALPHA) return null;

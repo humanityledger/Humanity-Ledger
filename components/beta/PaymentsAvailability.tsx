@@ -1,7 +1,7 @@
 'use client';
 /**
  * Settings > Payments: what works today, in the settings style. Public tips on Ethereum mainnet,
- * private payments on Aztec Alpha (HLC, or cUSDC once it is on for everyone), and the closed cUSDC beta for invited people, whose line
+ * private payments on Aztec Alpha in cUSDC: for everyone once that is on, otherwise the closed cUSDC beta for invited people, whose line
  * comes from /api/beta/cusdc/status (lib/beta/gate.ts betaSummary) and links to /beta.
  */
 import React, { useEffect, useState } from 'react';
@@ -53,8 +53,11 @@ export function PaymentsAvailability() {
       <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">What works today</p>
       <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden px-4">
         <Line icon={<Send size={18} />} label="Public tips" sub="ETH, USDC or USDT on Ethereum mainnet, from your Ethereum wallet. Public on the blockchain." value="Available" />
-        <Line icon={<Lock size={18} />} label="Private payments" sub={`On Aztec Alpha in ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account.`} value="Alpha" />
-        {!CUSDC_PUBLIC && <Line icon={<ShieldCheck size={18} />} label="cUSDC private payments" sub={beta.sub} value={beta.value} href={applies ? '/beta' : undefined} />}
+        {CUSDC_PUBLIC ? (
+          <Line icon={<Lock size={18} />} label="Private payments" sub={`On Aztec Alpha in ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account.`} value="Alpha" />
+        ) : (
+          <Line icon={<ShieldCheck size={18} />} label="Private cUSDC payments" sub={beta.sub} value={beta.value} href={applies ? '/beta' : undefined} />
+        )}
       </div>
       <p className="text-[12.5px] text-[#727a88] px-1 mt-2 leading-relaxed">Aztec Alpha has no external audit, and each private payment has a cap.</p>
     </div>

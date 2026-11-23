@@ -13,6 +13,7 @@ import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { betaCapacity, cusdcBetaEntry } from '@/lib/beta/cusdc-beta';
 import { BAD_CODE, redeemBetaInvite } from '@/lib/beta/cusdc-beta-store';
 import { prismaBetaStore } from '@/lib/beta/cusdc-beta-prisma';
+import { applyBetaPass } from '@/lib/beta/pass';
 import record from '../../../../../deployments/aztec-mainnet.json';
 
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,10 @@ export async function POST(req: NextRequest) {
       open: entry?.enabled === true,
       now: new Date(),
     });
-    return NextResponse.json(r.body, { status: r.status, headers: NO_STORE });
+    const res = NextResponse.json(r.body, { status: r.status, headers: NO_STORE });
+    // A new member gets the chat pass at once, so the redirect to /chat is not sent back to /beta.
+    if (r.status === 200) await applyBetaPass(res, who, true);
+    return res;
   } catch {
     return NextResponse.json({ error: BAD_CODE }, { status: 400, headers: NO_STORE });
   }

@@ -16,6 +16,7 @@ import {
 import { confirmBetaNotice, memberState, remainingPlaces } from '@/lib/beta/cusdc-beta-store';
 import type { MemberState } from '@/lib/beta/cusdc-beta';
 import { prismaBetaStore } from '@/lib/beta/cusdc-beta-prisma';
+import { applyBetaPass } from '@/lib/beta/pass';
 import record from '../../../../../deployments/aztec-mainnet.json';
 
 export const dynamic = 'force-dynamic';
@@ -57,10 +58,12 @@ export async function GET(req: NextRequest) {
   }
   const access = cusdcBetaDecision({ ...input, member });
   const capacity = betaCapacity(input.entry);
-  return NextResponse.json(
+  const res = NextResponse.json(
     {
       // The signed-in wallet, so /beta shows which account joins.
       wallet: w,
+      // While the switch is on, /chat opens only for members (middleware, lib/beta/pass.ts).
+      gate: input.entry?.enabled === true,
       open: program.ok,
       reasons: program.ok ? [] : program.reasons,
       member: !!member,
@@ -75,6 +78,9 @@ export async function GET(req: NextRequest) {
     },
     { headers: NO_STORE },
   );
+  // The chat pass follows membership on every read: set for members (revoked ones too), cleared otherwise.
+  await applyBetaPass(res, w, !!member);
+  return res;
 }
 
 export async function POST(req: NextRequest) {

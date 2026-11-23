@@ -183,13 +183,18 @@ function TimerScreen() {
   );
 }
 
+/**
+ * Each screen sits in one of the two high-resolution photos (front, tilt) or their mirror images,
+ * alternating down the page. The small wall photo (580 px wide, its screen 22% smaller) is not used:
+ * it showed soft on high-density displays and shrank the screen text.
+ */
 const SCREENS: Record<Screen, { el: () => React.ReactElement; label: string; dark?: boolean; photo: MockupId }> = {
-  profile: { el: ProfileScreen, photo: 'hand-wall', label: 'A hand holding a phone with a Ledger Chat profile: an @username and a QR code, without a phone number' },
-  chats: { el: ChatsScreen, photo: 'hand-tilt-l', label: 'A hand holding a phone with the chat list of Ledger Chat, every conversation end-to-end encrypted' },
-  call: { el: CallScreen, photo: 'hand-tilt', label: 'A hand holding a phone with a video call in Ledger Chat, encrypted in transit device to device', dark: true },
-  pay: { el: PayScreen, photo: 'hand-front-l', label: 'A hand holding a phone sending a private payment inside a conversation' },
-  file: { el: FileScreen, photo: 'hand-wall-l', label: 'A hand holding a phone with large files sent in a conversation, encrypted on the device' },
-  timer: { el: TimerScreen, photo: 'hand-front', label: 'A hand holding a phone choosing when messages disappear' },
+  profile: { el: ProfileScreen, photo: 'hand-tilt', label: 'A hand holding a phone with a Ledger Chat profile: an @username and a QR code, without a phone number' },
+  chats: { el: ChatsScreen, photo: 'hand-front-l', label: 'A hand holding a phone with the chat list of Ledger Chat, every conversation end-to-end encrypted' },
+  call: { el: CallScreen, photo: 'hand-tilt-l', label: 'A hand holding a phone with a video call in Ledger Chat, encrypted in transit device to device', dark: true },
+  pay: { el: PayScreen, photo: 'hand-front', label: 'A hand holding a phone sending a private payment inside a conversation' },
+  file: { el: FileScreen, photo: 'hand-tilt', label: 'A hand holding a phone with large files sent in a conversation, encrypted on the device' },
+  timer: { el: TimerScreen, photo: 'hand-front-l', label: 'A hand holding a phone choosing when messages disappear' },
 };
 
 export function PhoneScreen({ screen }: { screen: Screen }) {

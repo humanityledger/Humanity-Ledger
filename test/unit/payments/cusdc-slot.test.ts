@@ -27,7 +27,7 @@ describe('cUSDC slot', () => {
   it('the config builds the slot only on Alpha and always through withoutGatedTokens', () => {
     const src = fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8');
     expect(src).toMatch(/if \(key === 'CUSDC' && NETWORK !== 'mainnet'\) return \[\];/);
-    expect(src).toMatch(/const PUBLIC_TOKENS: readonly TokenConfig\[\] = Object\.freeze\(CUSDC_PUBLIC \? CONFIGURED_TOKENS\.filter\(\(t\) => !isTestToken\(t\.symbol\)\) : withoutGatedTokens\(CONFIGURED_TOKENS\)\);/);
+    expect(src).toMatch(/const PUBLIC_TOKENS: readonly TokenConfig\[\] = Object\.freeze\(CUSDC_PUBLIC \? LISTED_TOKENS : withoutGatedTokens\(LISTED_TOKENS\)\);/);
     // The only other path is the closed cUSDC beta, for members only (lib/beta/cusdc-beta.ts).
     expect(src).toMatch(/return tokensFor\(betaVisibility\);/);
   });
