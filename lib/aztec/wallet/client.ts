@@ -38,6 +38,7 @@ import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
 import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
 import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
 import { assertCusdcBetaAllows, refreshCusdcBeta } from '../../beta/cusdc-beta-client';
+import { TOKEN_CALLS, emitsPrivateTransferEvents, type TokenDialect } from '../token-dialect';
 import { BINDING_SCHEME_V2, bindingStatement, networkTagOf, sdkBindingCrypto, valueBindingContext, verifyAddressProof, type AddressProof, type BindingNetworkContext } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
@@ -229,6 +230,8 @@ class PrivateWallet {
   private portalArtifactCache: any = null;
   private claimPoll: ReturnType<typeof setInterval> | null = null;
   private tokens = new Map<TokenKey, any>();
+  /** Which token ABI each loaded token speaks (lib/aztec/token-dialect.ts): cUSDC is aztec-standards. */
+  private tokenDialects = new Map<TokenKey, TokenDialect>();
   private faucetAddress: any = null;
   private evmAddress: string | null = null;
   private listeners = new Set<Listener>();
@@ -287,6 +290,7 @@ class PrivateWallet {
     this.salt = null;
     this.claimSecrets = [];
     this.tokens.clear();
+    this.tokenDialects.clear();
     const settle = (p: Promise<unknown> | undefined) =>
       Promise.race([Promise.resolve(p).catch(() => {}), new Promise((r) => setTimeout(r, 4_000))]);
     if (wallet) await settle(wallet.stop?.());
@@ -1106,31 +1110,57 @@ class PrivateWallet {
 
   /**
    * Registers the configured tokens that are not registered yet. On Alpha each one must pass the G3
-   * check first (trusted Token class with the exact transfer_in_private); one that fails is never
-   * used. Returns the tokens left out, with why, instead of refusing the whole wallet.
+   * check first: its instance on the node runs a class computed from an artifact this client holds,
+   * and that artifact has every private transfer function the wallet calls (token-check.ts, purpose
+   * 'wallet'). Two artifacts are trusted there: the reference Token of noir-contracts.js and the
+   * aztec-standards Token that cUSDC runs (standards-token.ts). A token that fails is never used.
+   * Returns the tokens left out, with why, instead of refusing the whole wallet.
    */
   private async ensureTokens(): Promise<string[]> {
     const sdk = this.sdk!;
     const issues: string[] = [];
-    const tokenCheck = AZTEC_WALLET_CONFIG.network === 'mainnet' ? await import('../token-check') : null;
+    const onAlpha = AZTEC_WALLET_CONFIG.network === 'mainnet';
+    const tokenCheck = onAlpha ? await import('../token-check') : null;
+    const trusted: any[] = [sdk.TokenContract.artifact];
+    if (onAlpha && AZTEC_WALLET_CONFIG.tokens.some((t) => !this.tokens.has(t.key))) {
+      try {
+        const { loadStandardsTokenArtifact } = await import('../standards-token');
+        trusted.push(await loadStandardsTokenArtifact());
+      } catch (err) {
+        console.warn('[private wallet] aztec-standards Token artifact not loaded', err);
+      }
+    }
     for (const t of AZTEC_WALLET_CONFIG.tokens) {
       if (this.tokens.has(t.key)) continue;
       try {
         const addr = sdk.AztecAddress.fromStringUnsafe(t.address);
+        let artifact = sdk.TokenContract.artifact;
+        let dialect: TokenDialect = 'noir-contracts';
         if (tokenCheck) {
-          const c = await tokenCheck.checkTokenInstance(this.node, t.address, [sdk.TokenContract.artifact]);
+          const c = await tokenCheck.checkTokenInstance(this.node, t.address, trusted, { purpose: 'wallet' });
           if (!c.ok) { issues.push(`${t.symbol}: ${c.reason}`); continue; }
+          artifact = trusted[c.index];
+          dialect = c.dialect ?? 'noir-contracts';
         }
         const instance = await this.node.getContract(addr);
         if (!instance) { issues.push(`${t.symbol}: not deployed on ${networkLabel()}`); continue; }
-        await this.wallet.registerContract(instance, sdk.TokenContract.artifact);
-        this.tokens.set(t.key, sdk.TokenContract.at(addr, this.wallet));
+        await this.wallet.registerContract(instance, artifact);
+        const contract = artifact === sdk.TokenContract.artifact
+          ? sdk.TokenContract.at(addr, this.wallet)
+          : ((await import('@aztec-labs/aztec.js/contracts')) as any).Contract.at(addr, artifact, this.wallet);
+        this.tokenDialects.set(t.key, dialect);
+        this.tokens.set(t.key, contract);
       } catch (err) {
         console.warn(`[private wallet] ${t.symbol} not loaded`, err);
         issues.push(`${t.symbol}: ${humanError(err)}`);
       }
     }
     return issues;
+  }
+
+  /** The ABI of a loaded token; the reference Token unless the G3 check matched another. */
+  private dialectOf(key: TokenKey): TokenDialect {
+    return this.tokenDialects.get(key) ?? 'noir-contracts';
   }
 
   /* --------------------------------------------------------------- reading */
@@ -1177,6 +1207,9 @@ class PrivateWallet {
     const fromEvents: Activity[] = [];
     const sdk = this.sdk!;
     for (const t of AZTEC_WALLET_CONFIG.tokens) {
+      // cUSDC (aztec-standards) emits no private Transfer event for a private send: its incoming
+      // payments show in the balance, and its outgoing ones in the local activity.
+      if (!this.tokens.has(t.key) || !emitsPrivateTransferEvents(this.dialectOf(t.key))) continue;
       try {
         const events = await this.wallet.getPrivateEvents(sdk.TokenContract.events.Transfer, {
           contractAddress: sdk.AztecAddress.fromStringUnsafe(t.address),
@@ -1216,7 +1249,7 @@ class PrivateWallet {
     await assertNewValueAllowed();
     await assertCusdcBetaAllows(key);
     const units = parseUnits(amount, tokenConfig(key).decimals);
-    return this.run('shield', key, units, undefined, (c) => c.methods.transfer_to_private(this.me, units));
+    return this.run('shield', key, units, undefined, (c) => TOKEN_CALLS[this.dialectOf(key)].shield(c, this.me, units));
   }
 
   /** Moves tokens from private notes back to the public balance of an Aztec address (yours by default). */
@@ -1225,7 +1258,7 @@ class PrivateWallet {
     const target = to ? await this.validAddress(to) : this.me;
     // To your own public balance is an exit; to anyone else it is a payment.
     if (!(target.equals?.(this.me) ?? target === this.me)) { await assertNewValueAllowed(); await assertCusdcBetaAllows(key); }
-    return this.run('unshield', key, units, to?.toLowerCase(), (c) => c.methods.transfer_to_public(this.me, target, units, 0));
+    return this.run('unshield', key, units, to?.toLowerCase(), (c) => TOKEN_CALLS[this.dialectOf(key)].unshield(c, this.me, target, units));
   }
 
   /** Sends a private payment. Only the recipient can see the amount and the sender. */
@@ -1235,7 +1268,7 @@ class PrivateWallet {
     const units = parseUnits(amount, tokenConfig(key).decimals);
     const target = await this.validAddress(to);
     if (target.equals?.(this.me)) throw new Error('That is your own address.');
-    return this.run('send', key, units, to.trim().toLowerCase(), (c) => c.methods.transfer(target, units));
+    return this.run('send', key, units, to.trim().toLowerCase(), (c) => TOKEN_CALLS[this.dialectOf(key)].send(c, this.me, target, units));
   }
 
   /** Format check, then a check that the address is a point on the curve, so a typo cannot burn funds. */
