@@ -111,6 +111,7 @@ function store(codes: Record<string, Partial<Invite>>) {
       members.set(w, row);
       return row;
     },
+    async redeemReserved() { return 'bad'; },
     async countMembers() { return members.size; },
     async confirmNotice(w, v, at) { const m = { ...members.get(w)!, noticeVersion: v, noticeAckAt: at }; members.set(w, m); return m; },
   };

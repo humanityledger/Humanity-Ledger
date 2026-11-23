@@ -120,6 +120,21 @@ On success the page drops the wallet's cached beta answer, so cUSDC appears at t
 
 Members see their own state instead of the form: in the beta, notice to confirm again, paused, or revoked. A payment request in cUSDC shown to someone outside the beta links to `/beta`.
 
+## Requests for a place (no code)
+
+Someone without a code can ask for a place on `/beta`, signed in with the wallet that would join. Only that wallet address and the date are stored (`CusdcBetaRequest`, migration `20261123160000_cusdc_beta_requests`): no name, email or handle.
+
+1. The person opens `ledgerchat.org/beta`, connects their wallet and, at the code step, taps **Request a place** (`POST /api/beta/cusdc/request`: signed session, JSON only, rate limited, refused when the beta is off or full and for members).
+2. The operator lists the requests and, after the same checks as for any invitation (EU consolidated sanctions list, 18 or older), reserves one unused code for that wallet:
+
+   ```sh
+   node scripts/beta/cusdc-invites.mjs requests
+   node scripts/beta/cusdc-invites.mjs approve-request 0xWALLET 42 --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked
+   node scripts/beta/cusdc-invites.mjs decline-request 0xWALLET
+   ```
+
+3. When that wallet opens `/beta` again, the page says a place is reserved. It confirms the notice and joins without typing a code. The code is never shown to anyone, the 100-member limit is checked under the same lock, and every payment check stays the same.
+
 ## The payment flow
 
 1. **Redeem.** The member row is written in the same transaction as the code, under a database lock. Visibility becomes `send` on the server at once.

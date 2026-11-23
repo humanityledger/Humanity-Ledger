@@ -49,6 +49,9 @@ export default function BetaGateView() {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A request for a place from this page (no code): its state comes from the status, its answer here.
+  const [requestNote, setRequestNote] = useState<string | null>(null);
+  const [requesting, setRequesting] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const heading = useRef<HTMLHeadingElement | null>(null);
 
@@ -82,8 +85,34 @@ export default function BetaGateView() {
     window.setTimeout(() => router.push('/chat'), 2400);
   };
 
+  // An invitation the operator reserved for this wallet joins without a code; otherwise a code is needed.
+  const viaReserved = !!status?.reserved && !isCompleteCode(blocks);
+  const canUnlock = viaReserved || isCompleteCode(blocks);
+
+  const requestPlace = async () => {
+    if (requesting) return;
+    setRequesting(true);
+    setRequestNote(null);
+    try {
+      const r = await fetch('/api/beta/cusdc/request', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      });
+      const data = (await r.json().catch(() => null)) as { request?: string; error?: string } | null;
+      if (r.ok) {
+        setRequestNote(requestNoteFor(data?.request));
+        void load();
+      } else {
+        setRequestNote(data?.error || 'The request could not be sent. Try again later.');
+      }
+    } catch {
+      setRequestNote('The request could not be sent. Check your connection and try again.');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
   const unlock = async () => {
-    if (!status || busy || !agreed || !isCompleteCode(blocks)) return;
+    if (!status || busy || !agreed || !canUnlock) return;
     setBusy(true);
     setError(null);
     let res: Response | null = null;
@@ -93,7 +122,11 @@ export default function BetaGateView() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: blocksToCode(blocks), notice: true, noticeVersion: status.notice.version }),
+        body: JSON.stringify(
+          viaReserved
+            ? { reserved: true, notice: true, noticeVersion: status.notice.version }
+            : { code: blocksToCode(blocks), notice: true, noticeVersion: status.notice.version },
+        ),
       });
       body = await res.json().catch(() => null);
     } catch {
@@ -195,7 +228,12 @@ export default function BetaGateView() {
             <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" aria-hidden /> Connected
           </span>
         </div>
-        <button type="button" className={`${primary} mt-6`} onClick={() => setStep('code')}>Continue</button>
+        {status?.reserved && (
+          <p className="mt-4 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3 text-[13.5px] text-[#065F46]" data-testid="beta-reserved">
+            A place is reserved for this wallet. You can join without a code.
+          </p>
+        )}
+        <button type="button" className={`${primary} mt-6`} onClick={() => setStep(status?.reserved ? 'notice' : 'code')}>Continue</button>
       </section>
     );
   } else if (step === 'code') {
@@ -229,6 +267,22 @@ export default function BetaGateView() {
         </div>
         {error && <ErrorLine text={error} />}
         <button type="button" className={`${primary} mt-6`} disabled={!isCompleteCode(blocks)} onClick={() => { setError(null); setStep('notice'); }}>Continue</button>
+        <div className="mt-6 rounded-2xl border border-slate-200/80 bg-[#F8FAFC] px-4 py-3.5" data-testid="beta-request">
+          {status?.request === 'pending' ? (
+            <p className="text-[13.5px] text-[#475467]">{requestNoteFor('pending')}</p>
+          ) : status?.request === 'declined' ? (
+            <p className="text-[13.5px] text-[#475467]">{requestNoteFor('declined')}</p>
+          ) : (
+            <>
+              <p className="text-[13.5px] font-medium text-[#15171C]">No code yet?</p>
+              <p className="mt-0.5 text-[13px] text-[#667085]">Request a place for this wallet. Only its address is sent, nothing else.</p>
+              <button type="button" className={`${quiet} mt-2`} disabled={requesting} onClick={requestPlace}>
+                {requesting ? 'Sending request' : 'Request a place'}
+              </button>
+            </>
+          )}
+          {requestNote && status?.request !== 'pending' && <p className="mt-2 text-[13px] text-[#475467]" role="status">{requestNote}</p>}
+        </div>
         <button type="button" className={`${quiet} mt-4 block mx-auto`} onClick={() => setStep('wallet')}>Back</button>
       </section>
     );
@@ -239,10 +293,10 @@ export default function BetaGateView() {
         <p className="mt-1 text-[13.5px] text-[#667085]">Real cUSDC, small caps, no independent audit yet.</p>
         <Notice status={status!} agreed={agreed} onAgree={setAgreed} />
         {error && <ErrorLine text={error} />}
-        <button type="button" className={`${primary} mt-6`} disabled={!agreed || busy || !isCompleteCode(blocks)} onClick={unlock}>
+        <button type="button" className={`${primary} mt-6`} disabled={!agreed || busy || !canUnlock} onClick={unlock}>
           {busy ? <span className="inline-flex items-center gap-2"><span className={s.spinner} aria-hidden />Unlocking</span> : 'Unlock cUSDC Beta'}
         </button>
-        <button type="button" className={`${quiet} mt-4 block mx-auto`} disabled={busy} onClick={() => setStep('code')}>Back</button>
+        <button type="button" className={`${quiet} mt-4 block mx-auto`} disabled={busy} onClick={() => setStep(viaReserved ? 'wallet' : 'code')}>Back</button>
       </section>
     );
   }
@@ -394,4 +448,11 @@ function Granted({ onOpen }: { onOpen: () => void }) {
       <button type="button" className={`${primary} mt-6`} onClick={onOpen}>Open Ledger Chat</button>
     </section>
   );
+}
+
+/** What the page says about a request for a place, by its state. */
+function requestNoteFor(state: string | undefined): string {
+  if (state === 'approved') return 'Your request was approved. Go back and continue: you join without a code.';
+  if (state === 'declined') return 'This request was not approved. You can still join with an invitation code.';
+  return 'Request sent. If a place is approved for this wallet, open ledgerchat.org/beta with it again: you will join without a code.';
 }

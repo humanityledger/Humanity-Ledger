@@ -17,6 +17,10 @@ export type GateStatus = {
   capacity: number;
   remaining?: number | null;
   notice: { version: string; text: string[] };
+  /** A request for a place sent from /beta (none, pending, approved, declined). */
+  request?: 'none' | 'pending' | 'approved' | 'declined';
+  /** An invitation reserved for this wallet by the operator: it joins without a code. */
+  reserved?: boolean;
 };
 
 export type GateStage = 'loading' | 'signedOut' | 'unavailable' | 'member' | 'notice' | 'revoked' | 'waiting' | 'closed' | 'full' | 'join';

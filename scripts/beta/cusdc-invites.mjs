@@ -8,6 +8,14 @@
  *   node scripts/beta/cusdc-invites.mjs list
  *   node scripts/beta/cusdc-invites.mjs revoke-member 0xWALLET
  *   node scripts/beta/cusdc-invites.mjs revoke-invite <id>
+ *   node scripts/beta/cusdc-invites.mjs requests
+ *   node scripts/beta/cusdc-invites.mjs approve-request 0xWALLET <#|CODE> --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked
+ *   node scripts/beta/cusdc-invites.mjs decline-request 0xWALLET
+ *
+ * `requests` lists the places asked for from /beta (wallet and date only). `approve-request` runs
+ * after the same two checks for the person behind that wallet: it records them on one unused code
+ * and reserves that code for the wallet, which then joins on /beta without typing it. The code is
+ * not given to anyone. `decline-request` closes a request without a place.
  *
  * `create` prints each code ONCE; only its HMAC is stored (same format and pepper as the closed
  * alpha, lib/alpha/invites.ts). --by must be in ALPHA_ADMINS. One code per person, after the same two
@@ -117,8 +125,36 @@ try {
   } else if (cmd === 'revoke-invite') {
     await prisma.cusdcBetaInvite.update({ where: { id: String(target) }, data: { revokedAt: new Date() } });
     console.error(`Invitation ${target} revoked.`);
+  } else if (cmd === 'requests') {
+    const reqs = await prisma.cusdcBetaRequest.findMany({ orderBy: { requestedAt: 'asc' } });
+    console.table(reqs.map((r) => ({ wallet: r.walletAddress, requested: r.requestedAt.toISOString(), state: r.approvedAt ? 'approved' : r.declinedAt ? 'declined' : 'PENDING' })));
+    console.error(`${reqs.filter((r) => !r.approvedAt && !r.declinedAt).length} pending.`);
+  } else if (cmd === 'approve-request') {
+    if (pepper.length < 32) throw new Error('ALPHA_INVITE_PEPPER must be set (at least 32 characters).');
+    const w = String(target || '').toLowerCase();
+    if (!/^0x[0-9a-f]{40}$/.test(w)) throw new Error('Give the Ethereum wallet of the request: 0x and 40 hex characters.');
+    const codeArg = process.argv[4];
+    const checks = checksFromArgs();
+    const notChecked = inviteChecksProblem(checks);
+    if (notChecked) throw new Error(notChecked);
+    const req = await prisma.cusdcBetaRequest.findUnique({ where: { walletAddress: w } });
+    if (!req) throw new Error('No request from that wallet. List them with: requests');
+    if (await prisma.cusdcBetaMember.findUnique({ where: { walletAddress: w } })) throw new Error('That wallet is already a member.');
+    const c = resolveCodeArg(codeArg, /^#?\d+$/.test(String(codeArg)) ? parseCodesTable(readTable()) : []);
+    const at = new Date();
+    const r = await prisma.cusdcBetaInvite.updateMany({
+      where: { codeHash: betaCodeHash(c, pepper), redeemedBy: null, revokedAt: null, reservedFor: null },
+      data: { sanctionsCheckedAt: at, sanctionsListDate: checks.sanctionsListDate, sanctionsResult: 'clear', adultCheckedAt: at, reservedFor: w },
+    });
+    if (r.count !== 1) throw new Error('That code is unknown, redeemed, revoked or already reserved. Pick another one.');
+    await prisma.cusdcBetaRequest.update({ where: { walletAddress: w }, data: { approvedAt: at, declinedAt: null } });
+    console.error(`Reserved ${codeArg} for ${w}. That wallet can now join on /beta without a code. Do not give the code to anyone.`);
+  } else if (cmd === 'decline-request') {
+    const w = String(target || '').toLowerCase();
+    await prisma.cusdcBetaRequest.update({ where: { walletAddress: w }, data: { declinedAt: new Date() } });
+    console.error(`Declined the request from ${w}.`);
   } else {
-    console.error('usage: create --by 0x… --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked [--days d] | assign <#|CODE> --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked | export-table | list | revoke-member 0x… | revoke-invite <id>');
+    console.error('usage: create --by 0x… --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked [--days d] | assign <#|CODE> --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked | export-table | list | revoke-member 0x… | revoke-invite <id> | requests | approve-request 0x… <#|CODE> --sanctions-list-date YYYY-MM-DD --sanctions clear --adult-checked | decline-request 0x…');
     process.exitCode = 2;
   }
 } finally {
