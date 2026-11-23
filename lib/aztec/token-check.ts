@@ -14,6 +14,8 @@
  *   - that artifact has a private function `transfer_in_private` whose ABI
  *     signature is exactly the one the contracts call.
  */
+import { tokenDialect, type TokenDialect } from './token-dialect';
+
 export const TRANSFER_IN_PRIVATE_SIGNATURE = 'transfer_in_private((Field),(Field),u128,Field)';
 
 type Artifact = { name: string; functions: Array<{ name: string; parameters: any[]; functionType?: string }> };
@@ -33,27 +35,42 @@ export async function exposesTransferInPrivate(artifact: Artifact): Promise<bool
   return (await functionSignature(artifact, 'transfer_in_private')) === TRANSFER_IN_PRIVATE_SIGNATURE;
 }
 
-export type TokenCheck = { ok: true; artifact: string; classId: string } | { ok: false; reason: string };
+export type TokenCheck =
+  | { ok: true; artifact: string; classId: string; index: number; dialect?: TokenDialect }
+  | { ok: false; reason: string };
 
 /**
  * Checks a token instance on the node against the artifacts the client
  * trusts. `node` needs only getContract (aztec.js AztecNode).
+ *
+ * purpose 'agreements' (the default): the matching artifact must expose
+ * transfer_in_private with the exact signature, as above.
+ * purpose 'wallet': the private wallet only sends, shields and unshields, so
+ * the matching artifact must speak one dialect of lib/aztec/token-dialect.ts
+ * (every function the wallet calls, with its exact signature). `index` says
+ * which trusted artifact matched, so the wallet binds the instance to it.
  */
 export async function checkTokenInstance(
   node: { getContract(addr: any): Promise<{ currentContractClassId: { toString(): string } } | undefined> },
   tokenAddress: string,
   trusted: Artifact[],
+  opts: { purpose?: 'agreements' | 'wallet' } = {},
 ): Promise<TokenCheck> {
   const { AztecAddress } = await import('@aztec-labs/aztec.js/addresses');
   const { getContractClassFromArtifact } = await import('@aztec-labs/stdlib/contract');
   const instance = await node.getContract(AztecAddress.fromStringUnsafe(tokenAddress));
   if (!instance) return { ok: false, reason: 'no contract at the token address' };
   const classId = instance.currentContractClassId.toString();
-  for (const a of trusted) {
+  for (const [index, a] of trusted.entries()) {
     const cls = await getContractClassFromArtifact(a as any);
     if (cls.id.toString() !== classId) continue;
+    if (opts.purpose === 'wallet') {
+      const dialect = await tokenDialect(a);
+      if (!dialect) return { ok: false, reason: `${a.name} has none of the private transfer functions this wallet calls` };
+      return { ok: true, artifact: a.name, classId, index, dialect };
+    }
     if (!(await exposesTransferInPrivate(a))) return { ok: false, reason: `${a.name} has no ${TRANSFER_IN_PRIVATE_SIGNATURE}` };
-    return { ok: true, artifact: a.name, classId };
+    return { ok: true, artifact: a.name, classId, index };
   }
   return { ok: false, reason: 'token class is not one this client trusts' };
 }
