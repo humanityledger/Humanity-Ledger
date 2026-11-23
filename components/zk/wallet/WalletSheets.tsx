@@ -25,7 +25,7 @@ import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, isAztecAddress } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
-import { amountProblem, recipientProblem } from './walletLogic';
+import { amountProblem, effectiveToken, recipientProblem } from './walletLogic';
 
 export { amountProblem, recipientProblem };
 import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
@@ -38,9 +38,9 @@ import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
-export const FIRST_TOKEN: TokenKey = AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC';
 export const symbolOf = (key: TokenKey) => AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.symbol ?? key;
-const TOKENS = AZTEC_WALLET_CONFIG.tokens.map((t) => ({ key: t.key, symbol: t.symbol }));
+/** Read on every render: cUSDC is listed for beta members only once their membership is known. */
+const listedTokens = () => AZTEC_WALLET_CONFIG.tokens.map((t) => ({ key: t.key, symbol: t.symbol }));
 
 async function readClipboard(): Promise<string | null> {
   try {
@@ -63,7 +63,9 @@ export function SendFlow({
   onStepChange?: (step: 'details' | 'review' | 'running', back?: () => void) => void;
 }) {
   const { state, wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
+  const [chosen, setToken] = useState<TokenKey | null>(null);
+  const tokens = listedTokens();
+  const token = effectiveToken(chosen, tokens, state.balances, 'private', 'USDC' as TokenKey);
   const [amount, setAmount] = useState('');
   const [to, setTo] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -217,7 +219,7 @@ export function SendFlow({
       className="space-y-4"
     >
       <StepDots steps={['Details', 'Review']} at={0} />
-      <TokenChips tokens={TOKENS} value={token} onChange={setToken} />
+      <TokenChips tokens={tokens} value={token} onChange={setToken} />
       <AmountInput
         value={amount}
         onChange={setAmount}
@@ -302,8 +304,10 @@ export function SendFlow({
 /* ─── Receive ──────────────────────────────────────────────────────────────── */
 
 export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
-  const { wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
+  const { state, wallet } = useAztecWallet('');
+  const [chosen, setToken] = useState<TokenKey | null>(null);
+  const tokens = listedTokens();
+  const token = effectiveToken(chosen, tokens, state.balances, 'any', 'USDC' as TokenKey);
   const [amount, setAmount] = useState('');
   const [sender, setSender] = useState('');
   const [adding, setAdding] = useState(false);
@@ -350,7 +354,7 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
 
       <AddressBox label="Your Aztec address" value={aztecAddress} />
 
-      <TokenChips tokens={TOKENS} value={token} onChange={setToken} />
+      <TokenChips tokens={tokens} value={token} onChange={setToken} />
       <label className="block">
         <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
           Amount to request (optional)
@@ -407,7 +411,9 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
 
 export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () => void }) {
   const { state, wallet } = useAztecWallet('');
-  const [token, setToken] = useState<TokenKey>(FIRST_TOKEN);
+  const [chosen, setToken] = useState<TokenKey | null>(null);
+  const tokens = listedTokens();
+  const token = effectiveToken(chosen, tokens, state.balances, mode === 'shield' ? 'public' : 'private', 'USDC' as TokenKey);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -459,7 +465,7 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
         <BalanceLeg title="To" {...to} decimals={decimals} symbol={symbol} />
       </div>
 
-      <TokenChips tokens={TOKENS} value={token} onChange={setToken} />
+      <TokenChips tokens={tokens} value={token} onChange={setToken} />
       <AmountInput
         value={amount}
         onChange={setAmount}

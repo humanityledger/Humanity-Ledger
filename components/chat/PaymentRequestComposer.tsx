@@ -18,7 +18,9 @@ const field = 'w-full h-11 rounded-xl border border-[#e4e7ec] px-3 text-[16px] t
 export function PaymentRequestComposer({ peerName, onClose, onSend }: { peerName?: string; onClose: () => void; onSend: (message: string) => void }) {
   const tokens = AZTEC_WALLET_CONFIG.tokens;
   const alpha = AZTEC_WALLET_CONFIG.network === 'mainnet';
-  const [key, setKey] = useState<TokenKey | ''>(tokens[0]?.key ?? '');
+  // The choice holds while listed; cUSDC is listed for beta members once their membership is known.
+  const [chosenKey, setKey] = useState<TokenKey | ''>('');
+  const key: TokenKey | '' = tokens.some((t) => t.key === chosenKey) ? chosenKey : (tokens[0]?.key ?? '');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [validity, setValidity] = useState<number>(REQUEST_VALIDITY[1].ms);

@@ -27,6 +27,7 @@ import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
 import { useAddressFingerprint } from './useAddressFingerprint';
 import { useValueMode } from '@/lib/aztec/useValueMode';
+import { effectiveToken } from '@/components/zk/wallet/walletLogic';
 import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
@@ -107,7 +108,9 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
 
 function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, balances, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; peerAddress?: string; balances?: WalletSnapshot['balances']; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
   const [payee, setPayee] = useState<{ address?: string; verified: boolean } | null>(null);
-  const [token, setToken] = useState<TokenKey>(prefill?.token ?? AZTEC_WALLET_CONFIG.tokens[0]?.key ?? 'USDC');
+  // Read on every render: cUSDC is listed for beta members once their membership is known (walletLogic.effectiveToken).
+  const [chosen, setToken] = useState<TokenKey | null>(prefill?.token ?? null);
+  const token = effectiveToken(chosen, AZTEC_WALLET_CONFIG.tokens, balances ?? [], 'private', 'USDC' as TokenKey);
   const [amount, setAmount] = useState(prefill?.amount ?? '');
   const [ack, setAck] = useState(NO_ACK);
   const [confirmedFingerprint, setConfirmedFingerprint] = useState(false);
