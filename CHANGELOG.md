@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Sign-in without loops, and a new /beta (23 November 2026)
+
+- The middleware no longer rejects sessions issued before a fixed epoch: it disagreed with every
+  other session check, so /connect and the app sent people back and forth.
+- After sign-in (`lib/beta/landing.ts`): an explicit return path wins; a beta member goes to /chat,
+  someone who can still join goes to /beta, otherwise the chat opens. One extra status read covers a
+  phone whose session cookie is not readable yet after returning from the wallet.
+- /beta redesigned: one card with a three-step progress, a live capacity pill, a four-block code
+  input with paste anywhere, a custom notice checkbox and an "Access granted" screen. Members who
+  open /beta go straight to the chat.
+
 ### Payments hardening, cUSDC for everyone behind a switch, private wallet polish (22 November 2026)
 
 - A payment request is paid for the person who asked only when their own wallet finds a settled

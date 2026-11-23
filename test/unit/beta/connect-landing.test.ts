@@ -1,0 +1,63 @@
+/**
+ * Sign-in to /beta or /chat without loops: the middleware accepts every valid session the rest of
+ * the app accepts, /connect sends a member to /chat and someone who can still join to /beta, and a
+ * slow cookie write after a phone returns from its wallet gets one more try.
+ */
+import fs from 'node:fs';
+import { landingAfterSignIn, readLandingStatus } from '@/lib/beta/landing';
+
+const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
+
+describe('where sign-in lands', () => {
+  const open = { member: false, open: true, remaining: 40 };
+  it('an explicit return path wins, except /beta itself', () => {
+    expect(landingAfterSignIn('/settings', open)).toBe('/settings');
+    expect(landingAfterSignIn('/beta', { member: true, active: true, open: true })).toBe('/chat');
+    expect(landingAfterSignIn('/beta?x=1', open)).toBe('/beta');
+  });
+  it('a member goes to the chat, someone who can join goes to /beta', () => {
+    expect(landingAfterSignIn(null, { member: true, active: true, open: true })).toBe('/chat');
+    expect(landingAfterSignIn(null, open)).toBe('/beta');
+    expect(landingAfterSignIn(null, { member: true, active: false, open: true })).toBe('/beta');
+  });
+  it('a closed or full beta, or no answer, opens the chat', () => {
+    expect(landingAfterSignIn(null, { member: false, open: false })).toBe('/chat');
+    expect(landingAfterSignIn(null, { ...open, remaining: 0 })).toBe('/chat');
+    expect(landingAfterSignIn(null, null)).toBe('/chat');
+  });
+});
+
+describe('reading the status right after sign-in', () => {
+  const noWait = async () => {};
+  it('retries once when the cookie is not there yet', async () => {
+    let n = 0;
+    const f = (async () => (++n === 1 ? reply(401, {}) : reply(200, { member: true, active: true, open: true, remaining: 3 }))) as unknown as typeof fetch;
+    expect(await readLandingStatus(f, noWait)).toEqual({ member: true, active: true, open: true, remaining: 3 });
+    expect(n).toBe(2);
+  });
+  it('gives up quietly on errors and malformed answers', async () => {
+    expect(await readLandingStatus((async () => reply(401, {})) as unknown as typeof fetch, noWait)).toBeNull();
+    expect(await readLandingStatus((async () => reply(503, {})) as unknown as typeof fetch, noWait)).toBeNull();
+    expect(await readLandingStatus((async () => reply(200, { member: 'yes' })) as unknown as typeof fetch, noWait)).toBeNull();
+    expect(await readLandingStatus((async () => { throw new Error('offline'); }) as unknown as typeof fetch, noWait)).toBeNull();
+  });
+});
+
+describe('wiring', () => {
+  it('the middleware no longer rejects sessions by a fixed epoch', () => {
+    expect(fs.readFileSync('middleware.ts', 'utf8')).not.toMatch(/SESSION_EPOCH/);
+  });
+  it('/connect lands through the beta status, with one navigation', () => {
+    const page = fs.readFileSync('components/landing/ConnectPage.tsx', 'utf8');
+    expect(page).not.toMatch(/returnPathFromQuery/);
+    expect(page).toMatch(/window\.location\.replace\(landingAfterSignIn\(explicit, status\)\)/);
+    expect(page.match(/void goAfterSignIn\(\);/g)?.length).toBeGreaterThanOrEqual(5);
+  });
+  it('/beta sends a member straight to the chat and keeps the gate pieces', () => {
+    const view = fs.readFileSync('components/beta/BetaGateView.tsx', 'utf8');
+    expect(view).toMatch(/if \(stage === 'member' && step !== 'done'\) router\.replace\('\/chat'\)/);
+    expect(view).toMatch(/Closed Beta/);
+    expect(view).toMatch(/Ledger Chat · Aztec Alpha Privacy Layer/);
+    expect(fs.readFileSync('app/beta/page.tsx', 'utf8')).toMatch(/title: 'Closed Beta · Ledger Chat'/);
+  });
+});
