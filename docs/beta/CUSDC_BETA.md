@@ -120,6 +120,15 @@ On success the page drops the wallet's cached beta answer, so cUSDC appears at t
 
 Members see their own state instead of the form: in the beta, notice to confirm again, paused, or revoked. A payment request in cUSDC shown to someone outside the beta links to `/beta`.
 
+## The request form on /beta
+
+Anyone can ask for a code on `/beta`, signed in or not: **I don't have a code yet** (signed out) or **Request an invitation** (at the code step) opens a form with their name, email, and optionally their Ethereum wallet, X or Telegram and what they want to test, plus two confirmations (18 or older; consent to be contacted by email).
+
+- `POST /api/beta/cusdc/apply` sends one email to `BETA_REQUESTS_TO` (default `humanityledger@gmail.com`) with **Reply-To set to the person's email**, so replying to that message answers them with the code. It needs `RESEND_API_KEY`, and a sender domain verified in Resend (`RESEND_FROM_EMAIL`); without them the form says the request could not be sent.
+- Nothing from the form is saved in the database. When the person is signed in, their wallet address and the date are also kept as a request (below).
+- JSON only, a hidden field that bots fill in, and at most 5 requests an hour per network address.
+- Before replying with a code, check the person against the EU sanctions list and record it with `assign` (above).
+
 ## Requests for a place (no code)
 
 Someone without a code can ask for a place on `/beta`, signed in with the wallet that would join. Only that wallet address and the date are stored (`CusdcBetaRequest`, migration `20261123160000_cusdc_beta_requests`): no name, email or handle.

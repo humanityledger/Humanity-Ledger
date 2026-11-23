@@ -109,10 +109,11 @@ describe('wiring', () => {
     expect(reserved).toMatch(/sanctionsResult: 'clear', adultCheckedAt: \{ not: null \}/);
   });
 
-  it('/beta offers a request without a code, and joins with a reserved place', () => {
+  it('/beta offers the request form without a code, and joins with a reserved place', () => {
     const view = read('components/beta/BetaGateView.tsx');
-    expect(view).toMatch(/Request a place/);
-    expect(view).toMatch(/\/api\/beta\/cusdc\/request/);
+    expect(view).toMatch(/Request an invitation/);
+    expect(view).toMatch(/I don&apos;t have a code yet/);
+    expect(view).toMatch(/<BetaRequestForm/);
     expect(view).toMatch(/reserved: true, notice: true/);
   });
 });
