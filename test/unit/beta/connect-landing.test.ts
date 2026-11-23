@@ -57,7 +57,8 @@ describe('wiring', () => {
   });
   it('/beta sends a member straight to the chat and keeps the gate pieces', () => {
     const view = fs.readFileSync('components/beta/BetaGateView.tsx', 'utf8');
-    expect(view).toMatch(/if \(stage === 'member' && step !== 'done'\) router\.replace\('\/chat'\)/);
+    expect(view).toMatch(/if \(stage === 'member' && step !== 'done'\) window\.location\.replace\('\/chat'\)/);
+    expect(view).toMatch(/onOpen=\{\(\) => window\.location\.assign\('\/chat'\)\}/);
     expect(view).toMatch(/Closed Beta/);
     expect(view).toMatch(/Ledger Chat · Aztec Alpha Privacy Layer/);
     expect(fs.readFileSync('app/beta/page.tsx', 'utf8')).toMatch(/title: 'Closed Beta · Ledger Chat'/);

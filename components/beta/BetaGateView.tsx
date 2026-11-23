@@ -13,7 +13,6 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { invalidateCusdcBeta } from '@/lib/beta/cusdc-beta-client';
 import {
@@ -40,7 +39,6 @@ const primary =
 const quiet = 'text-[13.5px] font-medium text-[#667085] hover:text-[#15171C] transition-colors';
 
 export default function BetaGateView() {
-  const router = useRouter();
   const [status, setStatus] = useState<GateStatus | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -71,15 +69,16 @@ export default function BetaGateView() {
 
   const stage = gateStage(status, { signedOut, failed });
 
-  // A member who opens /beta goes straight to the chat: nothing to do here.
+  // A member who opens /beta goes straight to the chat: nothing to do here. A full page load (not a
+  // client transition): the chat is a large separate bundle, and the middleware checks the beta pass.
   useEffect(() => {
-    if (stage === 'member' && step !== 'done') router.replace('/chat');
-  }, [stage, step, router]);
+    if (stage === 'member' && step !== 'done') window.location.replace('/chat');
+  }, [stage, step]);
 
   const finish = () => {
     invalidateCusdcBeta();
     setStep('done');
-    window.setTimeout(() => router.push('/chat'), 2400);
+    window.setTimeout(() => window.location.assign('/chat'), 2400);
   };
 
   const unlock = async () => {
@@ -150,7 +149,7 @@ export default function BetaGateView() {
   if (stage === 'loading' || (stage === 'member' && step !== 'done')) {
     body = <Skeleton label={stage === 'member' ? 'Opening Ledger Chat' : 'Checking your place in the beta'} />;
   } else if (step === 'done') {
-    body = <Granted onOpen={() => router.push('/chat')} />;
+    body = <Granted onOpen={() => window.location.assign('/chat')} />;
   } else if (stage === 'signedOut') {
     body = (
       <Panel title="Connect your wallet" text="The beta is tied to the Ethereum wallet you sign in with. Your invitation is not used until you unlock." headingRef={heading}>
