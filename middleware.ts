@@ -281,16 +281,33 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
   // compatibility cookie and ignoring the real one. Removing the legacy write
   // would have broken every authenticated route at once, with nothing here to
   // explain why. Primary first, legacy names after it.
-  const ledgerCookie = req.cookies.get('hl_session')?.value
-    ?? req.cookies.get('humanity_session')?.value
-    ?? req.cookies.get('ledger_session')?.value
-    ?? req.cookies.get('human_session')?.value;
-
-  if (ledgerCookie) {
+  //
+  // Every cookie is tried in turn, as lib/session.ts getSession does. Taking only the first one present
+  // (`a ?? b ?? c`) meant a stale or duplicate hl_session hid the fresh legacy copies: the APIs saw a
+  // session and the perimeter did not, so /chat sent the user to /connect, /connect saw a session and
+  // sent them back, and every round asked the wallet for a new signature (23/11/2026).
+  //
+  // Same key choice as lib/jwt.ts: EdDSA only when BOTH keys are configured and parse, otherwise HS256.
+  // With only the public key set, the server minted HS256 tokens the perimeter refused.
+  let useEdDSA = false;
+  if (process.env.JWT_EDDSA_PRIVATE_JWK && process.env.JWT_EDDSA_PUBLIC_JWK) {
     try {
-      const isEdDSA = !!process.env.JWT_EDDSA_PUBLIC_JWK;
+      JSON.parse(process.env.JWT_EDDSA_PRIVATE_JWK);
+      JSON.parse(process.env.JWT_EDDSA_PUBLIC_JWK);
+      useEdDSA = true;
+    } catch {
+      useEdDSA = false;
+    }
+  }
+  const sessionCookies = ['hl_session', 'humanity_session', 'ledger_session', 'human_session']
+    .map((name) => req.cookies.get(name)?.value)
+    .filter((v): v is string => typeof v === 'string' && v.length > 0);
+
+  for (const ledgerCookie of sessionCookies) {
+    try {
+      const isEdDSA = useEdDSA;
       let payload;
-      
+
       if (isEdDSA) {
         const { importJWK } = await import('jose');
         const pubJwk = JSON.parse(process.env.JWT_EDDSA_PUBLIC_JWK!);
@@ -304,7 +321,9 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
       
       // A token that verifies is not automatically a sign-in (refresh tokens,
       // retired webauthn tokens): lib/security/sessionClaims.ts.
-      const addr = isSessionPayload(payload) ? ((payload as any).address ?? (payload as any).sub) : null;
+      // Same claim order as lib/session.ts getSession.
+      const p = payload as any;
+      const addr = isSessionPayload(payload) ? (p.walletAddress || p.address || p.userId || p.sub) : null;
       if (addr && typeof addr === 'string') return addr.toLowerCase();
     } catch {
       // Expired or invalid JWT — fall through

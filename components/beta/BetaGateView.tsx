@@ -12,6 +12,7 @@
  * Logic: lib/beta/gate.ts. Visual language: /connect (Inter, #5200FF, #10B981, #FF3B30).
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { allowAutoRedirect } from '@/lib/auth/session-check';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -75,8 +76,12 @@ export default function BetaGateView() {
   const stage = gateStage(status, { signedOut, failed });
 
   // A member who opens /beta goes straight to the chat: nothing to do here.
+  // Guarded by the shared loop breaker: if /chat keeps sending the member back here, show the
+  // "Open Ledger Chat" button instead of bouncing between the two pages forever.
   useEffect(() => {
-    if (stage === 'member' && step !== 'done') router.replace('/chat');
+    if (stage !== 'member' || step === 'done') return;
+    if (allowAutoRedirect()) router.replace('/chat');
+    else setStep('done');
   }, [stage, step, router]);
 
   const finish = () => {
