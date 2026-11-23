@@ -54,6 +54,8 @@ const PUBLIC_PATHS = new Set([
   '/connect',
   '/alpha',      // Joining the closed alpha: the page asks for sign-in itself; /api/alpha/* checks the session
   '/chat',       // LedgerChat handles its own auth internally (XMTP + MetaMask)
+  '/beta',       // The closed beta page: signed out it offers Connect wallet and the request form; its APIs check the session
+  '/api/beta/cusdc/apply', // The request form on /beta: open to anyone, JSON only, rate limited (app/api/beta/cusdc/apply)
   '/u',          // Profile links (/u#token): hands the token to /chat; the token never reaches the server
   '/studio',     // Ledger Studio handles its own wallet auth internally
   '/academy',    // Turing Shield — Academic Integrity Engine (handles own wallet auth internally)

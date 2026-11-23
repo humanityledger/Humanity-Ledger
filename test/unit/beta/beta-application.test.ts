@@ -56,6 +56,17 @@ describe('applicationEmail', () => {
   });
 });
 
+describe('reachable without signing in', () => {
+  it('/beta and the request endpoint are public; the rest of the beta API is not', async () => {
+    const { isPublicPath } = await import('../../../middleware');
+    expect(isPublicPath('/beta')).toBe(true);
+    expect(isPublicPath('/api/beta/cusdc/apply')).toBe(true);
+    expect(isPublicPath('/api/beta/cusdc/redeem')).toBe(false);
+    expect(isPublicPath('/api/beta/cusdc/status')).toBe(false);
+    expect(isPublicPath('/api/beta/cusdc/request')).toBe(false);
+  });
+});
+
 describe('the form', () => {
   it('has labelled fields only, two confirmations and no stored data', () => {
     const form = read('components/beta/BetaRequestForm.tsx');
