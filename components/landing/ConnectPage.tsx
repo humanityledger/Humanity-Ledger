@@ -72,6 +72,10 @@ const SIGN_TIMEOUT_MS = 120_000;
 const SIGN_READY_FALLBACK_MS = 8_000;
 const DynamicUniversalScanModal = dynamic(() => import("@/components/scan/UniversalScanModal"), { ssr: false });
 
+/** Shown when the loop breaker (lib/auth/session-check.ts) stops automatic redirects after sign-in. */
+const LOOP_MESSAGE =
+  "You are signed in, but Ledger Chat could not open. Wait a minute and tap 'Try again'; if it repeats, sign out and sign in again.";
+
 const QR_LIFETIME_MS = 240_000;
 const QR_POLL_MS = 2_000;
 
@@ -487,11 +491,20 @@ export default function ConnectPage() {
         });
         if (r.ok) {
           const d = await r.json();
-          if (d.authenticated && d.user?.address?.toLowerCase() === address.toLowerCase() && (await hasServerSession()) && allowAutoRedirect()) {
-            setSignStep(3);
-            setLinked(true);
-            redirectingRef.current = true;
-            void goAfterSignIn();
+          if (d.authenticated && d.user?.address?.toLowerCase() === address.toLowerCase() && (await hasServerSession())) {
+            if (stale()) return;
+            if (allowAutoRedirect()) {
+              setSignStep(3);
+              setLinked(true);
+              redirectingRef.current = true;
+              void goAfterSignIn();
+              return;
+            }
+            // The server already has this wallet's session, yet the app keeps sending the user back here.
+            // A new signature would not change that and would only restart the loop: stop and say so.
+            setSignError(LOOP_MESSAGE);
+            setAuthStatus("failed");
+            signingRef.current = false;
             return;
           }
         }
@@ -702,6 +715,14 @@ export default function ConnectPage() {
             clearDisconnectGuard();
           } catch {
             /* storage unavailable */
+          }
+          // The same loop breaker as every other automatic redirect from this page: if the app has sent
+          // the user back here too often, stop instead of opening the chat only to be bounced again.
+          if (!allowAutoRedirect()) {
+            setSignError(LOOP_MESSAGE);
+            setAuthStatus("failed");
+            signingRef.current = false;
+            return;
           }
           setSignStep(3);
           setLinked(true);
