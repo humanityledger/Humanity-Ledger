@@ -448,6 +448,7 @@ export default function ConnectPage() {
           document.cookie = `system_handshake=${normalized}; path=/; max-age=604800; SameSite=Lax`;
           setLinked(true);
         }
+        redirectingRef.current = true; // no wallet signature may start while the page leaves
         await new Promise((r) => setTimeout(r, 800));
         void goAfterSignIn();
       } catch {
@@ -463,11 +464,11 @@ export default function ConnectPage() {
     if (!mounted || accountStatus !== "connected" || !address) return;
     if (redirectingRef.current || signingRef.current || authStatus === "failed") return;
 
-    if (isLinked) {
-      redirectingRef.current = true;
-      void goAfterSignIn();
-      return;
-    }
+    // `isLinked` is not a session: LinkedGate sets it whenever wagmi has a wallet connected, and on phones
+    // WalletConnect reconnects the wallet on every page load. Redirecting on it alone (as this effect did)
+    // sent a phone whose server session had expired /connect → /chat → middleware → /connect … with no
+    // loop breaker (23/11/2026). The server check below decides, through the same loop breaker as the rest
+    // of this page; without a session the connected wallet is asked to sign.
     if (readDisconnectGuard()) return;
 
     setMobileDeepLink(null);
@@ -744,7 +745,7 @@ export default function ConnectPage() {
         signingRef.current = false;
       }
     })();
-  }, [mounted, accountStatus, address, authStatus, chainId, isLinked, signMessageAsync, setLinked, activeConnector]);
+  }, [mounted, accountStatus, address, authStatus, chainId, signMessageAsync, setLinked, activeConnector]);
 
   /* ── Auto-heal / Resume when returning from wallet app ────────────────── */
   useEffect(() => {
