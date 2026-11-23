@@ -2,7 +2,7 @@
 
 End-to-end encrypted messaging over XMTP (MLS, RFC 9420), with private payments on Aztec, in one conversation. Built by Humanity Ledger.
 
-`Early access · Aztec Alpha with a cap per payment · not externally audited · status as of 17 November 2026`
+`Early access · closed cUSDC beta on Aztec Alpha, capped per payment · not externally audited · status as of 23 November 2026`
 
 <p align="center">
   <img src="docs/readme/first-payment-record.jpg" width="900" alt="The first private payment from Ledger Chat on Aztec Alpha: L2 block 29,012, HLC deployed in block 28,992, confirmed by preflight run 43583640304">
@@ -14,20 +14,21 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 
 * No external audit has been done. On Aztec Alpha, payments from the app are capped per payment.
 * Aztec Alpha carries real value and is, in Aztec's own words as recorded in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), live but early, with critical bugs expected.
-* Every private payment on Alpha recorded in this repository (four) went between two accounts of the operator. The operator states that a private transfer between two non-operator accounts succeeded. No hash was supplied, so R8 stays open.
+* Every private payment on Alpha recorded in this repository went between accounts operated by the operator: four in HLC (14 November 2026) and the first in cUSDC between two beta member accounts (23 November 2026, L2 block 46420, [`docs/beta/FIRST_CUSDC_TRANSFER.md`](docs/beta/FIRST_CUSDC_TRANSFER.md)). A payment between two different people is still R8.
 * Ledger Chat pays no network fees for anyone: each account pays its own, with Fee Juice it bridges or that a contact pays through a fee link. `/api/aztec/sponsor` answers 410. The account that pays a fee, and its Fee Juice balance, are public; the sender, recipient and amount of a private transfer are not.
 * The protocol fee exists in the escrow and stream source and is not deployed anywhere. Its treasury is the Aztec account `0x177395a38df8c95a572d3e7591240312b2fddbaf14d294d9e1443f3b0d55faed`, designated by the operator on 17 November 2026. It is not the 4-of-7 multisig of the launch conditions.
 * The Ethereum portal and receiver addresses (added 17 November 2026) are written and tested in CI and **deployed nowhere**. The wallet says so and moves no money through them.
 * Passkeys open the private wallet by unwrapping the same account root the Ethereum wallet signs. Whoever holds an enrolled passkey can spend, exactly like whoever holds the wallet.
 * Community posts are not end-to-end encrypted. Our server can read them, and the app says so on the community screen.
-* HLC is a test token with no monetary value, issued by the operator only to test private payments in the closed alpha. It is never sold or offered (decision PA-1). Real payments are planned in cUSDC, issued by human.tech, and stay off ([`lib/payments/assets.ts`](lib/payments/assets.ts)).
-* Humanity Ledger is not affiliated with, endorsed by or audited by Aztec Labs, the Aztec Foundation or XMTP Labs.
+* Private payments on Alpha are in **cUSDC** (Clean USDC), a dollar token issued by human.tech through its Shield bridge, and only in a **closed technical beta** for at most 100 invited people, switched on from 23 November 2026 until 23 February 2027 ([`docs/beta/CUSDC_BETA.md`](docs/beta/CUSDC_BETA.md)). Ledger Chat does not issue, hold or redeem cUSDC. The nine gates for offering cUSDC to everyone (`CUSDC_GATES` in [`lib/payments/assets.ts`](lib/payments/assets.ts): legal note, operating company, issuer classification, sanctions policy, insurance and more) are all unmet; the operator decided on 22 November 2026 to run the beta before them.
+* HLC is a test token with no monetary value, issued by the operator only to test private payments. It is never sold or offered (decision PA-1), and since 23 November 2026 the wallet no longer lists it on Alpha.
+* Humanity Ledger is not affiliated with, endorsed by or audited by Aztec Labs, the Aztec Foundation, XMTP Labs or human.tech.
 
 ---
 
 ## Contents
 
-1. [Status](#1-status-as-of-17-november-2026)
+1. [Status](#1-status-as-of-23-november-2026)
 2. [Architecture](#2-architecture)
 3. [Private payments on Aztec Alpha](#3-private-payments-on-aztec-alpha)
 4. [G7: binding a chat identity to an Aztec address](#4-g7-binding-a-chat-identity-to-an-aztec-address)
@@ -47,21 +48,24 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 
 ---
 
-## 1. Status as of 17 November 2026
+## 1. Status as of 23 November 2026
 
 | Component | Network | State | Evidence |
 |---|---|---|---|
 | Direct messages | XMTP v3 | Real. MLS is provided by XMTP; we do not implement it | XMTP browser SDK 5.2.0, [`docs/STATUS.md`](docs/STATUS.md) |
-| Private wallet: send, shield, unshield | Aztec Alpha and testnet | Real. Four private transfers on Alpha (blocks 29012, 29771, 29895, 29923) | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), [section 3](#3-private-payments-on-aztec-alpha) |
+| Private wallet: send, shield, unshield | Aztec Alpha and testnet | Real. Four private HLC transfers on Alpha (blocks 29012, 29771, 29895, 29923) and two in cUSDC (blocks 46295 and 46420) | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), [`docs/beta/FIRST_CUSDC_TRANSFER.md`](docs/beta/FIRST_CUSDC_TRANSFER.md), [section 3](#3-private-payments-on-aztec-alpha) |
+| Closed cUSDC beta | Aztec Alpha | On since 23 Nov 2026, until 23 Feb 2027, at most 100 members with single-use invitation codes. cUSDC is listed only for members, asked again on the server before every payment, capped per payment, and stopped at once by exits-only mode. First transfer between two member accounts on 23 Nov 2026 | [`docs/beta/CUSDC_BETA.md`](docs/beta/CUSDC_BETA.md), `cusdcBeta` in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), `test/unit/beta/` |
+| cUSDC token contract in the wallet | Aztec Alpha | Real since 23 Nov 2026. cUSDC runs the AIP-20 Token of aztec-standards 6.0.0 (class `0x2ff09399…68ea9f`). The wallet loads it only after checking that class on the node against an artifact it holds | [`lib/aztec/standards-token.ts`](lib/aztec/standards-token.ts), [`lib/aztec/token-dialect.ts`](lib/aztec/token-dialect.ts), `test/unit/aztec/token-dialect.test.ts` |
+| Payments in the chat: requests, payment cards, notices, history | Client | Real. A request is shown as paid only when the requester's own wallet finds the receive. For cUSDC the receive is not yet listed (section 3), so cUSDC requests stay "announced" and no notice is raised | [`lib/payments/`](lib/payments/), [`components/chat/`](components/chat/), [`components/settings/PaymentHistory.tsx`](components/settings/PaymentHistory.tsx) |
 | Gas estimation for transfers and account creation | Aztec Alpha | Real since 14 Nov 2026: limits from a simulation, so an account holds about 15 AZTEC instead of about 42 | [`lib/aztec/fee-juice.ts`](lib/aztec/fee-juice.ts) (`gasLimitsFromSimulation`, `budgetFeeFor`) |
 | New user with no AZTEC | Aztec Alpha | Real once: a contact paid Fee Juice through a fee link, the account was created and sent its first payment | `newUserFlow` in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
-| HLC token | Aztec Alpha | Active since block 28992. An earlier HLC is retired | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
+| HLC test token | Aztec Alpha | Deployed in block 28992; an earlier HLC is retired. No longer listed by the wallet on Alpha since 23 Nov 2026 | [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json), [`lib/aztec/wallet/config.ts`](lib/aztec/wallet/config.ts) |
 | G7 peer binding | Client | Real in unit tests. Since 17 Nov 2026 the proof names the Aztec network (scheme v2), and on Alpha a proof without a network is refused. Not yet run between two different people (R8) | [`lib/aztec/peer-binding.ts`](lib/aztec/peer-binding.ts), `test/unit/aztec/peer-binding.test.ts`, `test/unit/aztec/peer-binding-network.test.ts` |
 | Passkeys for the private wallet | Client and backup | Real in code and unit tests since 17 Nov 2026 (WebAuthn PRF). Not yet tested on a real device | [`lib/aztec/wallet/passkey.ts`](lib/aztec/wallet/passkey.ts), [`docs/ACCOUNT_MODEL.md`](docs/ACCOUNT_MODEL.md), `test/unit/aztec/passkey.test.ts` |
 | Ethereum portal, receiver addresses, PortalToken | None | Written 17 Nov 2026. Hardhat suite and 11 TXE tests green in CI. Not deployed on any network, not audited | [`contracts/portal/`](contracts/portal/), [`contracts/aztec/portal_token/`](contracts/aztec/portal_token/), [`docs/PORTAL.md`](docs/PORTAL.md), [`docs/RECEIVER_ADDRESSES.md`](docs/RECEIVER_ADDRESSES.md) |
 | Encrypted local message store | Client | Real since 13 Nov 2026. Since 17 Nov 2026 its key is kept on the device under a non-extractable browser key, so signing in takes one signature | [`lib/xmtp/device-key-vault.ts`](lib/xmtp/device-key-vault.ts), [`lib/xmtp/db-key.ts`](lib/xmtp/db-key.ts) |
 | Escrow and payment streams (aztec-nr) | Testnet only | TXE tests in CI (section 8); end to end on testnet | [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](docs/AZTEC_TESTNET_DEPLOYMENTS.md) |
-| Escrow and streams on Alpha | Off | Refused in the client and the scripts: no external audit (`audit: null`) | [`lib/protocol/agreement-gate.ts`](lib/protocol/agreement-gate.ts), [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md) |
+| Escrow and streams on Alpha | Off | Refused in the client and the scripts: no external audit (`audit: null`). cUSDC is refused for agreements in any case: its contract has no `transfer_in_private` | [`lib/protocol/agreement-gate.ts`](lib/protocol/agreement-gate.ts), [`lib/aztec/agreement-policy.ts`](lib/aztec/agreement-policy.ts), [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md) |
 | Protocol fee (escrow and streams) | None | In the source, settlement only, to the designated treasury. CI compiled it with Aztec 6.0.0 and TXE passed (17 Nov 2026). Current classes: escrow `0x2ade61…9504c6`, streams `0x0251d1…c6777b`. Not deployed. Not on Alpha: no external audit | [`docs/protocol/FEE_CONTRACT_SPEC.md`](docs/protocol/FEE_CONTRACT_SPEC.md), [`deployments/aztec-testnet.json`](deployments/aztec-testnet.json) |
 | Standalone Noir circuits | None | Tests only. Known soundness issues ZK-01 to ZK-07 | [section 9](#9-standalone-noir-circuits-experimental) |
 | Calls (voice, video, screen) | WebRTC | Real. Since 17 Nov 2026 a call rings without its chat open and hangs up on both sides in every state. TURN relay keys set on 14 Nov 2026; a call across two different networks is not yet recorded (R3) | [`docs/CALLS.md`](docs/CALLS.md) |
@@ -196,7 +200,7 @@ the one that creates an account, is paid with the account's own Fee Juice: bridg
 through a fee link. No sponsor contract, route or client path remains in the code
 (`test/unit/aztec/no-sponsorship.test.ts`).
 
-### HLC, active and retired
+### HLC (test token), active and retired
 
 | | Active HLC | Retired HLC (do not use) |
 |---|---|---|
@@ -208,6 +212,48 @@ through a fee link. No sponsor contract, route or client path remains in the cod
 | Why | Deployed from the Ledger Chat private wallet, universal deployment | Nobody holds the key of its admin account, so it can never be issued |
 
 Name "Humanity Ledger Corp.", symbol HLC, 6 decimals. That name suggests a company that does not exist, so a new instance named "HLC Test Token" is prepared ([`docs/alpha/HLC_REDEPLOY_RUNBOOK.md`](docs/alpha/HLC_REDEPLOY_RUNBOOK.md)). The wallet keeps HLC in an internal slot named `USDC`; that name is never shown to users and HLC has no relation to USDC.
+
+
+Since 23 November 2026 the wallet no longer lists HLC, or any other test token, on Alpha ([`lib/aztec/wallet/config.ts`](lib/aztec/wallet/config.ts), `LISTED_TOKENS`). The records above stay as the history of the first runs.
+
+### cUSDC in the closed beta
+
+cUSDC (Clean USDC) is a dollar token on Aztec issued by human.tech: its Shield bridge takes USDC on Ethereum and, in private mode, mints cUSDC to an Aztec account. Address `0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38`, 6 decimals, recorded in `plannedTokens` of [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json). Ledger Chat neither issues nor holds it: each member brings their own cUSDC and pays their own fees.
+
+**Who can use it.** Only members of the closed technical beta: at most 100 people, each with a single-use invitation code, from 23 November 2026 until 23 February 2027 ([`docs/beta/CUSDC_BETA.md`](docs/beta/CUSDC_BETA.md), [`docs/beta/TESTER_GUIDE.md`](docs/beta/TESTER_GUIDE.md)). While the beta is on, `/chat` opens only for members; anyone else is sent to `/beta`, where they connect a wallet, enter a code, read the notice and unlock.
+
+**What the wallet checks before every cUSDC payment** (`cusdcBetaDecision` on the server, then again in the wallet):
+
+1. The beta is on and has not ended.
+2. The contract is confirmed on the network, and the wallet's own class check accepts it (below).
+3. A cap per payment exists for cUSDC (`NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS`). No direct payment on Alpha ever exceeds 100,000,000 base units (100 cUSDC), whatever the cap (`ALPHA_MAX_AMOUNT`).
+4. The payer is an active member who confirmed the current notice, and so is the recipient: a non-member could not see the payment.
+5. Exits-only mode (`AZTEC_VALUE_MODE`) is off. It stops new payments at once, without a deploy, and fails closed.
+6. The payee is the Aztec address verified in the conversation (G7, section 4). It is never typed, and never taken from a request.
+
+A member whose access is revoked keeps seeing their balance and can still move their own funds; only new payments are refused.
+
+**The contract cUSDC runs.** cUSDC is an instance of the AIP-20 Token of aztec-standards 6.0.0 (class `0x2ff0939914ff64bd3f7979926dbe8cf3332bc2fee55928bf3cc9ca802568ea9f`, read from the node), not of the reference Token of noir-contracts.js that HLC uses. On Alpha the wallet loads a token only if its instance runs a class computed from an artifact the wallet holds ([`lib/aztec/token-check.ts`](lib/aztec/token-check.ts)). Since 23 November 2026:
+
+* The wallet holds the published aztec-standards artifact with its debugging data removed; its bytecode and ABI are unchanged, and a test pins the class it computes ([`lib/aztec/standards-token.ts`](lib/aztec/standards-token.ts)).
+* It speaks both token ABIs. A token is matched to one only when every function the wallet calls exists with the exact signature: `transfer_private_to_private`, `transfer_public_to_private` and `transfer_private_to_public` for aztec-standards, and `transfer`, `transfer_to_private` and `transfer_to_public` for the reference Token ([`lib/aztec/token-dialect.ts`](lib/aztec/token-dialect.ts)).
+* Escrows and streams still require `transfer_in_private`, which the aztec-standards Token does not have, so cUSDC cannot back an agreement.
+* The token's `auth_contract` slot on Alpha is zero, so a transfer makes no extra authorisation call.
+
+### The first private cUSDC transfer
+
+On 23 November 2026, between two beta member accounts, both operated by the operator ([`docs/beta/FIRST_CUSDC_TRANSFER.md`](docs/beta/FIRST_CUSDC_TRANSFER.md)):
+
+| Step | Evidence |
+|---|---|
+| 4.768584 USDC bridged with Shield in private mode into a NULO wallet on Aztec, arriving as cUSDC in about 4 minutes | Shield's confirmation screen |
+| 4.555692 cUSDC sent privately from NULO to the Ledger Chat account `0x1cf28fb5c786f5d7587c3a97790cef3d5e4dc453d485efd0b463cb1a8e81fe42` | L2 block 46295 |
+| 1 cUSDC paid privately from member A to member B in the chat | `0x2aab3a187a96f645d838abd3291331d859d421f28e36f29941e2921fbc212a13`, L2 block 46420, `success`, fee 1.6011 Fee Juice ([view](https://aztecscan.xyz/tx-effects/0x2aab3a187a96f645d838abd3291331d859d421f28e36f29941e2921fbc212a13)) |
+
+**Gaps this run found, still open:**
+
+* The aztec-standards Token emits no private event for a private-to-private transfer. Received cUSDC shows in the balance, but not as activity. So, for cUSDC, the incoming-payment notice is not raised, and a request does not turn to "paid" on the requester's side.
+* A payment from a wallet that is not a verified chat contact (here, NULO) is found only after its address is added under Receive as a known sender.
 
 ---
 
@@ -412,6 +458,7 @@ Each value is copied from its source; [`docs/readme/FACTS.md`](docs/readme/FACTS
 | Portal and receivers (Hardhat) | 26 (CI, 17 Nov 2026) | Caps, pause limits, timelocks, balance-delta deposits, Outbox consumption once, receiver prediction, forward and EIP-712 rescue | Mock Inbox and Outbox; not deployed, not audited |
 | PortalToken TXE | 11 (CI, 17 Nov 2026) | A deposit is claimed once, only with its secret, amount and portal; a withdrawal burns and emits the exact content | Uses the TXE's message injection, not a real Inbox |
 | Passkeys and G7 v2 (Vitest) | `test/unit/aztec/passkey.test.ts`, `peer-binding-network.test.ts` | Wrapping, binding to account and network, root ownership, local-first records, network-bound proofs | A simulated authenticator, not a real device |
+| cUSDC wallet path and closed beta (Vitest) | `test/unit/aztec/token-dialect.test.ts`, `wallet-token-choice.test.ts`, `test/unit/beta/` (23 Nov 2026) | The pinned aztec-standards class, exact-signature matching, the calls built per token ABI, cUSDC refused for agreements; the beta switch, 100-member cap, invitation and gate rules, request spoofing | The real network: covered once by the transfer in section 3, between accounts of the operator |
 | Property fuzzing | 60,000 iterations | Inputs to the tested functions | Not formal verification |
 
 The TXE counts are read from the log of the "Aztec contracts" run named in the table; the other counts come from [`docs/ARCHITECTURE_AND_SECURITY_DOSSIER.md`](docs/ARCHITECTURE_AND_SECURITY_DOSSIER.md) and [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md). All are as of the dates given. Run the commands in [section 14](#14-reproduce) for current numbers.
@@ -421,8 +468,8 @@ The TXE counts are read from the log of the "Aztec contracts" run named in the t
 ## 12. Explicit non-claims
 
 1. **No external audit.** Payments on Alpha are capped. No claim of audited security is made. The protocol fee contracts are not deployed, and are refused on Alpha until an audit exists.
-2. **Not adoption.** All four private payments on Alpha went between two accounts of the operator.
-3. **HLC is not money.** It is issued by the operator, uncapped and unbacked.
+2. **Not adoption.** Every private payment on Alpha recorded here, in HLC and in cUSDC, went between accounts operated by the operator.
+3. **HLC is not money.** It is issued by the operator, uncapped and unbacked, and no longer listed on Alpha.
 4. **No quantum resistance.** BN254, secp256k1 and Curve25519 are classical.
 5. **No traffic-analysis protection.** MLS protects content, not IP addresses, sizes or timing; on Alpha the fee payer of each transaction is public.
 6. **No formal verification.** Tests and fuzzing are not machine-checked proofs.
@@ -430,7 +477,8 @@ The TXE counts are read from the log of the "Aztec contracts" run named in the t
 8. **The fee is not private.** On Alpha the account that pays a network fee, and its Fee Juice balance, are public.
 9. **The portal is not live.** `HLPortal`, the receiver addresses and `PortalToken` are deployed on no network and hold nothing.
 10. **A passkey is not the signing key.** It unwraps the account root; the Schnorr signing key is still derived in the browser.
-11. **No affiliation.** Aztec Labs, the Aztec Foundation and XMTP Labs have not reviewed, endorsed or audited this project.
+11. **No affiliation.** Aztec Labs, the Aztec Foundation, XMTP Labs and human.tech have not reviewed, endorsed or audited this project.
+12. **The cUSDC beta is not a launch.** It is a closed technical test for at most 100 invited people. The gates for offering cUSDC to everyone are unmet, and the landing keeps saying "Not enabled yet" for USDC. Ledger Chat does not issue, hold, exchange or redeem cUSDC.
 
 ---
 
@@ -460,7 +508,9 @@ The TXE counts are read from the log of the "Aztec contracts" run named in the t
 * **Voice messages** play on Safari: when the audio element cannot, the app decodes them with Web Audio, and otherwise says so and offers the file.
 * **Clear chat** empties a conversation on this device, and the chat list respects it.
 * **Communities**: start one with a name and a choice of private or public, and it opens. Open one to read its posts and write in one field; Send is the only action. **Manage** is a list of rows: pinned posts, members, invite, the admin settings, apps, analytics, governance, leave, and delete for the owner. A post is pinned only when someone chooses Pin. Posts are readable by our server, and the screen says so. Community apps run in a sandboxed frame with no network access.
-* **Private wallet**: Overview (balances, send, receive, shield, Ethereum), Activity, **Security** (keys, ways to open, address checks, whether new payments are allowed, the public fee payer, the audit status, passkeys) and Protocol.
+* **Private wallet**: Overview (balances, send, receive, shield, Ethereum), Activity, **Security** (keys, ways to open, address checks, whether new payments are allowed, the public fee payer, the audit status, passkeys) and Protocol. A "How it works" card states in five lines what is private, who pays fees, the cap and that payments cannot be reversed.
+* **Payments in the chat**: pay the verified contact from the conversation; send a payment request that the other person pays with a locked form; each payment is a card with its real status (making the proof, sent, settled in block N, not sent and why). **Settings > Payments** lists the wallet's real activity and exports it as CSV.
+* **Closed beta**: `/beta` is one card in three steps (wallet, code, notice) with the places left; members land on `/chat`, and while the beta is on nobody else does.
 * **Appearance**: 40 themes, 59 wallpapers, 14 bubble styles and original sticker packs drawn for Ledger Chat.
 
 Screenshots: `ledgerchat.org` on 14 November 2026 (phone), and components rendered from this repository. Images that still need a live session are listed in [`docs/readme/IMAGES_TODO.md`](docs/readme/IMAGES_TODO.md).
@@ -520,6 +570,10 @@ Each question names the code it concerns and what we do today. We ask only what 
 | 9 | G7 proves control of the signing key, not of the address's privacy keys | Is there a supported way to prove control of an address's privacy keys (or to derive the address so that it implies it) without revealing them? | `lib/aztec/peer-binding.ts` | Signing key proof; limit documented |
 | 10 | A recipient may open the wallet long after a payment | Is note discovery for a recipient who was offline guaranteed without extra tagging by the sender in 6.0.0, and for how long? | `lib/aztec/wallet/client.ts` | Rely on the PXE's note discovery |
 
+| 11 | cUSDC runs the AIP-20 Token of aztec-standards; HLC runs the reference Token of noir-contracts.js. Their ABIs differ, and a wallet must trust a token's class before calling it | Is there, or will there be, a canonical list of token classes (with artifacts) that wallets can trust on Alpha, and is AIP-20 the interface apps should target from now on? | `lib/aztec/token-check.ts`, `lib/aztec/token-dialect.ts` | Two artifacts held by the client; a token is loaded only when its class matches one and every function called exists with the exact signature |
+| 12 | A payment from a wallet that is not yet a known sender (for example NULO) is not found until its address is registered | What is the recommended way for a wallet to discover notes from a sender it has not registered: the `HandshakeRegistry` of `@aztec-labs/standard-contracts` 6.0.0, or something else? | `lib/aztec/wallet/client.ts` (`registerChatPeers`, `addSender`) | Chat contacts verified by G7 are registered as senders automatically; any other sender is added by hand under Receive |
+| 13 | The aztec-standards Token emits no private event on a private-to-private transfer | How should a wallet build a history of received payments (amount and sender) for AIP-20 tokens? | `lib/aztec/wallet/client.ts` (`loadActivity`), `lib/payments/paid-requests.ts` | Received cUSDC shows in the balance only; requests in cUSDC stay "announced" |
+
 Questions 1 to 5 also appear in [`docs/AZTEC_FOUNDATION_DOSSIER.md`](docs/AZTEC_FOUNDATION_DOSSIER.md), section 5.
 
 ---
@@ -534,10 +588,10 @@ In order, from [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md):
 | R2 | Public and legal texts that match production: **open**, needs counsel |
 | R3 | TURN relay for calls across networks: keys set in Railway on 14 November; **a call between two different networks still to be confirmed** |
 | R4 | Onboarding for accounts with no Fee Juice: **done without sponsorship**. Gas estimation lowered the Fee Juice an account must hold from about 42 to about 15 AZTEC; a contact can pay it through a fee link (run once, section 3). Ledger Chat sponsors no fee, by product decision (15 Nov 2026) |
-| R5 | A dollar-denominated token: **open**, after R4 and R7 |
+| R5 | A dollar-denominated token: **in a closed technical beta** since 23 November 2026: cUSDC for at most 100 invited people until 23 February 2027. First transfer between two member accounts (both the operator's) on 23 November 2026, L2 block 46420. Offering it to everyone waits on the nine `CUSDC_GATES`, all unmet |
 | R6 | Escrow and streams on Alpha: **closed alpha, wave 1, decided 18 Nov 2026** (`docs/alpha/OPERATOR_DECISIONS.md`): at most 20 testers, HLC only, no protocol fee, at most 100 HLC per agreement, unaudited by written decision (OD-10). Classes recompiled in CI. Not deployed: the invitation gate, monitoring and a testnet rehearsal come first, and Stefan signs each deployment |
 | R7 | External audit: **open** |
-| R8 | G7 and a payment between two different people: **open**. The full path has run between two accounts of the operator |
+| R8 | G7 and a payment between two different people: **open**. The full path has run between accounts of the operator, in HLC and in cUSDC |
 | M3 | Private fee payment, so a claim or a withdrawal no longer names the account as fee payer: **waiting on Aztec** (Q8). Only through an FPC operated by Aztec or the community, never one of ours, which would make us a custodian (`docs/AZTEC_DECISIONS.md`). Ledger Chat still sponsors no fee |
 | M2 | Ethereum portal and receiver addresses: **written and tested, not deployed**. Before deployment: R7, a two-account run on Sepolia, a multisig admin, and the wallet's own L1 payout step |
 | R9 | Direct database URL for migrations: the pre-deploy settles migrations that cannot run on `0_init` (#99); `DATABASE_URL_UNPOOLED` must point at Postgres, not PgBouncer: **to be confirmed in the deploy log** |
