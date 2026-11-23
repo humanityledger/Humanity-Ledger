@@ -4041,7 +4041,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             if (data.peers && Array.isArray(data.peers)) {
                const serverPeers = data.peers as string[];
                serverPeers.forEach(peer => {
-                 if (!merged.find(c => c.peerAddress.toLowerCase() === peer.toLowerCase())) {
+                 const pLower = peer.toLowerCase();
+                 // A peer deleted locally must not come back from the server contact list.
+                 if (deletedAtMs(pLower, [address]) > 0) return;
+                 if (!merged.find(c => c.peerAddress.toLowerCase() === pLower)) {
                    merged.push({ peerAddress: peer, lastMessage: '', lastAt: new Date() });
                  }
                });
@@ -4388,7 +4391,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     // Backup of the contact list to the server, debounced: this runs on every new message and
     // used to post the whole list (up to 200 rows written) each time. Now at most once every 5 s,
     // and only when the set of peers changed since the last successful post.
-    const peers = Array.from(new Set(arr.map((c) => (c.peerAddress || '').toLowerCase()).filter(Boolean))).sort();
+    const peers = Array.from(new Set(stored.map((c) => (c.peerAddress || '').toLowerCase()).filter(Boolean))).sort();
     const key = `${address.toLowerCase()}|${peers.join(',')}`;
     if (key === contactsSyncedRef.current) return;
     if (contactsTimerRef.current) clearTimeout(contactsTimerRef.current);
@@ -4526,6 +4529,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             const toAdd: ConversationMeta[] = newPeerAddrs
               .filter(a => !prevSet.has(a.toLowerCase()))
               .filter(a => a.toLowerCase() !== address?.toLowerCase()) // never add self
+              .filter(a => !(deletedAtMs(a, [address]) > 0)) // don't resurrect deleted chats
               .map(a => ({
                 peerAddress: a,
                 lastMessage: ' New message received',
@@ -5281,6 +5285,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                       : c
                   );
                 } else {
+                  // A deleted chat should only come back if this message was
+                  // sent AFTER the deletion (like other messengers).
+                  const delAt = deletedAtMs(msgConvPeer, [address]);
+                  if (delAt > 0 && sentAtNs <= delAt) {
+                    return prev;
+                  }
                   needsSync = true;
                   updated = [{
                     peerAddress: msgConvPeer,

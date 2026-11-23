@@ -94,13 +94,14 @@ describe('cUSDC for everyone', () => {
     expect(cusdcPublicDecision({ ...ok, cap: null })).toEqual({ ok: false, reasons: [PUBLIC_REASONS.noCap] });
     expect(cusdcPublicDecision({ ...ok, cap: 0n })).toEqual({ ok: false, reasons: [PUBLIC_REASONS.noCap] });
   });
-  it('is off in the record, and never marks a gate as met', () => {
+  it('public cUSDC is off in the record, beta is on; gates still unmet', () => {
     expect(cusdcPublicEntry(record)).toEqual({ enabled: false });
     expect(CUSDC_PUBLIC).toBe(false);
     expect(PRIVATE_ASSET.symbol).toBe('HLC');
     expect(CUSDC_GATES.every((g) => g.met === false)).toBe(true);
     expect(cusdcReady()).toBe(false);
-    expect((record as { cusdcBeta: { enabled: boolean } }).cusdcBeta.enabled).toBe(false);
+    // The closed beta is active, but the public switch stays off.
+    expect((record as { cusdcBeta: { enabled: boolean } }).cusdcBeta.enabled).toBe(true);
   });
   it('replaces HLC in the token list and turns the closed beta off', () => {
     const cfg = fs.readFileSync('lib/aztec/wallet/config.ts', 'utf8');

@@ -230,7 +230,7 @@ export default function BetaGateView() {
     <main className="min-h-[100dvh] bg-[#F7F8FA] px-3 py-8 sm:py-14 text-[#15171C]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       <div className="mx-auto w-full max-w-[520px]">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/chat" aria-label="Ledger Chat"><HLLogo variant="mark" theme="dark" size={28} /></Link>
+          <Link href="/chat" aria-label="Ledger Chat" className="flex items-center gap-2"><HLLogo variant="mark" theme="dark" size={28} /><span className="text-[16px] font-semibold tracking-[-0.01em] text-[#15171C]">Ledger Chat</span></Link>
           <span className="rounded-full border border-[#E4E7EC] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#15171C]" data-testid="beta-capacity">{pill}</span>
         </div>
         <div className="mt-5 overflow-hidden rounded-[28px] border border-[#E4E7EC] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
