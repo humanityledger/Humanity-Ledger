@@ -44,6 +44,7 @@ import { setSessionActivity } from "@/lib/activities/hooks";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
+import { landingAfterSignIn, readLandingStatus } from "@/lib/beta/landing";
 import { withSignTimeout } from "@/lib/auth/sign-timeout";
 import { classifySignError, SIGN_MESSAGES } from "@/lib/auth/sign-error";
 import { failedBeforeWallet, personalSign, relayDidNotTakeRequest, type Eip1193Provider } from "@/lib/auth/wallet-sign";
@@ -128,23 +129,26 @@ function inAppWalletOption(): WalletOption | null {
 }
 
 /**
- * Return path after sign-in. Only same-origin paths are honoured.
- *
- * While the closed cUSDC beta is active, every new sign-in lands on /beta so the person
- * enters their invitation code before they reach the chat. Members who already joined go
- * through /beta too: BetaGateView recognises them and shows "You are in the cUSDC beta"
- * with a button to the chat. An explicit `redirect` query parameter still wins, so the
- * middleware's ?redirect=%2Fbeta is respected and deep links into other pages keep working.
+ * An explicit return path from the query (?redirect=, ?returnUrl=), or null. Only same-origin
+ * paths are honoured; safeReturnPath refuses other sites, "/\host" and javascript: URLs.
  */
-function returnPathFromQuery(): string {
-  if (typeof window === "undefined") return "/beta";
+function explicitReturnPath(): string | null {
+  if (typeof window === "undefined") return null;
   const rp = new URLSearchParams(window.location.search);
   const raw = rp.get("returnUrl") || rp.get("redirect_url") || rp.get("redirect") || "";
-  // safeReturnPath refuses other sites, "/\host" and javascript: URLs.
-  // Default to /beta so every sign-in goes through the beta gate first.
-  const path = safeReturnPath(raw, "/beta");
-  const ok = !path.startsWith("/terminal") && path !== "/portfolio";
-  return ok ? path : "/beta";
+  if (!raw) return null;
+  const path = safeReturnPath(raw, "");
+  return path && !path.startsWith("/terminal") && path !== "/portfolio" ? path : null;
+}
+
+/**
+ * After sign-in: an explicit return path wins; otherwise a beta member goes to /chat and someone
+ * who can still join goes to /beta (lib/beta/landing.ts). One navigation, no bounce.
+ */
+async function goAfterSignIn(): Promise<void> {
+  const explicit = explicitReturnPath();
+  const status = explicit && explicit !== "/beta" ? null : await readLandingStatus();
+  window.location.replace(landingAfterSignIn(explicit, status));
 }
 
 function readDisconnectGuard(): boolean {
@@ -296,7 +300,7 @@ export default function ConnectPage() {
       if (ok && allowAutoRedirect()) {
         setLinked(true);
         redirectingRef.current = true;
-        window.location.replace(returnPathFromQuery());
+        void goAfterSignIn();
       } else {
         clearLocalSessionMarkers();
       }
@@ -440,7 +444,7 @@ export default function ConnectPage() {
           setLinked(true);
         }
         await new Promise((r) => setTimeout(r, 800));
-        window.location.replace(returnPathFromQuery());
+        void goAfterSignIn();
       } catch {
         /* transient network error, keep polling */
       }
@@ -456,7 +460,7 @@ export default function ConnectPage() {
 
     if (isLinked) {
       redirectingRef.current = true;
-      window.location.replace(returnPathFromQuery());
+      void goAfterSignIn();
       return;
     }
     if (readDisconnectGuard()) return;
@@ -486,7 +490,7 @@ export default function ConnectPage() {
             setSignStep(3);
             setLinked(true);
             redirectingRef.current = true;
-            window.location.replace(returnPathFromQuery());
+            void goAfterSignIn();
             return;
           }
         }
@@ -521,7 +525,7 @@ export default function ConnectPage() {
               setSignStep(3);
               setLinked(true);
               redirectingRef.current = true;
-              window.location.replace(returnPathFromQuery());
+              void goAfterSignIn();
               return;
             }
           } catch {
@@ -701,7 +705,7 @@ export default function ConnectPage() {
           setSignStep(3);
           setLinked(true);
           redirectingRef.current = true;
-          window.location.replace(returnPathFromQuery());
+          void goAfterSignIn();
           return;
         }
 
@@ -749,7 +753,7 @@ export default function ConnectPage() {
             setSignStep(3);
             setLinked(true);
             redirectingRef.current = true;
-            window.location.replace(returnPathFromQuery());
+            void goAfterSignIn();
             return;
           }
         }
