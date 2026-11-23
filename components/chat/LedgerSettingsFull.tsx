@@ -24,6 +24,7 @@ import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
 import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
 import { PrivateWalletStatus } from '@/components/zk/PrivateWalletStatus';
 import { PaymentsAvailability } from '@/components/beta/PaymentsAvailability';
+import { PaymentHistory } from '@/components/settings/PaymentHistory';
 import { PRIVATE_ASSET } from '@/lib/payments/private-asset';
 import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
@@ -1312,7 +1313,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {/* Real private wallet: balances, Fee Juice and local storage, read on this device only. */}
               <PrivateWalletStatus address={myAddress} />
 
-              {/* What works today: public tips, private HLC payments, the closed cUSDC beta. */}
+              {/* What works today: public tips and private cUSDC payments in the closed beta. */}
               <PaymentsAvailability />
 
               {/* Sovereign Aztec Identity */}
@@ -1397,7 +1398,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title="Public tip token" footer={`These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use ${PRIVATE_ASSET.test ? 'HLC, and cUSDC for members of the closed beta' : 'cUSDC'}. The network fee is Fee Juice from your own account, not USDC.`}>
+              <Group title="Public tip token" footer={`These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account, not USDC.`}>
                 <div className="px-4 pb-4">
                   {/* The tokens the payment sheet can actually send; it opens on this one. */}
                   {['ETH', 'USDC', 'USDT'].map((token) => (
@@ -1417,25 +1418,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               </Group>
 
-              <Group title="Transaction history">
-                <Row icon={<Clock size={18} />} label="Private payment history" sublabel="On this device, in the private wallet. There is no separate server history." onTap={() => toast.info('Open the private wallet in a chat. Settled payments are listed there, on this device only.')} />
-                <Row icon={<Download size={18} />} label="Export CSV" onTap={() => {
-                  try {
-                    const rows = [['Date', 'Type', 'Amount', 'Peer', 'Status']];
-                    for (let i = 0; i < localStorage.length; i++) {
-                      const k = localStorage.key(i)!;
-                      if (k.startsWith('ledger_tx_')) {
-                        try { const tx = JSON.parse(localStorage.getItem(k) || '{}'); rows.push([tx.date || '', tx.type || '', tx.amount || '', tx.peer || '', tx.status || '']); } catch {}
-                      }
-                    }
-                    if (rows.length === 1) { toast.info('No transactions recorded yet'); return; }
-                    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ledger-payments-${Date.now()}.csv`; a.click();
-                    toast.success('CSV exported');
-                  } catch { toast.error('Export failed'); }
-                }} />
-              </Group>
+              {/* The private wallet's own activity on this device, with a CSV of all of it. */}
+              <PaymentHistory />
             </div>
           )}
 
@@ -1533,7 +1517,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     ['Calls', 'Voice and video use WebRTC with DTLS-SRTP. With IP masking on, media goes through a TURN relay only when the server has one configured; it stays encrypted either way.'],
                     ['Communities', 'Community posts are stored on our server and are not end to end encrypted.'],
                     ['Your account', 'Your wallet is your account. To use another device, sign in with the same wallet there.'],
-                    ['Payments', `Private payments run on Aztec Alpha in HLC, a test token with no monetary value, with a cap per payment and no external audit. ${FEE_PRIVACY.long}`],
+                    ['Payments', `Private payments run on Aztec Alpha in ${PRIVATE_ASSET.phrase}, with a cap per payment and no external audit. ${FEE_PRIVACY.long}`],
                   ].map(([t, d]) => (
                     <div key={t} className="py-3 border-t border-black/[0.05] first:border-0">
                       <p className="text-[14px] font-semibold text-[#15171c]">{t}</p>
