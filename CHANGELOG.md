@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Beta gate on /chat, Payments history, cUSDC wording, sharper landing photos (23 November 2026)
+
+- While the closed beta is on, /chat opens only for members: a signed pass cookie (lib/beta/pass.ts)
+  set by the beta status and redeem routes, checked by the middleware against the session wallet.
+  Signed out goes to /connect; signed in without a pass goes to /beta.
+- Settings > Payments: Transaction history lists the private wallet's own activity and exports it
+  as CSV; HLC is no longer listed on Aztec Alpha and the texts name cUSDC.
+- /beta: the capacity pill stays on one line ("99 of 100 left").
+- Landing: the low-resolution wall photo is no longer used; screens sit in the high-resolution
+  photos, alternating; the file screen no longer squeezes its text.
+
 ### Sign-in without loops, and a new /beta (23 November 2026)
 
 - The middleware no longer rejects sessions issued before a fixed epoch: it disagreed with every
