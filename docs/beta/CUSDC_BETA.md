@@ -96,6 +96,9 @@ All of these are the operator's actions. Agents change no Railway variable, depl
 
 ## The gate at /beta
 
+**After sign-in** (`lib/beta/landing.ts`): an explicit return path wins; otherwise a member goes straight to `/chat`, someone who can still join goes to `/beta`, and a closed or full beta (or no answer) opens the chat. The status is asked once more after a short pause if the session cookie is not readable yet, so a phone returning from its wallet app is not sent back to `/connect`. The middleware accepts every session the rest of the app accepts: there is no fixed sign-out epoch.
+
+
 Signed-out visitors go to `/connect` first and come back. The page shows the capacity ("Closed Beta • 100 spots total • X remaining", from `/api/beta/cusdc/status`) and asks one thing at a time:
 
 1. **Wallet.** The signed-in Ethereum address, shortened, with a green check. This is the account the server admits.
