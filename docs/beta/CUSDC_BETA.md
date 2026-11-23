@@ -1,6 +1,6 @@
 # Closed technical beta of private cUSDC payments
 
-Status on 23 November 2026: **switched on**. `cusdcBeta.enabled` is `true` in `deployments/aztec-mainnet.json`, `until` is `2027-02-23T23:59:59Z` (3 months). Remaining steps: confirm the cUSDC contract on-chain (`verifiedOnChain`), set Railway variables, generate and assign the 100 invitation codes.
+Status on 23 November 2026: **switched on**. `cusdcBeta.enabled` is `true` in `deployments/aztec-mainnet.json`, `until` is `2027-02-23T23:59:59Z` (3 months). `plannedTokens[cUSDC].verifiedOnChain` is `true`, the 100 invitation codes are generated, and the wallet loads cUSDC since #239 (it runs the aztec-standards Token, not the reference Token). The first private transfer between two member accounts, both the operator's, is recorded in [`FIRST_CUSDC_TRANSFER.md`](FIRST_CUSDC_TRANSFER.md).
 
 This is a closed technical test for at most 100 invited people. Its only purpose is to check that private cUSDC payments in the chat work end to end for real users. It is not a launch: the landing keeps saying "Not enabled yet" for USDC (`lib/landing/claims.ts`, row `usdc`), and nothing public changes while the beta runs. Only Stefan switches it on.
 
