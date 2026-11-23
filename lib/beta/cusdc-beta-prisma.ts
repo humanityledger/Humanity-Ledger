@@ -46,6 +46,22 @@ export const prismaBetaStore: BetaStore = {
       });
     }),
 
+  redeemReserved: ({ wallet, capacity, noticeVersion, at }) =>
+    db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${REDEEM_LOCK})`;
+      if ((await tx.cusdcBetaMember.count()) >= capacity) return 'full' as const;
+      const usable = { reservedFor: wallet, redeemedBy: null, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] };
+      const claimed = await tx.cusdcBetaInvite.updateMany({
+        where: { ...usable, sanctionsResult: 'clear', adultCheckedAt: { not: null } },
+        data: { redeemedBy: wallet, redeemedAt: at },
+      });
+      if (claimed.count !== 1) return (await tx.cusdcBetaInvite.count({ where: usable })) > 0 ? ('inactive' as const) : ('bad' as const);
+      const invite = await tx.cusdcBetaInvite.findUnique({ where: { redeemedBy: wallet } });
+      return tx.cusdcBetaMember.create({
+        data: { walletAddress: wallet, inviteId: invite!.id, noticeVersion, noticeAckAt: at },
+      });
+    }),
+
   countMembers: () => db.cusdcBetaMember.count(),
 
   confirmNotice: (wallet, noticeVersion, at) =>

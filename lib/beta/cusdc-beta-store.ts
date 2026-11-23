@@ -28,6 +28,11 @@ export interface BetaStore {
    * yet), 'bad' (no such usable code) or the new member.
    */
   redeem(input: { wallet: string; codeHash: string; capacity: number; noticeVersion: string; at: Date }): Promise<'full' | 'inactive' | 'bad' | BetaMemberRow>;
+  /**
+   * The same as redeem, for the invitation the operator reserved for `wallet` when approving its
+   * request from /beta (reservedFor): no code is typed. 'bad' when nothing is reserved for it.
+   */
+  redeemReserved(input: { wallet: string; capacity: number; noticeVersion: string; at: Date }): Promise<'full' | 'inactive' | 'bad' | BetaMemberRow>;
   /** Members ever admitted, revoked ones included: the same count the capacity check uses. */
   countMembers(): Promise<number>;
   confirmNotice(wallet: string, noticeVersion: string, at: Date): Promise<BetaMemberRow>;
@@ -36,6 +41,7 @@ export interface BetaStore {
 export const BAD_CODE = 'This invitation code does not work. Check it, or ask for a new one.';
 export const NOT_ACTIVE = 'This invitation is not active yet. Ask the person who invited you to activate it, then try again.';
 export const BETA_FULL = 'The cUSDC beta is full: all 100 places are taken.';
+export const NOTHING_RESERVED = 'No place is reserved for this wallet yet. Request one, or enter an invitation code.';
 
 export type RedeemAnswer =
   | { status: 200; body: { member: true } }
@@ -47,31 +53,35 @@ export function memberState(row: BetaMemberRow | null): MemberState | null {
 
 export async function redeemBetaInvite(
   store: BetaStore,
-  input: { wallet: string; code: unknown; notice: unknown; noticeVersion: unknown; pepper: string; capacity: number; open: boolean; now: Date },
+  input: { wallet: string; code: unknown; notice: unknown; noticeVersion: unknown; pepper: string; capacity: number; open: boolean; now: Date; reserved?: boolean },
 ): Promise<RedeemAnswer> {
   if (!input.open) return { status: 503, body: { error: 'The cUSDC beta is not open.' } };
   if (input.pepper.length < 32) return { status: 503, body: { error: 'The cUSDC beta is not open.' } };
   if (input.notice !== true || input.noticeVersion !== BETA_NOTICE_VERSION) {
     return { status: 400, body: { error: 'Read and confirm the current beta notice.' } };
   }
-  const code = normalizeInviteCode(typeof input.code === 'string' ? input.code.slice(0, 40) : '');
-  if (!code) return { status: 400, body: { error: BAD_CODE } };
+  // A reserved invitation (an approved request) needs no code; anything else needs a valid one.
+  const code = input.reserved === true ? '' : normalizeInviteCode(typeof input.code === 'string' ? input.code.slice(0, 40) : '');
+  if (input.reserved !== true && !code) return { status: 400, body: { error: BAD_CODE } };
   const existing = await store.findMember(input.wallet);
   if (existing) {
     return existing.revokedAt
       ? { status: 403, body: { error: 'This account’s cUSDC beta access was revoked.' } }
       : { status: 200, body: { member: true } };
   }
-  const result = await store.redeem({
-    wallet: input.wallet,
-    codeHash: hashInviteCode(code, input.pepper),
-    capacity: input.capacity,
-    noticeVersion: BETA_NOTICE_VERSION,
-    at: input.now,
-  });
+  const result =
+    input.reserved === true
+      ? await store.redeemReserved({ wallet: input.wallet, capacity: input.capacity, noticeVersion: BETA_NOTICE_VERSION, at: input.now })
+      : await store.redeem({
+          wallet: input.wallet,
+          codeHash: hashInviteCode(code as string, input.pepper),
+          capacity: input.capacity,
+          noticeVersion: BETA_NOTICE_VERSION,
+          at: input.now,
+        });
   if (result === 'full') return { status: 409, body: { error: BETA_FULL } };
   if (result === 'inactive') return { status: 403, body: { error: NOT_ACTIVE } };
-  if (result === 'bad') return { status: 400, body: { error: BAD_CODE } };
+  if (result === 'bad') return { status: 400, body: { error: input.reserved === true ? NOTHING_RESERVED : BAD_CODE } };
   return { status: 200, body: { member: true } };
 }
 

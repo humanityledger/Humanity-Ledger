@@ -17,6 +17,8 @@ import { confirmBetaNotice, memberState, remainingPlaces } from '@/lib/beta/cusd
 import type { MemberState } from '@/lib/beta/cusdc-beta';
 import { prismaBetaStore } from '@/lib/beta/cusdc-beta-prisma';
 import { applyBetaPass } from '@/lib/beta/pass';
+import { requestState, type RequestState } from '@/lib/beta/cusdc-beta-request';
+import { hasReservedInvite, prismaRequestStore } from '@/lib/beta/cusdc-beta-request-prisma';
 import record from '../../../../../deployments/aztec-mainnet.json';
 
 export const dynamic = 'force-dynamic';
@@ -46,12 +48,22 @@ export async function GET(req: NextRequest) {
   const program = cusdcBetaProgram(input);
   let member: MemberState | null = null;
   let members: number | null = null;
+  let request: RequestState = 'none';
+  let reserved = false;
   try {
     [member, members] = await Promise.all([
       prismaBetaStore.findMember(w).then(memberState),
       // Only the capacity pill needs this; without it the page shows no count.
       prismaBetaStore.countMembers().catch(() => null),
     ]);
+    // A request sent from /beta, and an invitation the operator reserved for this wallet. Neither is
+    // needed for access, so a failure here never closes the page.
+    if (!member) {
+      [request, reserved] = await Promise.all([
+        prismaRequestStore.find(w).then(requestState).catch(() => 'none' as const),
+        hasReservedInvite(w, new Date()).catch(() => false),
+      ]);
+    }
   } catch {
     // Fail-closed: no database answer means no access.
     return NextResponse.json({ error: 'The beta status is not available right now.' }, { status: 503, headers: NO_STORE });
@@ -75,6 +87,8 @@ export async function GET(req: NextRequest) {
       capacity,
       remaining: remainingPlaces(capacity, members),
       notice: { version: BETA_NOTICE_VERSION, text: BETA_NOTICE },
+      request,
+      reserved,
     },
     { headers: NO_STORE },
   );

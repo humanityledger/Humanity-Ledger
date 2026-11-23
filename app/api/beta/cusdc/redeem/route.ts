@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
   const rl = await checkRateLimit(who, { max: 5, windowSec: 3600, prefix: 'rl:cusdc-beta-redeem' });
   if (!rl.allowed) return NextResponse.json({ error: 'Too many attempts. Try again in an hour.' }, { status: 429, headers: NO_STORE });
-  let body: { code?: unknown; notice?: unknown; noticeVersion?: unknown };
+  let body: { code?: unknown; notice?: unknown; noticeVersion?: unknown; reserved?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
       code: body.code,
       notice: body.notice,
       noticeVersion: body.noticeVersion,
+      // An invitation the operator reserved for this wallet (an approved request): no code.
+      reserved: body.reserved === true,
       pepper: process.env.ALPHA_INVITE_PEPPER || '',
       capacity: betaCapacity(entry),
       open: entry?.enabled === true,

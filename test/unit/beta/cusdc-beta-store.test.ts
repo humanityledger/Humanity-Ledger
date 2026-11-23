@@ -12,6 +12,7 @@ const now = new Date('2026-12-01T00:00:00Z');
 function memoryStore(codes: string[], existing: BetaMemberRow[] = []) {
   const invites = new Map(codes.map((c) => [hashInviteCode(c.replace(/-/g, ''), PEPPER), { redeemedBy: null as string | null, revoked: false }]));
   const members = new Map(existing.map((m) => [m.walletAddress, m]));
+  const reserved = new Set<string>();
   const store: BetaStore = {
     async findMember(w) { return members.get(w) ?? null; },
     async redeem({ wallet, codeHash, capacity, noticeVersion, at }) {
@@ -23,10 +24,18 @@ function memoryStore(codes: string[], existing: BetaMemberRow[] = []) {
       members.set(wallet, row);
       return row;
     },
+    async redeemReserved({ wallet, capacity, noticeVersion, at }) {
+      if (members.size >= capacity) return 'full';
+      if (!reserved.has(wallet)) return 'bad';
+      reserved.delete(wallet);
+      const row = { walletAddress: wallet, revokedAt: null, noticeVersion, noticeAckAt: at };
+      members.set(wallet, row);
+      return row;
+    },
     async countMembers() { return members.size; },
     async confirmNotice(w, v, at) { const m = { ...members.get(w)!, noticeVersion: v, noticeAckAt: at }; members.set(w, m); return m; },
   };
-  return { store, members, invites };
+  return { store, members, invites, reserved };
 }
 
 const base = { wallet: W, code: CODE, notice: true, noticeVersion: BETA_NOTICE_VERSION, pepper: PEPPER, capacity: 100, open: true, now };

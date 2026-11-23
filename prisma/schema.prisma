@@ -1973,6 +1973,19 @@ model CusdcBetaInvite {
   sanctionsListDate  String?
   sanctionsResult    String?
   adultCheckedAt     DateTime?
+  /// Set by the operator when approving a request from /beta: only this wallet can redeem the
+  /// invitation, without typing the code (scripts/beta/cusdc-invites.mjs approve-request).
+  reservedFor        String?   @unique
+}
+
+/// A request for a place in the closed cUSDC beta, sent from /beta by a signed-in wallet without a
+/// code. Holds the wallet address and dates only. The operator approves it by reserving an
+/// invitation for that wallet after the same checks as any invitation (sanctions list, 18 or older).
+model CusdcBetaRequest {
+  walletAddress String    @id
+  requestedAt   DateTime  @default(now())
+  approvedAt    DateTime?
+  declinedAt    DateTime?
 }
 
 /// A beta member: an Ethereum wallet that redeemed a cUSDC beta invitation (at most 100). Revoking
