@@ -4,15 +4,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import { MobileLanding as MobileSystemLanding } from '@/components/landing/MobileLanding';
 import dynamic from 'next/dynamic';
 import { useSystemAccount } from '@/hooks/useSystemAccount';
-import { usePathname } from 'next/navigation';
 
 // No mobile news shell anymore
 
 export function MobileEnforcer({ children }: { children: React.ReactNode }) {
     const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const [, setIsMobile] = useState(false); // drives the body classes below; no route decisions
     const { isConnected, address, isZkVerified } = useSystemAccount();
-    const pathname = usePathname() ?? '/';
 
     // Track previous connection state to detect NEW wallet connections
     const prevConnected = useRef<boolean>(false);
@@ -83,61 +81,14 @@ export function MobileEnforcer({ children }: { children: React.ReactNode }) {
         return <>{children}</>;
     }
 
-    //  MOBILE ZONE 
-    if (isMobile) {
-        //  [DIRECT ACCESS ROUTES] 
-        // These are PUBLIC or informational routes that render normally on mobile.
-        // ️  PC-ONLY routes (/terminal, /portfolio, /settings, /system-intel,
-        //     /predictions, /vip, /ledgerpost) are intentionally EXCLUDED here.
-        //     A mobile user  even with a connected wallet  must NOT reach those
-        //     pages because they are designed exclusively for the PC terminal.
-        //     They will stay on MobileSystemLanding as intended.
-        const DIRECT_ACCESS_ROUTES = [
-            '/',
-            '/news',
-            '/connect',
-            '/login',
-            '/sign-up',
-
-            '/faq',
-            '/ticket',
-            '/privacy',
-            '/terms',
-            '/legal',
-            '/forum',
-
-            '/company',
-            '/about',
-            '/product',
-            '/academy',
-            '/support',
-            '/passport',
-            '/scan',
-            '/studio',
-
-            // Chat + docs: same experience on mobile and desktop
-            '/chat',
-            '/docs',
-            '/settings',
-        ];
-
-        // [Cryptographic-GATE] Always allow dashboard/chat/portfolio so they can reach the ZK-Gate and connect from there
-        DIRECT_ACCESS_ROUTES.push('/chat', '/communities', '/studio');
-
-        const isDirectAccessRoute = DIRECT_ACCESS_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'));
-
-        if (isDirectAccessRoute) {
-            return <>{children}</>;
-        }
-
-        // If it's a mobile device and they try to hit a non-direct access route,
-        // we send them to the chat instead of showing a fake mobile landing.
-        if (typeof window !== 'undefined') {
-            window.location.replace('/chat');
-            return null;
-        }
-    }
-
-    //  PC ZONE 
+    // Every route renders on phones exactly as on a computer. This component used to keep an allowlist of
+    // routes and send any other one to /chat with window.location.replace. /beta, /join/<code>, /alpha,
+    // /status and the other pages added later were missing from it, so on every phone (iPhone and Android,
+    // Safari and Chrome) a signed-in user without a beta pass went /chat → 303 /beta (middleware) →
+    // replace('/chat') → /beta … forever, and beta invitation links never opened (23/11/2026).
+    // The PC-only pages that list protected (/terminal, /portfolio, /vip, /predictions, /ledgerpost…)
+    // are retired on the server by the middleware (lib/security/retiredRoutes.ts), for every device,
+    // so no redirect is needed here. Do not add one back: a client redirect that disagrees with the
+    // middleware is a redirect loop.
     return <>{children}</>;
 }

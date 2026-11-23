@@ -13,7 +13,17 @@ type GateState = 'INTRO' | 'AUTH' | 'APP';
  * legal pages belong here: the terms and the privacy policy must be readable
  * before someone agrees to them. Keep in step with PUBLIC_PATHS in middleware.ts.
  */
-const PUBLIC_PAGES = ['/', '/connect', '/terms', '/privacy', '/chat', '/studio', '/docs'];
+// Pages that are public in middleware.ts (PUBLIC_PATHS) must be public here too: when the two disagree,
+// the server lets a signed-out visitor in and this gate sends them to /connect. /beta (open to signed-out
+// visitors since #242) and the informational pages were missing (23/11/2026).
+const PUBLIC_PAGES = [
+    '/', '/connect', '/terms', '/privacy', '/chat', '/studio', '/docs',
+    '/beta', '/alpha', '/u', '/status', '/protocol', '/record', '/brief', '/security', '/trust', '/legal',
+];
+
+/** Exact path or one of its sub-paths: '/u' must not make '/unknown' public. */
+const isPublicPath = (pathname: string | null) =>
+    PUBLIC_PAGES.some(path => path === pathname || (path !== '/' && !!pathname?.startsWith(path + '/')));
 
 interface GateContextType {
     state: GateState;
@@ -37,9 +47,7 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
     // This prevents the loader flash on /connect after disconnect.
     // NOTE: /chat handles their own auth internally — they must NEVER be
     // gated here or TitaniumGate will render null causing a blank white screen.
-    const initialIsPublicPage = PUBLIC_PAGES.some(
-        path => path === pathname || (path !== '/' && pathname?.startsWith(path))
-    );
+    const initialIsPublicPage = isPublicPath(pathname);
 
     const [state, setState] = useState<GateState>(initialIsPublicPage ? 'APP' : 'AUTH');
     const [mounted, setMounted] = useState(false);
@@ -59,9 +67,7 @@ export function TitaniumGate({ children, requiredTier = 'PRO' }: TitaniumGatePro
     
     // Strict Whitelist: connect, docs, terms, privacy, chat and studio are always visible.
     // /chat handles its own auth — TitaniumGate must not gate them.
-    const isPublicPage = PUBLIC_PAGES.some(
-        path => path === pathname || (path !== '/' && pathname?.startsWith(path))
-    );
+    const isPublicPage = isPublicPath(pathname);
 
     useEffect(() => {
         setMounted(true);
