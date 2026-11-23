@@ -147,6 +147,22 @@ export class ChatDatabase {
     });
   }
 
+  /** Remove a conversation entry from the conversations store (not just its messages). */
+  async removeConversation(peerAddress: string): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction(['conversations'], 'readwrite');
+        const store = transaction.objectStore('conversations');
+        store.delete(peerAddress.toLowerCase());
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      } catch {
+        resolve();
+      }
+    });
+  }
+
   async clearAll(): Promise<void> {
     if (!this.db) await this.init();
     return new Promise((resolve, reject) => {

@@ -254,6 +254,11 @@ function applyRateLimit(key: string, LIMIT: number): NextResponse | null {
   return null;
 }
 
+// ── Session Epoch — sessions issued before this UNIX timestamp (seconds) are
+// rejected so every user must re-authenticate. Bump this value and redeploy
+// to force a global sign-out. 0 = no epoch enforced.
+const SESSION_EPOCH_SEC = Math.floor(new Date('2026-11-23T10:00:00Z').getTime() / 1000);
+
 // ── JWT Secret (Edge-compatible — TextEncoder only) ─────────────────────────
 function getEdgeSecret(): Uint8Array {
   // We can't import requireSecret easily in edge middleware without messing up bundle,
@@ -298,6 +303,10 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
       // A token that verifies is not automatically a sign-in (refresh tokens,
       // retired webauthn tokens): lib/security/sessionClaims.ts.
       const addr = isSessionPayload(payload) ? ((payload as any).address ?? (payload as any).sub) : null;
+      // Session epoch: tokens issued before the epoch are treated as expired.
+      if (SESSION_EPOCH_SEC > 0 && typeof payload.iat === 'number' && payload.iat < SESSION_EPOCH_SEC) {
+        return null; // force re-authentication
+      }
       if (addr && typeof addr === 'string') return addr.toLowerCase();
     } catch {
       // Expired or invalid JWT — fall through
@@ -309,6 +318,9 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
   if (accessToken) {
     try {
       const { payload } = await jwtVerify(accessToken, getEdgeSecret(), { algorithms: ['HS256'] });
+      if (SESSION_EPOCH_SEC > 0 && typeof payload.iat === 'number' && payload.iat < SESSION_EPOCH_SEC) {
+        return null;
+      }
       const userId = isSessionPayload(payload) ? (payload as any).userId : null;
       if (userId && typeof userId === 'string') return userId.toLowerCase();
     } catch {

@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 import BetaGateView from '@/components/beta/BetaGateView';
 
 export const metadata: Metadata = {
-  title: 'cUSDC beta · Ledger Chat',
+  title: 'Closed Beta · Ledger Chat',
   robots: { index: false, follow: false },
 };
 

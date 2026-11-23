@@ -1749,6 +1749,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     import('@/lib/chat/indexeddb').then(({ chatDB }) => {
       chatDB.clearConversation(dmId).catch(() => {});
       chatDB.clearConversation(peerLower).catch(() => {});
+      chatDB.removeConversation(peerLower).catch(() => {});
+      chatDB.removeConversation(dmId).catch(() => {});
     }).catch(() => {});
     if (activePeer?.toLowerCase() === peerLower) setActivePeer(null);
     setSidebarMenu(null);
@@ -4070,6 +4072,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                      const ts = p.createdAt ? new Date(p.createdAt).getTime() : Date.now();
                      // Cleared or deleted here: it must not come back into the thread or the list line.
                      if (!survivesClear(ts, clearedAtMs(peer, [address])) || (p.id && isHidden(peer, String(p.id)))) continue;
+                     // A deleted chat only comes back if the message is newer than the deletion.
+                     const peerDelAt = deletedAtMs(peer, [address]);
+                     if (peerDelAt > 0 && ts <= peerDelAt) continue;
                      const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
                          merged.push({ peerAddress: peer, lastMessage: lastMessageOf(p.content).slice(0, 30), lastAt: new Date(ts) });
