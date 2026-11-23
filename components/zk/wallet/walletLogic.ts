@@ -105,3 +105,27 @@ export function activityAmount(a: Activity): string {
     return '';
   }
 }
+
+/**
+ * The token a send, receive, shield or unshield sheet works with. The listed tokens change after
+ * the page loads: cUSDC joins for members of the closed beta once their membership is read
+ * (setCusdcBetaVisibility), so a choice fixed at module load pointed at a token that is not listed
+ * (23 Nov 2026: the Send sheet showed "0 USDC" next to a 4.55 cUSDC private balance, with no way
+ * to pick cUSDC). The user's choice wins while it is listed; otherwise the first listed token that
+ * holds a balance of `kind`, else the first listed token.
+ */
+export function effectiveToken<K extends string>(
+  chosen: K | null,
+  listed: ReadonlyArray<{ key: K }>,
+  balances: ReadonlyArray<{ key: K; privateUnits: bigint; publicUnits: bigint }>,
+  kind: 'private' | 'public' | 'any',
+  fallback: K,
+): K {
+  if (chosen !== null && listed.some((t) => t.key === chosen)) return chosen;
+  const holds = (k: K) => {
+    const b = balances.find((x) => x.key === k);
+    if (!b) return false;
+    return kind === 'private' ? b.privateUnits > 0n : kind === 'public' ? b.publicUnits > 0n : b.privateUnits + b.publicUnits > 0n;
+  };
+  return listed.find((t) => holds(t.key))?.key ?? listed[0]?.key ?? fallback;
+}
