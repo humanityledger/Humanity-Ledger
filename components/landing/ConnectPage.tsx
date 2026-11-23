@@ -147,7 +147,8 @@ function explicitReturnPath(): string | null {
  */
 async function goAfterSignIn(): Promise<void> {
   const explicit = explicitReturnPath();
-  const status = explicit && explicit !== "/beta" ? null : await readLandingStatus();
+  // Always read the status: it also renews the beta pass cookie the middleware checks for /chat.
+  const status = await readLandingStatus();
   window.location.replace(landingAfterSignIn(explicit, status));
 }
 

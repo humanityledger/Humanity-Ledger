@@ -9,20 +9,22 @@ import { landingAfterSignIn, readLandingStatus } from '@/lib/beta/landing';
 const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 
 describe('where sign-in lands', () => {
-  const open = { member: false, open: true, remaining: 40 };
-  it('an explicit return path wins, except /beta itself', () => {
-    expect(landingAfterSignIn('/settings', open)).toBe('/settings');
-    expect(landingAfterSignIn('/beta', { member: true, active: true, open: true })).toBe('/chat');
-    expect(landingAfterSignIn('/beta?x=1', open)).toBe('/beta');
+  const gated = { member: false, open: true, remaining: 40, gate: true };
+  it('an explicit return path wins, except /beta and /chat, which the beta decides', () => {
+    expect(landingAfterSignIn('/settings', gated)).toBe('/settings');
+    expect(landingAfterSignIn('/beta', { member: true, active: true, open: true, gate: true })).toBe('/chat');
+    expect(landingAfterSignIn('/chat', gated)).toBe('/beta');
+    expect(landingAfterSignIn('/beta?x=1', gated)).toBe('/beta');
   });
-  it('a member goes to the chat, someone who can join goes to /beta', () => {
-    expect(landingAfterSignIn(null, { member: true, active: true, open: true })).toBe('/chat');
-    expect(landingAfterSignIn(null, open)).toBe('/beta');
-    expect(landingAfterSignIn(null, { member: true, active: false, open: true })).toBe('/beta');
+  it('members (revoked ones too) go to the chat; with the gate on everyone else goes to /beta', () => {
+    expect(landingAfterSignIn(null, { member: true, active: true, open: true, gate: true })).toBe('/chat');
+    expect(landingAfterSignIn(null, { member: true, active: false, open: true, gate: true })).toBe('/chat');
+    expect(landingAfterSignIn(null, gated)).toBe('/beta');
+    expect(landingAfterSignIn(null, { ...gated, open: false })).toBe('/beta');
+    expect(landingAfterSignIn(null, { ...gated, remaining: 0 })).toBe('/beta');
   });
-  it('a closed or full beta, or no answer, opens the chat', () => {
-    expect(landingAfterSignIn(null, { member: false, open: false })).toBe('/chat');
-    expect(landingAfterSignIn(null, { ...open, remaining: 0 })).toBe('/chat');
+  it('with the gate off, or no answer, the chat (the middleware decides)', () => {
+    expect(landingAfterSignIn(null, { member: false, open: false, gate: false })).toBe('/chat');
     expect(landingAfterSignIn(null, null)).toBe('/chat');
   });
 });
@@ -32,7 +34,7 @@ describe('reading the status right after sign-in', () => {
   it('retries once when the cookie is not there yet', async () => {
     let n = 0;
     const f = (async () => (++n === 1 ? reply(401, {}) : reply(200, { member: true, active: true, open: true, remaining: 3 }))) as unknown as typeof fetch;
-    expect(await readLandingStatus(f, noWait)).toEqual({ member: true, active: true, open: true, remaining: 3 });
+    expect(await readLandingStatus(f, noWait)).toEqual({ member: true, active: true, open: true, remaining: 3, gate: false });
     expect(n).toBe(2);
   });
   it('gives up quietly on errors and malformed answers', async () => {

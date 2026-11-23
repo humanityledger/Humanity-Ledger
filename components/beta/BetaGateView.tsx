@@ -252,7 +252,7 @@ export default function BetaGateView() {
       <div className="mx-auto flex w-full max-w-[460px] flex-col">
         <header className="flex items-center justify-between gap-3">
           <Link href="/chat" aria-label="Ledger Chat" className="rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-[#5200FF]/15">
-            <HLLogo variant="full" theme="dark" size={26} label="Ledger Chat" />
+            <HLLogo variant="full" theme="dark" size={24} label="Ledger Chat" />
           </Link>
           <CapacityPill capacity={capacity} remaining={remaining} />
         </header>
@@ -276,9 +276,6 @@ export default function BetaGateView() {
         <footer className="mt-6 text-center text-[12.5px] text-[#98A2B3]">
           Ledger Chat · Aztec Alpha Privacy Layer
         </footer>
-        {(stage === 'join' || stage === 'full' || stage === 'closed') && step !== 'done' && (
-          <Link href="/chat" className={`${quiet} mt-2 self-center text-[12.5px]`}>Continue to messages without cUSDC</Link>
-        )}
       </div>
     </main>
   );
@@ -288,19 +285,19 @@ function CapacityPill({ capacity, remaining }: { capacity: number; remaining: nu
   const taken = remaining === null ? null : Math.min(capacity, Math.max(0, capacity - remaining));
   return (
     <div
-      className="flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white py-1.5 pl-3 pr-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      className="inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200/80 bg-white pl-2.5 pr-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
       data-testid="beta-capacity"
-      aria-label={remaining === null ? `Closed beta, ${capacity} spots` : `Closed beta, ${capacity} spots, ${remaining} remaining`}
+      aria-label={remaining === null ? `Closed beta, ${capacity} spots` : `Closed beta, ${remaining} of ${capacity} spots left`}
     >
-      <span className={`relative h-1.5 w-1.5 rounded-full bg-[#10B981] ${s.pulse}`} aria-hidden />
-      <span className="text-[12.5px] font-semibold tracking-[-0.01em] text-[#15171C]">Closed Beta</span>
-      <span className="h-3.5 w-px bg-slate-200" aria-hidden />
-      <span className="text-[12.5px] tabular-nums text-[#475467]">
-        {capacity} spots{remaining !== null && <> · <span className="font-semibold text-[#15171C]">{remaining}</span> remaining</>}
+      <span className={`relative h-1.5 w-1.5 shrink-0 rounded-full bg-[#10B981] ${s.pulse}`} aria-hidden />
+      <span className="text-[12px] font-semibold tracking-[-0.005em] text-[#15171C]">Closed Beta</span>
+      <span className="h-3 w-px bg-slate-200" aria-hidden />
+      <span className="text-[12px] tabular-nums text-[#667085]">
+        {remaining === null ? `${capacity} spots` : <><span className="font-semibold text-[#15171C]">{remaining}</span> of {capacity} left</>}
       </span>
       {taken !== null && (
-        <span className="hidden sm:block h-1 w-12 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-          <span className="block h-full rounded-full bg-[#5200FF] transition-[width] duration-700" style={{ width: `${Math.max(4, (taken / capacity) * 100)}%` }} />
+        <span className="hidden h-1 w-10 overflow-hidden rounded-full bg-slate-100 sm:block" aria-hidden>
+          <span className="block h-full rounded-full bg-[#5200FF]" style={{ width: `${Math.max(6, (taken / capacity) * 100)}%` }} />
         </span>
       )}
     </div>
