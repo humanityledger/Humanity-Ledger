@@ -11,8 +11,9 @@
  *     (preferRed) is no longer forced first: reordering payloads by hand is the one SDP change
  *     here that touches what each browser sends, and Safari↔Chrome calls must work before
  *     anything else. The browsers still negotiate RED by themselves where both want it.
- *   - sending: voice has the highest priority on the link; video and screen get bitrate caps, and a
- *     shared screen keeps its resolution (text stays readable) while a camera keeps its frame rate.
+ *   - sending: voice has the highest priority on the link; a camera sends 720p30 up to 2.5 Mbps
+ *     (HD on 4G and 5G) and balances frame rate against resolution under congestion; a shared
+ *     screen keeps its resolution (text stays readable). Data saver: 360p15, 0.5 Mbps.
  *   - ICE: few servers (each extra one slows candidate gathering), STUN first, then our TURN
  *     (lib/calls/ice.ts).
  */
@@ -118,8 +119,17 @@ type SenderLike = {
   setParameters: (p: any) => Promise<void>;
 };
 
+/**
+ * Camera sending, in bits per second. 720p30 needs about 1.5 to 2.5 Mbps to look sharp; 4G and 5G
+ * links usually carry that, and the browser's congestion control still lowers it on a weak link.
+ * The old 1.5 Mbps cap with 'maintain-framerate' made the first sign of congestion drop the picture
+ * below HD; 'balanced' trades a few frames for resolution first.
+ */
+export const CAMERA_MAX_BITRATE = 2_500_000;
+export const CAMERA_SAVER_BITRATE = 500_000;
+
 /** Sending priorities and caps. Best effort: a browser that refuses a field keeps its default. */
-export async function tuneSenders(pc: { getSenders: () => SenderLike[] } | null | undefined, opts: { screen?: boolean } = {}) {
+export async function tuneSenders(pc: { getSenders: () => SenderLike[] } | null | undefined, opts: { screen?: boolean; saver?: boolean } = {}) {
   if (!pc?.getSenders) return;
   await Promise.all(
     pc.getSenders().map(async (sender) => {
@@ -137,11 +147,13 @@ export async function tuneSenders(pc: { getSenders: () => SenderLike[] } | null 
             e.maxFramerate = 15;
             e.priority = 'medium';
           } else {
-            e.maxBitrate = 1_500_000;
+            e.maxBitrate = opts.saver ? CAMERA_SAVER_BITRATE : CAMERA_MAX_BITRATE;
+            e.maxFramerate = opts.saver ? 15 : 30;
+            e.scaleResolutionDownBy = 1; // send what the camera captures; congestion control scales on its own
             e.priority = 'low';
           }
         }
-        if (kind === 'video') p.degradationPreference = opts.screen ? 'maintain-resolution' : 'maintain-framerate';
+        if (kind === 'video') p.degradationPreference = opts.screen ? 'maintain-resolution' : 'balanced';
         await sender.setParameters(p);
       } catch {
         /* not supported here: browser defaults */

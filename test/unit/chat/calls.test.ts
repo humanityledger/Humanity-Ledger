@@ -67,7 +67,12 @@ describe('call media', () => {
     });
     await tuneSenders({ getSenders: () => [sender('audio'), sender('video')] });
     expect(sent.find((x) => x.kind === 'audio').p.encodings[0]).toMatchObject({ priority: 'high', networkPriority: 'high' });
-    expect(sent.find((x) => x.kind === 'video').p).toMatchObject({ degradationPreference: 'maintain-framerate' });
+    expect(sent.find((x) => x.kind === 'video').p).toMatchObject({ degradationPreference: 'balanced' });
+    // HD on 4G and 5G: 720p30 may use up to 2.5 Mbps, sent at full resolution.
+    expect(sent.find((x) => x.kind === 'video').p.encodings[0]).toMatchObject({ maxBitrate: 2_500_000, maxFramerate: 30, scaleResolutionDownBy: 1 });
+    sent.length = 0;
+    await tuneSenders({ getSenders: () => [sender('video')] }, { saver: true });
+    expect(sent[0].p.encodings[0]).toMatchObject({ maxBitrate: 500_000, maxFramerate: 15 });
     sent.length = 0;
     await tuneSenders({ getSenders: () => [sender('video')] }, { screen: true });
     expect(sent[0].p).toMatchObject({ degradationPreference: 'maintain-resolution' });

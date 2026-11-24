@@ -3758,6 +3758,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           localStreamRef.current.removeTrack(oldVideoTrack);
           localStreamRef.current.addTrack(newVideoTrack);
           oldVideoTrack.stop();
+          // The bitrate cap follows the camera: 0.5 Mbps in data saver, 2.5 Mbps (HD) otherwise.
+          void tuneSenders(peerConn as any, { saver: nextSaver });
           setDataSaver(nextSaver);
           newVideoTrack.enabled = !isCamOff;
         }
@@ -4686,7 +4688,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   }
                   resolvedPeerAddr = senderAddr?.toLowerCase() || '';
                 } else if (msg.conversation) {
-                  const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId, address || "");
+                  const dmPeer = await extractPeerAddress(msg.conversation, selfInboxId, address || "", client);
                   resolvedPeerAddr = dmPeer?.toLowerCase() || '';
                 }
               } catch (e) {
@@ -4716,7 +4718,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   }
                   
                   if (dm) {
-                    const dmPeer = await extractPeerAddress(dm, selfInboxId, address || "");
+                    const dmPeer = await extractPeerAddress(dm, selfInboxId, address || "", client);
                     resolvedPeerAddr = dmPeer?.toLowerCase() || '';
                     // Cache this mapping for future messages
                     if (resolvedPeerAddr && convoId) convIdToPeer.current.set(convoId, resolvedPeerAddr);
@@ -5471,7 +5473,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             let foundDm = null;
             
             for (const d of dms) {
-              const pAddr = await extractPeerAddress(d, selfId, address || "").catch(() => null);
+              const pAddr = await extractPeerAddress(d, selfId, address || "", client).catch(() => null);
               if (pAddr && pAddr.toLowerCase() === normalizedPeer.toLowerCase()) {
                 foundDm = d;
                 break;
@@ -7692,6 +7694,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                           formatMessagePreview={formatMessagePreview}
                           onVotePoll={(pollId, idx) => executeSend(`__VOTE__${pollId}__::${idx}`)}
                           onEditMsg={(id, current) => setEditingMsg({ id, content: current })}
+                          onRetry={(failedMsg) => {
+                            // The failed copy leaves the list and the same text goes through the normal send,
+                            // so it gets a fresh optimistic bubble and its real id like any other message.
+                            setMessages(prev => prev.filter(m => m.id !== failedMsg.id));
+                            void executeSend(String(failedMsg.content ?? ''));
+                          }}
                           bubbleStyle={bubbleStyle}
                           // The DM's peer inbox, resolved from the conversation's members:
                           // an Aztec address is pinned only from that inbox.
@@ -8471,7 +8479,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     {callType === 'video' && (
                       <>
                         <p className="px-3 pt-3 pb-1 text-[13px] font-medium text-[#727a88]">Video</p>
-                        {row({ icon: <Zap size={17} strokeWidth={1.8} />, title: 'Data saver', text: dataSaver ? 'Video is limited to 480p' : 'Video up to 1080p',
+                        {row({ icon: <Zap size={17} strokeWidth={1.8} />, title: 'Data saver', text: dataSaver ? 'Video is limited to 360p' : 'Video in HD (720p)',
                           right: toggle({ on: dataSaver, label: 'Data saver', onToggle: toggleDataSaver }) })}
                       </>
                     )}

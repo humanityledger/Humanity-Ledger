@@ -50,7 +50,7 @@ export default function SecurityPage() {
   ];
 
   return (
-    <div className={s.site}>
+    <div className={s.site} data-site="public">
       <a href="#main" className={s.skip}>Skip to content</a>
       <SiteHeader home={false} />
       <main id="main">
