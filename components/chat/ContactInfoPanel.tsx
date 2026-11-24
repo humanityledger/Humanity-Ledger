@@ -6,6 +6,7 @@ import {
   Star, Palette, Clock, KeyRound, Download, Trash2, Ban, Copy, Check, Wallet, Link as LinkIcon,
 } from 'lucide-react';
 import { EncryptionInfoSheet } from './EncryptionInfoSheet';
+import { wasVerified } from '@/lib/chat/verified-contacts';
 import { setSynced, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
 import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
 import { isAgreementMessage } from '@/lib/aztec/agreement-message';
@@ -332,7 +333,7 @@ export function ContactInfoSections({
           <Row compact={compact} icon={<Bell {...ICON} />} label="Mute notifications" toggle={isMuted} onTap={toggleMute} />
           <Row compact={compact} icon={<Clock {...ICON} />} label="Disappearing messages" value={TIMER_LABEL[disappearing]} onTap={() => setModal('disappearing')} />
           <Row compact={compact} icon={<Lock {...ICON} />} label="Lock chat with PIN" toggle={lockChat} onTap={toggleLock} />
-          <Row compact={compact} icon={<KeyRound {...ICON} />} label="Encryption" sublabel="Protocol and safety number" onTap={() => setModal('encryption')} />
+          <Row compact={compact} icon={<KeyRound {...ICON} />} label="Verify encryption" sublabel={wasVerified(peerAddress) ? 'Verified on this device. Check the safety number again' : 'Compare your safety number with them'} onTap={() => setModal('encryption')} />
         </Group>
 
         <Group title="Actions" {...g}>
