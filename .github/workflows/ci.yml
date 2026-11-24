@@ -83,6 +83,7 @@ jobs:
           test/unit/backup
           test/unit/chat/safety-digits.test.ts
           test/unit/chat/message-authority.test.ts
+          test/unit/xmtp/self-hosted.test.ts
           test/unit/xmtp/tab-presence.test.ts
           test/unit/xmtp/publish-state.test.ts
           test/unit/beta/beta-pass.test.ts

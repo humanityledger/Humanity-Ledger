@@ -117,6 +117,7 @@ const PUBLIC_PREFIXES = [
   '/api/chat/presence',  // Safe chat presence heartbeat / query
   '/api/gif/',           // GIF search proxy and fallback catalog
   '/api/link-preview',   // Safe SSRF-guarded OpenGraph link preview
+  '/api/xmtp/jwks',      // Public key of our own XMTP backend's credentials (lib/xmtp/backend-token.ts); public half only
   '/_next/',
   '/connect',
   '/legal/',

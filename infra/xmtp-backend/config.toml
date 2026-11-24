@@ -1,0 +1,61 @@
+# Ledger Chat's own XMTP backend: ghcr.io/xmtp/backend:8.0.0-rc4 (pin the exact tag).
+# Plan and gates: docs/xmtp/SELF_HOSTED_MIGRATION.md. Not deployed.
+#
+# Every key here is from XMTP's "Run the backend" reference. The backend refuses unknown keys or
+# invalid values at startup and names the key. Secrets are read with "env:NAME", never written here.
+
+[server]
+# Clients bind their local databases to this identifier: never change it once anyone connects.
+identifier = "org.ledgerchat.xmtp"
+# Plaintext gRPC, gRPC-Web and health on one port. Keep it private: TLS ends at the load balancer.
+listen = "0.0.0.0:5050"
+log_level = "info"
+log_format = "json"
+# Set after the first SDK 8 release we ship, so older clients are refused cleanly.
+# min_libxmtp_version = ""
+
+[telemetry]
+# Prometheus. Never publish this port.
+metrics_listen = "0.0.0.0:9464"
+service_name = "ledgerchat-xmtp"
+
+[database]
+# PostgreSQL 17 or later, with sslmode=verify-full in the URL.
+url = "env:XMTP_DATABASE_URL"
+max_connections = 20
+
+[auth]
+# Only signed-in Ledger Chat users reach the backend: our server signs 10-minute ES256 JWTs after
+# the SIWE session (app/api/xmtp/token) and publishes the public key (app/api/xmtp/jwks).
+enabled = true
+jwks_url = "env:XMTP_JWKS_URL"
+audiences = ["xmtp-backend"]
+issuers = ["https://ledgerchat.org"]
+required_scopes = ["xmtp"]
+leeway_seconds = 60
+
+[mls]
+max_group_members = 250
+max_installations_per_inbox = 10
+commit_log_enabled = true
+
+[retention]
+# 90 days, the defaults. XMTP notes expiry is metadata only today: rows are not pruned.
+group_message_seconds = 7776000
+welcome_seconds = 7776000
+key_package_seconds = 7776000
+
+[handles]
+# Usernames map to handles of the form name#1234 (phase M4 of the plan).
+min_name_length = 3
+
+[rate_limits]
+enabled = true
+# The load balancer's addresses, so per-caller limits see the real client.
+trusted_proxies = []
+
+[chains]
+# Needed only to verify smart-contract wallets (ERC-1271).
+"eip155:1" = "env:XMTP_RPC_MAINNET"
+
+# [attachments] and [push] stay off until phase M5 (S3 bucket; Web Push / APNs / FCM keys).
