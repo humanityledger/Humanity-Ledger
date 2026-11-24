@@ -75,7 +75,6 @@ try {
   check('the payment never carries the amount', !!payment && !/amount/.test(payment));
   check('Bob sees his payment sent', (await waitState(bob, 'payment-card', 'true', 'sent')) === 'sent');
   check('Bob sees the request paid', (await waitState(bob, 'payment-request-card', 'false', 'paid')) === 'paid');
-  check('Alice sees the request paid', (await waitState(alice, 'payment-request-card', 'true', 'paid')) === 'paid');
 
   // 3. Alice's card does not trust the message: it waits for her wallet.
   check('Alice waits for her wallet before showing it received', (await waitState(alice, 'payment-card', 'false', 'awaiting')) === 'awaiting');
@@ -85,6 +84,8 @@ try {
   check('Bob sees his payment confirmed', (await waitState(bob, 'payment-card', 'true', 'confirmed')) === 'confirmed');
   await alice.page.evaluate((tx) => window.__paymentsHarness.addActivity({ id: `receive-${tx}`, kind: 'receive', token: 'USDC', amount: '1500000', txHash: tx, status: 'settled', createdAt: Date.now() }), pay.txHash);
   check('Alice sees the payment received', (await waitState(alice, 'payment-card', 'false', 'received')) === 'received');
+  // A chat message alone never marks Alice's request paid (PaymentRequestCard): only her own wallet's receive does.
+  check('Alice sees the request paid', (await waitState(alice, 'payment-request-card', 'true', 'paid')) === 'paid');
   const notice = alice.page.getByText(/You received 1\.5 .* privately\./);
   check('Alice gets one notice with the amount', (await notice.count()) === 1);
   await alice.page.screenshot({ path: path.join(out, '2-alice-received.png') });

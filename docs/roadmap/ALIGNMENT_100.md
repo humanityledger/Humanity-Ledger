@@ -101,14 +101,14 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 80 | Privacy education | 6 | EXISTÍA | `/docs` |
 | 83 | In-app feedback | 6 | SIN VERIFICAR | `app/api/chat/report` exists |
 | 84 | Beta tester programme | 8 | EXISTÍA | cUSDC closed beta, 100 people (`lib/beta`) |
-| 86 | Flags to switch payments off | 7 | PARCIAL | `lib/feature-flags/index.ts` (Redis); payments use env switches |
+| 86 | Flags to switch payments off | 7 | EXISTÍA | `AZTEC_VALUE_MODE` exits-only, read by the server at every new value action (`lib/aztec/value-mode.ts`); chat is unaffected |
 | 87 | Public status page | 7 | EXISTÍA | `app/status/page.tsx` |
 | 88 | Runbooks | 7 | EXISTÍA | `docs/INCIDENT_RESPONSE.md` |
 | 90 | Backups under the user's control | 1 | HECHO | Same file as 45, restore merges and never deletes |
 | 91 | Portable messaging layer | 7 | FALTA | — |
 | 94 | Cost model | 7 | SIN VERIFICAR | — |
 | 95 | Scalable support | 7 | SIN VERIFICAR | — |
-| 96 | Automated audit process | 7 | PARCIAL | `npm run aztec:preflight`, Slither in CI |
+| 96 | Automated audit process | 7 | HECHO (gate) | Type check was failing on main on 67 old errors, so the unit tests after it never ran in CI. Fixed; the new tests of phases 1 to 6 are in the CI list |
 | 97 | Gradual rollout | 7 | PARCIAL | Flag engine supports a rollout percentage |
 | 99 | Health metrics | 7 | PARCIAL | `/status` |
 | 100 | Chat works without Aztec (reformulated) | 7 | EXISTÍA | |
@@ -128,6 +128,12 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R9 | Private membership proof | 4 | DECISIÓN taken: later | `docs/design/PRIVATE_MEMBERSHIP.md` |
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## Phase 7 (`claude/align-fase-7`)
+
+- CI gate: the 67 type errors on main are fixed (framer-motion preset types, an RTT cast, two validated record fields, a body that must exist); the vendored record package's stale test is checked by its own tsconfig, not the app's. New tests added to `ci.yml`.
+- Payments e2e: the check that Alice's request shows paid now runs after her own wallet finds the payment, as the card is designed; the in-app notice keeps the amount (only system notifications drop it).
+- 86, 87, 88 already existed. Not done: 40/98 (own realtime channel, second replica, k6 run), 94 (cost model needs real figures).
 
 ## Phase 6 (`claude/align-fase-6`)
 

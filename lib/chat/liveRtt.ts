@@ -111,7 +111,7 @@ export async function measurePing(opts?: {
   const now = opts?.now ?? (() => performance.now());
   const readEntries = opts?.readEntries ?? (() => {
     if (typeof performance === 'undefined' || !performance.getEntriesByType) return [];
-    return performance.getEntriesByType('resource') as TimingEntry[];
+    return performance.getEntriesByType('resource') as unknown as TimingEntry[];
   });
   const path = `/api/ping?n=${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
   const startedAt = now();
