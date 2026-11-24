@@ -37,8 +37,8 @@ describe('claims register', () => {
     for (const f of K.FEATURES) expect(CLAIMS.map((c) => c.id)).toContain(f.claim);
   });
 
-  it('USDC and the relay are never shown as live', () => {
-    expect(CLAIMS.find((c) => c.id === 'usdc')?.label).toBe('Not enabled yet');
+  it('USDC is a closed beta, not live for everyone; the relay is never shown as live', () => {
+    expect(CLAIMS.find((c) => c.id === 'usdc')?.label).toBe('Closed alpha');
     expect(CLAIMS.find((c) => c.id === 'relay')?.label).toBe('In design');
     expect(K.RELAY.never).toMatch(/never carries payments/);
   });

@@ -7,6 +7,7 @@ const ADDR = /^0x[0-9a-fA-F]{40}$/;
 
 export interface CommunityLike {
   communityMls?: boolean | null;
+  _count?: { members?: number } | null;
   channels?: { id?: string; xmtpGroupId?: string | null }[] | null;
   members?: { walletAddress?: string | null; role?: string | null }[] | null;
   ownerAddress?: string | null;
@@ -47,3 +48,14 @@ export function reconcileMembers(server: readonly string[], group: readonly stri
   };
 }
 
+
+/**
+ * True only when the member list is known to be complete: present, and as long as the server's own
+ * count. The community route can fall back to a query without members; reconciling against that
+ * would remove everyone from the group. With an incomplete list an admin's client only adds.
+ */
+export function membersComplete(c: CommunityLike): boolean {
+  if (!Array.isArray(c.members) || c.members.length === 0) return false;
+  const n = c._count?.members;
+  return n === undefined || n === null || n === c.members.length;
+}

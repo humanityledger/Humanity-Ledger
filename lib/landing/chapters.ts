@@ -33,7 +33,7 @@ export const HERO = {
 } as const;
 
 /**
- * The hero conversation. For the two people the payment reads "25 USDC", labelled as the design
+ * The hero conversation. For the two people the payment reads "25 cUSDC" (the closed beta asset)
  * (claims row "usdc"). For anyone else it reads as a proof.
  */
 export const HERO_THREAD = {
@@ -42,7 +42,7 @@ export const HERO_THREAD = {
     { from: 'a', text: 'Contract signed on my side. Sending the deposit now.' },
     { from: 'b', text: 'Perfect. I will confirm when it arrives.' },
   ],
-  payment: { amount: '25 USDC', note: 'Private payment', label: labelOf('usdc') as ClaimLabel },
+  payment: { amount: '25 cUSDC', note: 'Private payment', label: labelOf('usdc') as ClaimLabel },
   after: { from: 'b', text: 'Received. Thank you.' },
   observer: {
     message: 'MLS ciphertext',

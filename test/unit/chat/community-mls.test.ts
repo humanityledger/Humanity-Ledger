@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mlsGroupOf, reconcileMembers, serverMembers } from '@/lib/communities/mls-membership';
+import { membersComplete, mlsGroupOf, reconcileMembers, serverMembers } from '@/lib/communities/mls-membership';
 
 const A = '0x' + 'a'.repeat(40);
 const B = '0x' + 'b'.repeat(40);
@@ -17,5 +17,11 @@ describe('communities on MLS', () => {
   it('reconciles the group to the server and never removes yourself', () => {
     expect(reconcileMembers([A, B], [A, C], A)).toEqual({ add: [B], remove: [C] });
     expect(reconcileMembers([B], [A, B], A)).toEqual({ add: [], remove: [] });
+  });
+  it('never removes anyone against an incomplete member list', () => {
+    expect(membersComplete({ members: undefined })).toBe(false);
+    expect(membersComplete({ members: [] })).toBe(false);
+    expect(membersComplete({ members: [{ walletAddress: A }], _count: { members: 3 } })).toBe(false);
+    expect(membersComplete({ members: [{ walletAddress: A }], _count: { members: 1 } })).toBe(true);
   });
 });

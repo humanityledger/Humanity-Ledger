@@ -9,7 +9,9 @@
  * notice changed confirms the new text here. The notice is not legal terms.
  *
  * The wallet shown is the signed session's (/api/beta/cusdc/status), the one the server admits.
- * Logic: lib/beta/gate.ts. Visual language: /connect (Inter, #5200FF, #10B981, #FF3B30).
+ * Logic: lib/beta/gate.ts. Visual language (24 November 2026): the landing's corporate system in
+ * glass: a frosted card over a cool wash with slow light fields, display serif for the title, ink for
+ * the primary action, the corporate blue (#2754D6) for focus and links, green only for success.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { allowAutoRedirect } from '@/lib/auth/session-check';
@@ -34,11 +36,11 @@ const STEPS: { key: Exclude<Step, 'done'>; label: string }[] = [
 ];
 
 const primary =
-  'w-full h-[52px] rounded-[14px] bg-[#5200FF] text-white text-[15.5px] font-semibold tracking-[-0.01em] ' +
-  'shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_20px_-8px_rgba(82,0,255,0.55)] transition-all duration-200 ' +
-  'hover:-translate-y-[1px] hover:shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_14px_28px_-10px_rgba(82,0,255,0.6)] ' +
-  'active:translate-y-0 disabled:translate-y-0 disabled:bg-[#E4E7EC] disabled:text-[#98A2B3] disabled:shadow-none disabled:cursor-default ' +
-  'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5200FF]/20';
+  'w-full h-[52px] rounded-[12px] bg-[linear-gradient(180deg,#24272f,#15171c)] text-white text-[15.5px] font-semibold tracking-[-0.01em] ' +
+  'shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_10px_24px_-12px_rgba(18,24,52,0.6)] transition-all duration-200 ' +
+  'hover:-translate-y-[1px] hover:shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_16px_32px_-14px_rgba(18,24,52,0.65)] ' +
+  'active:translate-y-0 disabled:translate-y-0 disabled:bg-none disabled:bg-[#E4E7EC] disabled:text-[#98A2B3] disabled:shadow-none disabled:cursor-default ' +
+  'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2754D6]/25';
 const quiet = 'text-[13.5px] font-medium text-[#667085] hover:text-[#15171C] transition-colors';
 
 export default function BetaGateView() {
@@ -204,9 +206,9 @@ export default function BetaGateView() {
   } else if (step === 'wallet') {
     body = (
       <section>
-        <div className="flex items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-[#F8FAFC] px-4 py-3.5" data-testid="beta-wallet">
+        <div className="flex items-center gap-3.5 rounded-2xl border border-white/80 bg-white/60 backdrop-blur-md px-4 py-3.5" data-testid="beta-wallet">
           <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white border border-slate-200/80" aria-hidden>
-            <span className="h-4 w-4 rounded-full bg-gradient-to-br from-[#5200FF] to-[#9F7BFF]" />
+            <span className="h-4 w-4 rounded-full bg-gradient-to-br from-[#2754D6] to-[#8FA8F5]" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[12px] font-medium text-[#667085]">Signed in as</span>
@@ -247,7 +249,7 @@ export default function BetaGateView() {
                 spellCheck={false}
                 inputMode="text"
                 maxLength={i === 0 ? 40 : 19}
-                className="h-[58px] w-full min-w-0 rounded-[14px] border border-slate-200 bg-white text-center font-mono text-[18px] sm:text-[20px] font-medium uppercase tracking-[0.14em] text-[#15171C] shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-slate-300 focus:border-[#5200FF] focus:shadow-[0_0_0_4px_rgba(82,0,255,0.12)]"
+                className="h-[58px] w-full min-w-0 rounded-[12px] border border-slate-200/90 bg-white/85 text-center font-mono text-[18px] sm:text-[20px] font-medium uppercase tracking-[0.14em] text-[#15171C] shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-slate-300 focus:border-[#2754D6] focus:shadow-[0_0_0_4px_rgba(39,84,214,0.14)]"
                 placeholder="····"
               />
             </React.Fragment>
@@ -255,14 +257,14 @@ export default function BetaGateView() {
         </div>
         {error && <ErrorLine text={error} />}
         <button type="button" className={`${primary} mt-6`} disabled={!isCompleteCode(blocks)} onClick={() => { setError(null); setStep('notice'); }}>Continue</button>
-        <div className="mt-6 rounded-2xl border border-slate-200/80 bg-[#F8FAFC] px-4 py-3.5" data-testid="beta-request">
+        <div className="mt-6 rounded-2xl border border-white/80 bg-white/60 backdrop-blur-md px-4 py-3.5" data-testid="beta-request">
           {status?.request === 'pending' ? (
             <p className="text-[13.5px] text-[#475467]">{requestNoteFor('pending')}</p>
           ) : (
             <>
               <p className="text-[14px] font-medium text-[#15171C]">No code yet?</p>
               <p className="mt-0.5 text-[13.5px] text-[#667085]">Ask for one and we will reply by email.</p>
-              <button type="button" className={`${quiet} mt-2 !text-[#5200FF]`} onClick={() => setAsking(true)} data-testid="beta-ask">
+              <button type="button" className={`${quiet} mt-2 !text-[#2754D6]`} onClick={() => setAsking(true)} data-testid="beta-ask">
                 Request an invitation
               </button>
             </>
@@ -287,20 +289,23 @@ export default function BetaGateView() {
   }
 
   return (
-    <main className="min-h-[100dvh] bg-[#F8FAFC] px-4 py-8 sm:py-16 text-[#15171C] antialiased" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-      <div className="mx-auto flex w-full max-w-[460px] flex-col">
+    <main className={`min-h-[100dvh] px-4 py-8 sm:py-16 text-[#15171C] antialiased ${s.stage}`} style={{ fontFamily: 'var(--font-inter), Inter, system-ui, -apple-system, sans-serif' }}>
+      <span className={`${s.orb} ${s.orbA}`} aria-hidden />
+      <span className={`${s.orb} ${s.orbB}`} aria-hidden />
+      <span className={`${s.orb} ${s.orbC}`} aria-hidden />
+      <div className="relative mx-auto flex w-full max-w-[480px] flex-col">
         <header className="flex items-center justify-between gap-3">
-          <Link href="/chat" aria-label="Ledger Chat" className="rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-[#5200FF]/15">
+          <Link href="/chat" aria-label="Ledger Chat" className="rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-[#2754D6]/15">
             <HLLogo variant="full" theme="dark" size={24} label="Ledger Chat" />
           </Link>
           <CapacityPill capacity={capacity} remaining={remaining} />
         </header>
 
-        <div className="mt-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_1px_1px_rgba(15,23,42,0.03),0_10px_28px_-14px_rgba(15,23,42,0.12),0_40px_80px_-40px_rgba(15,23,42,0.18)]">
+        <div className={`mt-6 overflow-hidden ${s.glass}`}>
           {(joining || stage === 'signedOut') && (
             <div className="px-6 pt-7 sm:px-9 sm:pt-9">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#5200FF]">Private payments on Aztec Alpha</p>
-              <h1 ref={joining && step === 'wallet' ? heading : undefined} tabIndex={-1} className="mt-2 text-[27px] sm:text-[30px] font-semibold leading-[1.12] tracking-[-0.025em] outline-none">
+              <p className={s.eyebrow}>Private payments on Aztec Alpha</p>
+              <h1 ref={joining && step === 'wallet' ? heading : undefined} tabIndex={-1} className={`mt-3 text-[38px] sm:text-[44px] leading-[1.02] outline-none ${s.display}`}>
                 Join the closed beta
               </h1>
               <p className="mt-2.5 text-[14.5px] leading-relaxed text-[#475467]">
@@ -312,7 +317,7 @@ export default function BetaGateView() {
           <div key={`${stage}-${step}`} className={`px-6 pb-7 pt-6 sm:px-9 sm:pb-9 ${s.step}`}>{body}</div>
         </div>
 
-        <footer className="mt-6 text-center text-[12.5px] text-[#98A2B3]">
+        <footer className="mt-6 text-center text-[12.5px] text-[#667085]">
           Ledger Chat · Aztec Alpha Privacy Layer
         </footer>
       </div>
@@ -324,7 +329,7 @@ function CapacityPill({ capacity, remaining }: { capacity: number; remaining: nu
   const taken = remaining === null ? null : Math.min(capacity, Math.max(0, capacity - remaining));
   return (
     <div
-      className="inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200/80 bg-white pl-2.5 pr-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      className={`inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full pl-2.5 pr-3 ${s.glassSoft}`}
       data-testid="beta-capacity"
       aria-label={remaining === null ? `Closed beta, ${capacity} spots` : `Closed beta, ${remaining} of ${capacity} spots left`}
     >
@@ -336,7 +341,7 @@ function CapacityPill({ capacity, remaining }: { capacity: number; remaining: nu
       </span>
       {taken !== null && (
         <span className="hidden h-1 w-10 overflow-hidden rounded-full bg-slate-100 sm:block" aria-hidden>
-          <span className="block h-full rounded-full bg-[#5200FF]" style={{ width: `${Math.max(6, (taken / capacity) * 100)}%` }} />
+          <span className="block h-full rounded-full bg-[#2754D6]" style={{ width: `${Math.max(6, (taken / capacity) * 100)}%` }} />
         </span>
       )}
     </div>
@@ -351,7 +356,7 @@ function Stepper({ current }: { current: number }) {
         const active = i === current;
         return (
           <li key={x.key} aria-current={active ? 'step' : undefined}>
-            <span className={`block h-[3px] rounded-full transition-colors duration-300 ${done ? 'bg-[#10B981]' : active ? 'bg-[#5200FF]' : 'bg-slate-200'}`} />
+            <span className={`block h-[3px] rounded-full transition-colors duration-300 ${done ? 'bg-[#10B981]' : active ? 'bg-[#2754D6]' : 'bg-slate-200'}`} />
             <span className={`mt-2 block text-[12px] font-medium ${active ? 'text-[#15171C]' : done ? 'text-[#047857]' : 'text-[#98A2B3]'}`}>
               {i + 1}. {x.label}
             </span>
@@ -365,7 +370,7 @@ function Stepper({ current }: { current: number }) {
 function Panel({ title, text, headingRef, children }: { title: string; text: string; headingRef: React.RefObject<HTMLHeadingElement | null>; children?: React.ReactNode }) {
   return (
     <section>
-      <h2 ref={headingRef} tabIndex={-1} className="text-[22px] font-semibold tracking-[-0.02em] outline-none">{title}</h2>
+      <h2 ref={headingRef} tabIndex={-1} className={`text-[30px] leading-[1.08] outline-none ${s.display}`}>{title}</h2>
       <p className="mt-2 text-[14.5px] leading-relaxed text-[#475467]">{text}</p>
       {children}
     </section>
@@ -375,7 +380,7 @@ function Panel({ title, text, headingRef, children }: { title: string; text: str
 function Notice({ status, agreed, onAgree }: { status: GateStatus; agreed: boolean; onAgree: (v: boolean) => void }) {
   return (
     <>
-      <ul className="mt-4 max-h-[34vh] space-y-2 overflow-y-auto rounded-2xl border border-slate-200/80 bg-[#F8FAFC] px-4 py-3.5 text-[13.5px] leading-relaxed text-[#344054]">
+      <ul className="mt-4 max-h-[34vh] space-y-2 overflow-y-auto rounded-2xl border border-white/80 bg-white/60 backdrop-blur-md px-4 py-3.5 text-[13.5px] leading-relaxed text-[#344054]">
         {status.notice.text.map((line) => (
           <li key={line} className="flex gap-2.5"><span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[#98A2B3]" aria-hidden />{line}</li>
         ))}
@@ -384,7 +389,7 @@ function Notice({ status, agreed, onAgree }: { status: GateStatus; agreed: boole
       <label className="mt-4 flex cursor-pointer items-start gap-3 select-none">
         <input type="checkbox" checked={agreed} onChange={(e) => onAgree(e.target.checked)} className="peer sr-only" />
         <span
-          className="mt-[1px] grid h-[20px] w-[20px] shrink-0 place-items-center rounded-[6px] border border-slate-300 bg-white transition-colors peer-checked:border-[#5200FF] peer-checked:bg-[#5200FF] peer-focus-visible:ring-4 peer-focus-visible:ring-[#5200FF]/20"
+          className="mt-[1px] grid h-[20px] w-[20px] shrink-0 place-items-center rounded-[6px] border border-slate-300 bg-white transition-colors peer-checked:border-[#2754D6] peer-checked:bg-[#2754D6] peer-focus-visible:ring-4 peer-focus-visible:ring-[#2754D6]/20"
           aria-hidden
         >
           <svg width="12" height="12" viewBox="0 0 12 12" className={agreed ? 'opacity-100' : 'opacity-0'}>
@@ -423,12 +428,12 @@ function Granted({ onOpen }: { onOpen: () => void }) {
           <path d="M26 39l8.5 8.5L51 31" fill="none" stroke="#fff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" className={s.successCheck} />
         </svg>
       </div>
-      <h1 className="mt-5 text-[26px] font-semibold tracking-[-0.025em]">Access granted</h1>
+      <h1 className={`mt-5 text-[36px] leading-[1.05] ${s.display}`}>Access granted</h1>
       <p className="mt-2 max-w-[340px] text-[14.5px] leading-relaxed text-[#475467]">
         cUSDC is unlocked for this wallet. It appears in your private wallet at its next refresh.
       </p>
       <div className="mt-6 h-[3px] w-40 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-        <span className={`block h-full bg-[#5200FF] ${s.redirectBar}`} />
+        <span className={`block h-full bg-[#2754D6] ${s.redirectBar}`} />
       </div>
       <button type="button" className={`${primary} mt-6`} onClick={onOpen}>Open Ledger Chat</button>
     </section>

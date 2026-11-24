@@ -1639,7 +1639,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               )}
 
               {/* ── Clear Cache ── */}
-              {modal === 'history_backup' && <HistoryBackupSheet onClose={() => setModal(null)} />}
+              {modal === 'history_backup' && <HistoryBackupSheet account={myAddress || address} onClose={() => setModal(null)} />}
               {modal === 'aztec_node' && <NodeChoiceSheet onClose={() => setModal(null)} />}
               {modal === 'payments_settings' && <PaymentsSettingsSheet onClose={() => setModal(null)} />}
               {modal === 'clearCache' && (

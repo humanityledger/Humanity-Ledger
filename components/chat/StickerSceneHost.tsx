@@ -1,7 +1,9 @@
 'use client';
 
 /**
- * The layer over a conversation where sticker moments play (lib/chat/sticker-scenes.ts).
+ * The layer where sticker moments play (lib/chat/sticker-scenes.ts). It covers the whole window
+ * (frame-breaking, see the note on the returned element), never takes pointer events, and the
+ * offered packs play the short moment (IMMERSIVE_SCENE_MS) so a sticker never holds the screen.
  *
  * A sticker bubble asks for its moment with requestStickerScene(): when it arrives fresh (once per
  * message, also for the sender) and whenever someone taps it. Moments play one at a time; a burst
@@ -10,7 +12,8 @@
  * device; a tap still plays one. Reduced motion gets a short, still pop.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { stickerRef } from '@/lib/chat/stickers';
 
 export const STICKER_SCENE_EVENT = 'ledger:sticker-scene';
@@ -72,6 +75,10 @@ export function requestStickerScene(content: string, from?: Element | null, auto
 
 export function StickerSceneHost() {
   const ref = useRef<HTMLDivElement>(null);
+  // Stays in the conversation: what shakes for the shake and boom scenes.
+  const anchor = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const queue: SceneDetail[] = [];
@@ -86,18 +93,22 @@ export function StickerSceneHost() {
       const s = stickerRef(d.content);
       if (!s?.sticker.scene) return next();
       const { playStickerScene } = await import('@/lib/chat/sticker-scenes');
+      // Decode the picture before the moment starts, so its first frame is already sharp.
+      try { const pre = new Image(); pre.src = s.src; await pre.decode(); } catch { /* plays anyway */ }
       if (!alive) return;
       const reducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const from = d.rect ? new DOMRect(d.rect.left, d.rect.top, d.rect.width, d.rect.height) : null;
       const pb = playStickerScene({
         host,
-        shakeTarget: host.parentElement,
+        shakeTarget: anchor.current?.parentElement ?? null,
         src: s.src,
         label: s.sticker.label,
         scene: s.sticker.scene,
         tint: s.sticker.tint,
         from,
         reducedMotion,
+        durationMs: s.pack.sceneMs,
+        maxHeroPx: s.pack.px,
       });
       playing = pb;
       await pb.done;
@@ -132,5 +143,17 @@ export function StickerSceneHost() {
     };
   }, []);
 
-  return <div ref={ref} className="absolute inset-0 z-[45] pointer-events-none overflow-hidden" aria-hidden="true" />;
+  // Frame-breaking: the layer covers the whole window, not just the conversation, so a moment can
+  // pass over the chat list, the composer and the header. It never takes a pointer event: every tap,
+  // scroll and keystroke goes through to the app while it plays.
+  // Portalled to <body> so no transformed or filtered ancestor can clip it back into the chat.
+  return (
+    <>
+      <div ref={anchor} className="hidden" aria-hidden="true" />
+      {mounted && createPortal(
+        <div ref={ref} className="fixed inset-0 z-[300000] pointer-events-none overflow-hidden" aria-hidden="true" data-testid="sticker-stage" />,
+        document.body,
+      )}
+    </>
+  );
 }

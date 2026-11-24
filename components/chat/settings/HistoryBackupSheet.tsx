@@ -17,7 +17,7 @@ const FIELD = 'w-full h-12 rounded-xl border border-[#d0d5dd] px-4 text-[15px] t
 const PRIMARY = 'w-full h-12 rounded-xl bg-[#15171c] text-white font-semibold text-[15px] disabled:opacity-50';
 const SECONDARY = 'w-full h-12 rounded-xl border border-[#d0d5dd] bg-white text-[#15171c] font-semibold text-[15px] disabled:opacity-50';
 
-export function HistoryBackupSheet({ onClose }: { onClose: () => void }) {
+export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; account?: string }) {
   const [mode, setMode] = useState<'export' | 'restore'>('export');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -32,7 +32,7 @@ export function HistoryBackupSheet({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      const snap = await snapshotChatHistory();
+      const snap = await snapshotChatHistory(undefined, account);
       const sealed = await sealArchive(snap, pass);
       const blob = new Blob([JSON.stringify(sealed)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -57,7 +57,7 @@ export function HistoryBackupSheet({ onClose }: { onClose: () => void }) {
     try {
       const sealed = JSON.parse(await file.text());
       const snap = await openArchive<ChatHistorySnapshot>(sealed, pass);
-      const n = await restoreChatHistory(snap);
+      const n = await restoreChatHistory(snap, undefined, account);
       toast.success(`Restored ${n.messages} messages in ${n.conversations} conversations`);
       onClose();
     } catch (e) {

@@ -11,7 +11,6 @@
  */
 import React from 'react';
 import s from './site.module.css';
-import { StatusLabel } from './StatusLabel';
 import { DeviceScreen, PhotoMockup } from './PhotoMockup';
 import type { ClaimLabel } from '@/lib/landing/claims';
 
@@ -82,10 +81,9 @@ export function HeroConversation({ thread }: { thread: Thread }) {
           <div className={`${s.layer} ${s.inside}`} aria-hidden={view === 'outside'}>
             <div className={s.payTop}>
               <span>{payment.note}</span>
-              <StatusLabel label={payment.label} />
             </div>
             <div className={s.payAmount}>{payment.amount}</div>
-            <div className={s.payNote}>Shown as the design. Amount and recipient stay private.</div>
+            <div className={s.payNote}>On Aztec Alpha. Amount and recipient stay private.</div>
           </div>
           <div className={`${s.layer} ${s.outside}`} aria-hidden={view === 'inside'}>
             <div className={s.payTop}>
