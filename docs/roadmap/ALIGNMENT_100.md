@@ -40,10 +40,10 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 12 | Themes | 6 | EXCLUIDO for now | `app/ledger-tokens.css`: one light theme by decision |
 | 13 | Typing and online, efficient | 1 | EXISTÍA | Mutual contacts, cached (PR #153); toggles for typing, read receipts and last seen (`LedgerSettingsFull.tsx`) |
 | 14 | Voice with local transcription | 5 | PARCIAL | Voice notes exist; "Transcribing" in `CustomAudioPlayer.tsx`: where it runs is not verified |
-| 15 | Reactions and replies | 6 | PARCIAL | Quick reactions disabled (`MessageBubble.tsx:577`) |
-| 16 | Edit or delete within a window | 6 | PARCIAL | Edit via `__EDIT__` signal and delete exist (`LedgerChatV2.tsx`); no time window found |
+| 15 | Reactions and replies | 6 | EXISTÍA (decision) | Quick reactions are off by product decision (`MessageBubble.tsx:577`); replies exist |
+| 16 | Edit or delete within a window | 6 | HECHO + security fix | Edits within 24 h; remote edits and deletions apply only from the message's own author (`lib/chat/message-authority.ts`). Before, the other person could rewrite or delete your messages on your screen by naming their ids |
 | 17 | Notification centre | 1 | HECHO | Previews hidden by default, no sender in the title (`lib/privacy/defaults.ts`) |
-| 18 | Dark mode and high contrast | 6 | DECISIÓN | One light theme by decision (`app/ledger-tokens.css`) |
+| 18 | Dark mode and high contrast | 6 | DECISIÓN taken: light only | One light theme with 7:1 body contrast (`app/ledger-tokens.css`, `WalletUI.tsx`) |
 | 19 | Mobile gestures | 6 | SIN VERIFICAR | — |
 | 21 | Faster proofs in the browser | 5 | PARCIAL + HECHO (measure) | Proving time recorded per device (`lib/perf/proof-timings.ts`) and shown as an expectation; anonymous durations already reach the server log (`payment-report`) |
 | 22 | Transaction queue | 5 | PARCIAL | Activity record with stages (`components/zk/PaymentProgress.tsx`) |
@@ -128,6 +128,10 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R9 | Private membership proof | 4 | DECISIÓN taken: later | `docs/design/PRIVATE_MEMBERSHIP.md` |
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## Phase 6 (`claude/align-fase-6`)
+
+- 16 built, with a security fix found on the way. Not done: 79 (Spanish in the chat; the chat strings are not in the i18n dictionaries), 2 and 19 not measured.
 
 ## Phase 5 (`claude/align-fase-5`)
 
