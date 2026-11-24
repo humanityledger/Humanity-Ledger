@@ -112,48 +112,28 @@ export function Figure({ text, hidden, strong, className = '' }: { text: string;
 
 /* ─── marks ────────────────────────────────────────────────────────────────── */
 
-const TOKEN_TINT: Record<string, [string, string]> = {
-  USD: ['#3b82f6', '#1d4ed8'],
-  HLC: ['#3a3f4b', '#0f1116'],
-  ETH: ['#7c8cff', '#4252d6'],
-  FEE: ['#f59e0b', '#c2410c'],
+const TOKEN_TINT: Record<string, string> = {
+  USD: '#3b6cf6',
+  HLC: '#15171c',
+  ETH: '#6b7bf2',
 };
 
 /**
- * A round mark for a token: a dollar sign for dollar tokens (cUSDC), the first letter otherwise.
- * Our own drawing, never an issuer's logo. `shielded` adds a small lock seal: the amount is private.
+ * A round mark for a token: one flat colour, a dollar sign for dollar tokens (cUSDC), the first
+ * letter otherwise. Our own drawing, never an issuer's logo.
  */
-export function TokenMark({ symbol, size = 28, shielded }: { symbol: string; size?: number; shielded?: boolean }) {
+export function TokenMark({ symbol, size = 28 }: { symbol: string; size?: number; shielded?: boolean }) {
   const sym = (symbol || '?').toUpperCase();
   const dollar = /USD/.test(sym);
-  const [a, b] = dollar ? TOKEN_TINT.USD : TOKEN_TINT[sym] ?? TOKEN_TINT.HLC;
+  const bg = dollar ? TOKEN_TINT.USD : TOKEN_TINT[sym] ?? TOKEN_TINT.HLC;
   const glyph = dollar ? '$' : sym.replace(/^C(?=[A-Z]{2})/, '').slice(0, 1);
-  const seal = Math.max(12, Math.round(size * 0.44));
   return (
     <span
       aria-hidden="true"
-      className="relative inline-flex items-center justify-center rounded-full shrink-0 text-white font-semibold select-none"
-      style={{
-        width: size,
-        height: size,
-        fontSize: Math.round(size * 0.48),
-        lineHeight: 1,
-        background: `linear-gradient(150deg, ${a}, ${b})`,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.18), 0 1px 2px rgba(16,24,40,0.18)',
-      }}
+      className="inline-flex items-center justify-center rounded-full shrink-0 text-white font-semibold select-none"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.46), lineHeight: 1, background: bg }}
     >
       {glyph}
-      {shielded && (
-        <span
-          className="absolute -right-1 -bottom-1 rounded-full flex items-center justify-center"
-          style={{ width: seal, height: seal, background: '#15171c', boxShadow: '0 0 0 2px #ffffff' }}
-        >
-          <svg width={seal * 0.58} height={seal * 0.58} viewBox="0 0 12 12" fill="none">
-            <rect x="2.5" y="5.2" width="7" height="5" rx="1.3" fill="#fff" />
-            <path d="M4 5.2V4a2 2 0 0 1 4 0v1.2" stroke="#fff" strokeWidth="1.4" />
-          </svg>
-        </span>
-      )}
     </span>
   );
 }
@@ -184,35 +164,11 @@ export function AddressAvatar({ address, size = 40 }: { address: string; size?: 
         width: size,
         height: size,
         background: `radial-gradient(circle at ${cx}% ${cy}%, hsl(${h3} 85% 70% / 0.95), transparent 46%), conic-gradient(from ${angle}deg, hsl(${h1} 72% 52%), hsl(${h2} 70% 46%), hsl(${h1} 72% 52%))`,
-        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35), 0 1px 2px rgba(16,24,40,0.15)',
       }}
     />
   );
 }
 
-/**
- * The private notes, drawn: a quiet field of dots that fades out from one corner. Used behind the
- * dark balance card and the opening screen. Pure CSS, nothing animates, nothing is read.
- */
-export function NoteField({ at = '100% 0%', opacity = 0.16 }: { at?: string; opacity?: number }) {
-  const mask = `radial-gradient(120% 95% at ${at}, #000 0%, rgba(0,0,0,0.55) 38%, transparent 72%)`;
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0"
-      style={{
-        backgroundImage: `radial-gradient(rgba(255,255,255,${opacity}) 1px, transparent 1.3px)`,
-        backgroundSize: '14px 14px',
-        backgroundPosition: '7px 7px',
-        WebkitMaskImage: mask,
-        maskImage: mask,
-      }}
-    />
-  );
-}
-
-/** The dark surface of the balance card and the opening screen. */
-export const VAULT_BG = 'linear-gradient(158deg, #1d2136 0%, #14161f 44%, #0c0d12 100%)';
 
 /* ─── buttons ──────────────────────────────────────────────────────────────── */
 
@@ -315,10 +271,8 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
-      className={`w-full min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 transition-[background-color,transform] active:scale-[0.99] disabled:bg-[#e4e7ec] disabled:text-[#5b606b] disabled:active:scale-100 ${FOCUS} ${
-        tone === 'danger'
-          ? 'bg-[#b42318] hover:bg-[#962018] text-white'
-          : 'bg-[#15171c] bg-gradient-to-b from-[#2b2f3a] to-[#121419] hover:from-[#343947] hover:to-[#181b22] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_10px_24px_-14px_rgba(21,23,28,0.75)] disabled:from-[#e4e7ec] disabled:to-[#e4e7ec] disabled:shadow-none'
+      className={`w-full min-h-[56px] px-5 rounded-[18px] text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 transition-[background-color,transform] active:scale-[0.99] disabled:bg-[#f1f2f4] disabled:text-[#8a909c] disabled:active:scale-100 ${FOCUS} ${
+        tone === 'danger' ? 'bg-[#b42318] hover:bg-[#962018] text-white' : 'bg-[#0d0f14] hover:bg-[#2a2d34] text-white'
       }`}
     >
       {busy && <Spinner />}
@@ -333,7 +287,7 @@ export function SecondaryButton({ children, onClick, disabled }: { children: Rea
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold border-2 border-[#15171c] bg-white hover:bg-[#f7f8fa] disabled:opacity-40 ${FOCUS}`}
+      className={`w-full min-h-[56px] px-5 rounded-[18px] text-[16px] font-semibold bg-[#f4f5f7] hover:bg-[#eceef1] disabled:opacity-40 ${FOCUS}`}
       style={{ color: INK }}
     >
       {children}
@@ -419,7 +373,7 @@ export function Segmented<T extends string>({
     refs.current[n]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className="flex p-1 rounded-2xl bg-[#f2f4f7] gap-1">
+    <div role="tablist" aria-label={label} className="flex p-1 rounded-[16px] bg-[#f4f5f7] gap-1">
       {options.map((o, i) => {
         const on = o.value === value;
         return (
@@ -477,13 +431,11 @@ export function TokenChips<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(t.key)}
-            className={`min-h-[44px] pl-1.5 pr-4 rounded-full text-[14px] font-semibold border inline-flex items-center gap-2 transition-[background-color,border-color,box-shadow] ${FOCUS} ${
-              on
-                ? 'bg-[#15171c] border-[#15171c] text-white shadow-[0_6px_16px_-10px_rgba(21,23,28,0.8)]'
-                : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f7f8fa]'
+            className={`min-h-[44px] pl-1.5 pr-4 rounded-full text-[15px] font-semibold border inline-flex items-center gap-2 transition-[background-color,border-color] ${FOCUS} ${
+              on ? 'bg-white border-[#0d0f14] text-[#0d0f14]' : 'bg-[#f4f5f7] border-transparent text-[#3d424b] hover:bg-[#eceef1]'
             }`}
           >
-            <TokenMark symbol={t.symbol} size={30} />
+            <TokenMark symbol={t.symbol} size={28} />
             {t.symbol}
           </button>
         );
@@ -496,7 +448,7 @@ export function TokenChips<T extends string>({
 
 export function Card({ children, className = '', as: As = 'section', label }: { children: React.ReactNode; className?: string; as?: 'section' | 'div'; label?: string }) {
   return (
-    <As aria-label={label} className={`bg-white rounded-[20px] border border-[#e4e7ec] ${className}`}>
+    <As aria-label={label} className={`bg-white rounded-[24px] border border-[#eef0f3] ${className}`}>
       {children}
     </As>
   );
@@ -507,7 +459,7 @@ export function CardHead({ title, sub, action }: { title: string; sub?: string; 
   return (
     <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-1">
       <div className="min-w-0">
-        <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <h3 className="text-[16px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>
           {title}
         </h3>
         {sub && (
@@ -601,9 +553,9 @@ export function AddressBox({ label, value }: { label: string; value: string }) {
     return () => clearTimeout(t);
   }, [state]);
   return (
-    <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] px-4 py-3">
+    <div className="rounded-[20px] bg-[#f7f8fa] px-4 py-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <span className="text-[14px] font-medium" style={{ color: INK_3 }}>
           {label}
         </span>
         <TextButton onClick={async () => setState((await copyText(value)) ? 'yes' : 'no')} label={tr("Copy {label}", { label })}>
@@ -638,8 +590,8 @@ export function Notice({ tone = 'info', children, action }: { tone?: 'info' | 'w
 /* ─── amount input ─────────────────────────────────────────────────────────── */
 
 /**
- * The large amount field: centred, tabular, with the symbol after it and the
- * available balance and Max below.
+ * The amount panel: a soft grey field with the figure large on the left and the token on the right,
+ * the available balance and Max under it. Red outline when the amount cannot be sent.
  */
 export function AmountInput({
   value,
@@ -668,13 +620,17 @@ export function AmountInput({
   useEffect(() => {
     if (autoFocus) ref.current?.focus({ preventScroll: true });
   }, [autoFocus]);
-  const size = value.length > 12 ? 30 : value.length > 8 ? 38 : 46;
+  const size = value.length > 14 ? 28 : value.length > 9 ? 36 : 44;
   return (
-    <div className={`rounded-[20px] border-2 px-4 pt-4 pb-3 transition-colors ${invalid ? 'border-[#b42318]' : 'border-[#e4e7ec] focus-within:border-[#15171c]'}`}>
-      <label htmlFor={id} className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-center" style={{ color: INK_3 }}>
+    <div
+      className={`rounded-[24px] border px-5 pt-4 pb-4 transition-colors ${
+        invalid ? 'border-[#f3c9c4] bg-[#fffafa]' : 'border-transparent bg-[#f7f8fa] focus-within:bg-white focus-within:border-[#e4e7ec]'
+      }`}
+    >
+      <label htmlFor={id} className="block text-[14px] font-medium" style={{ color: INK_3 }}>
         {tr("Amount")}
       </label>
-      <div className="flex items-baseline justify-center gap-2 mt-1 min-w-0">
+      <div className="mt-1 flex items-center gap-3 min-w-0">
         <input
           ref={ref}
           id={id}
@@ -686,21 +642,22 @@ export function AmountInput({
           onChange={(e) => onChange(cleanAmount(e.target.value, decimals))}
           aria-invalid={invalid ? true : undefined}
           aria-describedby={`${id}-help`}
-          className="min-w-0 bg-transparent text-center font-semibold tracking-[-0.03em] tabular-nums outline-none placeholder:text-[#c3c8d0]"
-          style={{ color: INK, fontSize: size, width: `${Math.max(2, value.length + 1)}ch`, maxWidth: '100%' }}
+          className="flex-1 min-w-0 bg-transparent font-medium tracking-[-0.035em] tabular-nums outline-none placeholder:text-[#c3c8d0] h-[56px]"
+          style={{ color: INK, fontSize: size }}
         />
-        <span className="text-[18px] font-semibold shrink-0" style={{ color: INK_2 }}>
+        <span className="inline-flex items-center gap-2 h-10 pl-1 pr-3.5 rounded-full bg-white border border-[#eef0f3] text-[15px] font-semibold shrink-0" style={{ color: INK }}>
+          <TokenMark symbol={symbol} size={30} />
           {symbol}
         </span>
       </div>
-      <div id={`${id}-help`} className="mt-2 flex items-center justify-between gap-2 text-[13px]">
+      <div id={`${id}-help`} className="mt-1 flex items-center justify-between gap-2 text-[13px]">
         <span className="tabular-nums truncate" style={{ color: invalid ? BAD : INK_3 }} role={invalid ? 'alert' : undefined}>
           {invalid || `${availableLabel} ${available} ${symbol}`}
         </span>
         <button
           type="button"
           onClick={onMax}
-          className={`min-h-[36px] px-3 rounded-full text-[13px] font-semibold bg-[#f2f4f7] hover:bg-[#e9ecf0] shrink-0 ${FOCUS}`}
+          className={`min-h-[32px] px-3 rounded-full text-[13px] font-semibold hover:bg-[#eceef1] shrink-0 ${FOCUS}`}
           style={{ color: INK }}
         >
           {tr("Max")}
@@ -752,7 +709,7 @@ export function Sheet({
   }, []);
   return (
     <motion.div className="absolute inset-0 z-20 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button type="button" aria-label={tr("Close")} tabIndex={-1} className="absolute inset-0 bg-[#0b0c0e]/40 backdrop-blur-[2px]" onClick={onClose} />
+      <button type="button" aria-label={tr("Close")} tabIndex={-1} className="absolute inset-0 bg-[#0d0f14]/20" onClick={onClose} />
       <motion.div
         ref={panel}
         role="dialog"
@@ -763,7 +720,7 @@ export function Sheet({
         animate={{ y: 0 }}
         exit={{ y: 48 }}
         transition={{ duration: 0.18, ease: [0.22, 0.8, 0.24, 1] }}
-        className="relative max-h-[92%] flex flex-col rounded-t-[28px] bg-white shadow-[0_-12px_40px_rgba(16,24,40,0.12)] outline-none"
+        className="relative max-h-[92%] flex flex-col rounded-t-[32px] bg-white shadow-[0_-8px_32px_rgba(16,24,40,0.08)] outline-none"
       >
         <div className="shrink-0 px-5 pt-3">
           <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-[#d4d8de]" aria-hidden="true" />
