@@ -195,3 +195,60 @@ export const bugBounty: DocPage = {
     },
   ],
 };
+
+export const dataInventory: DocPage = {
+  slug: "data-inventory",
+  href: "/docs/data-inventory",
+  label: "Who sees what",
+  summary: "For each kind of data in Ledger Chat: who can read it, written from the code and kept with it.",
+  keywords: ["privacy", "data", "metadata", "server", "who can see", "inventory", "fee payer", "contacts"],
+  updated: "2026-11-24",
+  blocks: [
+    {
+      t: "p",
+      text: "This page lists what each party can read: the people in a conversation, our server, the XMTP network and anyone watching Aztec. It is written from the code, and the same pull request that changes the code changes this page. The repository keeps the same list with file references in `docs/privacy/DATA_INVENTORY.md`.",
+    },
+    { t: "h2", text: "Messages and calls" },
+    {
+      t: "table",
+      head: ["Data", "Who can read it"],
+      strongFirst: true,
+      rows: [
+        ["Direct and group messages", "Only the people in the conversation. XMTP nodes store ciphertext."],
+        ["Attachments and voice notes", "Only the people in the conversation. Our server stores ciphertext and never has the key."],
+        ["Community posts", "Our server can read them. They are stored as plain text today."],
+        ["Presence and typing", "Our server, for a few seconds, and your contacts, unless you turn them off in Settings."],
+        ["Your contact list", "Our server stores who you have as a contact."],
+        ["Your username", "Our server, linked to your wallet address. People can find you only by your exact username."],
+        ["Notifications", "By default they say only New message: not the text and not who sent it. You can turn previews on."],
+      ],
+    },
+    { t: "h2", text: "Private payments on Aztec" },
+    {
+      t: "table",
+      head: ["Data", "Who can see it"],
+      strongFirst: true,
+      rows: [
+        ["Amount and recipient", "Nobody outside the conversation."],
+        ["That your account sent a transaction, and its fee", "Anyone, on Aztec Alpha. Your account pays its own fee in Fee Juice, so its transactions can be linked to each other."],
+        ["Shield and unshield", "Anyone: the amount and the account."],
+        ["The payment message in the chat", "Only the people in the conversation."],
+      ],
+    },
+    { t: "h2", text: "On your device only" },
+    {
+      t: "ul",
+      items: [
+        "Your private wallet keys, in a store encrypted with a key derived from your wallet signature.",
+        "Your message history. You can export it as a file sealed with a passphrase from Settings, Data and backup.",
+        "Your passkey record. A copy is backed up on our server as ciphertext we cannot open.",
+      ],
+    },
+    {
+      t: "hint",
+      tone: "info",
+      title: "What is still open",
+      text: "Community posts readable by the server, the contact list on the server and the public fee payer on Aztec Alpha are known gaps. Each one has an item in the public plan.",
+    },
+  ],
+};

@@ -4,19 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { Lock, X, Copy, ShieldAlert, Phone, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
-/** A 60 digit safety number, the same for both people, from the two wallet addresses. */
-async function safetyNumber(a: string, b: string): Promise<string> {
-  const [x, y] = [a.toLowerCase(), b.toLowerCase()].sort();
-  const bytes = new TextEncoder().encode(`ledger-chat-safety:${x}:${y}`);
-  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  const digits: string[] = [];
-  for (let i = 0; i < 12; i++) {
-    const n = ((hash[i * 2] << 8) | hash[i * 2 + 1]) * 1 + (hash[(i + 12) % 32] << 16);
-    digits.push(String(n % 100000).padStart(5, '0'));
-  }
-  return digits.join(' ');
-}
+import { inboxDevicesFor, safetyDigits } from '@/lib/chat/safety-glyphs';
 
+/**
+ * The safety number covers both XMTP inboxes and every device registered on them
+ * (lib/chat/safety-glyphs.ts), the same digest as the glyphs in the chat details. It changes when
+ * either person adds or removes a device, which is exactly when it should be compared again.
+ * Without a signed-in XMTP client there is nothing to derive it from, and the sheet says so instead
+ * of showing a number that would not detect a changed device.
+ */
 export function EncryptionInfoSheet({
   open,
   onClose,
@@ -24,6 +20,7 @@ export function EncryptionInfoSheet({
   myAddress,
   peerAddress,
   serverCount,
+  client,
 }: {
   open: boolean;
   onClose: () => void;
@@ -31,14 +28,29 @@ export function EncryptionInfoSheet({
   myAddress: string;
   peerAddress: string;
   serverCount: number;
+  /** The signed-in XMTP client; the safety number needs it to read both inboxes' devices. */
+  client?: any;
 }) {
   const [code, setCode] = useState('');
+  const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
     if (!open || !myAddress || !peerAddress) return;
     let live = true;
-    safetyNumber(myAddress, peerAddress).then(c => live && setCode(c)).catch(() => live && setCode(''));
+    setCode('');
+    setUnavailable(false);
+    (async () => {
+      try {
+        const devices = client ? await inboxDevicesFor(client, peerAddress) : null;
+        if (!live) return;
+        if (!devices) { setUnavailable(true); return; }
+        const digits = await safetyDigits(devices[0], devices[1]);
+        if (live) setCode(digits);
+      } catch {
+        if (live) setUnavailable(true);
+      }
+    })();
     return () => { live = false; };
-  }, [open, myAddress, peerAddress]);
+  }, [open, myAddress, peerAddress, client]);
 
   if (!open) return null;
   const rows: [React.ReactNode, string, string][] = [
@@ -61,8 +73,8 @@ export function EncryptionInfoSheet({
         ))}
         <div className="py-3 border-t border-[#eceef2]">
           <p className="text-[14px] font-semibold text-[#15171c]">Safety number</p>
-          <p className="text-[13px] text-[#4a505c] leading-relaxed mb-2">Derived from both wallet addresses. Compare it with {peerName} in person or on a call. If it matches, you are talking to the right person.</p>
-          <p className="font-mono text-[15px] tracking-wide text-[#15171c] bg-[#f2f4f7] rounded-xl p-3 break-words leading-7">{code || '...'}</p>
+          <p className="text-[13px] text-[#4a505c] leading-relaxed mb-2">Derived from both inboxes and every device on them. Compare it with {peerName} in person or on a call. If it matches, nobody has added a device to either side. It changes whenever one of you adds or removes a device.</p>
+          <p className="font-mono text-[15px] tracking-wide text-[#15171c] bg-[#f2f4f7] rounded-xl p-3 break-words leading-7" data-testid="safety-number">{code || (unavailable ? 'Not available until both devices are online on XMTP.' : '...')}</p>
           {code && (
             <button type="button" onClick={() => { navigator.clipboard?.writeText(code); toast.success('Safety number copied'); }} className="mt-2 text-[13px] font-semibold text-[#15171c] inline-flex items-center gap-1.5"><Copy size={14} /> Copy</button>
           )}
