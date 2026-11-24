@@ -45,11 +45,11 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 17 | Notification centre | 1 | HECHO | Previews hidden by default, no sender in the title (`lib/privacy/defaults.ts`) |
 | 18 | Dark mode and high contrast | 6 | DECISIÓN | One light theme by decision (`app/ledger-tokens.css`) |
 | 19 | Mobile gestures | 6 | SIN VERIFICAR | — |
-| 21 | Faster proofs in the browser | 5 | PARCIAL | Worker prover (`lib/zk/prover-client.ts`); no measurements in the repo |
+| 21 | Faster proofs in the browser | 5 | PARCIAL + HECHO (measure) | Proving time recorded per device (`lib/perf/proof-timings.ts`) and shown as an expectation; anonymous durations already reach the server log (`payment-report`) |
 | 22 | Transaction queue | 5 | PARCIAL | Activity record with stages (`components/zk/PaymentProgress.tsx`) |
 | 23 | Aggressive caching | 5 | SIN VERIFICAR | — |
 | 24 | Web Workers | 5 | PARCIAL | `lib/zk/prover-client.ts`, `lib/chat/record-worker.ts` |
-| 25 | Smaller initial bundle | 5 | SIN VERIFICAR | Wallet libraries are loaded with `dynamic()` on /connect |
+| 25 | Smaller initial bundle | 5 | EXISTÍA | The Aztec SDK loads on demand (`loadSdk`, dynamic import) only when the wallet opens |
 | 26 | Lazy-load old messages | 5 | SIN VERIFICAR | — |
 | 27 | Media compression | 5 | PARCIAL | Images (`lib/chat/compress-image.ts`); not audio or video |
 | 28 | Storage for tens of thousands of messages | 5 | SIN VERIFICAR | — |
@@ -58,10 +58,10 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 31 | Battery during proving | 5 | FALTA | — |
 | 32 | Prefetch frequent contacts | 5 | SIN VERIFICAR | — |
 | 33 | Messaging separate from payments | 5 | EXISTÍA | Different stacks (XMTP, Aztec) and code paths |
-| 34, 85, 89 | Observability without user data | 7 | PARCIAL | `docs/OBSERVABILITY.md`; telemetry route handles presence, not metrics |
-| 35 | Graceful degradation when Aztec is slow | 5 | PARCIAL | Chat does not wait for Aztec; no explicit slow-network state |
+| 34, 85, 89 | Observability without user data | 7 | EXISTÍA | `app/api/wallet/payment-report` logs stage, kind, network and duration only, no address; hourly counters (`lib/ops/counters.ts`) |
+| 35 | Graceful degradation when Aztec is slow | 5 | HECHO | The progress screen says when it is slower than usual on this device and that it can still go through |
 | 36 | CDN for assets only | 7 | SIN VERIFICAR | — |
-| 37 | Optimise the Noir contracts | 5 | FALTA | No gate report in CI |
+| 37 | Optimise the Noir contracts | 5 | PARCIAL | CI job summary reports ACIR opcodes per circuit (`aztec-ci.yml`); ceiling after the first baseline |
 | 38 | Client rate limiting | 5 | SIN VERIFICAR | Server rate limits exist (`lib/security/rateLimiter.ts`) |
 | 39 | Smart reconnection | 5 | SIN VERIFICAR | — |
 | 40, 98 | 10× peaks | 7 | PARCIAL | `scripts/load-test-k6.js` exists; one replica (doc of 18 Nov) |
@@ -128,6 +128,10 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R9 | Private membership proof | 4 | DECISIÓN taken: later | `docs/design/PRIVATE_MEMBERSHIP.md` |
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## Phase 5 (`claude/align-fase-5`)
+
+- 21 (measure), 35 and 37 (report) built; 25 and 34 already existed. Not done: 27 audio/video compression, 31 battery, 28/30/32/39 not verified.
 
 ## Phase 4 (`claude/align-fase-4`)
 
