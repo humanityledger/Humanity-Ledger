@@ -350,10 +350,9 @@ export default async function RootLayout({
             than Safari or Chrome on the same phone, so Ledger Chat looked zoomed in. There the page
             is laid out ~10% wider and shown at 0.9, which matches what the phone's own browser shows.
             Pinch zoom stays available (WCAG 1.4.4). Runs now and again once Next's viewport tag exists.
-            iPhone and iPad (Safari, Chrome, any iOS browser): maximum-scale=1 stops the page from zooming
-            in when a field gets focus. iOS ignores it for the person's own pinch zoom, which keeps
-            working; Android is not given it, because there it would block pinch zoom. minimum-scale=1
-            and shrink-to-fit=no keep the layout at the phone's width even if something overflows.
+            iPhone and iPad (Safari, Chrome, any iOS browser): minimum-scale=1 keeps the layout at the
+            phone's width even if something overflows. No maximum-scale: pinch zoom stays available
+            (WCAG 1.4.4), and fields are 16 px so focusing one does not zoom (globals.css).
             Next.js rewrites the tag on navigation, so it is put back whenever it changes. */}
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){try{
 var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);

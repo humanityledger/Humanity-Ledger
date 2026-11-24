@@ -4,8 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
+import { untranslated } from '../../helpers/untranslated';
 
-const read = (p: string) => fs.readFileSync(p, 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(p, 'utf8'));
 
 describe('direct entry', () => {
   it('no guidelines gate between sign-in and the chat; they are accepted on the sign-in screen', () => {

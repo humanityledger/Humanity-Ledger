@@ -421,7 +421,7 @@
 .stack li { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s16); padding-bottom: var(--s32); }
 .stack li > div { grid-column: 2; min-width: 0; }
 .stack li::before { content: ''; position: absolute; left: 15.5px; top: 22px; bottom: 0; width: 1px; background: var(--line); }
-.stack li::after { content: ''; position: absolute; left: 11px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1.5px rgba(82, 0, 255, 0.55); }
+.stack li::after { content: ''; position: absolute; left: 11px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px rgba(82, 0, 255, 0.55); }
 .stack li:last-child { padding-bottom: 0; }
 .stack li:last-child::before { display: none; }
 .stack b { font-size: var(--t18); color: var(--ink); }

@@ -24,7 +24,7 @@ import { ArrowDown, ClipboardPaste, Lock, ScanLine, Share2, LockOpen, UserPlus }
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, isAztecAddress } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
-import { formatUnits } from '@/lib/aztec/wallet/amounts';
+import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
 import { amountProblem, effectiveToken, recipientProblem } from './walletLogic';
 import { useT } from '@/lib/i18n/client';
 
@@ -32,7 +32,7 @@ export { amountProblem, recipientProblem };
 import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
 import { usePaymentProofActivity } from '@/lib/activities/hooks';
 import {
-  AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, groupHex, shortHex,
+  AddressAvatar, AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, OK, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, TokenMark, groupHex, shortHex,
 } from './WalletUI';
 import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
 import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
@@ -187,8 +187,18 @@ export function SendFlow({
     return (
       <div className="space-y-4" data-testid="send-review">
         <StepDots steps={['Details', 'Review']} at={1} />
-        <div className="text-center pt-1 pb-2">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <div className="relative pt-1 pb-2 flex flex-col items-center text-center">
+          {/* From your private balance to this address: the two ends of the payment, face to face. */}
+          <div className="flex items-center gap-2" aria-hidden="true">
+            <TokenMark symbol={symbol} size={44} shielded />
+            <span className="flex items-center gap-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#15171c]" style={{ opacity: 0.25 + i * 0.25 }} />
+              ))}
+            </span>
+            <AddressAvatar address={to} size={44} />
+          </div>
+          <p className="mt-3 text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
             {tr("You send privately")}
           </p>
           <p className="mt-1 text-[40px] font-semibold tracking-[-0.035em] tabular-nums leading-tight" style={{ color: INK }}>
@@ -196,7 +206,16 @@ export function SendFlow({
           </p>
         </div>
         <Card as="div" className="px-5 py-1">
-          <KV k="To" v={shortHex(to, 8)} mono />
+          <KV
+            k="To"
+            v={
+              <span className="inline-flex items-center gap-2 max-w-full">
+                <AddressAvatar address={to} size={20} />
+                <span className="truncate">{shortHex(to, 8)}</span>
+              </span>
+            }
+            mono
+          />
           <KV k="From" v="Your private balance" />
           <KV k="Network" v={networkLabel()} />
           {isTestToken(symbol) && <KV k="Asset" v={`${symbol}, ${TEST_TOKEN_NOTE.toLowerCase()}`} />}
@@ -278,6 +297,13 @@ export function SendFlow({
         {toErr && (
           <p className="mt-1.5 text-[13px]" style={{ color: '#b42318' }} role="alert">
             {toErr}
+          </p>
+        )}
+        {!toErr && isAztecAddress(to) && (
+          <p className="mt-2 flex items-center gap-2 text-[13px] font-medium" style={{ color: INK_2 }}>
+            <AddressAvatar address={to} size={22} />
+            <span className="font-mono tabular-nums" style={{ color: INK }}>{shortHex(to, 6)}</span>
+            <span style={{ color: OK }}>{tr("Valid Aztec address")}</span>
           </p>
         )}
       </div>
@@ -428,6 +454,16 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
   const privateUnits = bal?.privateUnits ?? 0n;
   const max = mode === 'shield' ? publicUnits : privateUnits;
   const amountErr = amountProblem(amount, decimals, max);
+  // What each balance becomes, shown while typing. Only for an amount the wallet would accept.
+  const moving = useMemo(() => {
+    if (!amount || amountErr) return null;
+    try {
+      const u = parseUnits(amount, decimals);
+      return u > 0n && u <= max ? u : null;
+    } catch {
+      return null;
+    }
+  }, [amount, amountErr, decimals, max]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -460,12 +496,12 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
       <DisclosurePanel action={mode} />
 
       <div className="relative" aria-label={tr("{label} to {label2}", { label: from.label, label2: to.label })}>
-        <BalanceLeg title={tr("From")} {...from} decimals={decimals} symbol={symbol} />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center z-[1]" aria-hidden="true">
-          <ArrowDown size={16} strokeWidth={2.2} style={{ color: INK }} />
+        <BalanceLeg title={tr("From")} {...from} decimals={decimals} symbol={symbol} after={moving !== null ? from.units - moving : undefined} />
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-[14px] bg-white border border-[#e4e7ec] shadow-[0_4px_12px_-6px_rgba(16,24,40,0.25)] flex items-center justify-center z-[1]" aria-hidden="true">
+          <ArrowDown size={17} strokeWidth={2.2} style={{ color: INK }} />
         </span>
         <div className="h-2" />
-        <BalanceLeg title={tr("To")} {...to} decimals={decimals} symbol={symbol} />
+        <BalanceLeg title={tr("To")} {...to} decimals={decimals} symbol={symbol} after={moving !== null ? to.units + moving : undefined} gains={moving !== null} />
       </div>
 
       <TokenChips tokens={tokens} value={token} onChange={setToken} />
@@ -492,11 +528,17 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
   );
 }
 
-function BalanceLeg({ title, label, units, icon, decimals, symbol }: { title: string; label: string; units: bigint; icon: React.ReactNode; decimals: number; symbol: string }) {
+function BalanceLeg({
+  title, label, units, icon, decimals, symbol, after, gains,
+}: { title: string; label: string; units: bigint; icon: React.ReactNode; decimals: number; symbol: string; after?: bigint; gains?: boolean }) {
+  const tr = useT();
   return (
     <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] px-4 py-3 flex items-center gap-3">
-      <span className="w-9 h-9 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center shrink-0" style={{ color: INK }}>
-        {icon}
+      <span className="relative shrink-0">
+        <TokenMark symbol={symbol} size={38} />
+        <span className="absolute -right-1 -bottom-1 w-[18px] h-[18px] rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center [&>svg]:w-[11px] [&>svg]:h-[11px]" style={{ color: INK }}>
+          {icon}
+        </span>
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
@@ -506,8 +548,15 @@ function BalanceLeg({ title, label, units, icon, decimals, symbol }: { title: st
           {label}
         </span>
       </span>
-      <span className="text-[15px] font-semibold tabular-nums shrink-0" style={{ color: INK }}>
-        {formatUnits(units, decimals)} <span style={{ color: INK_2 }}>{symbol}</span>
+      <span className="text-right shrink-0">
+        <span className="block text-[15px] font-semibold tabular-nums" style={{ color: INK }}>
+          {formatUnits(units, decimals)} <span style={{ color: INK_2 }}>{symbol}</span>
+        </span>
+        {after !== undefined && (
+          <span className="block text-[12.5px] font-semibold tabular-nums" style={{ color: gains ? OK : INK_3 }} aria-label={tr("After: {amount} {symbol}", { amount: formatUnits(after, decimals), symbol })}>
+            {tr("After {amount}", { amount: formatUnits(after, decimals) })}
+          </span>
+        )}
       </span>
     </div>
   );

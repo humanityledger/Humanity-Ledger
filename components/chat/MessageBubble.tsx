@@ -110,6 +110,8 @@ export interface MessageProps {
   onThreadReply?: (msg: any) => void;
   onVotePoll?: (pollId: string, optionIndex: number) => void;
   onEditMsg?: (id: string, currentContent: string) => void;
+  /** Send a message that failed again. Shown as "Retry" next to "Not sent". */
+  onRetry?: (msg: any) => void;
   onJoinGroupCall?: (roomId: string, password: string) => void;
   /** The other person's XMTP inbox when this is a direct conversation; agreements need it. */
   dmPeerInboxId?: string;
@@ -631,7 +633,7 @@ MessageTicks.displayName = 'MessageTicks';
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, recordMembers, enter = false,
+  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, recordMembers, enter = false, onRetry,
 }: MessageProps) => {
   const tr = useT();
   const controls = useAnimation();
@@ -1143,7 +1145,19 @@ export const MessageBubble = React.memo(({
             </span>
             {isMe && !msg.failed && <MessageTicks status={msg.status} readReceipts={readReceipts} />}
             {isMe && msg.failed && (
-              <span className="text-[12px] font-medium text-[#d93036]">{tr("Not sent")}</span>
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#d93036]" role="status" title={typeof msg.error === 'string' ? msg.error.replace(/^Message delivery failed via XMTP: /, '') : undefined}>
+                {tr("Not sent")}
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onRetry(msg); }}
+                    className="min-h-[28px] px-2 -my-1 rounded-full text-[#15171c] font-semibold underline underline-offset-2 decoration-[#d0d4db] active:bg-[#f1f2f4]"
+                    aria-label={tr("Send this message again")}
+                  >
+                    {tr("Retry")}
+                  </button>
+                )}
+              </span>
             )}
           </div>
         </motion.div>

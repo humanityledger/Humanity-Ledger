@@ -108,7 +108,10 @@ describe('cUSDC for everyone', () => {
     expect(cfg).toMatch(/NETWORK === 'mainnet' \? CONFIGURED_TOKENS\.filter\(\(t\) => !isTestToken\(t\.symbol\)\) : CONFIGURED_TOKENS/);
     expect(cfg).toMatch(/CUSDC_PUBLIC \? LISTED_TOKENS : withoutGatedTokens\(LISTED_TOKENS\)/);
     expect(cfg).toMatch(/NETWORK === 'mainnet' && !CUSDC_PUBLIC \? CONFIGURED_TOKENS\.filter/);
-    expect(fs.readFileSync('lib/landing/claims.ts', 'utf8')).toMatch(/label: CUSDC_PUBLIC \? 'Live' : 'Not enabled yet'/);
+    // "Live" only when the public switch is on; otherwise a label that does not say live.
+    const claimLabel = fs.readFileSync('lib/landing/claims.ts', 'utf8').match(/label: CUSDC_PUBLIC \? 'Live' : '([^']+)'/);
+    expect(claimLabel).not.toBeNull();
+    expect(claimLabel![1]).not.toMatch(/live/i);
   });
 });
 

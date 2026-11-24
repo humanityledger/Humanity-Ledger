@@ -142,8 +142,11 @@ contract DeadmanHandler is Test {
     uint256 public earlyTriggers;
     uint256 public strangerTriggers;
     uint256 public backupSwaps; // backup changed before the cooldown
+    address public vault; // the HumanityTimeLockVault under test, to count tokens sent to it directly
+    uint256 public unsolicitedToVault;
 
-    constructor(LedgerDeadmanSwitch s, MockERC20 t, address o, address b) {
+    constructor(LedgerDeadmanSwitch s, MockERC20 t, address o, address b, address v) {
+        vault = v;
         d = s;
         token = t;
         owner = o;
@@ -178,8 +181,12 @@ contract DeadmanHandler is Test {
         bool early = block.timestamp <= lastPing + d.timeoutPeriod();
         address[] memory erc20 = new address[](1);
         erc20[0] = address(token);
+        address heir = d.backupWallet();
+        uint256 before = token.balanceOf(vault);
         vm.prank(caller);
         try d.triggerInheritance(erc20, new address[](0), new uint256[](0)) {
+            // Tokens inherited by the vault contract itself land outside its books.
+            if (heir == vault) unsolicitedToVault += token.balanceOf(vault) - before;
             if (early) earlyTriggers++;
             if (caller != d.backupWallet() && caller != owner) strangerTriggers++;
         } catch {}
@@ -211,7 +218,7 @@ contract VaultInvariantsTest is Test {
         token.mint(owner, 1_000_000 ether);
         vm.prank(owner);
         token.approve(address(dms), type(uint256).max);
-        dh = new DeadmanHandler(dms, token, owner, makeAddr("dms-backup"));
+        dh = new DeadmanHandler(dms, token, owner, makeAddr("dms-backup"), address(vault));
         targetContract(address(th));
         targetContract(address(vh));
         targetContract(address(dh));
@@ -223,11 +230,15 @@ contract VaultInvariantsTest is Test {
         assertEq(address(tl).balance, th.held());
     }
 
-    /// HumanityTimeLockVault: the token balance equals the recorded balances; no early sweep.
+    /// HumanityTimeLockVault: the vault holds at least what its books owe, and the books match every
+    /// deposit, withdrawal and sweep exactly; no early sweep. "At least": anyone can transfer tokens
+    /// to the vault without depositing (here the fuzzer once named the vault as the deadman switch's
+    /// backup, and the inheritance sent it 1e24 tokens). Such tokens belong to nobody's balance.
     function invariant_vault_books_balance() public view {
         uint256 sum;
         for (uint256 i; i < 3; ++i) sum += vault.vaultBalances(vh.owners(i), address(token));
-        assertEq(token.balanceOf(address(vault)), sum);
+        assertGe(token.balanceOf(address(vault)), sum);
+        assertEq(token.balanceOf(address(vault)) - sum, dh.unsolicitedToVault());
         assertEq(vh.deposited(), sum + vh.withdrawnByOwners() + vh.sweptToBackup());
         assertEq(vh.earlyTriggers(), 0);
         assertEq(vh.strangerTookFunds(), 0);

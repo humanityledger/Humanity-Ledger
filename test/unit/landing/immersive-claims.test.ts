@@ -13,8 +13,12 @@ describe('the immersive landing says only what the code and the record back', ()
   it('never claims an audit, E2E communities, a deployed portal, sponsorship or Studio', () => {
     for (const src of [...sources, text]) {
       expect(src).not.toMatch(/\baudited\b|audit seal|certified/i);
-      expect(src).not.toMatch(/end[- ]to[- ]end[^.]{0,80}communit|communit[^.]{0,80}end[- ]to[- ]end/i);
-      expect(src).not.toMatch(/partner|powered by Aztec Labs|backed by|sponsor/i);
+      // A sentence that says communities are NOT end-to-end encrypted is the honest limit, not a claim.
+      const e2eCommunity = [...src.matchAll(/end[- ]to[- ]end[^.]{0,80}communit|communit[^.]{0,80}end[- ]to[- ]end/gi)].map((m) => m[0]);
+      expect(e2eCommunity.filter((m) => !/\b(not|never|no|nor|isn't|aren't)\b/i.test(m))).toEqual([]);
+      // A denial ("Nothing is sponsored", "no sponsored fee payer") is the honest statement, not a claim.
+      const backers = [...src.matchAll(/(.{0,24})(partner|powered by Aztec Labs|backed by|sponsor)/gi)];
+      expect(backers.filter((m) => !/\b(nothing is|no|not|never)\b[^.]*$/i.test(m[1])).map((m) => m[0])).toEqual([]);
       expect(src).not.toMatch(/\bStudio\b|\bQDS\b/);
       expect(src).not.toMatch(/revolutionary|unprecedented|military[- ]grade/i);
     }

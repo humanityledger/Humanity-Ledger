@@ -24,6 +24,7 @@ import { tokensFor, type TokenConfig } from '@/lib/aztec/wallet/config';
 import { balanceProblem, recipientProblem } from '@/lib/payments/send-checks';
 import { paidRequestIds, rememberPaidRequest, requestSettlement } from '@/lib/payments/paid-requests';
 import { BANNED } from '@/lib/landing/claims';
+import { untranslated } from '../../helpers/untranslated';
 
 const PEPPER = 'q'.repeat(40);
 const now = new Date('2026-12-01T00:00:00Z');
@@ -81,12 +82,12 @@ describe('the operator table', () => {
     expect(redeemedLine(42)).toBe('42 / 100 redeemed');
   });
   it('the file is never committed and is written owner-only', () => {
-    expect(fs.readFileSync('.gitignore', 'utf8')).toContain(CODES_FILE);
-    const gen = fs.readFileSync('scripts/beta/generate-100-codes.mjs', 'utf8');
+    expect(untranslated(fs.readFileSync('.gitignore', 'utf8'))).toContain(CODES_FILE);
+    const gen = untranslated(fs.readFileSync('scripts/beta/generate-100-codes.mjs', 'utf8'));
     expect(gen).toMatch(/flag: 'wx', mode: 0o600/);
     expect(gen).toMatch(/open \+ count > MAX_BETA_CODES/);
     expect(gen).toMatch(/betaCodeHash\(code, pepper\)/);
-    const ops = fs.readFileSync('scripts/beta/cusdc-invites.mjs', 'utf8');
+    const ops = untranslated(fs.readFileSync('scripts/beta/cusdc-invites.mjs', 'utf8'));
     expect(ops).toMatch(/cmd === 'assign'/);
     expect(ops).toMatch(/inviteChecksProblem\(checks\)/);
     expect(ops).toMatch(/cmd === 'export-table'/);
@@ -153,13 +154,13 @@ describe('redemption', () => {
     expect(remainingPlaces(100, null)).toBeNull();
   });
   it('the endpoint keeps its session, rate limit and the checks in the database query', () => {
-    const route = fs.readFileSync('app/api/beta/cusdc/redeem/route.ts', 'utf8');
+    const route = untranslated(fs.readFileSync('app/api/beta/cusdc/redeem/route.ts', 'utf8'));
     expect(route).toMatch(/getVerifiedCaller/);
     expect(route).toMatch(/max: 5, windowSec: 3600/);
-    const prisma = fs.readFileSync('lib/beta/cusdc-beta-prisma.ts', 'utf8');
+    const prisma = untranslated(fs.readFileSync('lib/beta/cusdc-beta-prisma.ts', 'utf8'));
     expect(prisma).toMatch(/sanctionsResult: 'clear', adultCheckedAt: \{ not: null \}/);
     expect(prisma).toMatch(/pg_advisory_xact_lock/);
-    const status = fs.readFileSync('app/api/beta/cusdc/status/route.ts', 'utf8');
+    const status = untranslated(fs.readFileSync('app/api/beta/cusdc/status/route.ts', 'utf8'));
     expect(status).toMatch(/remaining: remainingPlaces\(capacity, members\)/);
     expect(status).toMatch(/wallet: w,/);
   });
@@ -219,20 +220,22 @@ describe('/beta', () => {
     expect(betaSummary(st(), { applies: true })).toEqual({ value: 'Invitation only', sub: '58 of 100 places left. Join with your invitation code.' });
     expect(betaSummary(st({ member: true, active: true, access: true }), { applies: true }).value).toBe('Member');
     expect(betaSummary(null, { applies: true, signedOut: true }).value).toBe('Invitation only');
-    const settings = fs.readFileSync('components/chat/LedgerSettingsFull.tsx', 'utf8');
+    const settings = untranslated(fs.readFileSync('components/chat/LedgerSettingsFull.tsx', 'utf8'));
     expect(settings).toMatch(/<PaymentsAvailability \/>/);
-    const panel = fs.readFileSync('components/beta/PaymentsAvailability.tsx', 'utf8');
-    for (const s of ['ETH, USDC or USDT on Ethereum mainnet', 'On Aztec Alpha in ${PRIVATE_ASSET.phrase}', 'Fee Juice', "href={applies ? '/beta' : undefined}"]) expect(panel).toContain(s);
+    const panel = untranslated(fs.readFileSync('components/beta/PaymentsAvailability.tsx', 'utf8'));
+    for (const s of ['ETH, USDC or USDT on Ethereum mainnet', 'Fee Juice', "href={applies ? '/beta' : undefined}"]) expect(panel).toContain(s);
+    // The asset phrase comes from PRIVATE_ASSET, as a template or as a translation variable.
+    expect(panel).toMatch(/On Aztec Alpha in \$\{PRIVATE_ASSET\.phrase\}|On Aztec Alpha in \{phrase\}[^\n]*phrase: PRIVATE_ASSET\.phrase/);
   });
   it('the new texts make no claim the landing forbids', () => {
     for (const f of ['components/beta/BetaGateView.tsx', 'components/beta/PaymentsAvailability.tsx', 'lib/beta/gate.ts', 'lib/payments/send-checks.ts', 'docs/beta/CUSDC_BETA.md']) {
-      const text = fs.readFileSync(f, 'utf8');
+      const text = untranslated(fs.readFileSync(f, 'utf8'));
       for (const re of BANNED) expect(text, `${f} ${re}`).not.toMatch(re);
     }
   });
   it('the page is the gate, unlocks with the notice version and drops the cached answer', () => {
-    expect(fs.readFileSync('app/beta/page.tsx', 'utf8')).toMatch(/<BetaGateView \/>/);
-    const view = fs.readFileSync('components/beta/BetaGateView.tsx', 'utf8');
+    expect(untranslated(fs.readFileSync('app/beta/page.tsx', 'utf8'))).toMatch(/<BetaGateView \/>/);
+    const view = untranslated(fs.readFileSync('components/beta/BetaGateView.tsx', 'utf8'));
     expect(view).toMatch(/Unlock cUSDC Beta/);
     expect(view).toMatch(/noticeVersion: status\.notice\.version/);
     expect(view).toMatch(/invalidateCusdcBeta\(\);\n    setStep\('done'\);/);
@@ -297,10 +300,13 @@ describe('redeem → visibility → payment capability', () => {
     expect(balanceProblem('1.5', t, { privateUnits: 1_500_000n, publicUnits: 0n })).toBeNull();
     expect(balanceProblem('2', t, undefined)).toBeNull();
     expect(balanceProblem('abc', t, { privateUnits: 0n, publicUnits: 0n })).toBeNull();
-    const modal = fs.readFileSync('components/chat/ZkMoneyModal.tsx', 'utf8');
-    expect(modal).toMatch(/const blocked = !!paused \|\| !!recipientIssue \|\| !!lowBalance/);
+    const modal = untranslated(fs.readFileSync('components/chat/ZkMoneyModal.tsx', 'utf8'));
+    // Send stays blocked while paused, for a recipient problem or a low balance (other checks may join).
+    const blockedLine = modal.match(/const blocked = [^\n]*;/)?.[0] ?? '';
+    for (const cond of ['!!paused', '!!recipientIssue', '!!lowBalance']) expect(blockedLine).toContain(cond);
+    expect(blockedLine).not.toMatch(/&&\s*!!(paused|recipientIssue|lowBalance)/);
     expect(modal).toMatch(/token === 'CUSDC' && betaApplies\(\)/);
-    const route = fs.readFileSync('app/api/beta/cusdc/member/route.ts', 'utf8');
+    const route = untranslated(fs.readFileSync('app/api/beta/cusdc/member/route.ts', 'utf8'));
     expect(route).toMatch(/getVerifiedCaller/);
     expect(route).toMatch(/checkRateLimit/);
     expect(route).toMatch(/recipientAnswer\(caller, target\)/);

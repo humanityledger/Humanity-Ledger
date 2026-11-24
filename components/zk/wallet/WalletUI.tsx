@@ -110,6 +110,110 @@ export function Figure({ text, hidden, strong, className = '' }: { text: string;
   );
 }
 
+/* ─── marks ────────────────────────────────────────────────────────────────── */
+
+const TOKEN_TINT: Record<string, [string, string]> = {
+  USD: ['#3b82f6', '#1d4ed8'],
+  HLC: ['#3a3f4b', '#0f1116'],
+  ETH: ['#7c8cff', '#4252d6'],
+  FEE: ['#f59e0b', '#c2410c'],
+};
+
+/**
+ * A round mark for a token: a dollar sign for dollar tokens (cUSDC), the first letter otherwise.
+ * Our own drawing, never an issuer's logo. `shielded` adds a small lock seal: the amount is private.
+ */
+export function TokenMark({ symbol, size = 28, shielded }: { symbol: string; size?: number; shielded?: boolean }) {
+  const sym = (symbol || '?').toUpperCase();
+  const dollar = /USD/.test(sym);
+  const [a, b] = dollar ? TOKEN_TINT.USD : TOKEN_TINT[sym] ?? TOKEN_TINT.HLC;
+  const glyph = dollar ? '$' : sym.replace(/^C(?=[A-Z]{2})/, '').slice(0, 1);
+  const seal = Math.max(12, Math.round(size * 0.44));
+  return (
+    <span
+      aria-hidden="true"
+      className="relative inline-flex items-center justify-center rounded-full shrink-0 text-white font-semibold select-none"
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.round(size * 0.48),
+        lineHeight: 1,
+        background: `linear-gradient(150deg, ${a}, ${b})`,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.18), 0 1px 2px rgba(16,24,40,0.18)',
+      }}
+    >
+      {glyph}
+      {shielded && (
+        <span
+          className="absolute -right-1 -bottom-1 rounded-full flex items-center justify-center"
+          style={{ width: seal, height: seal, background: '#15171c', boxShadow: '0 0 0 2px #ffffff' }}
+        >
+          <svg width={seal * 0.58} height={seal * 0.58} viewBox="0 0 12 12" fill="none">
+            <rect x="2.5" y="5.2" width="7" height="5" rx="1.3" fill="#fff" />
+            <path d="M4 5.2V4a2 2 0 0 1 4 0v1.2" stroke="#fff" strokeWidth="1.4" />
+          </svg>
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * A picture of an Aztec address: colours read from its first bytes, the same on every screen and
+ * every device. Two different addresses almost never look alike, so a person can tell at a glance
+ * that the recipient on the review is the one they scanned. It replaces nothing: the full
+ * address is always shown next to it.
+ */
+export function AddressAvatar({ address, size = 40 }: { address: string; size?: number }) {
+  const hex = (address || '').replace(/^0x/i, '').toLowerCase();
+  const byte = (i: number) => {
+    const v = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    return Number.isFinite(v) ? v : 0;
+  };
+  const h1 = Math.round((byte(0) / 255) * 360);
+  const h2 = (h1 + 70 + Math.round((byte(1) / 255) * 140)) % 360;
+  const h3 = (h2 + 50 + Math.round((byte(2) / 255) * 90)) % 360;
+  const angle = Math.round((byte(3) / 255) * 360);
+  const cx = 25 + Math.round((byte(4) / 255) * 50);
+  const cy = 25 + Math.round((byte(5) / 255) * 50);
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block rounded-full shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: `radial-gradient(circle at ${cx}% ${cy}%, hsl(${h3} 85% 70% / 0.95), transparent 46%), conic-gradient(from ${angle}deg, hsl(${h1} 72% 52%), hsl(${h2} 70% 46%), hsl(${h1} 72% 52%))`,
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35), 0 1px 2px rgba(16,24,40,0.15)',
+      }}
+    />
+  );
+}
+
+/**
+ * The private notes, drawn: a quiet field of dots that fades out from one corner. Used behind the
+ * dark balance card and the opening screen. Pure CSS, nothing animates, nothing is read.
+ */
+export function NoteField({ at = '100% 0%', opacity = 0.16 }: { at?: string; opacity?: number }) {
+  const mask = `radial-gradient(120% 95% at ${at}, #000 0%, rgba(0,0,0,0.55) 38%, transparent 72%)`;
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{
+        backgroundImage: `radial-gradient(rgba(255,255,255,${opacity}) 1px, transparent 1.3px)`,
+        backgroundSize: '14px 14px',
+        backgroundPosition: '7px 7px',
+        WebkitMaskImage: mask,
+        maskImage: mask,
+      }}
+    />
+  );
+}
+
+/** The dark surface of the balance card and the opening screen. */
+export const VAULT_BG = 'linear-gradient(158deg, #1d2136 0%, #14161f 44%, #0c0d12 100%)';
+
 /* ─── buttons ──────────────────────────────────────────────────────────────── */
 
 export function IconButton({
@@ -212,7 +316,9 @@ export function PrimaryButton({
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className={`w-full min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 transition-[background-color,transform] active:scale-[0.99] disabled:bg-[#e4e7ec] disabled:text-[#5b606b] disabled:active:scale-100 ${FOCUS} ${
-        tone === 'danger' ? 'bg-[#b42318] hover:bg-[#962018] text-white' : 'bg-[#15171c] hover:bg-[#262932] text-white'
+        tone === 'danger'
+          ? 'bg-[#b42318] hover:bg-[#962018] text-white'
+          : 'bg-[#15171c] bg-gradient-to-b from-[#2b2f3a] to-[#121419] hover:from-[#343947] hover:to-[#181b22] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_10px_24px_-14px_rgba(21,23,28,0.75)] disabled:from-[#e4e7ec] disabled:to-[#e4e7ec] disabled:shadow-none'
       }`}
     >
       {busy && <Spinner />}
@@ -371,10 +477,13 @@ export function TokenChips<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(t.key)}
-            className={`min-h-[40px] px-4 rounded-full text-[14px] font-semibold border transition-colors ${FOCUS} ${
-              on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f7f8fa]'
+            className={`min-h-[44px] pl-1.5 pr-4 rounded-full text-[14px] font-semibold border inline-flex items-center gap-2 transition-[background-color,border-color,box-shadow] ${FOCUS} ${
+              on
+                ? 'bg-[#15171c] border-[#15171c] text-white shadow-[0_6px_16px_-10px_rgba(21,23,28,0.8)]'
+                : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f7f8fa]'
             }`}
           >
+            <TokenMark symbol={t.symbol} size={30} />
             {t.symbol}
           </button>
         );
@@ -689,24 +798,23 @@ export function Sheet({
 
 /* ─── steps ────────────────────────────────────────────────────────────────── */
 
-/** "1 Details — 2 Review" at the top of a two-step sheet. */
+/** "1 Details, 2 Review" at the top of a two-step sheet: a bar per step that fills as you go. */
 export function StepDots({ steps, at }: { steps: string[]; at: number }) {
   const tr = useT();
   return (
-    <ol className="flex items-center gap-2 mb-4" aria-label={tr("Steps")}>
+    <ol className="grid gap-2 mb-4" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={tr("Steps")}>
       {steps.map((s, i) => (
-        <li key={s} className="flex items-center gap-2 min-w-0" aria-current={i === at ? 'step' : undefined}>
-          <span
-            className={`w-6 h-6 rounded-full text-[12px] font-semibold flex items-center justify-center shrink-0 ${
-              i < at ? 'bg-[#15171c] text-white' : i === at ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#5b606b]'
-            }`}
-          >
-            {i < at ? <Check size={13} strokeWidth={2.6} aria-hidden="true" /> : i + 1}
+        <li key={s} className="min-w-0" aria-current={i === at ? 'step' : undefined}>
+          <span className="block h-1 rounded-full overflow-hidden bg-[#eceef2]" aria-hidden="true">
+            <span
+              className="block h-full rounded-full bg-[#15171c] transition-[width] duration-300 ease-out motion-reduce:transition-none"
+              style={{ width: i <= at ? '100%' : '0%' }}
+            />
           </span>
-          <span className="text-[13px] font-semibold truncate" style={{ color: i <= at ? INK : INK_3 }}>
-            {s}
+          <span className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold truncate" style={{ color: i <= at ? INK : INK_3 }}>
+            {i < at ? <Check size={13} strokeWidth={2.6} aria-hidden="true" /> : <span className="tabular-nums" aria-hidden="true">{i + 1}</span>}
+            {tr(s)}
           </span>
-          {i < steps.length - 1 && <span className="w-6 h-px bg-[#d4d8de] shrink-0" aria-hidden="true" />}
         </li>
       ))}
     </ol>

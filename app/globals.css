@@ -224,6 +224,17 @@ body:has([data-landing="mobile"]) {
   overscroll-behavior-y: auto !important;
 }
 
+/* ── PUBLIC SITE (/, /record, /security, /trust): white to the very edge ────
+   24 November 2026: on an iPhone the landing showed a grey band at the bottom of the screen,
+   cutting the phone photos off, once Safari hid its toolbar. The band was the body's #f4f6fa from
+   the "nuclear guarantee" above: Safari on iOS 26 paints the area its toolbar leaves with the
+   body background. These pages are white, so their body is white too. */
+html:has([data-site="public"]),
+body:has([data-site="public"]) {
+  background-color: #FFFFFF !important;
+  padding-bottom: 0 !important;
+}
+
 
 /* 
    Enterprise LAYOUT SYSTEM

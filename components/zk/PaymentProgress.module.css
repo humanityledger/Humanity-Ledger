@@ -144,7 +144,8 @@
 .step.done .dot { background: #13a87a; border-color: #13a87a; }
 .step.active { background: #ffffff; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06); }
 .step.active .dot { border-color: rgba(19, 168, 122, 0.25); border-top-color: #13a87a; animation: orbit 0.9s linear infinite; }
-.step.todo { opacity: 0.45; }
+.step.todo { opacity: 0.55; }
+.step.todo .dot { color: #5f6673; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .step.bad { background: #fdf3f2; }
 .step.bad .dot { background: #e5484d; border-color: #e5484d; }
 .step.bad .stepNote { color: #b42318; }

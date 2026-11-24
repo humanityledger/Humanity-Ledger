@@ -49,7 +49,7 @@ const STORED: { what: string; why: string }[] = [
 export default async function TrustPage() {
   const t = await getT();
   return (
-    <div className={s.site}>
+    <div className={s.site} data-site="public">
       <a href="#main" className={s.skip}>{t("Skip to content")}</a>
       <SiteHeader home={false} />
       <main id="main">

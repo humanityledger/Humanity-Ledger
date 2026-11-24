@@ -16,7 +16,9 @@ describe('wallet payment events', () => {
     const client = fs.readFileSync('lib/aztec/wallet/client.ts', 'utf8');
     for (const s of ['attempted', 'sent', 'mined', 'unconfirmed', 'failed']) expect(client).toContain(`reportPayment('${s}'`);
     const report = fs.readFileSync('lib/aztec/wallet/payment-report.ts', 'utf8');
-    expect(report).not.toMatch(/txHash|amount:|address|message:/);
+    // Code only: the header comment lists what is never sent.
+    const reportCode = report.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(reportCode).not.toMatch(/txHash|amount:|address|message:/);
     const route = fs.readFileSync('app/api/wallet/payment-report/route.ts', 'utf8');
     expect(route).toMatch(/requireWallet/);
     expect(route).toMatch(/checkRateLimit/);
