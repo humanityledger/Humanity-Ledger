@@ -19,6 +19,14 @@ Legend: **Server** = our Next.js app, its Postgres, Redis and R2 storage on Rail
 | Username ↔ wallet address | The server (table `ChatUsername`). Lookup is exact-match only, 30 per minute. | `app/api/chat/username/lookup/route.ts` |
 | Push notifications | The push service sees that a notification was sent; with "hide content" on, it carries no text. | `lib/wallet/NotificationEngine.ts`, `lib/push/usePushNotifications.ts` |
 
+## Verification and stickers (24 November 2026)
+
+| Data | Who can read it | Evidence |
+|---|---|---|
+| Contacts you marked as verified, and the safety number at that moment | This device only (local storage). Nothing is sent. | `lib/chat/verified-contacts.ts` |
+| Stickers sent | The people in the conversation (XMTP). The image files are served from our site, so our server sees that your browser loaded a pack, not to whom it was sent. | `lib/chat/stickers.ts`, `public/stickers/` |
+| Closed beta request (the three-step form) | The operator, by email. | `components/beta/BetaRequestForm.tsx` |
+
 ## Account and sign-in
 
 | Data | Who can read it | Evidence |

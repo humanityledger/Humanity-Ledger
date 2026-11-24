@@ -20,6 +20,14 @@
 
 **Status (11 November):** one contract of ours is on Aztec Alpha, the operator's token HLC (below); no escrow or stream is. Production runs on Alpha since #41 (until then the Dockerfile declared no `ARG`, so every build used the test network defaults). The private wallet's storage bug (#43) and its dead ends are fixed in code. **14 November:** the first real end-to-end run is recorded (R1 below: first private payment from Ledger Chat, L2 block 29012). The wallet refuses a node that settles on Ethereum mainnet (`assertNetworkAllowed`) unless the build carries **both** `NEXT_PUBLIC_AZTEC_NETWORK=alpha` and `NEXT_PUBLIC_AZTEC_ALPHA_ENABLED=true`.
 
+## Note, 24 November 2026
+
+Unchanged in this document's gates since 12 November, with two additions elsewhere:
+- the closed cUSDC beta has been on since 23 November (`docs/beta/CUSDC_BETA.md`);
+- the Ethereum portal, receiver addresses and PortalToken (`docs/PORTAL.md`) are still not deployed and not audited. They are wave 2 (OD-1): an external review first, then a 2-of-3 Safe as admin and a separate guardian (OD-6), alerts (B-1) and caps set with the review (OD-3, OD-9).
+
+`audit` stays `null`.
+
 ## State on 12 November 2026: what stands between Ledger Chat and an unqualified "live on mainnet"
 
 Production runs on Aztec Alpha (Ethereum mainnet, chain 1) and HLC is confirmed on the node (below). Since 11 November, in code: CSP for the prover WASM (#58), Fee Juice minimum from live node fees and top-up plan (#59), calls active only when ICE connects (#60), true presence and linked-computer wallet (#61), migrations that bypass PgBouncer and read retries (#63). What remains is listed with its owner. **Nothing below can be closed by code alone in this repository today.**

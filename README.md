@@ -2,7 +2,7 @@
 
 End-to-end encrypted messaging over XMTP (MLS, RFC 9420), with private payments on Aztec, in one conversation. Built by Humanity Ledger.
 
-`Early access · closed cUSDC beta on Aztec Alpha, capped per payment · not externally audited · status as of 23 November 2026`
+`Early access · closed cUSDC beta on Aztec Alpha, capped per payment · not externally audited · status as of 24 November 2026`
 
 <p align="center">
   <img src="docs/readme/first-payment-record.jpg" width="900" alt="The first private payment from Ledger Chat on Aztec Alpha: L2 block 29,012, HLC deployed in block 28,992, confirmed by preflight run 43583640304">
@@ -28,7 +28,7 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 
 ## Contents
 
-1. [Status](#1-status-as-of-23-november-2026)
+1. [Status](#1-status-as-of-24-november-2026)
 2. [Architecture](#2-architecture)
 3. [Private payments on Aztec Alpha](#3-private-payments-on-aztec-alpha)
 4. [G7: binding a chat identity to an Aztec address](#4-g7-binding-a-chat-identity-to-an-aztec-address)
@@ -48,7 +48,7 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 
 ---
 
-## 1. Status as of 23 November 2026
+## 1. Status as of 24 November 2026
 
 | Component | Network | State | Evidence |
 |---|---|---|---|
@@ -69,7 +69,11 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 | Protocol fee (escrow and streams) | None | In the source, settlement only, to the designated treasury. CI compiled it with Aztec 6.0.0 and TXE passed (17 Nov 2026). Current classes: escrow `0x2ade61…9504c6`, streams `0x0251d1…c6777b`. Not deployed. Not on Alpha: no external audit | [`docs/protocol/FEE_CONTRACT_SPEC.md`](docs/protocol/FEE_CONTRACT_SPEC.md), [`deployments/aztec-testnet.json`](deployments/aztec-testnet.json) |
 | Standalone Noir circuits | None | Tests only. Known soundness issues ZK-01 to ZK-07 | [section 9](#9-standalone-noir-circuits-experimental) |
 | Calls (voice, video, screen) | WebRTC | Real. Since 17 Nov 2026 a call rings without its chat open and hangs up on both sides in every state. TURN relay keys set on 14 Nov 2026; a call across two different networks is not yet recorded (R3) | [`docs/CALLS.md`](docs/CALLS.md) |
-| Community posts | Our server | Readable by our server, not end-to-end encrypted (`communityMls` is false), and the community screen says so | [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) |
+| Community posts | Our server | Readable by our server, not end-to-end encrypted, and the community screen says so. Since 24 Nov 2026 the client can run a community on an XMTP MLS group (reads, posts, channel groups, member sync that never removes against an incomplete list); no community is switched to it yet, only the operator flips `communityMls` | [`lib/communities/mls.ts`](lib/communities/mls.ts), [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) |
+| Verify encryption | Client | Real since 24 Nov 2026. A Verify button in every chat opens a 60-digit safety number derived from both XMTP inboxes and every device on them (before: from the two wallet addresses, which could not detect an added device). Marking it verified is kept on the device; a later change is shown | [`lib/chat/safety-glyphs.ts`](lib/chat/safety-glyphs.ts), [`lib/chat/verified-contacts.ts`](lib/chat/verified-contacts.ts) |
+| Who can change a message | Client | Fixed 24 Nov 2026: a remote edit or delete-for-everyone applies only from the message's own XMTP inbox; edits within 24 h. Before, the other person could rewrite or delete your messages on your screen | [`lib/chat/message-authority.ts`](lib/chat/message-authority.ts) |
+| Privacy by default, backup, own node, limits | Client | Since 24 Nov 2026: notification previews hidden by default; encrypted chat history file (PBKDF2 600k, AES-256-GCM) bound to its wallet; your own Aztec node with the same identity checks and no relay; receive-only and per-payment limits checked in `wallet.send`; on-device CSV report and receipts | [`docs/roadmap/ALIGNMENT_100.md`](docs/roadmap/ALIGNMENT_100.md), [`/docs/data-inventory`](lib/docs/pages/security.ts) |
+| CI gate | GitHub Actions | Since 24 Nov 2026 the type check passes (67 old errors fixed), so the unit tests listed in `ci.yml` run on every pull request | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 | Community apps sandbox | Client | Real: sandboxed frame, no network | `test/eaf_isolation.adversarial.test.ts` |
 | L1 contracts (Solidity) | None | Tests in CI only (Hardhat, including `HLPortal` and the receiver factory), not deployed | `npm run test:contracts` |
 | External audit | — | None | `audit: null` in [`deployments/aztec-mainnet.json`](deployments/aztec-mainnet.json) |
@@ -497,7 +501,7 @@ The TXE counts are read from the log of the "Aztec contracts" run named in the t
 </p>
 
 <p align="center">
-  <img src="docs/readme/appearance.jpg" width="900" alt="Appearance: 40 themes, 59 wallpapers, 14 bubble styles and original animated stickers, previewed on a phone">
+  <img src="docs/readme/appearance.jpg" width="900" alt="Appearance: 40 themes, 59 wallpapers, 14 bubble styles and animated stickers, previewed on a phone">
 </p>
 
 * **Sign in** with a browser wallet or WalletConnect (SIWE with a sealed single-use nonce), with one signature: the message database key is kept on the device (section 7). No phone number, email or password. On phones over WalletConnect, every signature waits for the relay to acknowledge the request and is opened from a tap, so iPhone and Android Chrome reach the wallet with the request in place ([`lib/auth/wc-sign-request.ts`](lib/auth/wc-sign-request.ts)).
@@ -511,7 +515,8 @@ The TXE counts are read from the log of the "Aztec contracts" run named in the t
 * **Private wallet**: Overview (balances, send, receive, shield, Ethereum), Activity, **Security** (keys, ways to open, address checks, whether new payments are allowed, the public fee payer, the audit status, passkeys) and Protocol. A "How it works" card states in five lines what is private, who pays fees, the cap and that payments cannot be reversed.
 * **Payments in the chat**: pay the verified contact from the conversation; send a payment request that the other person pays with a locked form; each payment is a card with its real status (making the proof, sent, settled in block N, not sent and why). **Settings > Payments** lists the wallet's real activity and exports it as CSV.
 * **Closed beta**: `/beta` is one card in three steps (wallet, code, notice) with the places left; members land on `/chat`, and while the beta is on nobody else does.
-* **Appearance**: 40 themes, 59 wallpapers, 14 bubble styles and original sticker packs drawn for Ledger Chat.
+* **Appearance**: 40 themes, 59 wallpapers and 14 bubble styles.
+* **Stickers**: three packs since 24 November 2026, Hoops, Hammy and Noel (40 stickers, raster art supplied by the operator; licence recorded in [`public/stickers/CREDITS.md`](public/stickers/CREDITS.md)). Each plays a short moment of under three seconds across the whole window that never blocks a tap. Stickers from the earlier, drawn packs still show in chats.
 
 Screenshots: `ledgerchat.org` on 14 November 2026 (phone), and components rendered from this repository. Images that still need a live session are listed in [`docs/readme/IMAGES_TODO.md`](docs/readme/IMAGES_TODO.md).
 

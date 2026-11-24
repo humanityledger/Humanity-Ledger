@@ -129,6 +129,12 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
 
+## After phase 8 (24 November 2026)
+
+- #255: three sticker packs (40), a full-window sticker scene, the closed beta page and a three-step request form.
+- #257: a Verify button in every chat; marking a contact verified on the device.
+- Next: wave 2 of the portal. These steps are hardening, a test-network run, the review package and a plan for Stefan to sign; none of them is a deployment. The plan is `claude/prompt-portal-l1-l2-2026-11-24.md` in the project.
+
 ## Phase 8 (`claude/align-fase-8`)
 
 - R6 as a specification, the review package updated, 72 decided. The external audit itself is outside the code.
