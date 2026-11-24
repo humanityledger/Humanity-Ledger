@@ -25,6 +25,8 @@ import type { PayPrefill } from '@/lib/payments/request-draft';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
+import { PaymentDisclosure } from './PaymentDisclosure';
+import { paymentDisclosure } from '@/lib/payments/disclosure';
 import { useAddressFingerprint } from './useAddressFingerprint';
 import { useValueMode } from '@/lib/aztec/useValueMode';
 import { effectiveToken } from '@/components/zk/wallet/walletLogic';
@@ -74,7 +76,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
       </div>
     );
   } else if (dmPeerInboxId && ready) {
-    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} peerAddress={recipientAddress} balances={wallet?.balances} prefill={prefill} onClose={onClose} onPaid={posted} />;
+    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} peerAddress={recipientAddress} balances={wallet?.balances} feeJuice={wallet?.feeJuice} prefill={prefill} onClose={onClose} onPaid={posted} />;
   } else if (dmPeerInboxId || !ALPHA) {
     // Wallet not open yet (DM: only to open it, no typed-address payment posted), or a test-network community.
     body = <ZkWalletPanel address={myAddress} onClose={onClose} initialSheet={dmPeerInboxId ? null : 'send'} onPaymentSent={dmPeerInboxId ? undefined : ({ txHash, token }) => posted(txHash, token)} />;
@@ -106,7 +108,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
   );
 };
 
-function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, balances, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; peerAddress?: string; balances?: WalletSnapshot['balances']; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
+function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, balances, feeJuice, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; peerAddress?: string; balances?: WalletSnapshot['balances']; feeJuice?: WalletSnapshot['feeJuice']; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
   const [payee, setPayee] = useState<{ address?: string; verified: boolean } | null>(null);
   // Read on every render: cUSDC is listed for beta members once their membership is known (walletLogic.effectiveToken).
   const [chosen, setToken] = useState<TokenKey | null>(prefill?.token ?? null);
@@ -152,7 +154,9 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
   // G7 on every network; the fingerprint check is an extra out-of-band confirmation, never a substitute.
   const valueMode = useValueMode();
   const paused = valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
-  const blocked = !!paused || !!recipientIssue || !!lowBalance || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
+  // What the payment reveals and what its fee can be, before confirming (lib/payments/disclosure.ts).
+  const disclosure = paymentDisclosure({ network: AZTEC_WALLET_CONFIG.network, peerName: peerName || '', fee: feeJuice ? { balance: feeJuice.balance, minForTx: feeJuice.minForTx, plan: feeJuice.plan } : undefined });
+  const blocked = !!disclosure.feeProblem || !!paused || !!recipientIssue || !!lowBalance || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
@@ -232,6 +236,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
         Amount
         <input className={`${field} mt-1`} inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy || !!prefill} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} />
       </label>
+      <PaymentDisclosure d={disclosure} />
       <ProvingMemoryNote />
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
       {busy && <ProvingStatus label="Checking the address, then proving the payment on this device" startedAt={startedAt || Date.now()} />}
