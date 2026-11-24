@@ -1,6 +1,6 @@
 /**
  * Sign-in to /beta or /chat without loops: the middleware accepts every valid session the rest of
- * the app accepts, /connect sends a member to /chat and someone who can still join to /beta, and a
+ * the app accepts, /connect sends everyone to /chat unless a return path says otherwise, and a
  * slow cookie write after a phone returns from its wallet gets one more try.
  */
 import fs from 'node:fs';
@@ -10,27 +10,19 @@ const reply = (status: number, body: unknown) => new Response(JSON.stringify(bod
 
 describe('where sign-in lands', () => {
   const gated = { member: false, open: true, remaining: 40, gate: true };
-  it('an explicit return path wins, except /beta and /chat, which the beta decides', () => {
+  it('an explicit return path wins; a member asking for /beta goes to the chat', () => {
     expect(landingAfterSignIn('/settings', gated)).toBe('/settings');
     expect(landingAfterSignIn('/beta', { member: true, active: true, open: true, gate: true })).toBe('/chat');
-    expect(landingAfterSignIn('/chat', gated)).toBe('/beta');
-    expect(landingAfterSignIn('/beta?x=1', gated)).toBe('/beta');
+    expect(landingAfterSignIn('/chat', gated)).toBe('/chat');
+    expect(landingAfterSignIn('/beta?x=1', gated)).toBe('/beta?x=1');
   });
-  it('members (revoked ones too) go to the chat; with the gate on everyone else goes to /beta', () => {
-    expect(landingAfterSignIn(null, { member: true, active: true, open: true, gate: true })).toBe('/chat');
+  it('everyone else goes to the chat: the beta limits cUSDC, not the chat', () => {
     expect(landingAfterSignIn(null, { member: true, active: false, open: true, gate: true })).toBe('/chat');
-    expect(landingAfterSignIn(null, gated)).toBe('/beta');
-    expect(landingAfterSignIn(null, { ...gated, open: false })).toBe('/beta');
-    expect(landingAfterSignIn(null, { ...gated, remaining: 0 })).toBe('/beta');
-  });
-  it('with the gate off, or no answer, the chat (the middleware decides)', () => {
-    expect(landingAfterSignIn(null, { member: false, open: false, gate: false })).toBe('/chat');
+    expect(landingAfterSignIn(null, gated)).toBe('/chat');
+    expect(landingAfterSignIn(null, { ...gated, open: false })).toBe('/chat');
+    expect(landingAfterSignIn(null, { ...gated, remaining: 0 })).toBe('/chat');
     expect(landingAfterSignIn(null, null)).toBe('/chat');
   });
-});
-
-describe('reading the status right after sign-in', () => {
-  const noWait = async () => {};
   it('retries once when the cookie is not there yet', async () => {
     let n = 0;
     const f = (async () => (++n === 1 ? reply(401, {}) : reply(200, { member: true, active: true, open: true, remaining: 3 }))) as unknown as typeof fetch;

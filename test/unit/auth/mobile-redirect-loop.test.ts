@@ -23,9 +23,9 @@ describe('mobile redirect loops', () => {
     expect(src).not.toMatch(/router\.(replace|push)\s*\(/);
   });
 
-  it('the middleware sends a member-less session from /chat to /beta, which phones must be able to render', () => {
-    expect(read('middleware.ts')).toMatch(/url\.pathname = '\/beta'/);
-    expect(read('lib/beta/landing.ts')).toMatch(/return '\/beta'/);
+  it('the chat is open to everyone: neither the middleware nor sign-in sends anyone from /chat to /beta', () => {
+    expect(read('middleware.ts')).not.toMatch(/url\.pathname = '\/beta'/);
+    expect(read('lib/beta/landing.ts')).not.toMatch(/return '\/beta'/);
   });
 
   it('/connect does not leave for the app on isLinked alone', () => {

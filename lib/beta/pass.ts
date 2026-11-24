@@ -1,6 +1,7 @@
 /**
- * lib/beta/pass.ts: the closed cUSDC beta pass, so the middleware can open /chat only for beta
- * members without a database call at the edge.
+ * lib/beta/pass.ts: the closed cUSDC beta pass. Since 24 November 2026 it no longer gates /chat:
+ * the chat is open to everyone and the beta limits cUSDC only (checked by the server before each
+ * payment). The pass is kept as a cheap, signed "this wallet is a member" hint.
  *
  * /api/beta/cusdc/status and /api/beta/cusdc/redeem set an HttpOnly cookie holding a short JWT
  * (HS256, JWT_SECRET) whose subject is the member's wallet; they clear it for anyone who is not a
@@ -42,15 +43,6 @@ export async function signBetaPass(wallet: string, secret: Uint8Array, now: numb
 
 export function betaPassCookieOptions(): { httpOnly: true; secure: boolean; sameSite: 'lax'; path: '/'; maxAge: number } {
   return { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: BETA_PASS_TTL_S };
-}
-
-export type ChatGate = 'open' | 'connect' | 'beta';
-
-/** What the middleware does with a request for /chat. */
-export function chatGateDecision(i: { gateOn: boolean; harness: boolean; session: string | null; passOk: boolean }): ChatGate {
-  if (!i.gateOn || i.harness) return 'open';
-  if (!i.session) return 'connect';
-  return i.passOk ? 'open' : 'beta';
 }
 
 /** Sets or clears the pass on a route response, from the member row. */

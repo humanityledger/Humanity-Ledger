@@ -1,10 +1,8 @@
 /**
  * lib/beta/landing.ts: where /connect sends someone right after they sign in.
  *
- * An explicit return path (?redirect=/settings, a deep link) wins, except /beta and /chat. Otherwise
- * the beta status decides: a member goes straight to /chat; while the beta gate is on everyone else
- * goes to /beta to enter their code (the middleware opens /chat only for members, lib/beta/pass.ts);
- * with the gate off, or no answer, the chat opens and the middleware decides.
+ * An explicit return path (?redirect=/settings, a deep link, /beta to join) wins; otherwise the
+ * chat. The chat is open to everyone; the closed beta decides only who can use cUSDC.
  *
  * The session cookie is set by the sign-in response itself; the status is asked right after it,
  * and asked once more after a short pause if the first answer is 401, so a slow cookie write on a
@@ -13,11 +11,12 @@
 export type LandingStatus = { member: boolean; active?: boolean; open: boolean; remaining?: number | null; gate?: boolean };
 
 export function landingAfterSignIn(explicit: string | null, status: LandingStatus | null): string {
-  const gated = (p: string) => p === '/beta' || p.startsWith('/beta?') || p === '/chat' || p.startsWith('/chat?') || p.startsWith('/chat/');
-  if (explicit && !gated(explicit)) return explicit;
-  if (!status) return '/chat';
-  if (status.member) return '/chat'; // revoked members too: the chat is where they move their funds out
-  if (status.gate) return '/beta';
+  // The chat is open to everyone (24 Nov 2026): the beta only decides who can hold cUSDC.
+  // An explicit return path wins, except /beta for someone who is already a member.
+  if (explicit) {
+    if (status?.member && (explicit === '/beta' || explicit.startsWith('/beta?'))) return '/chat';
+    return explicit;
+  }
   return '/chat';
 }
 

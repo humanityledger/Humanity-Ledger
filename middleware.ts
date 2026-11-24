@@ -37,11 +37,7 @@ import { jwtVerify } from 'jose/jwt/verify';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
 import { isRetiredApiRoute, retiredPageTarget } from './lib/security/retiredRoutes';
 import { isSessionPayload } from './lib/security/sessionClaims';
-import { BETA_PASS_COOKIE, betaGateOn, chatGateDecision, verifyBetaPass } from './lib/beta/pass';
-import deploymentRecord from './deployments/aztec-mainnet.json';
 
-/** The closed cUSDC beta gates /chat while its switch is on (deployments/aztec-mainnet.json). */
-const BETA_GATE_ON = betaGateOn(deploymentRecord);
 import { isPhoneRequest, LANDING_ACCEPT_CH, LANDING_TREE_HEADER, LANDING_VARY } from './lib/landing/device';
 
 // ── Public routes: accessible to EVERYONE (no auth required) ──────────────────
@@ -458,30 +454,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 1b. Closed cUSDC beta: while it is on, the chat opens only for members (lib/beta/pass.ts).
-  // Signed out → /connect, signed in without a pass → /beta, where the code is entered (and a
-  // member's pass is renewed). Test builds with the e2e harness are not gated.
-  if (pathname === '/chat' || pathname.startsWith('/chat/')) {
-    const session = earlySession !== undefined ? earlySession : await extractSessionAddress(req);
-    if (earlySession === undefined) earlySession = session;
-    const gate = chatGateDecision({
-      gateOn: BETA_GATE_ON,
-      harness: process.env.NEXT_PUBLIC_E2E_HARNESS === '1',
-      session,
-      passOk: BETA_GATE_ON && !!session ? await verifyBetaPass(req.cookies.get(BETA_PASS_COOKIE)?.value, session, getEdgeSecret()) : false,
-    });
-    if (gate !== 'open') {
-      const url = req.nextUrl.clone();
-      url.search = '';
-      if (gate === 'connect') {
-        url.pathname = '/connect';
-        url.searchParams.set('redirect', '/chat');
-      } else {
-        url.pathname = '/beta';
-      }
-      return NextResponse.redirect(url, 303);
-    }
-  }
+  // 1b. The chat is open to everyone. The closed cUSDC beta limits cUSDC only: the wallet lists it
+  // for members and the server is asked again before every payment (lib/beta/cusdc-beta-client.ts,
+  // /api/beta/cusdc/member). Until 24 Nov 2026 the beta also kept non-members out of /chat.
 
   // 2. Allow all public paths through immediately.
   // A-016: ALWAYS strip client-injected identity headers — even on public paths.
