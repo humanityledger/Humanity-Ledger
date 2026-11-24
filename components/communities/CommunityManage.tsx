@@ -32,6 +32,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { communityInviteUrl } from '@/lib/ui/format';
 import { authorLabel, postText, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
 import { createChannelGroup, isMlsCommunity } from '@/lib/communities/mls';
+import { useT } from '@/lib/i18n/client';
 
 const CommunityApps = React.lazy(() => import('@/components/chat/community-apps/CommunityApps').then((m) => ({ default: m.CommunityApps })));
 const CommunityAnalytics = React.lazy(() => import('@/components/chat/CommunityAnalytics'));
@@ -120,6 +121,7 @@ const input = 'w-full min-h-[52px] rounded-2xl border-2 border-[#9aa1ac] focus:b
 const short = (a: string) => (a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 
 export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGone, fetchImpl, xmtpClient }: CommunityManageProps) {
+  const t = useT();
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
   const me = myAddress.toLowerCase();
   const headers = useMemo(() => ({ 'Content-Type': 'application/json', 'x-web3-address': me, 'x-verified-session-address': me }), [me]);
@@ -147,7 +149,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
       setCommunity(d.community ?? d);
       setLoad('ready');
     } catch {
-      setNote({ kind: 'error', text: 'This community could not be loaded. Check your connection and try again.' });
+      setNote({ kind: 'error', text: t("This community could not be loaded. Check your connection and try again.") });
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
   }, [base, f, headers]);
@@ -176,17 +178,17 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
   const title = view === 'rows' ? 'Manage' : rows.find((r) => r.view === view)?.label ?? 'Manage';
 
   return (
-    <section className="flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white" aria-label={`Manage ${name}`}>
+    <section className="flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white" aria-label={t("Manage {name}", { name })}>
       <header className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-[#d4d8de] bg-white">
         <button
           type="button"
           onClick={() => (view === 'rows' ? onBack() : setView('rows'))}
           className={`${btn} px-3 hover:bg-[#eff1f4]`}
           style={{ color: INK }}
-          aria-label={view === 'rows' ? `Back to ${name}` : 'Back to Manage'}
+          aria-label={view === 'rows' ? t("Back to {name}", { name }) : t("Back to Manage")}
         >
           <span aria-hidden="true" className="text-[22px] leading-none">‹</span>
-          <span className="hidden sm:inline">Back</span>
+          <span className="hidden sm:inline">{t("Back")}</span>
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[21px] sm:text-[22px] font-semibold leading-tight truncate" style={{ color: INK }}>{title}</h1>
@@ -206,17 +208,17 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
             </p>
           )}
 
-          {load === 'loading' && !community && <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading…</p>}
+          {load === 'loading' && !community && <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>}
           {load === 'error' && !community && (
             <div className="py-10 text-center" role={note ? undefined : 'alert'}>
-              {!note && <p className="text-[18px] leading-snug" style={{ color: INK }}>This community could not be loaded. Check your connection and try again.</p>}
-              <button type="button" onClick={() => { setNote(null); setLoad('loading'); fetchCommunity(); }} className={`${primary} mx-auto mt-4`}>Try again</button>
+              {!note && <p className="text-[18px] leading-snug" style={{ color: INK }}>{t("This community could not be loaded. Check your connection and try again.")}</p>}
+              <button type="button" onClick={() => { setNote(null); setLoad('loading'); fetchCommunity(); }} className={`${primary} mx-auto mt-4`}>{t("Try again")}</button>
             </div>
           )}
 
           {community && view === 'rows' && (
             <>
-              <ul className={`${card} divide-y divide-[#d4d8de] overflow-hidden`} aria-label="Manage this community">
+              <ul className={`${card} divide-y divide-[#d4d8de] overflow-hidden`} aria-label={t("Manage this community")}>
                 {rows.map((r) => (
                   <li key={r.view}>
                     <button
@@ -252,7 +254,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
                 const r = await patch('/api/chat/communities', { action: 'REVOKE_LINK', communityId });
                 if (!r.ok) return fail(r.data, 'The link was not reset. Try again.');
                 setCommunity((c: any) => ({ ...c, joinCode: r.data?.joinCode ?? c?.joinCode }));
-                setNote({ kind: 'ok', text: 'New link ready. The old link no longer works.' });
+                setNote({ kind: 'ok', text: t("New link ready. The old link no longer works.") });
               }}
             />
           )}
@@ -263,7 +265,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
               onSave={async (n, d) => {
                 const r = await patch(base, { name: n, description: d });
                 if (!r.ok) return fail(r.data, 'The name was not saved. Try again.');
-                setNote({ kind: 'ok', text: 'Saved.' });
+                setNote({ kind: 'ok', text: t("Saved.") });
                 fetchCommunity();
               }}
             />
@@ -276,7 +278,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
                 // An MLS community: the channel is an XMTP group, created here; the server stores only its id.
                 let xmtpGroupId: string | undefined;
                 if (isMlsCommunity(community)) {
-                  if (!xmtpClient) { setNote({ kind: 'error', text: 'Encrypted messaging is not connected on this device yet. Try again in a moment.' }); return false; }
+                  if (!xmtpClient) { setNote({ kind: 'error', text: t("Encrypted messaging is not connected on this device yet. Try again in a moment.") }); return false; }
                   try { xmtpGroupId = await createChannelGroup(xmtpClient, community, n, me); }
                   catch (e) { setNote({ kind: 'error', text: e instanceof Error && !e.message.startsWith('[') ? e.message : 'The encrypted channel could not be created. Try again.' }); return false; }
                 }
@@ -303,7 +305,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
               onChange={async (changes) => {
                 const r = await patch('/api/chat/communities', { action: 'UPDATE_PERMISSIONS', communityId, permissions: changes });
                 if (!r.ok) return fail(r.data, 'Not saved. Try again.');
-                setNote({ kind: 'ok', text: 'Saved.' });
+                setNote({ kind: 'ok', text: t("Saved.") });
                 setCommunity((c: any) => ({ ...c, permissions: { ...(c?.permissions || {}), ...(r.data?.permissions || changes) } }));
               }}
             />
@@ -322,7 +324,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
           )}
 
           {community && (view === 'apps' || view === 'governance' || (view === 'analytics' && isAdmin)) && (
-            <Suspense fallback={<p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading…</p>}>
+            <Suspense fallback={<p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>}>
               <div className={`${card} overflow-hidden`}>
                 {view === 'apps' && <CommunityApps communityId={communityId} communityName={name} />}
                 {view === 'analytics' && <CommunityAnalytics communityId={communityId} community={community} />}
@@ -333,7 +335,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
           {community && view === 'leave' && !isOwner && (
             <Confirm
-              text={`You will stop seeing the posts of ${name}. To come back you need a new invite if it is private.`}
+              text={t("You will stop seeing the posts of {name}. To come back you need a new invite if it is private.", { name })}
               action="Leave"
               onConfirm={async () => {
                 const r = await patch(`${base}/members`, {}, 'DELETE');
@@ -346,7 +348,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
           {community && view === 'delete' && isOwner && (
             <Confirm
-              text={`This deletes ${name} for everyone: its posts, channels and members. It cannot be undone.`}
+              text={t("This deletes {name} for everyone: its posts, channels and members. It cannot be undone.", { name })}
               action="Delete for everyone"
               typeToConfirm={name}
               onConfirm={async () => {
@@ -377,6 +379,7 @@ function RowValue({ view, community }: { view: ManageView; community: any }) {
 function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
   communityId: string; base: string; f: typeof fetch; headers: Record<string, string>; me: string; nameFor?: (a: string) => string | undefined; allowed: boolean;
 }) {
+  const t = useT();
   const [pinned, setPinned] = useState<ReaderPost[] | null>(null);
   const [recent, setRecent] = useState<ReaderPost[] | null>(null);
   const [error, setError] = useState('');
@@ -398,7 +401,7 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
       setRecent((Array.isArray(pb.posts) ? pb.posts : []).filter((p: any) => p && p.id && !p.pinnedAt && !ids.has(p.id)).slice(0, 20));
       setError('');
     } catch {
-      setError('The posts could not be loaded. Check your connection and try again.');
+      setError(t("The posts could not be loaded. Check your connection and try again."));
     }
   }, [base, f, headers]);
 
@@ -412,9 +415,9 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
         body: JSON.stringify({ action: pin ? 'PIN_MESSAGE' : 'UNPIN_MESSAGE', communityId, messageId: id }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok || !d?.ok) setError(typeof d?.error === 'string' ? d.error : pin ? 'The post was not pinned. Try again.' : 'The post was not unpinned. Try again.');
+      if (!res.ok || !d?.ok) setError(typeof d?.error === 'string' ? d.error : pin ? t("The post was not pinned. Try again.") : t("The post was not unpinned. Try again."));
     } catch {
-      setError('This device could not reach the server. Check your connection and try again.');
+      setError(t("This device could not reach the server. Check your connection and try again."));
     }
     await refresh();
     setBusy(null);
@@ -428,18 +431,18 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
   return (
     <>
       {error && <p role="alert" className="rounded-2xl border border-[#9b1c16] bg-[#fdf3f2] px-4 py-3 text-[18px]" style={{ color: DANGER }}>{error}</p>}
-      <h2 className="text-[19px] font-semibold" style={{ color: INK }}>Pinned</h2>
+      <h2 className="text-[19px] font-semibold" style={{ color: INK }}>{t("Pinned")}</h2>
       {pinned === null ? (
-        <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">Loading…</p>
+        <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>
       ) : pinned.length === 0 ? (
-        <p className={`${card} px-4 py-3 text-[18px]`} style={{ color: INK }} data-testid="pinned-empty">No pinned posts.</p>
+        <p className={`${card} px-4 py-3 text-[18px]`} style={{ color: INK }} data-testid="pinned-empty">{t("No pinned posts.")}</p>
       ) : (
         <ol className="flex flex-col gap-3" data-testid="pinned-list">
           {pinned.map((p) => (
             <PostCard key={p.id} p={p} who={who(p)}>
               {allowed && (
                 <button type="button" disabled={busy === p.id} onClick={() => toggle(p.id, false)} className={secondary} style={{ color: INK }}>
-                  Unpin
+                  {t("Unpin")}
                 </button>
               )}
             </PostCard>
@@ -449,15 +452,15 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
 
       {allowed ? (
         <>
-          <h2 className="text-[19px] font-semibold mt-2" style={{ color: INK }}>Choose a post to pin</h2>
+          <h2 className="text-[19px] font-semibold mt-2" style={{ color: INK }}>{t("Choose a post to pin")}</h2>
           {recent === null ? null : recent.length === 0 ? (
-            <p className="text-[18px]" style={{ color: INK_SOFT }}>There are no other posts to pin.</p>
+            <p className="text-[18px]" style={{ color: INK_SOFT }}>{t("There are no other posts to pin.")}</p>
           ) : (
             <ol className="flex flex-col gap-3" data-testid="pin-candidates">
               {recent.map((p) => (
                 <PostCard key={p.id} p={p} who={who(p)}>
                   <button type="button" disabled={busy === p.id} onClick={() => toggle(p.id, true)} className={secondary} style={{ color: INK }}>
-                    Pin
+                    {t("Pin")}
                   </button>
                 </PostCard>
               ))}
@@ -465,18 +468,19 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
           )}
         </>
       ) : (
-        <p className="text-[18px] leading-snug" style={{ color: INK_SOFT }}>Admins choose which posts are pinned.</p>
+        <p className="text-[18px] leading-snug" style={{ color: INK_SOFT }}>{t("Admins choose which posts are pinned.")}</p>
       )}
     </>
   );
 }
 
 function PostCard({ p, who, children }: { p: ReaderPost; who: string; children?: React.ReactNode }) {
+  const t = useT();
   return (
     <li className={`${card} px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3`}>
       <div className="flex-1 min-w-0">
         <p className="text-[16px] font-semibold" style={{ color: INK_SOFT }}>{who}</p>
-        <p className="text-[18px] leading-relaxed mt-1 whitespace-pre-wrap break-words" style={{ color: INK }}>{postText(p)}</p>
+        <p className="text-[18px] leading-relaxed mt-1 whitespace-pre-wrap break-words" style={{ color: INK }}>{t(postText(p))}</p>
       </div>
       {children ? <div className="shrink-0 flex gap-2">{children}</div> : null}
     </li>
@@ -488,6 +492,7 @@ function PostCard({ p, who, children }: { p: ReaderPost; who: string; children?:
 function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
   base: string; f: typeof fetch; headers: Record<string, string>; me: string; nameFor?: (a: string) => string | undefined; isAdmin: boolean; owner: string;
 }) {
+  const t = useT();
   const [members, setMembers] = useState<any[] | null>(null);
   const [error, setError] = useState('');
   const [add, setAdd] = useState('');
@@ -500,7 +505,7 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
       const d = await res.json();
       setMembers(Array.isArray(d.members) ? d.members : []);
     } catch {
-      setError('The members could not be loaded. Check your connection and try again.');
+      setError(t("The members could not be loaded. Check your connection and try again."));
     }
   }, [base, f, headers]);
   useEffect(() => { refresh(); }, [refresh]);
@@ -513,7 +518,7 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
       const d = await res.json().catch(() => ({}));
       if (!res.ok) setError(typeof d?.error === 'string' ? d.error : failText);
     } catch {
-      setError('This device could not reach the server. Check your connection and try again.');
+      setError(t("This device could not reach the server. Check your connection and try again."));
     }
     await refresh();
     setBusy(null);
@@ -524,7 +529,7 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
   return (
     <>
       {error && <p role="alert" className="rounded-2xl border border-[#9b1c16] bg-[#fdf3f2] px-4 py-3 text-[18px]" style={{ color: DANGER }}>{error}</p>}
-      {members === null && !error && <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">Loading…</p>}
+      {members === null && !error && <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>}
       {members && (
         <ul className={`${card} divide-y divide-[#d4d8de]`}>
           {members.map((m) => {
@@ -543,11 +548,11 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
                   <div className="flex flex-wrap gap-2">
                     <button type="button" disabled={busy === a} className={secondary} style={{ color: INK }}
                       onClick={() => call('PATCH', { walletAddress: a, role: m.role === 'ADMIN' ? 'MEMBER' : 'ADMIN' }, a, 'The role was not changed. Try again.')}>
-                      {m.role === 'ADMIN' ? 'Make member' : 'Make admin'}
+                      {m.role === 'ADMIN' ? t("Make member") : t("Make admin")}
                     </button>
                     <button type="button" disabled={busy === a} className={secondary} style={{ color: DANGER, borderColor: DANGER }}
                       onClick={() => call('DELETE', { walletAddress: a }, a, 'The member was not removed. Try again.')}>
-                      Remove
+                      {t("Remove")}
                     </button>
                   </div>
                 )}
@@ -558,10 +563,10 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
       )}
       {isAdmin && (
         <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={(e) => { e.preventDefault(); if (validAdd) call('POST', { walletAddress: add.trim() }, 'add', 'The member was not added. Try again.').then(() => setAdd('')); }}>
-          <label htmlFor="manage-add-member" className="text-[18px] font-semibold" style={{ color: INK }}>Add a member by wallet address</label>
+          <label htmlFor="manage-add-member" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Add a member by wallet address")}</label>
           <input id="manage-add-member" value={add} onChange={(e) => setAdd(e.target.value)} placeholder="0x…" className={input} style={{ color: INK }} autoComplete="off" spellCheck={false} />
           <div className="flex justify-end">
-            <button type="submit" disabled={!validAdd || busy === 'add'} className={primary}>Add</button>
+            <button type="submit" disabled={!validAdd || busy === 'add'} className={primary}>{t("Add")}</button>
           </div>
         </form>
       )}
@@ -572,15 +577,16 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
 // ─── Invite ──────────────────────────────────────────────────────────────────
 
 function Invite({ joinCode, canReset, onReset }: { joinCode?: string | null; canReset?: boolean; onReset?: () => Promise<void> }) {
+  const t = useT();
   const link = communityInviteUrl(joinCode);
   const [copied, setCopied] = useState<'' | 'yes' | 'no'>('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => { setCopied(''); }, [link]);
-  if (!link) return <p className={`${card} px-4 py-3 text-[18px]`} style={{ color: INK }}>This community has no invite link yet.</p>;
+  if (!link) return <p className={`${card} px-4 py-3 text-[18px]`} style={{ color: INK }}>{t("This community has no invite link yet.")}</p>;
   return (
     <div className={`${card} px-4 py-4 flex flex-col gap-3`}>
-      <p className="text-[18px] leading-snug" style={{ color: INK }}>Send this link to someone you want in this community.</p>
+      <p className="text-[18px] leading-snug" style={{ color: INK }}>{t("Send this link to someone you want in this community.")}</p>
       <p className="rounded-2xl border-2 border-[#9aa1ac] px-4 py-3 text-[18px] break-all" style={{ color: INK }} data-testid="invite-link">{link}</p>
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -588,25 +594,25 @@ function Invite({ joinCode, canReset, onReset }: { joinCode?: string | null; can
           className={primary}
           onClick={() => navigator.clipboard?.writeText(link).then(() => setCopied('yes'), () => setCopied('no'))}
         >
-          Copy the link
+          {t("Copy the link")}
         </button>
-        {copied === 'yes' && <span role="status" className="text-[18px]" style={{ color: INK }}>Copied.</span>}
-        {copied === 'no' && <span role="alert" className="text-[18px]" style={{ color: DANGER }}>Not copied. Select the link and copy it.</span>}
+        {copied === 'yes' && <span role="status" className="text-[18px]" style={{ color: INK }}>{t("Copied.")}</span>}
+        {copied === 'no' && <span role="alert" className="text-[18px]" style={{ color: DANGER }}>{t("Not copied. Select the link and copy it.")}</span>}
       </div>
       {canReset && onReset && (
         <div className="border-t border-[#d4d8de] pt-3 flex flex-col gap-2">
           {!confirmReset ? (
             <button type="button" className={`${btn} px-4 self-start hover:bg-[#eff1f4]`} style={{ color: DANGER }} onClick={() => setConfirmReset(true)} data-testid="invite-reset">
-              Reset the link
+              {t("Reset the link")}
             </button>
           ) : (
             <>
-              <p className="text-[16px] leading-snug" style={{ color: INK }}>Anyone with the old link will not be able to join with it. People already in stay.</p>
+              <p className="text-[16px] leading-snug" style={{ color: INK }}>{t("Anyone with the old link will not be able to join with it. People already in stay.")}</p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" disabled={busy} className={primary} onClick={async () => { setBusy(true); try { await onReset(); } finally { setBusy(false); setConfirmReset(false); } }}>
-                  {busy ? 'Resetting…' : 'Reset now'}
+                  {busy ? t("Resetting…") : t("Reset now")}
                 </button>
-                <button type="button" className={`${btn} px-4 hover:bg-[#eff1f4]`} style={{ color: INK }} onClick={() => setConfirmReset(false)}>Cancel</button>
+                <button type="button" className={`${btn} px-4 hover:bg-[#eff1f4]`} style={{ color: INK }} onClick={() => setConfirmReset(false)}>{t("Cancel")}</button>
               </div>
             </>
           )}
@@ -619,17 +625,18 @@ function Invite({ joinCode, canReset, onReset }: { joinCode?: string | null; can
 // ─── Name and description ────────────────────────────────────────────────────
 
 function Profile({ community, onSave }: { community: any; onSave: (name: string, description: string) => Promise<void> }) {
+  const t = useT();
   const [n, setN] = useState(community?.name || '');
   const [d, setD] = useState(community?.description || '');
   const [busy, setBusy] = useState(false);
   return (
     <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={async (e) => { e.preventDefault(); if (!n.trim()) return; setBusy(true); await onSave(n.trim(), d.trim()); setBusy(false); }}>
-      <label htmlFor="manage-name" className="text-[18px] font-semibold" style={{ color: INK }}>Name</label>
+      <label htmlFor="manage-name" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Name")}</label>
       <input id="manage-name" value={n} onChange={(e) => setN(e.target.value)} maxLength={60} className={input} style={{ color: INK }} />
-      <label htmlFor="manage-description" className="text-[18px] font-semibold" style={{ color: INK }}>Description</label>
+      <label htmlFor="manage-description" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Description")}</label>
       <textarea id="manage-description" value={d} onChange={(e) => setD(e.target.value)} maxLength={280} rows={3} className={`${input} resize-none`} style={{ color: INK }} />
       <div className="flex justify-end">
-        <button type="submit" disabled={!n.trim() || busy} className={primary}>Save</button>
+        <button type="submit" disabled={!n.trim() || busy} className={primary}>{t("Save")}</button>
       </div>
     </form>
   );
@@ -638,6 +645,7 @@ function Profile({ community, onSave }: { community: any; onSave: (name: string,
 // ─── Channels ────────────────────────────────────────────────────────────────
 
 function Channels({ channels, onAdd, onDelete }: { channels: any[]; onAdd: (name: string) => Promise<boolean>; onDelete: (id: string, name: string) => Promise<void> }) {
+  const t = useT();
   const [n, setN] = useState('');
   const [busy, setBusy] = useState(false);
   const clean = n.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 40);
@@ -649,17 +657,17 @@ function Channels({ channels, onAdd, onDelete }: { channels: any[]; onAdd: (name
             <span className="flex-1 min-w-0 text-[18px] font-semibold truncate" style={{ color: INK }}>{c.name}</span>
             {c.name !== 'general' && (
               <button type="button" className={secondary} style={{ color: DANGER, borderColor: DANGER }} onClick={() => onDelete(c.id, c.name)}>
-                Delete
+                {t("Delete")}
               </button>
             )}
           </li>
         ))}
       </ul>
       <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={async (e) => { e.preventDefault(); if (!clean) return; setBusy(true); if (await onAdd(clean)) setN(''); setBusy(false); }}>
-        <label htmlFor="manage-channel" className="text-[18px] font-semibold" style={{ color: INK }}>Add a channel</label>
-        <input id="manage-channel" value={n} onChange={(e) => setN(e.target.value)} placeholder="announcements" maxLength={40} className={input} style={{ color: INK }} />
+        <label htmlFor="manage-channel" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Add a channel")}</label>
+        <input id="manage-channel" value={n} onChange={(e) => setN(e.target.value)} placeholder={t("announcements")} maxLength={40} className={input} style={{ color: INK }} />
         <div className="flex justify-end">
-          <button type="submit" disabled={!clean || busy} className={primary}>Add</button>
+          <button type="submit" disabled={!clean || busy} className={primary}>{t("Add")}</button>
         </div>
       </form>
     </>
@@ -671,6 +679,7 @@ function Channels({ channels, onAdd, onDelete }: { channels: any[]; onAdd: (name
 function Switches({ items, values, slow, onChange }: {
   items: Array<[string, string]>; values: Record<string, any>; slow: boolean; onChange: (changes: Record<string, boolean | number>) => Promise<void>;
 }) {
+  const t = useT();
   const [busy, setBusy] = useState<string | null>(null);
   const run = async (key: string, changes: Record<string, boolean | number>) => { setBusy(key); await onChange(changes); setBusy(null); };
   return (
@@ -690,7 +699,7 @@ function Switches({ items, values, slow, onChange }: {
                 style={{ color: INK }}
               >
                 <span className="flex-1 min-w-0 font-semibold">{label}</span>
-                <span className={`min-w-[64px] text-center rounded-xl px-3 py-1 text-[16px] font-semibold border-2 ${on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#9aa1ac] text-[#15171c]'}`}>{on ? 'On' : 'Off'}</span>
+                <span className={`min-w-[64px] text-center rounded-xl px-3 py-1 text-[16px] font-semibold border-2 ${on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#9aa1ac] text-[#15171c]'}`}>{on ? t("On") : t("Off")}</span>
               </button>
             </li>
           );
@@ -698,8 +707,8 @@ function Switches({ items, values, slow, onChange }: {
       </ul>
       {slow && (
         <fieldset className={`${card} px-4 py-4`}>
-          <legend className="px-1 text-[18px] font-semibold" style={{ color: INK }}>Slow mode</legend>
-          <p className="text-[16px] mb-3" style={{ color: INK_SOFT }}>How long each member waits between two posts.</p>
+          <legend className="px-1 text-[18px] font-semibold" style={{ color: INK }}>{t("Slow mode")}</legend>
+          <p className="text-[16px] mb-3" style={{ color: INK_SOFT }}>{t("How long each member waits between two posts.")}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {SLOW.map(([v, l]) => {
               const on = (values.slowModeSeconds ?? 0) === v;
@@ -720,10 +729,11 @@ function Switches({ items, values, slow, onChange }: {
 // ─── Privacy and discovery ───────────────────────────────────────────────────
 
 function Privacy({ isPrivate, onChange }: { isPrivate: boolean; onChange: (priv: boolean) => Promise<void> }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="sr-only">Who can join</legend>
+      <legend className="sr-only">{t("Who can join")}</legend>
       {([
         [true, 'Private', 'Only people with an invite can join. It is not listed in Find one.'],
         [false, 'Public', 'Anyone can find it in Find one and join.'],
@@ -735,10 +745,10 @@ function Privacy({ isPrivate, onChange }: { isPrivate: boolean; onChange: (priv:
             <span className="block text-[18px] font-semibold" style={{ color: INK }}>{label}</span>
             <span className="block text-[16px]" style={{ color: INK_SOFT }}>{text}</span>
           </span>
-          <span className="text-[16px] font-semibold" style={{ color: INK }}>{isPrivate === priv ? 'Selected' : 'Choose'}</span>
+          <span className="text-[16px] font-semibold" style={{ color: INK }}>{isPrivate === priv ? t("Selected") : t("Choose")}</span>
         </button>
       ))}
-      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>Either way, posts are stored on our server and people in the community can read them.</p>
+      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{t("Either way, posts are stored on our server and people in the community can read them.")}</p>
     </fieldset>
   );
 }
@@ -748,6 +758,7 @@ function Privacy({ isPrivate, onChange }: { isPrivate: boolean; onChange: (priv:
 function Confirm({ text, action, typeToConfirm, onConfirm, onCancel }: {
   text: string; action: string; typeToConfirm?: string; onConfirm: () => Promise<void>; onCancel: () => void;
 }) {
+  const t = useT();
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const ready = !typeToConfirm || typed.trim() === typeToConfirm.trim();
@@ -756,12 +767,12 @@ function Confirm({ text, action, typeToConfirm, onConfirm, onCancel }: {
       <p className="text-[18px] leading-snug" style={{ color: INK }}>{text}</p>
       {typeToConfirm && (
         <>
-          <label htmlFor="manage-confirm" className="text-[18px] font-semibold" style={{ color: INK }}>Type the name to confirm: {typeToConfirm}</label>
+          <label htmlFor="manage-confirm" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Type the name to confirm: {typeToConfirm}", { typeToConfirm })}</label>
           <input id="manage-confirm" value={typed} onChange={(e) => setTyped(e.target.value)} className={input} style={{ color: INK }} autoComplete="off" />
         </>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <button type="button" onClick={onCancel} className={secondary} style={{ color: INK }}>Cancel</button>
+        <button type="button" onClick={onCancel} className={secondary} style={{ color: INK }}>{t("Cancel")}</button>
         <button type="button" disabled={!ready || busy} onClick={async () => { setBusy(true); await onConfirm(); setBusy(false); }} className={dangerBtn}>{action}</button>
       </div>
     </div>

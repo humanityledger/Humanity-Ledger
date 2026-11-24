@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAMP, hash, noise } from '@/components/immersive/glyphs';
+import { untranslated } from '../../helpers/untranslated';
 
-const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+const read = (p: string) => untranslated(readFileSync(join(process.cwd(), p), 'utf8'));
 /** The code without its comments (the comments list the claims the page must not make). */
 const code = (src: string) => src.replace(/\/\*[^]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const landing = read('components/landing/v2/Landing.tsx');
@@ -25,7 +26,7 @@ describe('landing: says only what is true', () => {
 
   it('the network sentence follows the build, in the page and the footer', () => {
     expect(landing).toMatch(/networkLabel\(\)/);
-    expect(footer).toMatch(/ALPHA_LIVE\s*\n?\s*\?\s*" on Aztec Alpha with real funds and a cap per payment\. "/);
+    expect(footer).toMatch(/ALPHA_LIVE\s*\n?\s*\?\s*["'] on Aztec Alpha with real funds and a cap per payment\. ["']/);
     expect(footer).toMatch(/only on the Aztec test network with tokens that have no value/);
     // The early-access and affiliation disclaimers stay.
     expect(footer).toMatch(/Ledger Chat is in early access/);
@@ -43,7 +44,7 @@ describe('landing: says only what is true', () => {
   it('the bar and the footer say Ledger Chat', () => {
     expect(nav).toMatch(/<HLLogo size=\{30\} label="Ledger Chat" \/>/);
     expect(nav).toMatch(/aria-label="Ledger Chat home"/);
-    expect(footer).toMatch(/Ledger <em>Chat<\/em>/);
+    expect(footer).toMatch(/Ledger <em>Chat<\/em>|'Ledger \{0\}', \{ 0: <em>Chat<\/em> \}/);
   });
 
   it('every in-page link points at a section that exists', () => {

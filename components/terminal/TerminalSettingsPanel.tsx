@@ -9,10 +9,12 @@ import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useAccount, useBalance } from 'wagmi';
+import { useT } from '@/lib/i18n/client';
 
 // We will construct categories inside the component to use the hook.
 
 export function TerminalSettingsPanel() {
+  const tr = useT();
   const store = useSettingsStore();
   const { t } = useSystemTranslation();
   const { isLoading, updateSetting, fetchSettings } = store;
@@ -22,20 +24,20 @@ export function TerminalSettingsPanel() {
   const { data: balance } = useBalance({ address });
 
   const CATEGORIES = [
-    { id: 'account', label: 'Account' },
-    { id: 'notifications', label: 'Notifications' },
+    { id: 'account', label: tr("Account") },
+    { id: 'notifications', label: tr("Notifications") },
     { id: 'general', label: t('GENERAL_SETTINGS') },
     { id: 'display', label: t('APPEARANCE') },
     { id: 'privacy', label: t('PRIVACY_SECURITY') },
-    { id: 'payments', label: 'Payments & Unlocks' },
-    { id: 'legal', label: 'Legal & Regulatory' },
+    { id: 'payments', label: tr("Payments & Unlocks") },
+    { id: 'legal', label: tr("Legal & Regulatory") },
   ];
 
   const LEGAL_LINKS = [
-    { href: '/legal/privacy',   icon: FileText, label: 'Privacy Policy (GDPR)',  desc: 'Data processing, right of erasure and ZKP anonymization protocol.' },
-    { href: '/legal/terms',     icon: FileText, label: 'Terms & Conditions',      desc: 'Platform terms and utility token classification.' },
-    { href: '/legal/security',  icon: Globe,    label: 'Security Architecture',   desc: 'Noir circuit audit status, key management and incident response policy.' },
-    { href: 'https://github.com/humanityledger/Humanity-Ledger', icon: Lock, label: 'GitHub Repository', desc: 'Open source code — Ledger Chat P2P protocol on Aztec V5.' },
+    { href: '/legal/privacy',   icon: FileText, label: tr("Privacy Policy (GDPR)"),  desc: tr("Data processing, right of erasure and ZKP anonymization protocol.") },
+    { href: '/legal/terms',     icon: FileText, label: tr("Terms & Conditions"),      desc: tr("Platform terms and utility token classification.") },
+    { href: '/legal/security',  icon: Globe,    label: tr("Security Architecture"),   desc: tr("Noir circuit audit status, key management and incident response policy.") },
+    { href: 'https://github.com/humanityledger/Humanity-Ledger', icon: Lock, label: tr("GitHub Repository"), desc: tr("Open source code — Ledger Chat P2P protocol on Aztec V5.") },
   ];
 
   const handleTotalDisconnect = async () => {
@@ -86,7 +88,7 @@ export function TerminalSettingsPanel() {
                     onClick={() => updateSetting(key, opt.value as never)}
                     className={`w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border text-left ${isSelected ? 'bg-black text-white border-black' : 'bg-transparent text-black/50 border-black/10 hover:border-black/30 hover:text-black'}`}
                   >
-                     {opt.label}
+                     {tr(opt.label)}
                   </button>
                )
             })}
@@ -136,7 +138,7 @@ export function TerminalSettingsPanel() {
                    onClick={() => setActiveTab(c.id)}
                    className={`flex items-center gap-3 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${isActive ? 'bg-black text-white' : 'bg-transparent text-black/40 hover:bg-black/5 hover:text-black'}`}
                  >
-                    {c.label}
+                    {tr(c.label)}
                  </button>
                )
             })}
@@ -157,7 +159,7 @@ export function TerminalSettingsPanel() {
          
          <div className="mb-12 max-w-4xl mx-auto">
             <h2 className="text-[20px] font-black uppercase tracking-widest mb-3 text-black">
-               {CATEGORIES.find(c => c.id === activeTab)?.label}
+               {tr(CATEGORIES.find(c => c.id === activeTab)?.label)}
             </h2>
             <p className="text-[11px] font-mono text-black/40 uppercase tracking-widest leading-relaxed">
                {t('MANAGE_CONFIG')}
@@ -178,19 +180,19 @@ export function TerminalSettingsPanel() {
                     <>
                        {renderInput('displayName' as any, 'Display Name', 'Your visible name in chats', 'text')}
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
-                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Wallet Address</span>
-                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Your primary identity</span>
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Wallet Address")}</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">{tr("Your primary identity")}</span>
                            <input disabled value={address ? `${address.slice(0, 6)}...${address.slice(-4)} (Connected Wallet)` : "Not Connected"} className="w-full bg-black/5 border border-transparent rounded-xl px-5 py-3 text-[12px] font-mono text-black/50 cursor-not-allowed" />
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
-                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Linked Devices</span>
-                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Manage your active sessions</span>
-                           <div className="text-[12px] font-black tracking-widest text-black">{typeof window !== "undefined" && localStorage.getItem("ledger_linked_device_qr") ? "2 devices" : "1 device (this device)"}</div>
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Linked Devices")}</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">{tr("Manage your active sessions")}</span>
+                           <div className="text-[12px] font-black tracking-widest text-black">{typeof window !== "undefined" && localStorage.getItem("ledger_linked_device_qr") ? tr("2 devices") : tr("1 device (this device)")}</div>
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-red-500/20 rounded-2xl hover:border-red-500/40 transition-all">
-                           <span className="text-[12px] font-black uppercase tracking-widest text-red-600 mb-1.5">Danger Zone</span>
-                           <span className="text-[10px] text-red-500/60 font-mono mb-4 leading-relaxed">Permanently delete your account and history</span>
-                           <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-red-50 text-red-600 border-red-200 hover:bg-red-500 hover:text-white">Delete Account</button>
+                           <span className="text-[12px] font-black uppercase tracking-widest text-red-600 mb-1.5">{tr("Danger Zone")}</span>
+                           <span className="text-[10px] text-red-500/60 font-mono mb-4 leading-relaxed">{tr("Permanently delete your account and history")}</span>
+                           <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-red-50 text-red-600 border-red-200 hover:bg-red-500 hover:text-white">{tr("Delete Account")}</button>
                        </div>
                     </>
                  )}
@@ -209,14 +211,14 @@ export function TerminalSettingsPanel() {
                     <>
                        {renderToggle('payments_enabled' as any, 'Enable Crypto Payments', 'When disabled, all payment CTAs are hidden throughout the app')}
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
-                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Sticker Premium Plan</span>
-                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Current: Free Plan</span>
-                           <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-[#25D366] text-white border-transparent hover:bg-[#20bd5a]">Upgrade for €2.99/mo</button>
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Sticker Premium Plan")}</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">{tr("Current: Free Plan")}</span>
+                           <button className="w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-[#25D366] text-white border-transparent hover:bg-[#20bd5a]">{tr("Upgrade for €2.99/mo")}</button>
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
-                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">Crypto Balance</span>
-                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">Available crypto</span>
-                           <div className="text-[16px] font-black tracking-widest text-black">{balance ? parseFloat(balance.formatted).toFixed(4) : "0.00"} {balance?.symbol || "ETH"}</div>
+                           <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Crypto Balance")}</span>
+                           <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">{tr("Available crypto")}</span>
+                           <div className="text-[16px] font-black tracking-widest text-black">{balance ? parseFloat(balance.formatted).toFixed(4) : "0.00"} {balance?.symbol || tr("ETH")}</div>
                        </div>
                     </>
                  )}
@@ -238,8 +240,8 @@ export function TerminalSettingsPanel() {
                           {value: '24h', label: t('24_HOURS')}
                        ])}
                        {renderSelect('dateFormat', t('DATE_FORMAT'), t('DATE_ORDERING'), [
-                          {value: 'DD/MM/YYYY', label: 'DD/MM/YYYY'},
-                          {value: 'MM/DD/YYYY', label: 'MM/DD/YYYY'}
+                          {value: 'DD/MM/YYYY', label: tr("DD/MM/YYYY")},
+                          {value: 'MM/DD/YYYY', label: tr("MM/DD/YYYY")}
                        ])}
                        {renderSelect('addressFormat', t('ADDRESS_FORMAT'), t('CRYPTO_RENDER'), [
                           {value: 'truncated', label: t('ABBREVIATED')},
@@ -271,8 +273,7 @@ export function TerminalSettingsPanel() {
                   {activeTab === 'legal' && (
                      <div className="col-span-1 md:col-span-2 flex flex-col gap-4">
                         <p className="text-[11px] font-mono text-black/40 uppercase tracking-widest leading-relaxed border-b border-black/10 pb-4">
-                          Humanity Ledger S.L. — MiCA Title II Utility Token Issuer — Regulated under Regulation (EU) 2023/1114.
-                          Full regulatory documentation suite: 27 documents. Access each document below.
+                          {tr("Humanity Ledger S.L. — MiCA Title II Utility Token Issuer — Regulated under Regulation (EU) 2023/1114. Full regulatory documentation suite: 27 documents. Access each document below.")}
                         </p>
                         {LEGAL_LINKS.map((item) => {
                           const Icon = item.icon;
@@ -287,16 +288,16 @@ export function TerminalSettingsPanel() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-[12px] font-black uppercase tracking-widest text-black truncate">{item.label}</span>
+                                  <span className="text-[12px] font-black uppercase tracking-widest text-black truncate">{tr(item.label)}</span>
                                   <ExternalLink size={12} className="text-black/20 group-hover:text-black/60 transition-colors shrink-0" />
                                 </div>
-                                <span className="text-[10px] font-mono text-black/40 leading-relaxed mt-1 block">{item.desc}</span>
+                                <span className="text-[10px] font-mono text-black/40 leading-relaxed mt-1 block">{tr(item.desc)}</span>
                               </div>
                             </Link>
                           );
                         })}
                         <p className="text-[9px] font-mono text-black/25 uppercase tracking-widest text-center pt-2">
-                          © 2026 Humanity Ledger S.L. (In process of incorporation) · All rights reserved
+                          {tr("© 2026 Humanity Ledger S.L. (In process of incorporation) · All rights reserved")}
                         </p>
                      </div>
                   )}

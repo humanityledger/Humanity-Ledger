@@ -3,6 +3,7 @@
 import React, { useMemo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { useT } from '@/lib/i18n/client';
 
 export interface SearchableMessage {
   id: string;
@@ -50,6 +51,7 @@ export function InChatSearch({
   onClose,
   onNavigate,
 }: InChatSearchProps) {
+  const t = useT();
   const [query, setQuery] = React.useState("");
   const [currentIdx, setCurrentIdx] = React.useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,18 +122,18 @@ export function InChatSearch({
           <input
             ref={inputRef}
             type="search"
-            placeholder="Search in this chat…"
+            placeholder={t("Search in this chat…")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className="flex-1 bg-transparent text-[14px] text-[#15171c] placeholder-[#a3a9b4] outline-none min-w-0"
-            aria-label="Search messages"
+            aria-label={t("Search messages")}
           />
 
           {/* Result counter */}
           {query.trim() && (
             <span className="text-[12px] text-[#727a88] tabular-nums shrink-0 min-w-[50px] text-center">
-              {total === 0 ? "No results" : `${currentIdx + 1} / ${total}`}
+              {total === 0 ? t("No results") : `${currentIdx + 1} / ${total}`}
             </span>
           )}
 
@@ -142,7 +144,7 @@ export function InChatSearch({
               disabled={total === 0}
               onClick={() => navigate(-1)}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-[#475061] disabled:opacity-30 hover:bg-[#f2f4f7] transition-colors"
-              aria-label="Previous match"
+              aria-label={t("Previous match")}
             >
               <ChevronUp size={15} strokeWidth={2} />
             </button>
@@ -151,7 +153,7 @@ export function InChatSearch({
               disabled={total === 0}
               onClick={() => navigate(1)}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-[#475061] disabled:opacity-30 hover:bg-[#f2f4f7] transition-colors"
-              aria-label="Next match"
+              aria-label={t("Next match")}
             >
               <ChevronDown size={15} strokeWidth={2} />
             </button>
@@ -162,7 +164,7 @@ export function InChatSearch({
             type="button"
             onClick={onClose}
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#475061] hover:bg-[#f2f4f7] transition-colors"
-            aria-label="Close search"
+            aria-label={t("Close search")}
           >
             <X size={15} strokeWidth={2} />
           </button>

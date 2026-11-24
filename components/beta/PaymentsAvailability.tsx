@@ -11,6 +11,7 @@ import { betaApplies } from '@/lib/beta/cusdc-beta-client';
 import { CUSDC_PUBLIC } from '@/lib/aztec/wallet/config';
 import { PRIVATE_ASSET } from '@/lib/payments/private-asset';
 import { betaSummary, type GateStatus } from '@/lib/beta/gate';
+import { useT } from '@/lib/i18n/client';
 
 function Line({ icon, label, sub, value, href }: { icon: React.ReactNode; label: string; sub: string; value: string; href?: string }) {
   const inner = (
@@ -28,6 +29,7 @@ function Line({ icon, label, sub, value, href }: { icon: React.ReactNode; label:
 }
 
 export function PaymentsAvailability() {
+  const t = useT();
   const applies = betaApplies();
   const [status, setStatus] = useState<GateStatus | null>(null);
   const [flags, setFlags] = useState<{ signedOut?: boolean; failed?: boolean }>({});
@@ -50,16 +52,16 @@ export function PaymentsAvailability() {
 
   return (
     <div className="mb-6" data-testid="payments-availability">
-      <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">What works today</p>
+      <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{t("What works today")}</p>
       <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden px-4">
-        <Line icon={<Send size={18} />} label="Public tips" sub="ETH, USDC or USDT on Ethereum mainnet, from your Ethereum wallet. Public on the blockchain." value="Available" />
+        <Line icon={<Send size={18} />} label={t("Public tips")} sub={t("ETH, USDC or USDT on Ethereum mainnet, from your Ethereum wallet. Public on the blockchain.")} value={t("Available")} />
         {CUSDC_PUBLIC ? (
-          <Line icon={<Lock size={18} />} label="Private payments" sub={`On Aztec Alpha in ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account.`} value="Alpha" />
+          <Line icon={<Lock size={18} />} label={t("Private payments")} sub={t("On Aztec Alpha in {phrase}. The network fee is Fee Juice from your own account.", { phrase: PRIVATE_ASSET.phrase })} value={t("Alpha")} />
         ) : (
-          <Line icon={<ShieldCheck size={18} />} label="Private cUSDC payments" sub={beta.sub} value={beta.value} href={applies ? '/beta' : undefined} />
+          <Line icon={<ShieldCheck size={18} />} label={t("Private cUSDC payments")} sub={t(beta.sub)} value={beta.value} href={applies ? '/beta' : undefined} />
         )}
       </div>
-      <p className="text-[12.5px] text-[#727a88] px-1 mt-2 leading-relaxed">Aztec Alpha has no external audit, and each private payment has a cap.</p>
+      <p className="text-[12.5px] text-[#727a88] px-1 mt-2 leading-relaxed">{t("Aztec Alpha has no external audit, and each private payment has a cap.")}</p>
     </div>
   );
 }

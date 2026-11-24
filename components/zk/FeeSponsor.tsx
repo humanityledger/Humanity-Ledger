@@ -22,6 +22,7 @@ import { formatUnits, parseUnits } from 'viem';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { SPONSOR_SECRET_INDEX, humanError } from '@/lib/aztec/wallet/client';
 import { bridgeFeeJuice, ERC20_ABI, l1ClientsFromViem, pinnedFeeJuice, type BridgeStep } from '@/lib/aztec/fee-juice';
+import { useT } from '@/lib/i18n/client';
 
 const MAINNET = 1;
 const HEX32 = /^0x[0-9a-fA-F]{64}$/;
@@ -35,6 +36,7 @@ const STEP_TEXT: Record<BridgeStep, string> = {
 };
 
 export function FeeSponsor() {
+  const t = useT();
   const params = useMemo(() => (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search)), []);
   const to = params?.get('to') ?? '';
   const secretHash = params?.get('h') ?? '';
@@ -72,7 +74,7 @@ export function FeeSponsor() {
         if (h) setTx(h);
       });
     } catch (e) {
-      setError(humanError(e));
+      setError(t(humanError(e)));
       setStep(null);
     } finally {
       busyRef.current = false;
@@ -81,55 +83,53 @@ export function FeeSponsor() {
 
   const card = 'w-full max-w-md bg-white rounded-3xl border border-black/[0.06] shadow-sm p-6';
   if (AZTEC_WALLET_CONFIG.network !== 'mainnet') {
-    return <div className={card}><p className="text-[14px] text-[#475467]">Network fees are only needed on Aztec Alpha. This build uses the test network, where fees are sponsored.</p></div>;
+    return <div className={card}><p className="text-[14px] text-[#475467]">{t("Network fees are only needed on Aztec Alpha. This build uses the test network, where fees are sponsored.")}</p></div>;
   }
   if (!valid) {
-    return <div className={card}><p className="text-[14px] text-[#475467]">This link is not complete. Ask your contact to copy it again from their private wallet.</p></div>;
+    return <div className={card}><p className="text-[14px] text-[#475467]">{t("This link is not complete. Ask your contact to copy it again from their private wallet.")}</p></div>;
   }
   const done = step === 'deposited';
   const busy = step !== null && !done;
   return (
     <div className={card}>
       <span className="w-11 h-11 rounded-2xl bg-[#f2f4f7] flex items-center justify-center"><Fuel size={20} /></span>
-      <h1 className="mt-3 text-[19px] font-semibold text-[#15171c]">Pay a contact's network fees</h1>
-      <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#475467]">
-        Your AZTEC becomes Fee Juice for this {networkLabel()} account, so it can be created and pay its own transactions. Only its owner can use it. Fee Juice cannot be sent back.
-      </p>
+      <h1 className="mt-3 text-[19px] font-semibold text-[#15171c]">{t("Pay a contact's network fees")}</h1>
+      <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#475467]">{t("Your AZTEC becomes Fee Juice for this {networkLabel} account, so it can be created and pay its own transactions. Only its owner can use it. Fee Juice cannot be sent back.", { networkLabel: t(networkLabel()) })}</p>
       <div className="mt-4 rounded-2xl bg-[#f7f8fa] px-4 py-3">
-        <p className="text-[12px] text-[#727a88]">For the Aztec account</p>
+        <p className="text-[12px] text-[#727a88]">{t("For the Aztec account")}</p>
         <p className="font-mono text-[12px] break-all text-[#15171c]">{to}</p>
       </div>
 
       {done ? (
         <div className="mt-5 flex gap-2 rounded-2xl bg-[#e9f7ef] px-4 py-3 text-[13.5px] text-[#0f6b45]">
           <CheckCircle2 size={17} className="shrink-0 mt-0.5" />
-          <span>Done. The Fee Juice reaches Aztec in a few minutes; your contact's account sets itself up when they open their private wallet.</span>
+          <span>{t("Done. The Fee Juice reaches Aztec in a few minutes; your contact's account sets itself up when they open their private wallet.")}</span>
         </div>
       ) : (
         <>
-          <label className="mt-5 block text-[13px] font-medium text-[#15171c]" htmlFor="fee-amount">Amount of AZTEC</label>
+          <label className="mt-5 block text-[13px] font-medium text-[#15171c]" htmlFor="fee-amount">{t("Amount of AZTEC")}</label>
           <input id="fee-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={busy}
             className="mt-1.5 w-full h-11 px-3 rounded-xl border border-[#e4e7ec] text-[15px] outline-none focus:border-[#98a2b3]" />
-          {typeof held === 'bigint' && <p className="mt-1 text-[12px] text-[#727a88]">Your Ethereum wallet holds {formatUnits(held, 18)} AZTEC.</p>}
+          {typeof held === 'bigint' && <p className="mt-1 text-[12px] text-[#727a88]">{t("Your Ethereum wallet holds {formatUnits} AZTEC.", { formatUnits: formatUnits(held, 18) })}</p>}
           <label className="mt-4 flex gap-2.5 text-[12.5px] leading-relaxed text-[#475467]">
             <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={busy} className="mt-0.5" />
-            <span>I understand this is public on Ethereum: my address, this Aztec account and the amount. It costs Ethereum gas for an approval and a deposit (about 310,000 gas).</span>
+            <span>{t("I understand this is public on Ethereum: my address, this Aztec account and the amount. It costs Ethereum gas for an approval and a deposit (about 310,000 gas).")}</span>
           </label>
           {error && <p className="mt-3 flex gap-2 text-[13px] text-[#b42318]"><AlertTriangle size={15} className="shrink-0 mt-0.5" />{error}</p>}
           {!isConnected ? (
-            <button type="button" onClick={() => open()} className="mt-5 w-full h-12 rounded-2xl bg-[#15171c] text-white text-[14.5px] font-semibold">Connect your Ethereum wallet</button>
+            <button type="button" onClick={() => open()} className="mt-5 w-full h-12 rounded-2xl bg-[#15171c] text-white text-[14.5px] font-semibold">{t("Connect your Ethereum wallet")}</button>
           ) : (
             <button type="button" onClick={pay} disabled={!units || !ack || busy || (typeof held === 'bigint' && !!units && units > held)}
               className="mt-5 w-full h-12 rounded-2xl bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-40 flex items-center justify-center gap-2">
               {busy && <Loader2 size={16} className="animate-spin" />}
-              {busy ? STEP_TEXT[step!] : `Pay ${amount || '0'} AZTEC of fees`}
+              {busy ? t(STEP_TEXT[step!]) : t("Pay {value} AZTEC of fees", { value: amount || '0' })}
             </button>
           )}
         </>
       )}
       {tx && (
         <a href={`https://etherscan.io/tx/${tx}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-[12.5px] text-[#1a4fb8]">
-          View on Etherscan <ExternalLink size={12} />
+          {t("View on Etherscan")}{" "}<ExternalLink size={12} />
         </a>
       )}
     </div>
@@ -141,6 +141,7 @@ export function FeeSponsor() {
  * the network fees, and look for the deposit once they have.
  */
 export function FeeRequestBox() {
+  const t = useT();
   const publicClient = usePublicClient({ chainId: MAINNET });
   const [link, setLink] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -153,10 +154,10 @@ export function FeeRequestBox() {
       const l = await getPrivateWallet().feeRequestLink();
       setLink(l);
       const text = 'Can you cover my Ledger Chat network fees? Open this link and pay a few AZTEC from your Ethereum wallet:';
-      if (navigator.share) await navigator.share({ title: 'Ledger Chat network fees', text, url: l }).catch(() => {});
-      else { await navigator.clipboard?.writeText(l); setNote('Link copied. Send it to a contact in a chat.'); }
+      if (navigator.share) await navigator.share({ title: t("Ledger Chat network fees"), text, url: l }).catch(() => {});
+      else { await navigator.clipboard?.writeText(l); setNote(t("Link copied. Send it to a contact in a chat.")); }
     } catch (e) {
-      setNote(humanError(e));
+      setNote(t(humanError(e)));
     }
   }, []);
 
@@ -167,9 +168,9 @@ export function FeeRequestBox() {
     try {
       const { getPrivateWallet } = await import('@/lib/aztec/wallet/client');
       const n = await getPrivateWallet().recoverFeeJuiceClaims({ getLogs: (a: any) => (publicClient as any).getLogs(a), getBlockNumber: () => (publicClient as any).getBlockNumber() });
-      setNote(n ? 'Fee Juice found. Your account is created as soon as it reaches Aztec (a few minutes).' : 'Nothing has arrived yet. Deposits show up a minute or two after the contact pays.');
+      setNote(n ? t("Fee Juice found. Your account is created as soon as it reaches Aztec (a few minutes).") : t("Nothing has arrived yet. Deposits show up a minute or two after the contact pays."));
     } catch (e) {
-      setNote(humanError(e));
+      setNote(t(humanError(e)));
     } finally {
       setChecking(false);
     }
@@ -177,13 +178,12 @@ export function FeeRequestBox() {
 
   return (
     <div className="mx-5 mb-5 rounded-2xl border border-black/[0.06] p-4">
-      <p className="text-[13.5px] font-semibold text-[#15171c]">No AZTEC? Ask a contact</p>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-black/55">Share a link: a contact pays a few AZTEC of fees for your account from their Ethereum wallet. Only you can use them.</p>
+      <p className="text-[13.5px] font-semibold text-[#15171c]">{t("No AZTEC? Ask a contact")}</p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-black/55">{t("Share a link: a contact pays a few AZTEC of fees for your account from their Ethereum wallet. Only you can use them.")}</p>
       <div className="mt-3 flex gap-2">
-        <button type="button" onClick={share} className="flex-1 h-10 rounded-xl bg-[#15171c] text-white text-[13px] font-medium">Share fee link</button>
+        <button type="button" onClick={share} className="flex-1 h-10 rounded-xl bg-[#15171c] text-white text-[13px] font-medium">{t("Share fee link")}</button>
         <button type="button" onClick={check} disabled={checking} className="flex-1 h-10 rounded-xl border border-[#e4e7ec] text-[13px] flex items-center justify-center gap-1.5">
-          {checking && <Loader2 size={14} className="animate-spin" />} Check for fees
-        </button>
+          {t("{value} Check for fees", { value: checking && <Loader2 size={14} className="animate-spin" /> })}</button>
       </div>
       {link && <p className="mt-2 font-mono text-[11px] break-all text-black/45">{link}</p>}
       {note && <p className="mt-2 text-[12.5px] text-[#475467]">{note}</p>}

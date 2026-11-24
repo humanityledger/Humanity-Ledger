@@ -41,19 +41,22 @@ import { ScrollProgressBar } from "@/components/ui/ScrollProgressBar";
 import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 
 import { AztecProvider } from "@/context/AztecContext";
+import { getServerLocale, getT, loadMessages } from '@/lib/i18n/server';
+import { I18nProvider } from '@/lib/i18n/client';
+import { HTML_LANG } from '@/lib/i18n/locales';
 
 
 // No global WalletConnect *wallet* SDK (WalletConnectProvider): it opened a second WalletConnect core and
 // relay WebSocket on every page, for a pairing screen nothing in the app shows. Sign-in uses AppKit.
 
 const inter = Inter({ 
-  subsets: ['latin'], 
+  subsets: ['latin', 'latin-ext', 'cyrillic'], 
   variable: '--font-inter',
   display: 'swap'
 })
 
 const aztecFont = Inter({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   variable: '--font-aztec-serif',
   display: 'swap',
 })
@@ -61,7 +64,7 @@ const aztecFont = Inter({
 // Editorial display face for headings on the public pages (landing, docs,
 // /connect, footer). Body text stays Inter.
 const displaySerif = Instrument_Serif({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   weight: '400',
   style: ['normal', 'italic'],
   variable: '--font-display',
@@ -69,7 +72,7 @@ const displaySerif = Instrument_Serif({
 })
 
 const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   weight: ['400', '500', '700'],
   variable: '--font-aztec-mono',
   display: 'swap',
@@ -256,6 +259,10 @@ export default async function RootLayout({
   children: React.ReactNode
 
 }) {
+  const t = await getT();
+  // The language of this request (cookie hl_locale, else Accept-Language): rendered in it from the first byte.
+  const locale = await getServerLocale();
+  const messages = await loadMessages(locale);
 
   const headersList = await headers();
 
@@ -332,7 +339,7 @@ export default async function RootLayout({
 
   return (
 
-    <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang={HTML_LANG[locale]} className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
         {/* The boot mark's image (components/layout/BootMark.tsx): fetched before the first paint so it never pops in. */}
@@ -612,10 +619,11 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] bg-black text-white px-4 py-2 rounded-lg font-bold text-sm">
 
-          Skip to main content
+          {t("Skip to main content")}
 
         </a>
 
+        <I18nProvider locale={locale} messages={messages}>
         {mobileLanding ? children : (<>
         <ScrollProgressBar />
 
@@ -657,6 +665,7 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
         </Providers>
         </>)}
+        </I18nProvider>
 
       </body>
 

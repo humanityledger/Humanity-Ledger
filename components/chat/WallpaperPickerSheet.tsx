@@ -4,6 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check } from "lucide-react";
 import { WALLPAPERS } from "@/lib/chat/wallpapers";
+import { useT } from '@/lib/i18n/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Wallpaper options
@@ -48,6 +49,7 @@ export function WallpaperPickerSheet({
   onSelect,
   onClose,
 }: WallpaperPickerSheetProps) {
+  const t = useT();
   return (
     <AnimatePresence>
       {open && (
@@ -75,17 +77,16 @@ export function WallpaperPickerSheet({
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f2f4f7]">
               <div>
                 <h2 className="text-[20px] font-bold text-[#15171c] leading-none">
-                  Chat Wallpaper
+                  {t("Chat Wallpaper")}
                 </h2>
-                <p className="text-[13px] text-[#727a88] mt-1">
-                  For your chat with {peerDisplayName}
+                <p className="text-[13px] text-[#727a88] mt-1">{t("For your chat with {peerDisplayName}", { peerDisplayName })}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 className="w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors"
-                aria-label="Close"
+                aria-label={t("Close")}
               >
                 <X size={18} strokeWidth={2} />
               </button>
@@ -113,7 +114,7 @@ export function WallpaperPickerSheet({
                     {/* Label */}
                     <div className="bg-white px-2 py-1.5 text-center">
                       <span className="text-[11px] font-medium text-[#15171c] leading-none">
-                        {opt.label}
+                        {t(opt.label)}
                       </span>
                     </div>
                     {/* Active check */}

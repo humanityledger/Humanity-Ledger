@@ -37,12 +37,14 @@ import { wipeLocalChatData } from '@/lib/settings/localWipe';
 import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { ThemePickerSheet, type AppearanceTab } from './ThemePickerSheet';
+import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 import { findChatTheme } from '@/lib/chat/themes';
 import { resolveWallpaper } from '@/lib/chat/wallpapers';
 import { BUBBLE_STYLES } from '@/lib/chat/bubbleStyles';
 import { setStickerEffectsEnabled, stickerEffectsEnabled } from './StickerSceneHost';
 import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
 import { ProfileHeaderCard, ProfilePanel, ProfileSharePanel, UsernameEditor } from './profile/ProfileShare';
+import { useT } from '@/lib/i18n/client';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -207,6 +209,7 @@ const SETTINGS_SECTIONS = [
 const PROFILE_TABS: Record<string, string> = { profile: 'Profile', username: 'Username', share: 'QR code or link' };
 
 const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const tr = useT();
   const [blocked, setBlocked] = useState<string[] | null>(null);
   useEffect(() => {
     // Same list the chat enforces (vault `ledger_blocked`).
@@ -217,28 +220,28 @@ const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const unblock = (addr: string) => {
     const updated = (blocked || []).filter(a => a !== addr);
     setBlocked(updated);
-    saveBlockList(updated).then(() => toast.success('Unblocked')).catch(() => toast.error('Could not unblock. Try again.'));
+    saveBlockList(updated).then(() => toast.success(tr("Unblocked"))).catch(() => toast.error(tr("Could not unblock. Try again.")));
   };
   return (
     <div className="px-6 pb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[20px] font-semibold text-[#15171c]">Blocked addresses</h3>
-        <button type="button" onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
+        <h3 className="text-[20px] font-semibold text-[#15171c]">{tr("Blocked addresses")}</h3>
+        <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
       </div>
       {blocked === null ? (
-        <p className="text-[14px] text-[#727a88] text-center py-10">Loading…</p>
+        <p className="text-[14px] text-[#727a88] text-center py-10">{tr("Loading…")}</p>
       ) : blocked.length === 0 ? (
         <div className="py-12 flex flex-col items-center gap-3 text-[#727a88]">
           <Shield size={40} className="opacity-30" />
-          <p className="text-[15px] font-medium">No blocked addresses</p>
-          <p className="text-[13px] text-center">Blocked wallets can't message or call you. Block someone from their chat info.</p>
+          <p className="text-[15px] font-medium">{tr("No blocked addresses")}</p>
+          <p className="text-[13px] text-center">{tr("Blocked wallets can't message or call you. Block someone from their chat info.")}</p>
         </div>
       ) : (
         <div className="max-h-[320px] overflow-y-auto">
           {blocked.map(addr => (
             <div key={addr} className="flex items-center justify-between bg-white border border-[#e4e7ec] rounded-2xl px-4 py-3 mb-2">
               <p className="text-[14px] font-semibold text-[#15171c] tabular-nums" title={addr}>{addr.length > 16 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr}</p>
-              <button type="button" onClick={() => unblock(addr)} className="text-[13px] text-[#15171c] font-semibold px-3 py-1.5 rounded-xl hover:bg-black/5">Unblock</button>
+              <button type="button" onClick={() => unblock(addr)} className="text-[13px] text-[#15171c] font-semibold px-3 py-1.5 rounded-xl hover:bg-black/5">{tr("Unblock")}</button>
             </div>
           ))}
         </div>
@@ -253,33 +256,34 @@ const CustomRpcModalContent: React.FC<{
   onSave: (url: string) => void;
   onClose: () => void;
 }> = ({ currentRpc, onSave, onClose }) => {
+  const tr = useT();
   const [rpcVal, setRpcVal] = useState(currentRpc || '');
   const [rpcErr, setRpcErr] = useState<string | null>(null);
 
   return (
     <div className="px-6 pb-6">
-      <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Custom RPC URL</h3>
-      <p className="text-[13px] text-[#727a88] mb-4 leading-relaxed">Use your own Ethereum RPC provider for transactions and contract interactions.</p>
+      <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">{tr("Custom RPC URL")}</h3>
+      <p className="text-[13px] text-[#727a88] mb-4 leading-relaxed">{tr("Use your own Ethereum RPC provider for transactions and contract interactions.")}</p>
       <input
         type="url"
         value={rpcVal}
         onChange={e => { setRpcVal(e.target.value); setRpcErr(null); }}
-        placeholder="https://mainnet.infura.io/v3/your-key"
+        placeholder={tr("https://mainnet.infura.io/v3/your-key")}
         className={`w-full bg-white border border-[#e4e7ec] rounded-2xl px-4 py-4 text-[14px] tabular-nums text-[#15171c] outline-none focus:ring-2 mb-1 ${rpcErr ? 'ring-2 ring-red-400 focus:ring-red-400' : 'focus:ring-black/30'}`}
       />
       {rpcErr && <p className="text-[12px] text-[#d93036] mb-3 px-1">{rpcErr}</p>}
       <div className="flex gap-3 mt-4">
         <button
           type="button"
-          onClick={() => { setRpcVal(''); onSave(''); onClose(); toast.success('Restored default RPC'); }}
+          onClick={() => { setRpcVal(''); onSave(''); onClose(); toast.success(tr("Restored default RPC")); }}
           className="flex-1 py-4 border border-[#e4e7ec] rounded-2xl text-[#727a88] font-semibold text-[15px]"
         >
-          Reset to Default
+          {tr("Reset to Default")}
         </button>
         <button
           type="button"
           onClick={() => {
-            if (!rpcVal) { onSave(''); onClose(); toast.success('Restored default RPC'); return; }
+            if (!rpcVal) { onSave(''); onClose(); toast.success(tr("Restored default RPC")); return; }
             try {
               const u = new URL(rpcVal);
               if (u.protocol !== 'https:' && u.protocol !== 'http:') { setRpcErr('Only https:// and http:// URLs are allowed.'); return; }
@@ -287,11 +291,11 @@ const CustomRpcModalContent: React.FC<{
             } catch { setRpcErr('Please enter a valid URL.'); return; }
             onSave(rpcVal.slice(0, 512));
             onClose();
-            toast.success('RPC URL saved');
+            toast.success(tr("RPC URL saved"));
           }}
           className="flex-1 py-4 bg-[#15171c] rounded-2xl text-white font-semibold text-[15px]"
         >
-          Save
+          {tr("Save")}
         </button>
       </div>
     </div>
@@ -302,6 +306,7 @@ const NukeModalContent: React.FC<{
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }> = ({ onClose, onConfirm }) => {
+  const tr = useT();
   const [nukeConfirm, setNukeConfirm] = useState('');
   const [working, setWorking] = useState(false);
   const confirmed = nukeConfirm.trim().toUpperCase() === 'DELETE' && !working;
@@ -313,19 +318,19 @@ const NukeModalContent: React.FC<{
           <AlertTriangle size={22} className="text-[#d93036]" />
         </div>
         <div>
-          <h3 className="text-[18px] font-semibold text-[#15171c]">Delete all data</h3>
-          <p className="text-[13px] text-[#d93036] font-semibold">This cannot be undone</p>
+          <h3 className="text-[18px] font-semibold text-[#15171c]">{tr("Delete all data")}</h3>
+          <p className="text-[13px] text-[#d93036] font-semibold">{tr("This cannot be undone")}</p>
         </div>
       </div>
       <p className="text-[14px] text-[#727a88] mb-5 leading-relaxed">
-        Erases what Ledger Chat keeps on this device: cached messages, contacts, blocked list, notes, saved files and settings, and signs you out. Your messages stay in your encrypted inbox and come back when you sign in again. Your wallet and funds are not touched.
+        {tr("Erases what Ledger Chat keeps on this device: cached messages, contacts, blocked list, notes, saved files and settings, and signs you out. Your messages stay in your encrypted inbox and come back when you sign in again. Your wallet and funds are not touched.")}
       </p>
-      <p className="text-[13px] text-[#3C3C43] mb-2 font-semibold">Type <span className="font-semibold text-red-600">DELETE</span> to confirm:</p>
+      <p className="text-[13px] text-[#3C3C43] mb-2 font-semibold">{tr("Type {0} to confirm:", { 0: <span className="font-semibold text-red-600">{tr("DELETE")}</span> })}</p>
       <input
         type="text"
         value={nukeConfirm}
         onChange={e => setNukeConfirm(e.target.value)}
-        placeholder="DELETE"
+        placeholder={tr("DELETE")}
         className="w-full bg-white border border-[#e4e7ec] rounded-2xl px-4 py-3 text-[15px] tabular-nums font-semibold text-[#15171c] outline-none focus:ring-2 focus:ring-red-400 mb-4"
         autoCapitalize="characters"
       />
@@ -334,14 +339,14 @@ const NukeModalContent: React.FC<{
         disabled={!confirmed}
         onClick={async () => {
           setWorking(true);
-          try { await onConfirm(); } catch { setWorking(false); toast.error('Could not delete everything. Try again.'); }
+          try { await onConfirm(); } catch { setWorking(false); toast.error(tr("Could not delete everything. Try again.")); }
         }}
         className={`w-full py-4 rounded-2xl text-white font-semibold text-[16px] transition-opacity ${confirmed ? 'bg-[#e5484d]' : 'bg-[#e5484d] opacity-30 cursor-not-allowed'}`}
       >
-        {working ? 'Deleting…' : 'Delete everything'}
+        {working ? tr("Deleting…") : tr("Delete everything")}
       </button>
       <button type="button" onClick={onClose} className="w-full py-3 mt-2 text-[#727a88] font-semibold text-[16px]">
-        Cancel
+        {tr("Cancel")}
       </button>
     </div>
   );
@@ -349,6 +354,7 @@ const NukeModalContent: React.FC<{
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddress, myName, onClose }) => {
+  const tr = useT();
   const { connector, address, chain } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { disconnect } = useDisconnect();
@@ -419,19 +425,19 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   // see them. A failed publish is reported, not hidden.
   const publishProfile = useCallback(async (patch: { displayName?: string; bio?: string; avatarUrl?: string }, okMsg: string) => {
     const r = await pushPublicProfile(myAddress, patch);
-    if (r.ok) toast.success(okMsg);
-    else if (r.error === 'offline') toast.message(`${okMsg} on this device. It will be shared once you are back online.`);
-    else toast.error(`Saved on this device, but others cannot see it yet: ${r.error}`);
+    if (r.ok) toast.success(tr(okMsg));
+    else if (r.error === 'offline') toast.message(tr("{okMsg} on this device. It will be shared once you are back online.", { okMsg }));
+    else toast.error(tr("Saved on this device, but others cannot see it yet: {error}", { error: r.error }));
   }, [myAddress]);
 
   const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Choose an image file.'); return; }
-    if (file.size > 15 * 1024 * 1024) { toast.error('Photo must be under 15 MB'); return; }
+    if (!file.type.startsWith('image/')) { toast.error(tr("Choose an image file.")); return; }
+    if (file.size > 15 * 1024 * 1024) { toast.error(tr("Photo must be under 15 MB")); return; }
     let dataUrl: string;
-    try { dataUrl = await downscaleAvatar(file); } catch (err: any) { toast.error(err?.message || 'Could not open that photo.'); return; }
+    try { dataUrl = await downscaleAvatar(file); } catch (err: any) { toast.error(err?.message || tr("Could not open that photo.")); return; }
     setAvatarUrl(dataUrl);
     try { localStorage.setItem('ledger_avatar', dataUrl); } catch {}
     try { updateSetting('avatar_url', dataUrl); } catch {}
@@ -510,7 +516,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     navigator.clipboard.writeText(myAddress).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast.success('Address copied');
+    toast.success(tr("Address copied"));
   }, [myAddress]);
 
   // Full sign-out: ends the server session (httpOnly cookies included),
@@ -522,12 +528,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const handleSignOut = useCallback(() => setModal('signout'), []);
   const confirmSignOut = useCallback(async () => {
     setSigningOut(true);
-    try { await nuclearDisconnect(); } catch { setSigningOut(false); toast.error('Failed to sign out'); }
+    try { await nuclearDisconnect(); } catch { setSigningOut(false); toast.error(tr("Failed to sign out")); }
   }, [nuclearDisconnect]);
 
   const deleteAllData = useCallback(async () => {
     await wipeLocalChatData(myAddress);
-    toast.success('Local data deleted. Signing you out…');
+    toast.success(tr("Local data deleted. Signing you out…"));
     await nuclearDisconnect();
   }, [myAddress, nuclearDisconnect]);
 
@@ -552,19 +558,19 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         clearedDb = true;
     } catch(e) {}
 
-    toast.success(clearedDb ? 'Message cache cleared. Reloading…' : `Cleared ${count} cached item${count === 1 ? '' : 's'}`);
+    toast.success(clearedDb ? tr("Message cache cleared. Reloading…") : tr("Cleared {count} cached item{value}", { count, value: count === 1 ? '' : 's' }));
     setModal(null);
     setTimeout(() => window.location.reload(), 1000);
   }, []);
 
   const requestNotificationPermission = useCallback(async () => {
-    if (!('Notification' in window)) { toast.error('Notifications not supported'); return; }
+    if (!('Notification' in window)) { toast.error(tr("Notifications not supported")); return; }
     const perm = await Notification.requestPermission();
     if (perm === 'granted') {
-      toast.success('Notifications enabled');
+      toast.success(tr("Notifications enabled"));
       updateSetting('notifications_private', true);
     } else {
-      toast.error('Notifications are blocked. Check your browser settings.');
+      toast.error(tr("Notifications are blocked. Check your browser settings."));
     }
   }, [updateSetting]);
 
@@ -593,10 +599,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       type="button"
                       onClick={() => avatarFileRef.current?.click()}
                       className="w-[88px] h-[88px] rounded-full overflow-hidden shadow-lg ring-4 ring-black/[0.08] hover:ring-black/20 transition-all active:scale-95"
-                      title="Change profile photo"
+                      title={tr("Change profile photo")}
                     >
                       {avatarUrl ? (
-                        <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                        <img src={avatarUrl} alt={tr("Profile")} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-[#15171c] flex items-center justify-center">
                           <span className="text-white text-3xl font-semibold">
@@ -610,7 +616,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       type="button"
                       onClick={() => avatarFileRef.current?.click()}
                       className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#15171c] rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-black transition-colors"
-                      title="Change photo"
+                      title={tr("Change photo")}
                     >
                       <Camera size={14} className="text-white" />
                     </button>
@@ -621,7 +627,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       onClick={() => { removeAvatar(); }}
                       className="text-[13px] font-semibold text-[#d93036] hover:text-red-600 transition-colors"
                     >
-                      Remove photo
+                      {tr("Remove photo")}
                     </button>
                   )}
 
@@ -634,7 +640,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         onChange={e => setDisplayName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && saveDisplayName()}
                         className="flex-1 text-center text-[20px] font-semibold text-[#15171c] bg-white border border-[#e4e7ec] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30"
-                        placeholder="Display name"
+                        placeholder={tr("Display name")}
                         maxLength={32}
                       />
                       <button type="button" onClick={saveDisplayName} className="w-9 h-9 bg-[#15171c] rounded-full flex items-center justify-center shadow-sm">
@@ -644,9 +650,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   ) : (
                     <button type="button" onClick={() => setEditingName(true)} className="flex items-center gap-2 group">
                       <span className="text-[20px] font-semibold text-[#15171c]">
-                        {displayName || 'Add display name'}
+                        {displayName || tr("Add display name")}
                       </span>
-                      <span className="text-[12px] text-[#727a88] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
+                      <span className="text-[12px] text-[#727a88] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">{tr("Edit")}</span>
                     </button>
                   )}
 
@@ -659,7 +665,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         onChange={e => setBio(e.target.value)}
                         rows={2}
                         className="flex-1 text-center text-[14px] text-[#727a88] bg-white border border-[#e4e7ec] rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-black/30 resize-none"
-                        placeholder="About / bio"
+                        placeholder={tr("About / bio")}
                         maxLength={100}
                       />
                       <button type="button" onClick={saveBio} className="w-8 h-8 bg-[#15171c] rounded-full flex items-center justify-center shadow-sm mt-1">
@@ -668,8 +674,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     </div>
                   ) : (
                     <button type="button" onClick={() => setEditingBio(true)} className="text-[14px] text-[#727a88] group flex items-center gap-1">
-                      {bio || 'Add a bio'}
-                      <span className="text-[12.5px] text-[#727a88] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Edit</span>
+                      {bio || tr("Add a bio")}
+                      <span className="text-[12.5px] text-[#727a88] opacity-0 group-hover:opacity-100 transition-opacity font-semibold">{tr("Edit")}</span>
                     </button>
                   )}
 
@@ -691,7 +697,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       <span className="text-[13px] font-semibold text-[#15171c]">
                         {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
                       </span>
-                      <span className="text-[12.5px] text-[#727a88]">on {chain?.name || 'Ethereum'}</span>
+                      <span className="text-[12.5px] text-[#727a88]">{tr("on {value}", { value: chain?.name || tr("Ethereum") })}</span>
                     </div>
                   )}
                 </div>
@@ -699,96 +705,96 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   const accountGroups = (
     <>
-              <Group title="Devices" footer="Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.">
+              <Group title={tr("Devices")} footer="Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.">
                 <Row
                   icon={<Smartphone size={18} />}
-                  label="Linked devices"
-                  sublabel="Link a computer, see and unlink your devices"
+                  label={tr("Linked devices")}
+                  sublabel={tr("Link a computer, see and unlink your devices")}
                   onTap={() => setModal('linked_devices')}
                 />
                 <Row
                   icon={<Monitor size={18} />}
-                  label="This device"
-                  sublabel="This browser, signed in now"
-                  value="Active"
+                  label={tr("This device")}
+                  sublabel={tr("This browser, signed in now")}
+                  value={tr("Active")}
                 />
               </Group>
 
-              <Group title="Profile visibility" footer="Your display name and bio are shared with people you message.">
+              <Group title={tr("Profile visibility")} footer="Your display name and bio are shared with people you message.">
                 <Row
                   icon={<User size={18} />}
-                  label="Display name"
-                  value={displayName || 'Not set'}
+                  label={tr("Display name")}
+                  value={displayName || tr("Not set")}
                   onTap={() => setEditingName(true)}
                 />
                 <Row
                   icon={<FileText size={18} />}
-                  label="Bio"
-                  value={bio || 'Not set'}
+                  label={tr("Bio")}
+                  value={bio || tr("Not set")}
                   onTap={() => setEditingBio(true)}
                 />
                 
                 <Row
                   icon={<Globe size={18} />}
-                  label="Network"
-                  value={chain?.name || 'Ethereum'}
+                  label={tr("Network")}
+                  value={chain?.name || tr("Ethereum")}
                 />
               </Group>
 
-              <Group title="Data and backup">
+              <Group title={tr("Data and backup")}>
                 <Row
                   icon={<Wallet size={18} />}
-                  label="Payments"
-                  sublabel="Receive only, limits per payment, a 30-day summary and a CSV report."
+                  label={tr("Payments")}
+                  sublabel={tr("Receive only, limits per payment, a 30-day summary and a CSV report.")}
                   onTap={() => setModal('payments_settings')}
                 />
                 <Row
                   icon={<Globe size={18} />}
-                  label="Aztec node"
-                  sublabel="Use your own node for the private wallet. The default is the public node."
+                  label={tr("Aztec node")}
+                  sublabel={tr("Use your own node for the private wallet. The default is the public node.")}
                   onTap={() => setModal('aztec_node')}
                 />
                 <Row
                   icon={<Eye size={18} />}
-                  label="Who sees what"
-                  sublabel="What our server, XMTP and the Aztec network can and cannot see."
+                  label={tr("Who sees what")}
+                  sublabel={tr("What our server, XMTP and the Aztec network can and cannot see.")}
                   onTap={() => { window.open('/docs/data-inventory', '_blank', 'noopener'); }}
                 />
                 <Row
                   icon={<Lock size={18} />}
-                  label="Chat history backup"
-                  sublabel="Export or restore this device's messages as a file sealed with your passphrase."
+                  label={tr("Chat history backup")}
+                  sublabel={tr("Export or restore this device's messages as a file sealed with your passphrase.")}
                   onTap={() => setModal('history_backup')}
                 />
                 <Row
                   icon={<Download size={18} />}
-                  label="Export settings"
-                  sublabel="Your preferences as a JSON file. Keys and sessions are never included."
+                  label={tr("Export settings")}
+                  sublabel={tr("Your preferences as a JSON file. Keys and sessions are never included.")}
                   onTap={() => {
-                    try { downloadSettingsBackup(); toast.success('Settings exported'); }
-                    catch { toast.error('Export failed'); }
+                    try { downloadSettingsBackup(); toast.success(tr("Settings exported")); }
+                    catch { toast.error(tr("Export failed")); }
                   }}
                 />
                 <Row
                   icon={<RefreshCw size={18} />}
-                  label="Clear message cache"
-                  sublabel="Free up local storage"
+                  label={tr("Clear message cache")}
+                  sublabel={tr("Free up local storage")}
                   onTap={() => setModal('clearCache')}
                 />
               </Group>
 
-              <Group title="Session">
+              <Group title={tr("Session")}>
                 <Row
                   icon={<LogOut size={18} />}
-                  label="Sign out"
-                  sublabel="Disconnect your wallet"
+                  label={tr("Sign out")}
+                  sublabel={tr("Disconnect your wallet")}
                   danger
                   onTap={handleSignOut}
                 />
                 <Row
                   icon={<Trash2 size={18} />}
-                  label="Delete all data"
-                  sublabel="Permanently erase everything"
+                  label={tr("Delete all data")}
+                  sublabel={tr("Permanently erase everything")}
                   danger
                   onTap={() => setModal('nuke')}
                 />
@@ -816,9 +822,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       >
         <button type="button" onClick={onClose} className="flex items-center gap-1 text-[#15171c] font-medium text-[16px]">
           <ArrowLeft size={20} className="text-[#15171c]" />
-          Back
+          {tr("Back")}
         </button>
-        <span className="text-[17px] font-semibold text-[#15171c]">Settings</span>
+        <span className="text-[17px] font-semibold text-[#15171c]">{tr("Settings")}</span>
         <div className="w-16" />
       </div>
 
@@ -829,7 +835,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       {/* Rendered only when it is to be seen (both panes, or the list screen): never hidden by a
           display class that a global rule could override (see app/globals.css, nav centering). */}
       {(wide || activeTab === 'home') && (
-      <nav aria-label="Settings sections" className={`flex flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-white border border-[#e4e7ec]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)', alignItems: 'stretch' }}>
+      <nav aria-label={tr("Settings sections")} className={`flex flex-col overflow-y-auto overscroll-contain ${wide ? 'w-[340px] lg:w-[360px] shrink-0 border-r border-[#e6e8ec] bg-white border border-[#e4e7ec]' : 'w-full'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)', alignItems: 'stretch' }}>
           <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16 space-y-5">
             {/* You, as Signal shows it at the top of Settings: photo, name, @username, QR code. */}
             <ProfileHeaderCard
@@ -841,7 +847,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             />
             {SETTINGS_SECTIONS.map(section => (
               <div key={section.title}>
-                <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{section.title}</p>
+                <p className="text-[13px] font-medium text-[#727a88] px-1 mb-1.5">{tr(section.title)}</p>
                 <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">
                   {section.items.map((item, idx) => (
                     <button
@@ -858,8 +864,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         <item.icon size={17} strokeWidth={1.8} />
                       </span>
                       <div className="flex-1 min-w-0 pr-3">
-                        <p className="text-[15px] font-medium text-[#15171c] leading-tight">{item.label}</p>
-                        {item.sublabel && <p className="text-[12.5px] text-[#727a88] mt-1 leading-snug">{item.sublabel}</p>}
+                        <p className="text-[15px] font-medium text-[#15171c] leading-tight">{tr(item.label)}</p>
+                        {item.sublabel && <p className="text-[12.5px] text-[#727a88] mt-1 leading-snug">{tr(item.sublabel)}</p>}
                       </div>
                       <ChevronRight size={16} className="text-[#c9ced6] shrink-0" />
                     </button>
@@ -881,11 +887,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             className="flex items-center gap-1 text-[#15171c] font-medium text-[14px] hover:opacity-70 transition-opacity"
           >
             <ChevronLeft size={18} />
-            Settings
+            {tr("Settings")}
           </button>
           <span className="text-[#c9ced6]">/</span>
           <span className="text-[14px] text-[#727a88] font-medium outline-none" ref={!wide ? (el) => { sectionTitleRef.current = el; } : undefined} tabIndex={-1}>
-            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || activeTab}
+            {tr(PROFILE_TABS[activeTab]) || tr( SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label) || activeTab}
           </span>
         </div>
       )}
@@ -895,7 +901,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       <div data-testid="settings-content" className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="max-w-2xl mx-auto w-full px-4 py-5 pb-16">
           <h2 ref={wide ? (el) => { sectionTitleRef.current = el; } : undefined} tabIndex={-1} className={`${wide ? 'block' : 'hidden'} text-center text-[15px] font-semibold text-[#15171c] mb-5 outline-none`}>
-            {PROFILE_TABS[activeTab] || SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label || ''}
+            {tr(PROFILE_TABS[activeTab]) || tr( SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === activeTab)?.label) || ''}
           </h2>
 
           {/* Profile: one page with everything that used to be split between Profile and
@@ -927,50 +933,50 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'privacy' && (
             <>
-              <Group title="Who can see" footer="Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.">
-                <Row icon={<Clock size={18} />} label="Last seen and online" value={({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || 'My contacts'} onTap={() => setModal('privacy_last_seen')} />
+              <Group title={tr("Who can see")} footer="Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.">
+                <Row icon={<Clock size={18} />} label={tr("Last seen and online")} value={({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || tr("My contacts")} onTap={() => setModal('privacy_last_seen')} />
               </Group>
 
-              <Group title="Disappearing messages" footer="New messages in all chats will auto-delete after the chosen time.">
-                <Row icon={<Trash2 size={18} />} label="Default timer" value={settings.auto_delete_timer || 'Off'} onTap={() => setModal('auto_delete')} />
+              <Group title={tr("Disappearing messages")} footer="New messages in all chats will auto-delete after the chosen time.">
+                <Row icon={<Trash2 size={18} />} label={tr("Default timer")} value={settings.auto_delete_timer || tr("Off")} onTap={() => setModal('auto_delete')} />
                 <Row
                   icon={<EyeOff size={18} />}
-                  label="Burn after reading"
-                  sublabel={`Messages you receive are removed from this device ${(settings as any).burn_on_read_seconds || 10} s after you open them`}
+                  label={tr("Burn after reading")}
+                  sublabel={tr("Messages you receive are removed from this device {value} s after you open them", { value: (settings as any).burn_on_read_seconds || 10 })}
                   toggle={!!settings.burn_on_read}
                   onToggle={v => updateSetting('burn_on_read', v)}
                 />
               </Group>
 
-              <Group title="Interactions">
+              <Group title={tr("Interactions")}>
                 <Row
                   icon={<Eye size={18} />}
-                  label="Read receipts"
-                  sublabel="Show when you've read messages"
+                  label={tr("Read receipts")}
+                  sublabel={tr("Show when you've read messages")}
                   toggle={settings.show_read_receipts !== false}
                   onToggle={v => updateSetting('show_read_receipts', v)}
                 />
                 <Row
                   icon={<MessageSquare size={18} />}
-                  label="Typing indicators"
-                  sublabel="Show when you're typing"
+                  label={tr("Typing indicators")}
+                  sublabel={tr("Show when you're typing")}
                   toggle={settings.typing_indicators !== false}
                   onToggle={v => updateSetting('typing_indicators', v)}
                 />
                 <Row
                   icon={<Shield size={18} />}
-                  label="Screen privacy"
-                  sublabel="Blurs the chat when you switch apps and turns off text selection. Browsers can't block screenshots."
+                  label={tr("Screen privacy")}
+                  sublabel={tr("Blurs the chat when you switch apps and turns off text selection. Browsers can't block screenshots.")}
                   toggle={!!settings.anti_screenshot}
                   onToggle={v => updateSetting('anti_screenshot', v)}
                 />
               </Group>
 
-              <Group title="Contacts">
+              <Group title={tr("Contacts")}>
                 <Row
                   icon={<BellOff size={18} />}
-                  label="Blocked addresses"
-                  sublabel="Manage blocked wallets"
+                  label={tr("Blocked addresses")}
+                  sublabel={tr("Manage blocked wallets")}
                   onTap={() => setModal('blocked_list')}
                 />
               </Group>
@@ -987,90 +993,90 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-4 mb-5 flex items-start gap-3">
                   <AlertTriangle size={17} className="text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-[14px] font-semibold text-amber-900">Notifications disabled</p>
-                    <p className="text-[12px] text-amber-700 mt-0.5">Enable to never miss a message.</p>
+                    <p className="text-[14px] font-semibold text-amber-900">{tr("Notifications disabled")}</p>
+                    <p className="text-[12px] text-amber-700 mt-0.5">{tr("Enable to never miss a message.")}</p>
                   </div>
                   <button type="button" onClick={requestNotificationPermission} className="bg-amber-600 text-white text-[12px] font-semibold px-3 py-1.5 rounded-xl shrink-0">
-                    Enable
+                    {tr("Enable")}
                   </button>
                 </div>
               )}
 
-              <Group title="Push notifications">
+              <Group title={tr("Push notifications")}>
                 <div className="px-4 py-3 flex items-center justify-between">
                   <div>
-                    <p className="text-[15px] font-semibold text-[#15171c]">Background notifications</p>
+                    <p className="text-[15px] font-semibold text-[#15171c]">{tr("Background notifications")}</p>
                     <p className="text-[12px] text-[#727a88] mt-0.5">
                       {!push.isSupported
-                        ? 'Not supported in this browser'
+                        ? tr("Not supported in this browser")
                         : push.permission === 'denied'
-                        ? 'Blocked in your browser. Allow them in the site settings.'
-                        : 'Get notified even when the app is closed'}
+                        ? tr("Blocked in your browser. Allow them in the site settings.")
+                        : tr("Get notified even when the app is closed")}
                     </p>
                   </div>
                   {push.isSupported && push.permission !== 'denied' && (
                     push.isSubscribed ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] text-[#15171c] font-semibold">On</span>
-                        <button onClick={push.unsubscribe} className="text-[12px] text-[#727a88] underline">Off</button>
+                        <span className="text-[13px] text-[#15171c] font-semibold">{tr("On")}</span>
+                        <button onClick={push.unsubscribe} className="text-[12px] text-[#727a88] underline">{tr("Off")}</button>
                       </div>
                     ) : (
                       <button
                         onClick={async () => {
                           const ok = await push.subscribe();
-                          if (ok) toast.success('Notifications enabled');
-                          else toast.error('Could not enable notifications');
+                          if (ok) toast.success(tr("Notifications enabled"));
+                          else toast.error(tr("Could not enable notifications"));
                         }}
                         disabled={push.isLoading}
                         className="px-4 py-2 bg-[#15171c] hover:bg-black text-white text-[13px] font-semibold rounded-xl disabled:opacity-50 transition-colors"
                       >
-                        {push.isLoading ? 'Enabling' : 'Enable'}
+                        {push.isLoading ? tr("Enabling") : tr("Enable")}
                       </button>
                     )
                   )}
                   {push.permission === 'denied' && (
-                    <span className="text-[12px] text-[#d93036] font-semibold">Blocked</span>
+                    <span className="text-[12px] text-[#d93036] font-semibold">{tr("Blocked")}</span>
                   )}
                 </div>
               </Group>
 
-              <Group title="Messages">
+              <Group title={tr("Messages")}>
                 <Row
                   icon={<MessageSquare size={18} />}
-                  label="Message notifications"
-                  sublabel="Alerts for new messages in your chats"
+                  label={tr("Message notifications")}
+                  sublabel={tr("Alerts for new messages in your chats")}
                   toggle={settings.notifications_private !== false}
                   onToggle={v => updateSetting('notifications_private', v)}
                 />
               </Group>
 
-              <Group title="Sounds and vibration">
+              <Group title={tr("Sounds and vibration")}>
                 <Row
                   icon={<Volume2 size={18} />}
-                  label="Message sound"
+                  label={tr("Message sound")}
                   toggle={settings.notification_sound !== false}
                   onToggle={v => updateSetting('notification_sound', v)}
                 />
                 <Row
                   icon={<Vibrate size={18} />}
-                  label="Vibration"
+                  label={tr("Vibration")}
                   toggle={settings.haptics_intensity > 0}
                   onToggle={v => updateSetting('haptics_intensity', v ? 2 : 0)}
                 />
               </Group>
 
-              <Group title="Display">
+              <Group title={tr("Display")}>
                 <Row
                   icon={<Eye size={18} />}
-                  label="Show preview in notifications"
-                  sublabel="Off by default: alerts say only “New message”, not the text or who sent it"
+                  label={tr("Show preview in notifications")}
+                  sublabel={tr("Off by default: alerts say only “New message”, not the text or who sent it")}
                   toggle={settings.notifications_private !== false && !hidesNotificationContent(settings as any)}
                   onToggle={v => updateSetting('hide_notification_content' as any, !v)}
                 />
                 <Row
                   icon={<Moon size={18} />}
-                  label="Do not disturb"
-                  sublabel="No message alerts or banners. Calls still ring."
+                  label={tr("Do not disturb")}
+                  sublabel={tr("No message alerts or banners. Calls still ring.")}
                   toggle={!!(settings as any).do_not_disturb}
                   onToggle={v => updateSetting('do_not_disturb' as any, v)}
                 />
@@ -1087,45 +1093,45 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   screen is enabled (lib/auth/pin-lock.ts, off by default). Without it the switch
                   changed nothing, so it is shown only when it can lock. */}
               {pinLockEnabled() && (
-                <Group title="App lock" footer="When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.">
+                <Group title={tr("App lock")} footer="When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.">
                   <Row
                     icon={<Fingerprint size={18} />}
-                    label="Ask for my PIN"
-                    sublabel="Each time Ledger Chat opens"
+                    label={tr("Ask for my PIN")}
+                    sublabel={tr("Each time Ledger Chat opens")}
                     toggle={!!settings.biometric_lock}
                     onToggle={v => updateSetting('biometric_lock', v)}
                   />
                 </Group>
               )}
 
-              <Group title="Encryption" footer="Direct messages use XMTP with MLS. Messages marked as sent through the server fallback are not end to end encrypted.">
+              <Group title={tr("Encryption")} footer="Direct messages use XMTP with MLS. Messages marked as sent through the server fallback are not end to end encrypted.">
                 <Row
                   icon={<ShieldCheck size={18} />}
-                  label="How your chats are protected"
-                  sublabel="Protocol, call encryption and limits"
+                  label={tr("How your chats are protected")}
+                  sublabel={tr("Protocol, call encryption and limits")}
                   onTap={() => setModal('encryption')}
                 />
               </Group>
 
-              <Group title="Network security" footer="IP masking uses a TURN relay only when the server has one configured. If it does not, calls between different networks may fail. The switch does not create a relay by itself.">
+              <Group title={tr("Network security")} footer="IP masking uses a TURN relay only when the server has one configured. If it does not, calls between different networks may fail. The switch does not create a relay by itself.">
                 <Row
                   icon={<Shield size={18} />}
-                  label="WebRTC IP masking"
-                  sublabel="Hide your IP during calls"
+                  label={tr("WebRTC IP masking")}
+                  sublabel={tr("Hide your IP during calls")}
                   toggle={!!settings.webrtc_ip_masking}
                   onToggle={v => updateSetting('webrtc_ip_masking', v)}
                 />
               </Group>
 
 
-              <Group title="Records on this device" footer="The passphrase wraps record keys on this device only. Other people in the chat keep their own copies. Locking drops the key from memory. A passkey, when this browser has one, is preferred over a passphrase.">
+              <Group title={tr("Records on this device")} footer="The passphrase wraps record keys on this device only. Other people in the chat keep their own copies. Locking drops the key from memory. A passkey, when this browser has one, is preferred over a passphrase.">
                 <div className="px-4 py-3 flex flex-col gap-2">
                   <input
                     type="password"
                     autoComplete="new-password"
                     value={recordPass}
                     onChange={e => setRecordPass(e.target.value)}
-                    placeholder="Passphrase, at least 8 characters"
+                    placeholder={tr("Passphrase, at least 8 characters")}
                     className="h-11 px-3 rounded-xl bg-white border border-[#e4e7ec] text-[15px] text-[#15171c] outline-none"
                   />
                   <button
@@ -1143,12 +1149,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         await recordSession().unlockPassphrase(recordPass, salt);
                         localStorage.setItem('hl_record_kdf_salt', toHex(salt));
                         setRecordPass('');
-                        toast.success('This device is unlocked. Locking it drops record keys from memory. Other people in the chat are not affected.');
+                        toast.success(tr("This device is unlocked. Locking it drops record keys from memory. Other people in the chat are not affected."));
                       } catch (err) {
-                        toast.error(err instanceof Error ? err.message : 'Could not set the passphrase');
+                        toast.error(err instanceof Error ? err.message : tr("Could not set the passphrase"));
                       }
                     }}
-                  >Protect record keys</button>
+                  >{tr("Protect record keys")}</button>
                   <button
                     type="button"
                     className="h-10 rounded-xl bg-white border border-[#e4e7ec] text-[#15171c] text-[14px] font-semibold"
@@ -1159,18 +1165,18 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         const kek = await passkeyKek();
                         await recordSession().unlockPasskey(kek);
                         kek.fill(0);
-                        toast.success('Record keys on this device now unlock with this passkey');
+                        toast.success(tr("Record keys on this device now unlock with this passkey"));
                       } catch (err) {
-                        toast.error(err instanceof Error ? err.message : 'This passkey could not be used');
+                        toast.error(err instanceof Error ? err.message : tr("This passkey could not be used"));
                       }
                     }}
-                  >Use a passkey</button>
+                  >{tr("Use a passkey")}</button>
                 </div>
               </Group>
 
-              <Group title="Danger zone" footer="These actions are permanent and cannot be undone.">
-                <Row icon={<RefreshCw size={18} />} label="Clear all caches" onTap={() => setModal('clearCache')} />
-                <Row icon={<Trash2 size={18} />} label="Delete all data" danger onTap={() => setModal('nuke')} />
+              <Group title={tr("Danger zone")} footer="These actions are permanent and cannot be undone.">
+                <Row icon={<RefreshCw size={18} />} label={tr("Clear all caches")} onTap={() => setModal('clearCache')} />
+                <Row icon={<Trash2 size={18} />} label={tr("Delete all data")} danger onTap={() => setModal('nuke')} />
               </Group>
             </>
           )}
@@ -1180,68 +1186,69 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'chat' && (
             <>
-              <Group title="Appearance and themes">
+              <Group title={tr("Appearance and themes")}>
+                <LanguagePicker />
                 <Row
                   icon={<Palette size={18} />}
-                  label="Color theme"
-                  value={findChatTheme(settings.chat_theme).label}
+                  label={tr("Color theme")}
+                  value={tr(findChatTheme(settings.chat_theme).label)}
                   onTap={() => setStudio('theme')}
                 />
                 <Row
                   icon={<Sun size={18} />}
-                  label="Chat wallpaper"
+                  label={tr("Chat wallpaper")}
                   value={(() => { const w = resolveWallpaper(settings.chat_background); return !w || w.id === 'default' ? 'Theme' : w.label; })()}
                   onTap={() => setStudio('wallpaper')}
                 />
                 <Row
                   icon={<FileText size={18} />}
-                  label="Font family"
-                  value={settings.font_family ? (settings.font_family.charAt(0).toUpperCase() + settings.font_family.slice(1)) : 'Inter'}
+                  label={tr("Font family")}
+                  value={settings.font_family ? (settings.font_family.charAt(0).toUpperCase() + settings.font_family.slice(1)) : tr("Inter")}
                   onTap={() => setModal('font_family')}
                 />
                 <Row
                   icon={<Sliders size={18} />}
-                  label="Font size"
+                  label={tr("Font size")}
                   value={textSizeLabel(settings.text_size ?? DEFAULT_TEXT_SIZE_LEVEL)}
                   onTap={() => setModal('font_size')}
                 />
                 <Row
                   icon={<MessageSquare size={18} />}
-                  label="Bubble style"
-                  value={BUBBLE_STYLES.find(b => b.id === settings.bubble_style)?.label ?? 'Default'}
+                  label={tr("Bubble style")}
+                  value={tr(BUBBLE_STYLES.find(b => b.id === settings.bubble_style)?.label) ?? tr("Default")}
                   onTap={() => setStudio('bubbles')}
                 />
                 <Row
                   icon={<Star size={18} />}
-                  label="Sticker effects"
-                  sublabel="Stickers play a full-chat moment when they arrive (this device)"
+                  label={tr("Sticker effects")}
+                  sublabel={tr("Stickers play a full-chat moment when they arrive (this device)")}
                   toggle={stickerFx}
                   onToggle={v => { setStickerFx(v); setStickerEffectsEnabled(v); }}
                 />
               </Group>
 
-              <Group title="Composing">
+              <Group title={tr("Composing")}>
                 <Row
                   icon={<Send size={18} />}
-                  label="Enter to send"
-                  sublabel="Press Enter to send, Shift+Enter for newline"
+                  label={tr("Enter to send")}
+                  sublabel={tr("Press Enter to send, Shift+Enter for newline")}
                   toggle={settings.enter_to_send !== false}
                   onToggle={v => updateSetting('enter_to_send', v)}
                 />
                 <Row
                   icon={<Zap size={18} />}
-                  label="Keyboard sound"
-                  sublabel="Mechanical keyboard click on keypress"
+                  label={tr("Keyboard sound")}
+                  sublabel={tr("Mechanical keyboard click on keypress")}
                   toggle={!!settings.mechanical_keyboard}
                   onToggle={v => updateSetting('mechanical_keyboard', v)}
                 />
               </Group>
 
-              <Group title="Writing help" footer="Runs on this device. Your messages are not sent anywhere to be checked.">
+              <Group title={tr("Writing help")} footer="Runs on this device. Your messages are not sent anywhere to be checked.">
                 <Row
                   icon={<Zap size={18} />}
-                  label="Soften strong language"
-                  sublabel="Replaces insults and swear words in messages you send"
+                  label={tr("Soften strong language")}
+                  sublabel={tr("Replaces insults and swear words in messages you send")}
                   toggle={!!settings.tone_translator}
                   onToggle={v => updateSetting('tone_translator', v)}
                 />
@@ -1256,21 +1263,21 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             <>
 
 
-              <Group title="Privacy" footer="IP masking uses a TURN relay when one is configured on the server. If none is set, calls between different networks may not connect. Voice and video stay encrypted with DTLS-SRTP either way.">
+              <Group title={tr("Privacy")} footer="IP masking uses a TURN relay when one is configured on the server. If none is set, calls between different networks may not connect. Voice and video stay encrypted with DTLS-SRTP either way.">
                 <Row
                   icon={<Shield size={18} />}
-                  label="IP address masking"
-                  sublabel="Hides your real IP from callers"
+                  label={tr("IP address masking")}
+                  sublabel={tr("Hides your real IP from callers")}
                   toggle={!!settings.webrtc_ip_masking}
                   onToggle={v => updateSetting('webrtc_ip_masking', v)}
                 />
               </Group>
 
-              <Group title="Vibration">
+              <Group title={tr("Vibration")}>
                 <Row
                   icon={<Vibrate size={18} />}
-                  label="Vibrate"
-                  sublabel="For incoming calls and new messages (same switch as in Notifications)"
+                  label={tr("Vibrate")}
+                  sublabel={tr("For incoming calls and new messages (same switch as in Notifications)")}
                   toggle={settings.haptics_intensity > 0}
                   onToggle={v => updateSetting('haptics_intensity', v ? 2 : 0)}
                 />
@@ -1296,13 +1303,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 const mb = (total / 1024 / 1024).toFixed(2);
                 return (
                   <div className="bg-white rounded-2xl border border-[#e6e8ec] p-5 mb-6">
-                    <p className="text-[12px] text-[#727a88] font-semibold mb-3">Local storage used</p>
+                    <p className="text-[12px] text-[#727a88] font-semibold mb-3">{tr("Local storage used")}</p>
                     <div className="flex items-end gap-2 mb-3">
                       <p className="text-[40px] font-semibold text-[#15171c] leading-none">
                         {parseFloat(mb) < 0.1 ? kb : mb}
                       </p>
                       <p className="text-[16px] font-semibold text-[#727a88] mb-1">
-                        {parseFloat(mb) < 0.1 ? 'KB' : 'MB'}
+                        {parseFloat(mb) < 0.1 ? tr("KB") : tr("MB")}
                       </p>
                     </div>
                     <div className="w-full bg-[#e4e7ec] rounded-full h-2">
@@ -1311,24 +1318,24 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         style={{ width: `${Math.min((parseFloat(mb) / 50) * 100, 100)}%` }}
                       />
                     </div>
-                    <p className="text-[12px] text-[#727a88] mt-2">About {count} Ledger Chat items in local storage. Private-wallet notes and keys are in this browser&apos;s origin storage, not in this number. Remove them from Payments.</p>
+                    <p className="text-[12px] text-[#727a88] mt-2">{tr("About {count} Ledger Chat items in local storage. Private-wallet notes and keys are in this browser's origin storage, not in this number. Remove them from Payments.", { count })}</p>
                   </div>
                 );
               })()}
 
-              <Group title="Manage" footer="Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.">
-                <Row icon={<RefreshCw size={18} />} label="Clear cache" sublabel="Remove temporary files" onTap={() => setModal('clearCache')} />
-                <Row icon={<HardDrive size={18} />} label="Manage media" sublabel="Photos, videos, and files" onTap={() => setModal('manage_media')} />
+              <Group title={tr("Manage")} footer="Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.">
+                <Row icon={<RefreshCw size={18} />} label={tr("Clear cache")} sublabel={tr("Remove temporary files")} onTap={() => setModal('clearCache')} />
+                <Row icon={<HardDrive size={18} />} label={tr("Manage media")} sublabel={tr("Photos, videos, and files")} onTap={() => setModal('manage_media')} />
               </Group>
 
               <Group>
                 <Row
                   icon={<Download size={18} />}
-                  label="Export settings"
-                  sublabel="Your preferences as a JSON file. Keys and sessions are never included."
+                  label={tr("Export settings")}
+                  sublabel={tr("Your preferences as a JSON file. Keys and sessions are never included.")}
                   onTap={() => {
-                    try { downloadSettingsBackup(); toast.success('Settings exported'); }
-                    catch { toast.error('Export failed'); }
+                    try { downloadSettingsBackup(); toast.success(tr("Settings exported")); }
+                    catch { toast.error(tr("Export failed")); }
                   }}
                 />
               </Group>
@@ -1345,15 +1352,15 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <PaymentsAvailability />
 
               {/* Sovereign Aztec Identity */}
-              <Group title="Your zk handle" footer="Stored only on this device. It is not registered on Aztec and it is not a payment address.">
+              <Group title={tr("Your zk handle")} footer="Stored only on this device. It is not registered on Aztec and it is not a payment address.">
                 <Row
                   icon={<Wallet size={18} />}
-                  label="zk handle"
-                  sublabel="A local alias. Payments use your Aztec address, not this name."
+                  label={tr("zk handle")}
+                  sublabel={tr("A local alias. Payments use your Aztec address, not this name.")}
                   value={currentZkTag}
                   onTap={() => {
                     navigator.clipboard.writeText(currentZkTag);
-                    toast.success('Handle copied. It is local to this device.');
+                    toast.success(tr("Handle copied. It is local to this device."));
                   }}
                 />
                 <div className="px-4 py-3 border-t border-black/[0.04]">
@@ -1363,17 +1370,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       onClick={() => { setNewZkTag(currentZkTag.replace('zk:', '')); setEditingZkTag(true); }}
                       className="text-[13px] font-semibold text-[#15171c] hover:underline flex items-center gap-1.5"
                     >
-                      Change handle
+                      {tr("Change handle")}
                     </button>
                   ) : (
                     <div className="space-y-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-gray-500 tabular-nums">zk:</span>
+                        <span className="text-[13px] font-semibold text-gray-500 tabular-nums">{tr("zk:")}</span>
                         <input
                           type="text"
                           value={newZkTag}
                           onChange={e => setNewZkTag(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
-                          placeholder="newhandle"
+                          placeholder={tr("newhandle")}
                           maxLength={32}
                           className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-[#e4e7ec] text-[13px] tabular-nums outline-none focus:ring-1 focus:ring-black/30"
                         />
@@ -1384,7 +1391,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                           onClick={() => setEditingZkTag(false)}
                           className="px-3.5 py-1.5 rounded-xl text-[12px] font-semibold bg-white border border-[#e4e7ec] text-gray-600 hover:bg-[#e4e7ec]"
                         >
-                          Cancel
+                          {tr("Cancel")}
                         </button>
                         <button
                           type="button"
@@ -1392,22 +1399,22 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                             const fullTag = `zk:${newZkTag}`;
                             // Basic local validation (validateZkHandle removed — was zk.money simulation)
                             if (!newZkTag || newZkTag.length < 3) {
-                              toast.error('Handle must be at least 3 characters');
+                              toast.error(tr("Handle must be at least 3 characters"));
                               return;
                             }
                             if (!/^[a-z0-9_.\\-]+$/.test(newZkTag)) {
-                              toast.error('Only lowercase letters, numbers, _ . - allowed');
+                              toast.error(tr("Only lowercase letters, numbers, _ . - allowed"));
                               return;
                             }
                             // Store locally (registerZkTag removed — was zk.money simulation)
                             try { localStorage.setItem(`zkTag_${myAddress}`, fullTag); } catch {}
                             setCurrentZkTag(fullTag);
                             setEditingZkTag(false);
-                            toast.success(`Saved on this device: ${fullTag}. Not registered on Aztec.`);
+                            toast.success(tr("Saved on this device: {fullTag}. Not registered on Aztec.", { fullTag }));
                           }}
                           className="px-4 py-1.5 rounded-xl text-[12px] font-semibold bg-[#15171c] text-white hover:bg-black"
                         >
-                          Save handle
+                          {tr("Save handle")}
                         </button>
                       </div>
                     </div>
@@ -1416,17 +1423,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
               {/* Native Crypto Payments */}
-              <Group title="Crypto payments">
+              <Group title={tr("Crypto payments")}>
                 <Row
                   icon={<Wallet size={18} />}
-                  label="Payments in chats"
-                  sublabel="Show Payment, Tip and private payment options in the attach menu and /pay"
+                  label={tr("Payments in chats")}
+                  sublabel={tr("Show Payment, Tip and private payment options in the attach menu and /pay")}
                   toggle={settings.payments_enabled !== false}
                   onToggle={(v) => updateSetting('payments_enabled', v)}
                 />
               </Group>
 
-              <Group title="Public tip token" footer={`These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account, not USDC.`}>
+              <Group title={tr("Public tip token")} footer={`These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account, not USDC.`}>
                 <div className="px-4 pb-4">
                   {/* The tokens the payment sheet can actually send; it opens on this one. */}
                   {['ETH', 'USDC', 'USDT'].map((token) => (
@@ -1505,10 +1512,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {['privacy_last_seen','privacy_profile_photo','privacy_bio','privacy_group_invites'].includes(modal!) && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">
-                    {modal === 'privacy_last_seen' ? 'Last seen'
-                      : modal === 'privacy_profile_photo' ? 'Profile photo'
-                      : modal === 'privacy_bio' ? 'About / bio'
-                      : 'Group invites'}
+                    {modal === 'privacy_last_seen' ? tr("Last seen")
+                      : modal === 'privacy_profile_photo' ? tr("Profile photo")
+                      : modal === 'privacy_bio' ? tr("About / bio")
+                      : tr("Group invites")}
                   </h3>
                   {/* Presence is only ever shared with mutual contacts, so "Everybody"
                       would promise something the server never does. */}
@@ -1519,7 +1526,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       key={opt}
-                      onClick={() => { updateSetting(modal as any, opt); setModal(null); toast.success('Privacy updated'); }}
+                      onClick={() => { updateSetting(modal as any, opt); setModal(null); toast.success(tr("Privacy updated")); }}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${current === opt ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e4e7ec]'}`}
                     >
                       <span className="font-semibold">{label}</span>
@@ -1534,8 +1541,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'encryption' && (
                 <div className="px-6 pb-6 max-h-[80vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[20px] font-semibold text-[#15171c]">How your chats are protected</h3>
-                    <button type="button" onClick={() => setModal(null)} aria-label="Close" className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center shrink-0">
+                    <h3 className="text-[20px] font-semibold text-[#15171c]">{tr("How your chats are protected")}</h3>
+                    <button type="button" onClick={() => setModal(null)} aria-label={tr("Close")} className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center shrink-0">
                       <X size={16} className="text-[#727a88]" />
                     </button>
                   </div>
@@ -1558,15 +1565,15 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {/* ── Auto-Delete ── */}
               {modal === 'auto_delete' && (
                 <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Disappearing messages</h3>
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">{tr("Disappearing messages")}</h3>
                   {['off','1 hour','24 hours','1 week','1 month','1 year'].map(opt => (
                     <button
                       type="button"
                       key={opt}
-                      onClick={() => { updateSetting('auto_delete_timer', (opt === 'off' ? 'off' : opt) as any); setModal(null); toast.success('Timer saved'); }}
+                      onClick={() => { updateSetting('auto_delete_timer', (opt === 'off' ? 'off' : opt) as any); setModal(null); toast.success(tr("Timer saved")); }}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.auto_delete_timer || 'off') === opt ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e4e7ec]'}`}
                     >
-                      <span className="font-semibold">{opt === 'off' ? 'Disabled' : opt}</span>
+                      <span className="font-semibold">{opt === 'off' ? tr("Disabled") : opt}</span>
                       {(settings.auto_delete_timer || 'off') === opt && <Check size={18} />}
                     </button>
                   ))}
@@ -1576,10 +1583,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {/* ── Font Size ── */}
               {modal === 'font_size' && (
                 <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">Font size</h3>
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">{tr("Font size")}</h3>
                   <div className="bg-white border border-[#e4e7ec] rounded-2xl p-4 mb-5">
                     <p style={{ fontSize: `${chatTextPx(settings.text_size ?? DEFAULT_TEXT_SIZE_LEVEL)}px` }} className="text-[#15171c] text-center">
-                      Preview text at this size
+                      {tr("Preview text at this size")}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1595,23 +1602,23 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     />
                     <span className="text-[18px] text-[#727a88] font-semibold">A</span>
                   </div>
-                  <button type="button" onClick={() => setModal(null)} className="w-full mt-5 py-4 bg-[#15171c] rounded-2xl text-white font-semibold text-[16px]">Done</button>
+                  <button type="button" onClick={() => setModal(null)} className="w-full mt-5 py-4 bg-[#15171c] rounded-2xl text-white font-semibold text-[16px]">{tr("Done")}</button>
                 </div>
               )}
 
               {/* ── Font Family ── */}
               {modal === 'font_family' && (
                 <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Font family</h3>
-                  <p className="text-[13px] text-[#727a88] mb-5">Change the typeface used across all chat messages and transcripts.</p>
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">{tr("Font family")}</h3>
+                  <p className="text-[13px] text-[#727a88] mb-5">{tr("Change the typeface used across all chat messages and transcripts.")}</p>
                   {[
-                    { id: 'inter', label: 'Inter', desc: 'Modern, highly readable sans-serif' },
-                    { id: 'mono', label: 'JetBrains Mono', desc: 'Technical monospaced developer typeface' },
-                    { id: 'space-mono', label: 'Space Mono', desc: 'Retro-futuristic fixed-width font' },
-                    { id: 'system', label: 'System Native', desc: 'Native OS font (San Francisco / Segoe UI)' },
-                    { id: 'satoshi', label: 'Satoshi', desc: 'Clean geometric contemporary sans' },
-                    { id: 'serif', label: 'Merriweather Serif', desc: 'Editorial literary serif styling' },
-                    { id: 'dyslexic', label: 'OpenDyslexic', desc: 'High contrast specialized accessibility typeface' },
+                    { id: 'inter', label: tr("Inter"), desc: tr("Modern, highly readable sans-serif") },
+                    { id: 'mono', label: tr("JetBrains Mono"), desc: tr("Technical monospaced developer typeface") },
+                    { id: 'space-mono', label: tr("Space Mono"), desc: tr("Retro-futuristic fixed-width font") },
+                    { id: 'system', label: tr("System Native"), desc: tr("Native OS font (San Francisco / Segoe UI)") },
+                    { id: 'satoshi', label: tr("Satoshi"), desc: tr("Clean geometric contemporary sans") },
+                    { id: 'serif', label: tr("Merriweather Serif"), desc: tr("Editorial literary serif styling") },
+                    { id: 'dyslexic', label: tr("OpenDyslexic"), desc: tr("High contrast specialized accessibility typeface") },
                   ].map(font => {
                     const isSel = (settings.font_family || 'inter') === font.id;
                     return (
@@ -1621,15 +1628,15 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         onClick={() => {
                           updateSetting('font_family', font.id as any);
                           setModal(null);
-                          toast.success(`Font set to ${font.label}`);
+                          toast.success(tr("Font set to {label}", { label: font.label }));
                         }}
                         className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${
                           isSel ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e9ecf0]'
                         }`}
                       >
                         <div className="text-left">
-                          <p className="font-semibold text-[15px]">{font.label}</p>
-                          <p className={`text-[12px] mt-0.5 ${isSel ? 'text-white/70' : 'text-[#727a88]'}`}>{font.desc}</p>
+                          <p className="font-semibold text-[15px]">{tr(font.label)}</p>
+                          <p className={`text-[12px] mt-0.5 ${isSel ? 'text-white/70' : 'text-[#727a88]'}`}>{tr(font.desc)}</p>
                         </div>
                         {isSel && <Check size={18} />}
                       </button>
@@ -1644,13 +1651,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'payments_settings' && <PaymentsSettingsSheet onClose={() => setModal(null)} />}
               {modal === 'clearCache' && (
                 <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Clear cache</h3>
-                  <p className="text-[14px] text-[#727a88] mb-6 leading-relaxed">This removes temporary cached data. Your messages, contacts, and settings are safe and will not be deleted.</p>
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">{tr("Clear cache")}</h3>
+                  <p className="text-[14px] text-[#727a88] mb-6 leading-relaxed">{tr("This removes temporary cached data. Your messages, contacts, and settings are safe and will not be deleted.")}</p>
                   <button type="button" onClick={purgeCache} className="w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px]">
-                    Clear Cache
+                    {tr("Clear Cache")}
                   </button>
                   <button type="button" onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#727a88] font-semibold text-[16px]">
-                    Cancel
+                    {tr("Cancel")}
                   </button>
                 </div>
               )}
@@ -1666,9 +1673,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {/* ── Sign out ── */}
               {modal === 'signout' && (
                 <div className="px-6 pb-6">
-                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Sign out?</h3>
+                  <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">{tr("Sign out?")}</h3>
                   <p className="text-[14px] text-[#727a88] mb-6 leading-relaxed">
-                    This ends your session on this device and disconnects your wallet. Your chats stay in your encrypted inbox; sign in again with the same wallet to see them.
+                    {tr("This ends your session on this device and disconnects your wallet. Your chats stay in your encrypted inbox; sign in again with the same wallet to see them.")}
                   </p>
                   <button
                     type="button"
@@ -1676,10 +1683,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     onClick={confirmSignOut}
                     className={`w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px] ${signingOut ? 'opacity-60 cursor-wait' : ''}`}
                   >
-                    {signingOut ? 'Signing out…' : 'Sign out'}
+                    {signingOut ? tr("Signing out…") : tr("Sign out")}
                   </button>
                   <button type="button" disabled={signingOut} onClick={() => setModal(null)} className="w-full py-3 mt-2 text-[#727a88] font-semibold text-[16px]">
-                    Cancel
+                    {tr("Cancel")}
                   </button>
                 </div>
               )}
@@ -1696,17 +1703,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 return (
                   <div className="px-6 pb-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-[20px] font-semibold text-[#15171c]">Manage media</h3>
+                      <h3 className="text-[20px] font-semibold text-[#15171c]">{tr("Manage media")}</h3>
                       <button type="button" onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
                     </div>
                     <div className="bg-white border border-[#e4e7ec] rounded-2xl p-5 mb-5">
-                      <p className="text-[13px] text-[#727a88] mb-1">Cached media storage</p>
-                      <p className="text-[28px] font-semibold text-[#15171c]">{mb} <span className="text-[16px] font-medium text-[#727a88]">MB</span></p>
-                      <p className="text-[12px] text-[#727a88] mt-1">{mediaCount} media item{mediaCount !== 1 ? 's' : ''}</p>
+                      <p className="text-[13px] text-[#727a88] mb-1">{tr("Cached media storage")}</p>
+                      <p className="text-[28px] font-semibold text-[#15171c]">{mb} <span className="text-[16px] font-medium text-[#727a88]">{tr("MB")}</span></p>
+                      <p className="text-[12px] text-[#727a88] mt-1">{tr("{mediaCount} media item{value}", { mediaCount, value: mediaCount !== 1 ? 's' : '' })}</p>
                       <div className="mt-3 h-2 bg-[#e4e7ec] rounded-full overflow-hidden"><div className="h-full bg-[#15171c] rounded-full" style={{ width: `${Math.min((parseFloat(mb) / 10) * 100, 100)}%` }} /></div>
                     </div>
-                    <button type="button" onClick={() => { let n = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i)!; if (k.startsWith('ledger_') && (localStorage.getItem(k) || '').startsWith('data:')) { localStorage.removeItem(k); n++; } } toast.success(`Cleared ${n} item${n !== 1 ? 's' : ''}`); setModal(null); }} className="w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px] mb-2">Clear media cache</button>
-                    <button type="button" onClick={() => setModal(null)} className="w-full py-3 text-[#727a88] font-semibold text-[16px]">Cancel</button>
+                    <button type="button" onClick={() => { let n = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i)!; if (k.startsWith('ledger_') && (localStorage.getItem(k) || '').startsWith('data:')) { localStorage.removeItem(k); n++; } } toast.success(tr("Cleared {n} item{value}", { n, value: n !== 1 ? 's' : '' })); setModal(null); }} className="w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px] mb-2">{tr("Clear media cache")}</button>
+                    <button type="button" onClick={() => setModal(null)} className="w-full py-3 text-[#727a88] font-semibold text-[16px]">{tr("Cancel")}</button>
                   </div>
                 );
               })()}

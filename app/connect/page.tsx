@@ -1,13 +1,15 @@
 "use client";
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useT } from '@/lib/i18n/client';
 
 /** Shown for the moment the sign-in code loads: the same grey page and white card. */
 function ConnectLoading() {
+  const t = useT();
   return (
     <div
       role="status"
-      aria-label="Loading sign in"
+      aria-label={t("Loading sign in")}
       style={{ minHeight: '100dvh', background: '#f2f3f5', padding: 12, display: 'flex' }}
     >
       <div

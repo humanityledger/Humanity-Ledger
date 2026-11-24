@@ -4,8 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
+import { untranslated } from '../../helpers/untranslated';
 
-const read = (p: string) => fs.readFileSync(p, 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(p, 'utf8'));
 
 describe('chat on a phone', () => {
   it('the page is never laid out wider than the screen, and iOS keeps it so after Next.js rewrites the tag', () => {

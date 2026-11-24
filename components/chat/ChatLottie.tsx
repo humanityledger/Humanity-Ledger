@@ -17,6 +17,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
+import { useT } from '@/lib/i18n/client';
 
 export const LOTTIE = {
   // A new file name, not the old one: the cat that used to live at new-conversation.json stays in
@@ -107,7 +108,8 @@ export function ChatLottie({ src, width, height, loop = true, label, className, 
  * conversation has no message, including right after Clear chat. The file is 350 x 230.
  */
 export function NewConversationLottie() {
-  return <ChatLottie src={LOTTIE.NEW_CONVERSATION} width={210} height={138} label="A new conversation" />;
+  const tr = useT();
+  return <ChatLottie src={LOTTIE.NEW_CONVERSATION} width={210} height={138} label={tr("A new conversation")} />;
 }
 
 /** The other person is writing. Sized to sit inside a message bubble. */
@@ -148,5 +150,6 @@ export function SendConfirmationBurst({ burst, size = 40, wide = false, classNam
 
 /** The Ledger Chat home, when no conversation is open. */
 export function WelcomeLottie() {
-  return <ChatLottie src={LOTTIE.WELCOME} width={176} height={176} label="Ledger Chat" />;
+  const tr = useT();
+  return <ChatLottie src={LOTTIE.WELCOME} width={176} height={176} label={tr("Ledger Chat")} />;
 }

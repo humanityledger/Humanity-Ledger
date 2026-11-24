@@ -21,10 +21,12 @@ import {
 import { requestValueHandoff } from '@/lib/chat/value-handoff';
 import { requestRecordEpoch } from '@/lib/chat/record-epoch';
 import { recallRecordKey, rememberRecordKey } from '@/lib/chat/record-keys';
+import { useT } from '@/lib/i18n/client';
 
 const SEAL_BUBBLES = 12;
 
 export function RecordCard({ message, members, arrive = false }: { message: string; members: string[]; arrive?: boolean }) {
+  const t = useT();
   const modern = parseRecordMessage(message);
   const legacy = modern ? null : parseLegacyMessage(message);
   const label = modern ? recordPreview(modern) : legacy ? legacyPreview(legacy) : 'Sealed note';
@@ -39,7 +41,7 @@ export function RecordCard({ message, members, arrive = false }: { message: stri
 
   const show = (opened: { text: string | null; plain: Uint8Array; handoff: { action: 'pay' | 'agreement'; peer: string } | null }) => {
     if (opened.handoff) setHandoff({ action: opened.handoff.action, peer: opened.handoff.peer });
-    else if (opened.text != null) setText(opened.text);
+    else if (opened.text != null) setText(t(opened.text));
     else {
       const blob = new Blob([opened.plain as BlobPart], { type: 'application/octet-stream' });
       setFileUrl(URL.createObjectURL(blob));
@@ -86,13 +88,13 @@ export function RecordCard({ message, members, arrive = false }: { message: stri
     } catch (err) {
       const code = err && typeof err === 'object' && 'code' in err ? String((err as { code: string }).code) : '';
       if (code === 'locked') {
-        setError('This device is locked. Unlock it to open the record. Other people in the chat are not affected.');
+        setError(t("This device is locked. Unlock it to open the record. Other people in the chat are not affected."));
       } else if (code === 'passphrase' || code === 'passkey') {
-        setError('That passphrase or passkey did not open the record.');
+        setError(t("That passphrase or passkey did not open the record."));
       } else if (code === 'epoch' || code === 'unwrap') {
-        setError('This record cannot be opened on this device. It belongs to an earlier epoch, and no local key is stored.');
+        setError(t("This record cannot be opened on this device. It belongs to an earlier epoch, and no local key is stored."));
       } else {
-        setError(err instanceof Error ? err.message : 'The record could not be opened');
+        setError(err instanceof Error ? err.message : t("The record could not be opened"));
       }
     } finally {
       setBusy(false);
@@ -114,25 +116,25 @@ export function RecordCard({ message, members, arrive = false }: { message: stri
         <span className="min-w-0">
           <span className="block text-[14px] font-semibold text-[#15171c] truncate">{label}</span>
           <span className="block text-[12px] text-[#727a88] mt-0.5">
-            {legacy ? 'Sealed in this encrypted chat' : `Sealed record · version ${generation}`}
+            {legacy ? t("Sealed in this encrypted chat") : t("Sealed record · version {generation}", { generation })}
           </span>
         </span>
       </div>
       {text != null && <p className="mt-3 text-[14px] text-[#15171c] whitespace-pre-wrap break-words">{text}</p>}
       {fileUrl && (
         <a href={fileUrl} download={label || 'record'} className="mt-3 inline-flex text-[13px] font-semibold text-[#15171c] underline underline-offset-2">
-          Download
+          {t("Download")}
         </a>
       )}
       {handoff && (
         <button type="button" onClick={() => requestValueHandoff(handoff)} className="mt-3 h-9 px-3 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold">
-          {handoff.action === 'pay' ? 'Open payment' : 'Open agreement'}
+          {handoff.action === 'pay' ? t("Open payment") : t("Open agreement")}
         </button>
       )}
       {error && <p className="mt-3 text-[12.5px] text-[#9a3412]">{error}</p>}
       {text == null && !fileUrl && !handoff && (
         <button type="button" onClick={() => { void open(); }} disabled={busy} className="mt-3 h-9 px-3 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold disabled:opacity-50">
-          {busy ? 'Opening' : 'Open'}
+          {busy ? t("Opening") : t("Open")}
         </button>
       )}
     </div>

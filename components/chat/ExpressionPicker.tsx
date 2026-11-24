@@ -19,6 +19,7 @@ import { Loader2, Search } from 'lucide-react';
 import type { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react';
 import { STICKER_PACKS, stickerFile, stickerMessage } from '@/lib/chat/stickers';
 import { supportedEmojiVersion } from '@/lib/chat/emojiSupport';
+import { useT } from '@/lib/i18n/client';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false, loading: () => <Spinner /> });
 
@@ -42,6 +43,7 @@ export function ExpressionPicker({
   onSend: (content: string) => void;
   onClose: () => void;
 }) {
+  const tr = useT();
   const [tab, setTabState] = useState<ExpressionTab>(initialTab);
   // Panes stay mounted once opened: going back to Emojis keeps its scroll and does not load the
   // picker again (it used to remount, with a spinner, on every switch).
@@ -189,7 +191,7 @@ export function ExpressionPicker({
     <div
       ref={ref}
       role="dialog"
-      aria-label="Emojis, stickers and GIFs"
+      aria-label={tr("Emojis, stickers and GIFs")}
       className="absolute bottom-[68px] left-2 z-50 w-[min(392px,calc(100vw-16px))] h-[min(480px,62vh)] flex flex-col bg-white rounded-[28px] border border-[#e4e7ec] shadow-[0_28px_60px_-18px_rgba(16,24,40,0.30)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
     >
       <div className="px-3.5 pt-3.5 pb-3 shrink-0">
@@ -199,7 +201,7 @@ export function ExpressionPicker({
           className="relative p-1.5 rounded-full bg-[#f2f4f7]"
           style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: 8 }}
           role="tablist"
-          aria-label="Emojis, stickers and GIFs"
+          aria-label={tr("Emojis, stickers and GIFs")}
           onKeyDown={(e) => {
             if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
             e.preventDefault();
@@ -324,6 +326,7 @@ function EmojiTab({ onEmoji }: { onEmoji: (e: string) => void }) {
 const LAST_PACK_KEY = 'ledger_sticker_pack';
 
 function StickerTab({ onSend }: { onSend: (c: string) => void }) {
+  const tr = useT();
   const [packId, setPackId] = useState<string>(() => {
     try {
       const v = localStorage.getItem(LAST_PACK_KEY);
@@ -338,7 +341,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
   };
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div data-no-swipe className={`${STICKER_PACKS.length < 2 ? 'hidden' : 'flex'} gap-2.5 px-3.5 pb-3 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`} style={{ touchAction: 'pan-x' }} role="tablist" aria-label="Sticker packs">
+      <div data-no-swipe className={`${STICKER_PACKS.length < 2 ? 'hidden' : 'flex'} gap-2.5 px-3.5 pb-3 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`} style={{ touchAction: 'pan-x' }} role="tablist" aria-label={tr("Sticker packs")}>
         {STICKER_PACKS.map(p => {
           const on = p.id === pack.id;
           return (
@@ -347,7 +350,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
               type="button"
               role="tab"
               aria-selected={on}
-              title={p.name}
+              title={tr(p.name)}
               onClick={() => choose(p.id)}
               // The chosen pack is scrolled into its own row only (scrollIntoView would also move the
               // sliding panes around it).
@@ -360,7 +363,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
               } : undefined}
               className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-[background-color,box-shadow] duration-150 ${on ? 'bg-[#f2f4f7] shadow-[inset_0_0_0_2px_#15171c]' : 'hover:bg-[#f2f4f7]'}`}
             >
-              <img src={stickerFile(p.id, p.cover)} alt={p.name} className="w-9 h-9 object-contain" draggable={false} />
+              <img src={stickerFile(p.id, p.cover)} alt={tr(p.name)} className="w-9 h-9 object-contain" draggable={false} />
             </button>
           );
         })}
@@ -371,7 +374,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pack.accent }} aria-hidden="true" />
             {pack.name}
           </p>
-          <p className="text-[12px] text-[#727a88] leading-snug mt-0.5">{pack.description}</p>
+          <p className="text-[12px] text-[#727a88] leading-snug mt-0.5">{tr(pack.description)}</p>
         </div>
         <div className="grid grid-cols-4 gap-3">
           {pack.stickers.map((s) => (
@@ -379,8 +382,8 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
               key={s.id}
               type="button"
               onClick={() => onSend(stickerMessage(pack.id, s.id))}
-              title={s.scene ? `${s.label} · plays an effect` : s.label}
-              aria-label={`Send sticker: ${s.label}`}
+              title={s.scene ? tr("{label} · plays an effect", { label: s.label }) : s.label}
+              aria-label={tr("Send sticker: {label}", { label: s.label })}
               className="group relative aspect-square rounded-2xl hover:bg-[#f2f4f7] active:scale-95 transition-transform flex items-center justify-center p-1.5"
             >
               <img src={stickerFile(pack.id, s.id)} alt="" className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-[1.06]" draggable={false} loading="lazy" />
@@ -393,6 +396,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
 }
 
 function GifTab({ onSend }: { onSend: (c: string) => void }) {
+  const tr = useT();
   const [q, setQ] = useState('');
   const [items, setItems] = useState<Gif[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'empty' | 'off' | 'error'>('loading');
@@ -442,8 +446,8 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search GIPHY"
-            aria-label="Search GIFs"
+            placeholder={tr("Search GIPHY")}
+            aria-label={tr("Search GIFs")}
             className="w-full h-10 rounded-full bg-[#f2f4f7] pl-10 pr-4 text-[15px] text-[#15171c] outline-none placeholder:text-[#a3a9b4] focus:bg-white focus:ring-2 focus:ring-[#15171c]/10"
           />
         </div>
@@ -455,14 +459,14 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
           if ((state === 'ready' || (state === 'error' && items.length > 0)) && el.scrollTop + el.clientHeight > el.scrollHeight - 200) { setState('loading'); load(q, next); }
         }}
       >
-        {state === 'off' && <p className="text-center text-[13.5px] text-[#727a88] py-10 px-6">GIFs are not switched on for this server yet.</p>}
+        {state === 'off' && <p className="text-center text-[13.5px] text-[#727a88] py-10 px-6">{tr("GIFs are not switched on for this server yet.")}</p>}
         {state === 'error' && items.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-10">
-            <p className="text-center text-[13.5px] text-[#727a88]">GIFs could not be loaded.</p>
-            <button type="button" onClick={() => load(q, 0)} className="h-9 px-4 rounded-full border border-[#e4e7ec] text-[13.5px] font-medium text-[#15171c] hover:bg-[#f7f8fa]">Try again</button>
+            <p className="text-center text-[13.5px] text-[#727a88]">{tr("GIFs could not be loaded.")}</p>
+            <button type="button" onClick={() => load(q, 0)} className="h-9 px-4 rounded-full border border-[#e4e7ec] text-[13.5px] font-medium text-[#15171c] hover:bg-[#f7f8fa]">{tr("Try again")}</button>
           </div>
         )}
-        {state === 'empty' && <p className="text-center text-[13.5px] text-[#727a88] py-10">No GIFs for “{q}”.</p>}
+        {state === 'empty' && <p className="text-center text-[13.5px] text-[#727a88] py-10">{tr("No GIFs for “{q}”.", { q })}</p>}
         {items.length > 0 && (
           <div className="grid grid-cols-2 gap-2.5 items-start">
             {cols.map((col, ci) => (
@@ -472,7 +476,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
                     key={g.id}
                     type="button"
                     onClick={() => onSend(`[GIF]${g.url}`)}
-                    aria-label={g.title ? `Send GIF: ${g.title}` : 'Send GIF'}
+                    aria-label={g.title ? tr("Send GIF: {title}", { title: g.title }) : tr("Send GIF")}
                     title={g.title || undefined}
                     className="block w-full rounded-2xl overflow-hidden bg-[#eff1f4] active:scale-[0.98] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
                     style={{ aspectRatio: `${g.width} / ${g.height}` }}
@@ -487,7 +491,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
         {state === 'loading' && <Spinner />}
       </div>
       <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 px-3 h-6 rounded-full bg-[#15171c]/85 text-white text-[10.5px] font-semibold tracking-[0.06em] flex items-center">
-        POWERED BY GIPHY
+        {tr("POWERED BY GIPHY")}
       </div>
     </>
   );

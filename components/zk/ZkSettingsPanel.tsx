@@ -18,6 +18,7 @@ import { ZkPrivacyScore } from './ZkPrivacyScore';
 import { ZkStreamManager } from './ZkStreamManager';
 import { ZkShieldModal } from './ZkShieldModal';
 import { ZkSequencerDashboard } from './ZkSequencerDashboard';
+import { useT } from '@/lib/i18n/client';
 
 interface ZkSettingsPanelProps {
   userAddress: string;
@@ -42,6 +43,7 @@ function formatTokenBalance(units: bigint, decimals: number, dp: number = 4): st
 }
 
 export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) {
+  const tr = useT();
   const [tab, setTab] = useState<SettingsTab>('overview');
   const [identity, setIdentity] = useState<ZkIdentity | null>(null);
   const [walletSnapshot, setWalletSnapshot] = useState<WalletSnapshot | null>(null);
@@ -155,13 +157,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
   }, 0).toFixed(2);
 
   const tabs: Array<{ key: SettingsTab; label: string; icon: React.ReactNode }> = [
-    { key: 'overview', label: 'Overview', icon: <BarChart3 size={15} /> },
-    { key: 'identity', label: 'Identity', icon: <Lock size={15} /> },
-    { key: 'keys', label: 'Crypto Keys', icon: <Key size={15} /> },
-    { key: 'privacy', label: 'Privacy', icon: <Lock size={15} /> },
-    { key: 'streams', label: 'Streams', icon: <Waves size={15} /> },
-    { key: 'bridge', label: 'Network fees', icon: <Layers size={15} /> },
-    { key: 'sequencer', label: 'Sequencer & V6', icon: <Server size={15} /> },
+    { key: 'overview', label: tr("Overview"), icon: <BarChart3 size={15} /> },
+    { key: 'identity', label: tr("Identity"), icon: <Lock size={15} /> },
+    { key: 'keys', label: tr("Crypto Keys"), icon: <Key size={15} /> },
+    { key: 'privacy', label: tr("Privacy"), icon: <Lock size={15} /> },
+    { key: 'streams', label: tr("Streams"), icon: <Waves size={15} /> },
+    { key: 'bridge', label: tr("Network fees"), icon: <Layers size={15} /> },
+    { key: 'sequencer', label: tr("Sequencer & V6"), icon: <Server size={15} /> },
   ];
 
   return (
@@ -182,8 +184,8 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 <Lock size={16} className="text-white" strokeWidth={2.2} />
               </div>
               <div>
-                <span className="text-[13px] font-black text-gray-900">zk.money</span>
-                <span className="text-[9px] font-semibold text-gray-400 block leading-tight">Aztec Network</span>
+                <span className="text-[13px] font-black text-gray-900">{tr("zk.money")}</span>
+                <span className="text-[9px] font-semibold text-gray-400 block leading-tight">{tr("Aztec Network")}</span>
               </div>
             </div>
           </div>
@@ -201,7 +203,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 }`}
               >
                 <span className={tab === t.key ? 'text-white' : 'text-gray-400'}>{t.icon}</span>
-                {t.label}
+                {tr(t.label)}
                 {tab === t.key && <ChevronRight size={13} className="ml-auto text-white/60" />}
               </button>
             ))}
@@ -219,13 +221,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
               )}
               <span className="text-gray-600 font-medium">
                 {nodeError
-                  ? 'Node unreachable'
+                  ? tr("Node unreachable")
                   : nodeStatus?.synced
-                    ? `Block #${nodeStatus.blockNumber}`
-                    : 'Connecting...'}
+                    ? tr("Block #{blockNumber}", { blockNumber: nodeStatus.blockNumber })
+                    : tr("Connecting...")}
               </span>
             </div>
-            <div className="text-[10px] text-gray-400 mt-0.5">{networkLabel()}</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">{tr(networkLabel())}</div>
           </div>
         </div>
 
@@ -234,7 +236,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
           {/* Close Button */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06]">
             <h2 className="text-[16px] font-black text-gray-900">
-              {tabs.find(t => t.key === tab)?.label}
+              {tr(tabs.find(t => t.key === tab)?.label)}
             </h2>
             <button
               onClick={onClose}
@@ -251,21 +253,21 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 {/* Balance Cards */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[13px] font-bold text-gray-700">Shielded Balances</h3>
+                    <h3 className="text-[13px] font-bold text-gray-700">{tr("Shielded Balances")}</h3>
                     <button
                       onClick={handleSync}
                       disabled={syncing}
                       className="flex items-center gap-1.5 text-[11px] font-bold text-black/70 hover:text-black transition"
                     >
                       <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
-                      Sync from Aztec
+                      {tr("Sync from Aztec")}
                     </button>
                   </div>
 
                   {balances.length === 0 ? (
                     <div className="text-center py-6 text-gray-400 bg-[#FAFAFA] border border-black/[0.06] rounded-2xl">
                       <Lock size={22} strokeWidth={1.5} className="mx-auto mb-2 text-gray-300" />
-                      <p className="text-[13px]">No shielded balances found. Connect your Aztec wallet to get started.</p>
+                      <p className="text-[13px]">{tr("No shielded balances found. Connect your Aztec wallet to get started.")}</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-3">
@@ -276,12 +278,11 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                         return (
                           <div key={b.key ?? b.symbol} className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4">
                             <div className="flex items-center gap-1.5 mb-2">
-                              <span className="text-[11px] font-bold text-gray-700 bg-black/5 px-2 py-0.5 rounded-md font-mono">
-                                zk{b.symbol}
+                              <span className="text-[11px] font-bold text-gray-700 bg-black/5 px-2 py-0.5 rounded-md font-mono">{tr("zk{symbol}", { symbol: b.symbol })}
                               </span>
                             </div>
                             <div className="text-[18px] font-black text-gray-900 font-mono leading-tight">{privateAmt}</div>
-                            <div className="text-[11px] text-gray-400 mt-0.5">≈ ${usd} USD</div>
+                            <div className="text-[11px] text-gray-400 mt-0.5">{tr("≈ ${usd} USD", { usd })}</div>
                           </div>
                         );
                       })}
@@ -291,7 +292,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                   {/* Total */}
                   <div className="mt-3 bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Total Private Portfolio</span>
+                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{tr("Total Private Portfolio")}</span>
                       <div className="text-[22px] font-black text-gray-900 font-mono">${totalUSD}</div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -299,13 +300,13 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                         onClick={() => setShieldMode('shield')}
                         className="flex items-center gap-1.5 px-3.5 py-2 bg-[#1C1C1E] text-white text-[12px] font-semibold rounded-xl hover:bg-black transition"
                       >
-                        <ArrowDownLeft size={13} /> Shield Funds
+                        <ArrowDownLeft size={13} />{" "}{tr("Shield Funds")}
                       </button>
                       <button
                         onClick={() => setShieldMode('unshield')}
                         className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F2F2F7] text-gray-700 text-[12px] font-semibold rounded-xl hover:bg-[#E5E5EA] transition border border-black/[0.04]"
                       >
-                        <ArrowUpRight size={13} /> Unshield
+                        <ArrowUpRight size={13} />{" "}{tr("Unshield")}
                       </button>
                     </div>
                   </div>
@@ -313,12 +314,12 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
 
                 {/* Activity Stats */}
                 <div>
-                  <h3 className="text-[13px] font-bold text-gray-700 mb-3">Activity Summary</h3>
+                  <h3 className="text-[13px] font-bold text-gray-700 mb-3">{tr("Activity Summary")}</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: 'Total Txs', value: txHistory.length },
-                      { label: 'Shields', value: txHistory.filter(a => a.kind === 'shield').length },
-                      { label: 'Privacy Score', value: 'Not measured yet' },
+                      { label: tr("Total Txs"), value: txHistory.length },
+                      { label: tr("Shields"), value: txHistory.filter(a => a.kind === 'shield').length },
+                      { label: tr("Privacy Score"), value: 'Not measured yet' },
                     ].map(({ label, value }) => (
                       <div key={label} className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-3 text-center">
                         <div className="text-[20px] font-black text-gray-900">{value}</div>
@@ -330,11 +331,11 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
 
                 {/* Recent Transactions */}
                 <div>
-                  <h3 className="text-[13px] font-bold text-gray-700 mb-3">Recent Private Transactions</h3>
+                  <h3 className="text-[13px] font-bold text-gray-700 mb-3">{tr("Recent Private Transactions")}</h3>
                   {txHistory.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                       <Lock size={24} strokeWidth={1.5} className="mx-auto mb-2 text-gray-300" />
-                      <p className="text-[13px]">No transactions yet. Send your first shielded payment!</p>
+                      <p className="text-[13px]">{tr("No transactions yet. Send your first shielded payment!")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -355,7 +356,7 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                               <div>
                                 <div className="text-[12px] font-bold text-gray-900 capitalize">{tx.kind}</div>
                                 <div className="text-[10px] text-gray-400 font-mono">
-                                  {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'Unknown date'}
+                                  {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : tr("Unknown date")}
                                 </div>
                               </div>
                             </div>
@@ -388,80 +389,80 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                       <Lock size={22} className="text-[#1C1C1E]" strokeWidth={2.2} />
                     </div>
                     <div>
-                      <div className="text-[16px] font-black text-[#1C1C1E]">{identity?.zkHandle || 'Not registered'}</div>
-                      <div className="text-[11px] text-black/50 font-mono">Humanity Ledger Confidential Identity</div>
+                      <div className="text-[16px] font-black text-[#1C1C1E]">{identity?.zkHandle || tr("Not registered")}</div>
+                      <div className="text-[11px] text-black/50 font-mono">{tr("Humanity Ledger Confidential Identity")}</div>
                     </div>
                     {identity?.verified && (
                       <span className="ml-auto text-[10px] font-bold bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full border border-black/10">
-                        ✓ Verified
+                        {tr("✓ Verified")}
                       </span>
                     )}
                   </div>
                   <div className="space-y-2 text-[11px] font-mono text-black/60">
                     <div className="flex justify-between">
-                      <span className="text-black/40">EVM Address</span>
+                      <span className="text-black/40">{tr("EVM Address")}</span>
                       <span>{userAddress.slice(0, 10)}...{userAddress.slice(-6)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-black/40">Aztec Address</span>
+                      <span className="text-black/40">{tr("Aztec Address")}</span>
                       <span className="text-black/80">
                         {activeAztecAddress
                           ? `${activeAztecAddress.slice(0, 14)}...${activeAztecAddress.slice(-6)}`
-                          : 'Derived upon confidential connection'}
+                          : tr("Derived upon confidential connection")}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-black/40">Reputation</span>
-                      <span className="text-black/80">{identity?.reputationScore || 0} pts</span>
+                      <span className="text-black/40">{tr("Reputation")}</span>
+                      <span className="text-black/80">{tr("{value} pts", { value: identity?.reputationScore || 0 })}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Edit Handle */}
                 <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4">
-                  <h3 className="text-[13px] font-bold text-gray-900 mb-3">zk.money Handle</h3>
+                  <h3 className="text-[13px] font-bold text-gray-900 mb-3">{tr("zk.money Handle")}</h3>
                   {editingHandle ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-bold text-[#1C1C1E]">zk:</span>
+                        <span className="text-[13px] font-bold text-[#1C1C1E]">{tr("zk:")}</span>
                         <input
                           type="text"
                           value={newHandle}
                           onChange={e => setNewHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
-                          placeholder="yourhandle"
+                          placeholder={tr("yourhandle")}
                           className="flex-1 bg-white border border-black/[0.08] rounded-xl px-3 py-2 text-[13px] font-mono outline-none focus:border-black/30"
                           maxLength={32}
                           autoFocus
                         />
                       </div>
-                      <div className="text-[11px] text-gray-400">3 to 32 characters: lowercase letters, numbers, underscore, dot or hyphen</div>
+                      <div className="text-[11px] text-gray-400">{tr("3 to 32 characters: lowercase letters, numbers, underscore, dot or hyphen")}</div>
                       <div className="flex gap-2">
                         <button
                           onClick={handleSaveHandle}
                           disabled={!newHandle.match(/^[a-z0-9_.-]{3,32}$/)}
                           className="flex-1 py-2 bg-[#1C1C1E] text-white text-[12px] font-bold rounded-xl hover:bg-black transition disabled:opacity-50 shadow-sm"
                         >
-                          Confirm Handle
+                          {tr("Confirm Handle")}
                         </button>
                         <button
                           onClick={() => setEditingHandle(false)}
                           className="px-4 py-2 bg-[#f0f2f5] text-gray-600 text-[12px] font-bold rounded-xl"
                         >
-                          Cancel
+                          {tr("Cancel")}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-[14px] font-bold text-gray-900 font-mono">{identity?.zkHandle || 'Not set'}</div>
-                        <div className="text-[11px] text-gray-400 mt-0.5">Your public zk.money identity</div>
+                        <div className="text-[14px] font-bold text-gray-900 font-mono">{identity?.zkHandle || tr("Not set")}</div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">{tr("Your public zk.money identity")}</div>
                       </div>
                       <button
                         onClick={() => { setEditingHandle(true); setNewHandle(identity?.zkHandle?.replace('zk:', '') || ''); }}
                         className="px-3 py-1.5 bg-black/5 text-[#1C1C1E] text-[11px] font-bold rounded-lg hover:bg-black/10 transition"
                       >
-                        {identity ? 'Edit' : 'Register'}
+                        {identity ? tr("Edit") : tr("Register")}
                       </button>
                     </div>
                   )}
@@ -470,10 +471,10 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 {/* Identity Details */}
                 <div className="space-y-2">
                   {[
-                    { label: 'Display Name', value: identity?.displayName || 'Not set', editable: true },
-                    { label: 'ENS Name', value: identity?.ensName || 'Not set', editable: false },
-                    { label: 'Total Transactions', value: identity?.totalTransactions?.toString() || '0', editable: false },
-                    { label: 'Created', value: identity ? new Date(identity.createdAt).toLocaleDateString() : 'Not set', editable: false },
+                    { label: tr("Display Name"), value: identity?.displayName || 'Not set', editable: true },
+                    { label: tr("ENS Name"), value: identity?.ensName || 'Not set', editable: false },
+                    { label: tr("Total Transactions"), value: identity?.totalTransactions?.toString() || '0', editable: false },
+                    { label: tr("Created"), value: identity ? new Date(identity.createdAt).toLocaleDateString() : 'Not set', editable: false },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center justify-between bg-[#FAFAFA] border border-black/[0.06] rounded-xl px-4 py-2.5">
                       <span className="text-[12px] text-gray-500 font-medium">{label}</span>
@@ -490,53 +491,52 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
                   <Lock size={16} className="text-emerald-700 mt-0.5 flex-shrink-0" />
                   <div className="text-[12px] text-emerald-900 leading-relaxed">
-                    <strong>Zero-Custody Cryptographic Enclave:</strong> Real Aztec keys (sk_m, nsk_m, ivsk_m) are derived exclusively in local Web Worker memory and never exposed to the DOM or transmitted over the network.
-                  </div>
+                    {tr("{0} Real Aztec keys (sk_m, nsk_m, ivsk_m) are derived exclusively in local Web Worker memory and never exposed to the DOM or transmitted over the network.", { 0: <strong>{tr("Zero-Custody Cryptographic Enclave:")}</strong> })}</div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="text-[13px] font-bold text-gray-900">Encrypted Storage at Rest (OPFS)</div>
+                      <div className="text-[13px] font-bold text-gray-900">{tr("Encrypted Storage at Rest (OPFS)")}</div>
                       <span className="text-[10.5px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                        AES-256 Encrypted
+                        {tr("AES-256 Encrypted")}
                       </span>
                     </div>
                     <p className="text-[11.5px] text-gray-500 leading-normal">
-                      Local PXE notes and account database are encrypted using SQLCipher over Origin Private File System (OPFS). Keys are derived via HKDF-SHA256 from your wallet signature.
+                      {tr("Local PXE notes and account database are encrypted using SQLCipher over Origin Private File System (OPFS). Keys are derived via HKDF-SHA256 from your wallet signature.")}
                     </p>
                     <div className="font-mono text-[11px] text-gray-700 bg-white border border-black/[0.05] rounded-xl px-3 py-2">
-                      Store Info: hl/aztec/v1/store (32-byte derived key)
+                      {tr("Store Info: hl/aztec/v1/store (32-byte derived key)")}
                     </div>
                   </div>
 
                   <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="text-[13px] font-bold text-gray-900">Proving Bundle Integrity</div>
+                      <div className="text-[13px] font-bold text-gray-900">{tr("Proving Bundle Integrity")}</div>
                       <span className="text-[10.5px] font-bold bg-black/5 text-[#1C1C1E] px-2 py-0.5 rounded-full border border-black/10">
-                        UltraHonk BN254
+                        {tr("UltraHonk BN254")}
                       </span>
                     </div>
                     <p className="text-[11.5px] text-gray-500 leading-normal">
-                      Client-side proofs use Barretenberg 5.3.0 with SHA-256 verification keys pinned against on-chain contract verifiers.
+                      {tr("Client-side proofs use Barretenberg 5.3.0 with SHA-256 verification keys pinned against on-chain contract verifiers.")}
                     </p>
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] font-mono text-gray-600">Verification Endpoint: /api/security/integrity</span>
+                      <span className="text-[11px] font-mono text-gray-600">{tr("Verification Endpoint: /api/security/integrity")}</span>
                       <a
                         href="/api/security/integrity"
                         target="_blank"
                         rel="noreferrer"
                         className="text-[11.5px] font-semibold text-[#15171c] hover:underline flex items-center gap-1"
                       >
-                        Inspect Manifest <ExternalLink size={12} />
+                        {tr("Inspect Manifest")}{" "}<ExternalLink size={12} />
                       </a>
                     </div>
                   </div>
 
                   <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-2">
-                    <div className="text-[13px] font-bold text-gray-900">Memory & Storage Hygiene</div>
+                    <div className="text-[13px] font-bold text-gray-900">{tr("Memory & Storage Hygiene")}</div>
                     <p className="text-[11.5px] text-gray-500 leading-normal">
-                      Upon session sign-out, all local OPFS stores and IndexedDB message caches are purged via the secure wipe routine.
+                      {tr("Upon session sign-out, all local OPFS stores and IndexedDB message caches are purged via the secure wipe routine.")}
                     </p>
                   </div>
                 </div>
@@ -549,14 +549,14 @@ export function ZkSettingsPanel({ userAddress, onClose }: ZkSettingsPanelProps) 
                 <ZkPrivacyScore address={userAddress} />
 
                 <div className="bg-[#FAFAFA] border border-black/[0.06] rounded-2xl p-4 space-y-3">
-                  <h3 className="text-[13px] font-bold text-gray-900">Privacy Configuration</h3>
+                  <h3 className="text-[13px] font-bold text-gray-900">{tr("Privacy Configuration")}</h3>
 
                   {[
-                    { label: 'Shield new payments automatically', desc: 'Auto-shield any received token to Aztec', enabled: true },
-                    { label: 'Enforce anonymity set minimum', desc: 'Wait for ≥5 other notes before spending', enabled: true },
-                    { label: 'Rotate spending keys quarterly', desc: 'Derive fresh note keys every 90 days', enabled: false },
-                    { label: 'Tor relay for PXE calls', desc: 'Route Aztec node queries through Tor (slower)', enabled: false },
-                    { label: 'Encrypted local note cache', desc: 'Store notes with AES-256 encryption locally', enabled: true },
+                    { label: tr("Shield new payments automatically"), desc: tr("Auto-shield any received token to Aztec"), enabled: true },
+                    { label: tr("Enforce anonymity set minimum"), desc: tr("Wait for ≥5 other notes before spending"), enabled: true },
+                    { label: tr("Rotate spending keys quarterly"), desc: tr("Derive fresh note keys every 90 days"), enabled: false },
+                    { label: tr("Tor relay for PXE calls"), desc: tr("Route Aztec node queries through Tor (slower)"), enabled: false },
+                    { label: tr("Encrypted local note cache"), desc: tr("Store notes with AES-256 encryption locally"), enabled: true },
                   ].map(({ label, desc, enabled }) => (
                     <div key={label} className="flex items-center justify-between py-2 border-b border-black/[0.04] last:border-0">
                       <div>

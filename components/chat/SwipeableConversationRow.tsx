@@ -30,6 +30,7 @@ import {
   type PanInfo,
 } from "framer-motion";
 import { Archive, BellOff, Bell, Trash2, Pin, PinOff, CheckCheck } from "lucide-react";
+import { useT } from '@/lib/i18n/client';
 
 export interface SwipeableConversationRowProps {
   peerAddress: string;
@@ -78,6 +79,7 @@ export default function SwipeableConversationRow({
   isPinned = false,
   isMuted = false,
 }: SwipeableConversationRowProps) {
+  const t = useT();
   const reduced = useReducedMotion();
   // Touch screens slide; a mouse uses right click (the list's own menu) instead.
   const [touch, setTouch] = useState(false);
@@ -98,12 +100,12 @@ export default function SwipeableConversationRow({
 
   const right: Action[] = [
     { id: "pin", label: isPinned ? "Unpin" : "Pin", Icon: isPinned ? PinOff : Pin, color: "#c27803", run: onPin },
-    { id: "read", label: "Mark as read", Icon: CheckCheck, color: "#1f7a4d", run: onMarkAsRead },
+    { id: "read", label: t("Mark as read"), Icon: CheckCheck, color: "#1f7a4d", run: onMarkAsRead },
   ].filter((a) => a.run);
   const left: Action[] = [
-    { id: "archive", label: "Archive", Icon: Archive, color: "#2456e6", run: onArchive },
+    { id: "archive", label: t("Archive"), Icon: Archive, color: "#2456e6", run: onArchive },
     { id: "mute", label: isMuted ? "Unmute" : "Mute", Icon: isMuted ? Bell : BellOff, color: "#4a505c", run: onMute },
-    { id: "delete", label: "Delete", Icon: Trash2, color: "#d93036", run: onDelete },
+    { id: "delete", label: t("Delete"), Icon: Trash2, color: "#d93036", run: onDelete },
   ].filter((a) => a.run);
 
   const RIGHT_W = right.length ? trayWidth(right.length) : 0;
@@ -253,6 +255,7 @@ function Island({
   onRun: (a: Action) => void;
   name: string;
 }) {
+  const t = useT();
   const sign = side === "right" ? 1 : -1;
   const reveal = useTransform(x, (v) => Math.max(0, Math.min(1, (sign * v) / width)));
   const capsule = width - 2 * EDGE;
@@ -268,7 +271,7 @@ function Island({
       {/* No black capsule behind the actions (18 Nov 2026): only the buttons, on the row background. */}
       <motion.div
         role="toolbar"
-        aria-label={`Actions for ${name}`}
+        aria-label={t("Actions for {name}", { name })}
         className={`h-[46px] flex items-center ${side === "right" ? "justify-start" : "justify-end"}`}
         style={{ width: capsuleWidth, paddingLeft: PAD, paddingRight: PAD }}
       >
@@ -299,6 +302,7 @@ function IslandButton({
   interactive: boolean;
   onRun: (a: Action) => void;
 }) {
+  const t = useT();
   // Buttons appear one after another from the edge the row uncovers.
   const order = side === "right" ? i : n - 1 - i;
   const start = 0.2 + (order / n) * 0.55;
@@ -312,8 +316,8 @@ function IslandButton({
         e.stopPropagation();
         onRun(a);
       }}
-      title={a.label}
-      aria-label={a.label}
+      title={t(a.label)}
+      aria-label={t(a.label)}
       className="shrink-0 rounded-full flex items-center justify-center text-white outline-none shadow-[0_4px_12px_-4px_rgba(16,24,40,0.35)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#15171c] active:brightness-90"
       style={{ width: BTN, height: BTN, background: a.color, scale, opacity }}
     >

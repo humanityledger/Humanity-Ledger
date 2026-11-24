@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LocalContact } from '@/lib/wallet/localAddressBook';
+import { useT } from '@/lib/i18n/client';
 
 interface LedgerStatus {
   peerAddress: string;
@@ -95,6 +96,7 @@ interface LedgerChatStatusBarProps {
 }
 
 export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarProps) {
+  const t = useT();
   const [statuses, setStatuses] = useState<LedgerStatus[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState<LedgerStatus | null>(null);
@@ -179,7 +181,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
                 <span className="text-white text-[10px] font-black leading-none">+</span>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-black/50 max-w-[50px] truncate">My Status</span>
+            <span className="text-[10px] font-bold text-black/50 max-w-[50px] truncate">{t("My Status")}</span>
           </button>
 
           {/* Contacts with Statuses */}
@@ -230,13 +232,13 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
               className="bg-white w-full max-w-lg rounded-t-[24px] p-6 border-t-4 border-black"
               onClick={e => e.stopPropagation()}
             >
-              <h3 className="text-[18px] font-black uppercase tracking-tight mb-4">Post Status</h3>
+              <h3 className="text-[18px] font-black uppercase tracking-tight mb-4">{t("Post Status")}</h3>
               <input
                 autoFocus
                 value={newStatusText}
                 onChange={e => setNewStatusText(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handlePostStatus()}
-                placeholder="What's happening?"
+                placeholder={t("What's happening?")}
                 maxLength={120}
                 className="w-full bg-[#f5f5f7] rounded-xl px-4 py-3 text-[15px] font-medium text-black placeholder:text-black/30 outline-none mb-4"
               />
@@ -247,7 +249,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
                     onClick={() => setSelectedEmoji(e)}
                     className={`text-[24px] w-10 h-10 flex items-center justify-center rounded-xl transition-all ${selectedEmoji === e ? 'bg-black scale-110 shadow-lg' : 'bg-black/5 hover:bg-black/10'}`}
                   >
-                    {e}
+                    {t(e)}
                   </button>
                 ))}
               </div>
@@ -256,14 +258,13 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 h-12 rounded-xl bg-black/5 text-black font-bold text-[14px]"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   onClick={handlePostStatus}
                   disabled={!newStatusText.trim()}
                   className="flex-1 h-12 rounded-xl bg-black text-white font-bold text-[14px] disabled:opacity-30"
-                >
-                  Post {selectedEmoji}
+                >{t("Post {selectedEmoji}", { selectedEmoji })}
                 </button>
               </div>
             </motion.div>
@@ -292,7 +293,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
             <button
               className="absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               onClick={closeViewModal}
-              aria-label="Close"
+              aria-label={t("Close")}
             >
               <X size={22} strokeWidth={2} />
             </button>
@@ -300,7 +301,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
             <div className="flex flex-col items-center gap-6 px-8 max-w-sm text-center">
               <AddressAvatar address={showViewModal.peerAddress} size={80} />
               <div className="text-[60px]">{showViewModal.emoji}</div>
-              <p className="text-white text-[22px] font-black leading-tight">{showViewModal.text}</p>
+              <p className="text-white text-[22px] font-black leading-tight">{t(showViewModal.text)}</p>
               <p className="text-white/40 text-[12px] font-mono">
                 {new Date(showViewModal.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>

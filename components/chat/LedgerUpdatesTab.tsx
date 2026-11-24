@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PeerAvatar, SectionLabel, EmptyState, PrimaryButton, SecondaryButton, IconButton, Sheet, shortAddr } from './ui/kit';
 import { loadStatusMedia, parseStatusMedia, STATUS_VIDEO_MAX_SECONDS, StatusMediaError, uploadStatusMedia } from '@/lib/chat/status-media';
+import { useT } from '@/lib/i18n/client';
 
 /*
  * Status: a short text, a photo or a video of up to 30 seconds, for 24 hours.
@@ -26,6 +27,7 @@ type Mode = 'text' | 'image' | 'video';
 
 /** Decrypts and shows one photo or video status; text otherwise. */
 function StatusBody({ story, compact = false }: { story: Story; compact?: boolean }) {
+  const t = useT();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const media = story.mediaType === 'text' ? null : parseStatusMedia(story.contentUrl);
@@ -38,12 +40,12 @@ function StatusBody({ story, compact = false }: { story: Story; compact?: boolea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story.contentUrl]);
   if (story.mediaType === 'text') return <span className="block text-[14.5px] text-[#15171c] whitespace-pre-wrap break-words">{story.contentUrl}</span>;
-  if (!media || failed) return <span className="block text-[13.5px] text-[#727a88]">This {story.mediaType === 'video' ? 'video' : 'photo'} is not available.</span>;
-  if (!src) return <span className={`block rounded-xl border border-[#e4e7ec] bg-white ${compact ? 'h-24 w-24' : 'h-48 w-full'}`} aria-label="Loading" />;
+  if (!media || failed) return <span className="block text-[13.5px] text-[#727a88]">{t("This {value} is not available.", { value: story.mediaType === 'video' ? 'video' : 'photo' })}</span>;
+  if (!src) return <span className={`block rounded-xl border border-[#e4e7ec] bg-white ${compact ? 'h-24 w-24' : 'h-48 w-full'}`} aria-label={t("Loading")} />;
   const cls = `block rounded-xl border border-[#e4e7ec] bg-white object-cover ${compact ? 'h-24 w-24' : 'max-h-[60vh] w-full object-contain'}`;
   return story.mediaType === 'video'
     ? <video src={src} className={cls} controls={!compact} muted playsInline preload="metadata" />
-    : <img src={src} alt="Status photo" className={cls} />;
+    : <img src={src} alt={t("Status photo")} className={cls} />;
 }
 
 interface Story {
@@ -74,6 +76,7 @@ const ago = (ts: string | number) => {
 };
 
 export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, myName, contacts, onOpenChat }) => {
+  const t = useT();
   const [mine, setMine] = useState<Story[]>([]);
   const [others, setOthers] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +130,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
   const canPost = mode === 'text' ? Boolean(draft.trim()) : Boolean(file);
   const post = async () => {
     if (!canPost || posting) return;
-    if (picked && picked.size === 0) { toast.error('Pick at least one contact, or choose All my contacts.'); return; }
+    if (picked && picked.size === 0) { toast.error(t("Pick at least one contact, or choose All my contacts.")); return; }
     setPosting(true);
     try {
       let contentUrl = draft.trim();
@@ -156,10 +159,10 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
       }
       setMine(prev => [data.story, ...prev]);
       resetComposer();
-      toast.success('Status posted');
+      toast.success(t("Status posted"));
     } catch (e: any) {
       // Say what went wrong (size, length, type, session, storage), not only "try again".
-      toast.error(e instanceof StatusMediaError ? e.message : 'Could not post your status. Check your connection and try again.');
+      toast.error(e instanceof StatusMediaError ? e.message : t("Could not post your status. Check your connection and try again."));
     }
     setPosting(false);
   };
@@ -172,7 +175,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
       if (!res.ok) throw new Error();
     } catch {
       setMine(before);
-      toast.error('Could not delete the status');
+      toast.error(t("Could not delete the status"));
     }
   };
 
@@ -192,16 +195,16 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
             <button
               type="button"
               onClick={() => setComposer(true)}
-              aria-label="New status"
+              aria-label={t("New status")}
               className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#15171c] text-white ring-2 ring-white flex items-center justify-center"
             >
               {G.plus}
             </button>
           </span>
           <button type="button" onClick={() => setComposer(true)} className="flex-1 min-w-0 text-left">
-            <span className="block text-[15.5px] font-medium text-[#15171c]">My status</span>
+            <span className="block text-[15.5px] font-medium text-[#15171c]">{t("My status")}</span>
             <span className="block text-[13.5px] text-[#727a88]">
-              {mine.length === 0 ? 'Share a text, photo or short video for 24 hours' : `${mine.length} active ${mine.length === 1 ? 'status' : 'statuses'}`}
+              {mine.length === 0 ? t("Share a text, photo or short video for 24 hours") : t("{length} active {value}", { length: mine.length, value: mine.length === 1 ? 'status' : 'statuses' })}
             </span>
           </button>
         </div>
@@ -212,10 +215,10 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 <span className="flex-1 min-w-0">
                   <StatusBody story={s} compact />
                   <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">
-                    {ago(s.createdAt)} · {s.audienceSize ? `${s.audienceSize} ${s.audienceSize === 1 ? 'contact' : 'contacts'}` : 'All my contacts'}
+                    {ago(s.createdAt)} · {s.audienceSize ? `${s.audienceSize} ${s.audienceSize === 1 ? 'contact' : 'contacts'}` : t("All my contacts")}
                   </span>
                 </span>
-                <IconButton label="Delete status" onClick={() => remove(s.id)} className="text-[#727a88] hover:text-[#FF3B30]">
+                <IconButton label={t("Delete status")} onClick={() => remove(s.id)} className="text-[#727a88] hover:text-[#FF3B30]">
                   {G.trash}
                 </IconButton>
               </li>
@@ -224,14 +227,14 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
         )}
       </div>
 
-      <SectionLabel>Recent</SectionLabel>
+      <SectionLabel>{t("Recent")}</SectionLabel>
       {loading ? (
-        <p className="px-4 py-6 text-[14px] text-[#a3a9b4]">Loading</p>
+        <p className="px-4 py-6 text-[14px] text-[#a3a9b4]">{t("Loading")}</p>
       ) : Object.keys(byAuthor).length === 0 ? (
         <EmptyState
           icon={G.ring}
-          title="No updates yet"
-          text="When people who saved you as a contact share a status, it shows up here for 24 hours."
+          title={t("No updates yet")}
+          text={t("When people who saved you as a contact share a status, it shows up here for 24 hours.")}
         />
       ) : (
         <ul className="px-2">
@@ -251,9 +254,9 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                     <span className="text-[12.5px] text-[#a3a9b4] shrink-0">{ago(list[0].createdAt)}</span>
                   </span>
                   <span className="block text-[14px] text-[#4a505c] mt-0.5 line-clamp-2">
-                    {list[0].mediaType === 'text' ? list[0].contentUrl : list[0].mediaType === 'video' ? 'Video' : 'Photo'}
+                    {list[0].mediaType === 'text' ? list[0].contentUrl : list[0].mediaType === 'video' ? t("Video") : t("Photo")}
                   </span>
-                  {list.length > 1 && <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">and {list.length - 1} more</span>}
+                  {list.length > 1 && <span className="block text-[12.5px] text-[#a3a9b4] mt-0.5">{t("and {value} more", { value: list.length - 1 })}</span>}
                 </span>
               </button>
             </li>
@@ -265,11 +268,11 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
         open={viewing !== null}
         onClose={() => setViewing(null)}
         title={viewing ? nameOf(viewing) : ''}
-        subtitle="Status, for 24 hours"
+        subtitle={t("Status, for 24 hours")}
         footer={
           <div className="flex items-center justify-end gap-2">
-            <SecondaryButton onClick={() => setViewing(null)}>Close</SecondaryButton>
-            <PrimaryButton onClick={() => { const a = viewing; setViewing(null); if (a) onOpenChat(a); }}>Reply in chat</PrimaryButton>
+            <SecondaryButton onClick={() => setViewing(null)}>{t("Close")}</SecondaryButton>
+            <PrimaryButton onClick={() => { const a = viewing; setViewing(null); if (a) onOpenChat(a); }}>{t("Reply in chat")}</PrimaryButton>
           </div>
         }
       >
@@ -286,17 +289,17 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
       <Sheet
         open={composer}
         onClose={resetComposer}
-        title="New status"
-        subtitle="Visible for 24 hours"
+        title={t("New status")}
+        subtitle={t("Visible for 24 hours")}
         footer={
           <div className="flex items-center justify-end gap-2">
-            <SecondaryButton onClick={resetComposer}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={post} disabled={!canPost || posting}>{posting ? 'Posting' : 'Post'}</PrimaryButton>
+            <SecondaryButton onClick={resetComposer}>{t("Cancel")}</SecondaryButton>
+            <PrimaryButton onClick={post} disabled={!canPost || posting}>{posting ? t("Posting") : t("Post")}</PrimaryButton>
           </div>
         }
       >
         <div className="px-5 pb-4">
-          <div role="tablist" aria-label="Status type" className="flex gap-2 mb-3">
+          <div role="tablist" aria-label={t("Status type")} className="flex gap-2 mb-3">
             {([['text', 'Text'], ['image', 'Photo'], ['video', 'Video']] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -322,19 +325,19 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
               {preview ? (
                 mode === 'video'
                   ? <video src={preview} className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" controls muted playsInline />
-                  : <img src={preview} alt="Selected photo" className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" />
+                  : <img src={preview} alt={t("Selected photo")} className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" />
               ) : null}
               <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 h-10 w-full rounded-xl border border-[#e4e7ec] bg-white text-[14px] font-medium text-[#15171c]">
-                {file ? 'Choose another' : mode === 'image' ? 'Choose a photo' : `Choose a video (up to ${STATUS_VIDEO_MAX_SECONDS} s)`}
+                {file ? t("Choose another") : mode === 'image' ? t("Choose a photo") : t("Choose a video (up to {STATUS_VIDEO_MAX_SECONDS} s)", { STATUS_VIDEO_MAX_SECONDS })}
               </button>
-              <p className="text-[12.5px] text-[#a3a9b4] mt-1">Up to 20 MB.</p>
+              <p className="text-[12.5px] text-[#a3a9b4] mt-1">{t("Up to 20 MB.")}</p>
             </>
           ) : (<>
           <textarea
             autoFocus
             value={draft}
             onChange={e => setDraft(e.target.value.slice(0, MAX))}
-            placeholder="What would you like to share?"
+            placeholder={t("What would you like to share?")}
             rows={5}
             className="w-full text-[15.5px] text-[#15171c] placeholder:text-[#a3a9b4] resize-none outline-none border border-[#d9dde3] rounded-xl p-3 focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10"
           />
@@ -342,14 +345,14 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
           </>)}
 
           <fieldset className="mt-4">
-            <legend className="text-[13px] font-semibold text-[#15171c] mb-2">Who can see it</legend>
+            <legend className="text-[13px] font-semibold text-[#15171c] mb-2">{t("Who can see it")}</legend>
             <label className="flex items-center gap-2 py-1 text-[14px] text-[#15171c]">
               <input type="radio" name="status-audience" checked={picked === null} onChange={() => setPicked(null)} />
-              All my contacts who saved me
+              {t("All my contacts who saved me")}
             </label>
             <label className="flex items-center gap-2 py-1 text-[14px] text-[#15171c]">
               <input type="radio" name="status-audience" checked={picked !== null} onChange={() => setPicked(new Set())} disabled={contacts.length === 0} />
-              Only some contacts
+              {t("Only some contacts")}
             </label>
             {picked !== null && (
               <ul className="mt-1 max-h-40 overflow-y-auto rounded-xl border border-[#e4e7ec]">
@@ -370,13 +373,11 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 })}
               </ul>
             )}
-            <p className="text-[12.5px] text-[#a3a9b4] mt-1">Only people who saved you as a contact can ever see your status.</p>
+            <p className="text-[12.5px] text-[#a3a9b4] mt-1">{t("Only people who saved you as a contact can ever see your status.")}</p>
           </fieldset>
 
           <p className="mt-3 flex items-start gap-2 text-[13.5px] text-[#4a505c] leading-relaxed">
-            <span className="mt-[2px] shrink-0 text-[#727a88]">{G.info}</span>
-            Status is stored on our server and is not end-to-end encrypted. Photos and videos are encrypted at rest, but the server holds their key.
-          </p>
+            {t("{0}Status is stored on our server and is not end-to-end encrypted. Photos and videos are encrypted at rest, but the server holds their key.", { 0: <span className="mt-[2px] shrink-0 text-[#727a88]">{G.info}</span> })}</p>
         </div>
       </Sheet>
     </div>

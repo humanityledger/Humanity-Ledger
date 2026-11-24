@@ -8,6 +8,7 @@ import {
     AnalyticsConfig, ExecutionConfig, UiConfig, 
     getDefaultUserSettings 
 } from '@/lib/settings-validation';
+import { useT } from '@/lib/i18n/client';
 
 
 // --- TYPES ---
@@ -111,6 +112,7 @@ export interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const tr = useT();
     // --- INITIAL STATES (With Persistence) ---
     // General
     const [theme, setTheme] = useState<ThemeMode>('light');
@@ -253,7 +255,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                 }
             } catch (error: any) {
                 console.error('[Legendary-Sync] Failed to load cloud settings:', error);
-                setSyncError(error.message);
+                setSyncError(tr(error.message));
                 
                 // LocalStorage is our rock-solid fallback
                 try {
@@ -366,19 +368,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                             lastSavedHash.current = currentHash;
                             
                             // Visual feedback only for actual user changes
-                            toast.success("Settings Synced", { 
-                                description: "Configuration secured in Human Cloud.",
+                            toast.success(tr("Settings Synced"), { 
+                                description: tr("Configuration secured in Human Cloud."),
                                 duration: 2000,
                                 icon: ""
                             });
                         } else {
                             // Don't spam toasts for silent background failures unless they persist
-                            setSyncError(result.error || 'Sync failed');
+                            setSyncError(result.error || tr("Sync failed"));
                             console.warn('[Legendary-Sync] Cloud sync failed:', result.error);
                         }
                     } catch (error: any) {
                         console.error('[Legendary-Sync] Background cloud save error:', error);
-                        setSyncError(error.message);
+                        setSyncError(tr(error.message));
                     } finally {
                         setIsSyncing(false);
                     }
@@ -434,12 +436,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     const triggerBackup = () => {
         setLastSyncAt(new Date());
-        toast.success("Manual Backup Triggered", { description: "Your encrypted keys have synced locally." });
+        toast.success(tr("Manual Backup Triggered"), { description: tr("Your encrypted keys have synced locally.") });
     };
 
     const lockApp = () => {
         // Mock locking
-        alert(" SESSION LOCKED. Please re-authenticate.");
+        alert(tr(" SESSION LOCKED. Please re-authenticate."));
         window.location.reload();
     };
 

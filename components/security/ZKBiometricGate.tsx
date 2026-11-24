@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAccount, useSignMessage } from 'wagmi';
 import { Shield, Eye, CheckCircle2, AlertTriangle, ScanLine, Camera, Smartphone } from "lucide-react";
 import { useSecureCamera } from "@/hooks/useSecureCamera";
+import { useT } from '@/lib/i18n/client';
 
 type Stage = "IDLE" | "PERMISSION" | "DOCUMENT_SCAN" | "FACE_SCAN" | "PROCESSING" | "SUCCESS" | "ERROR";
 
@@ -14,6 +15,7 @@ interface ZKBiometricGateProps {
 }
 
 export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
+  const t = useT();
   const [stage, setStage] = useState<Stage>("IDLE");
   const [errorMsg, setErrorMsg] = useState("");
   const [progress, setProgress] = useState(0);
@@ -42,7 +44,7 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
 
   const handleStart = async () => {
     if (!address) {
-      setErrorMsg("Wallet disconnected. Reconnect to proceed.");
+      setErrorMsg(t("Wallet disconnected. Reconnect to proceed."));
       setStage("ERROR");
       return;
     }
@@ -66,7 +68,7 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
         }, 1500);
       }, 4000);
     } else if (stage === "PERMISSION" && hasPermission === false) {
-      setErrorMsg("Camera access denied. We require WebRTC telemetry for Activeness.");
+      setErrorMsg(t("Camera access denied. We require WebRTC telemetry for Activeness."));
       setStage("ERROR");
     }
   }, [stage, hasPermission]);
@@ -111,7 +113,7 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
 
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || "Cryptographic Signature Failed.");
+      setErrorMsg(err.message || t("Cryptographic Signature Failed."));
       setStage("ERROR");
     }
   };
@@ -130,8 +132,8 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
         
         {/* Header */}
         <div className="mb-8 flex flex-col items-center">
-           <h2 className="text-[14px] font-bold uppercase tracking-[0.4em] text-[#0a0a0a]">System Identity</h2>
-           <p className="text-[9px] text-black/40 uppercase tracking-widest mt-2">Zero Knowledge Biometric Protocol</p>
+           <h2 className="text-[14px] font-bold uppercase tracking-[0.4em] text-[#0a0a0a]">{t("System Identity")}</h2>
+           <p className="text-[9px] text-black/40 uppercase tracking-widest mt-2">{t("Zero Knowledge Biometric Protocol")}</p>
         </div>
 
         <div className="w-full h-full flex flex-col items-center justify-center flex-1 min-h-[300px]">
@@ -143,13 +145,13 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
                    <Camera size={32} className="text-black/60" />
                  </div>
                  <p className="text-[11px] text-black/60 leading-relaxed mb-8 uppercase tracking-[0.1em] max-w-[280px]">
-                   Authentic WebRTC Telemetry. Your facial geometry is encrypted locally and transmitted via zero knowledge tunnels.
+                   {t("Authentic WebRTC Telemetry. Your facial geometry is encrypted locally and transmitted via zero knowledge tunnels.")}
                  </p>
                  <button 
                    onClick={handleStart}
                    className="w-full py-4 bg-emerald-500 text-black text-[11px] font-black uppercase tracking-[0.3em] rounded-xl hover:bg-emerald-400 active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(16,185,129,0.2)]"
                  >
-                   Initialize WebRTC Scanner
+                   {t("Initialize WebRTC Scanner")}
                  </button>
               </motion.div>
             )}
@@ -157,8 +159,8 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
             {stage === "PERMISSION" && (
               <motion.div key="perm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center">
                  <div className="w-12 h-12 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-6" />
-                 <p className="text-[10px] text-emerald-500 uppercase tracking-widest font-bold">Requesting Hardware Access...</p>
-                 <p className="text-[8px] text-black/40 mt-2 uppercase tracking-widest">Please allow camera permissions.</p>
+                 <p className="text-[10px] text-emerald-500 uppercase tracking-widest font-bold">{t("Requesting Hardware Access...")}</p>
+                 <p className="text-[8px] text-black/40 mt-2 uppercase tracking-widest">{t("Please allow camera permissions.")}</p>
               </motion.div>
             )}
 
@@ -185,7 +187,7 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
                  </div>
                  
                  <div className="w-full flex items-center justify-between px-2 mb-2">
-                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0a0a0a]">Position ID Document</p>
+                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0a0a0a]">{t("Position ID Document")}</p>
                    <span className="text-[10px] font-bold text-emerald-500">{Math.round(progress)}%</span>
                  </div>
                  <div className="w-full h-1 bg-black/5 rounded-full overflow-hidden">
@@ -208,8 +210,8 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
                  </div>
                  
                  <div className="w-full flex flex-col items-center mb-4">
-                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0a0a0a] mb-1">Look Directly At Camera</p>
-                   <p className="text-[8px] text-black/40 uppercase tracking-widest">Analyzing 3D Activeness & Micro-expressions</p>
+                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0a0a0a] mb-1">{t("Look Directly At Camera")}</p>
+                   <p className="text-[8px] text-black/40 uppercase tracking-widest">{t("Analyzing 3D Activeness & Micro-expressions")}</p>
                  </div>
                  
                  <div className="w-full h-1.5 bg-black/5 rounded-full overflow-hidden w-48">
@@ -222,8 +224,8 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
             {stage === "PROCESSING" && (
               <motion.div key="proc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center">
                  <div className="w-14 h-14 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-6" />
-                 <p className="text-[10px] text-emerald-500 uppercase tracking-[0.2em] font-black mb-2">Cryptographic Binding</p>
-                 <p className="text-[8px] text-black/40 uppercase tracking-widest text-center max-w-[200px]">Sign the transaction in your wallet to confirm the ZK-Proof.</p>
+                 <p className="text-[10px] text-emerald-500 uppercase tracking-[0.2em] font-black mb-2">{t("Cryptographic Binding")}</p>
+                 <p className="text-[8px] text-black/40 uppercase tracking-widest text-center max-w-[200px]">{t("Sign the transaction in your wallet to confirm the ZK-Proof.")}</p>
               </motion.div>
             )}
 
@@ -234,8 +236,8 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
                    <div className="absolute inset-0 border border-emerald-400 rounded-full animate-ping opacity-20" />
                    <CheckCircle2 size={32} className="text-emerald-500" />
                  </div>
-                 <h3 className="text-[14px] font-black text-[#0a0a0a] uppercase tracking-[0.3em] mb-2">Identity Verified</h3>
-                 <p className="text-[9px] text-black/40 uppercase tracking-widest">System Terminal Unlocked</p>
+                 <h3 className="text-[14px] font-black text-[#0a0a0a] uppercase tracking-[0.3em] mb-2">{t("Identity Verified")}</h3>
+                 <p className="text-[9px] text-black/40 uppercase tracking-widest">{t("System Terminal Unlocked")}</p>
               </motion.div>
             )}
 
@@ -247,7 +249,7 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
                  </div>
                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest leading-relaxed mb-6">{errorMsg}</p>
                  <button onClick={() => setStage("IDLE")} className="px-6 py-2 bg-black text-white text-[9px] font-bold uppercase tracking-[0.2em] rounded-lg">
-                   Retry Hardware Access
+                   {t("Retry Hardware Access")}
                  </button>
               </motion.div>
             )}
@@ -258,12 +260,12 @@ export function ZKBiometricGate({ onSuccess, uuid }: ZKBiometricGateProps) {
         {/* E2EE Footer */}
         <div className="w-full pt-6 mt-4 border-t border-black/5 flex flex-col gap-2">
           <div className="flex justify-between w-full">
-             <span className="text-[8px] text-black/30 uppercase tracking-widest flex items-center gap-1"><Shield size={10}/> Encryption</span>
-             <span className="text-[8px] text-black/50 uppercase tracking-widest font-bold">AES-GCM-256</span>
+             <span className="text-[8px] text-black/30 uppercase tracking-widest flex items-center gap-1"><Shield size={10}/>{" "}{t("Encryption")}</span>
+             <span className="text-[8px] text-black/50 uppercase tracking-widest font-bold">{t("AES-GCM-256")}</span>
           </div>
           <div className="flex justify-between w-full">
-             <span className="text-[8px] text-black/30 uppercase tracking-widest flex items-center gap-1"><ScanLine size={10}/> Telemetry</span>
-             <span className="text-[8px] text-black/50 uppercase tracking-widest font-bold">Activeness Edge</span>
+             <span className="text-[8px] text-black/30 uppercase tracking-widest flex items-center gap-1"><ScanLine size={10}/>{" "}{t("Telemetry")}</span>
+             <span className="text-[8px] text-black/50 uppercase tracking-widest font-bold">{t("Activeness Edge")}</span>
           </div>
         </div>
 

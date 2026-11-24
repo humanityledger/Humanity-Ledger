@@ -24,12 +24,14 @@ import { present } from './presentations';
 import { useMotionPreset } from './motion';
 import { useNow } from './useNow';
 import s from './activities.module.css';
+import { useT } from '@/lib/i18n/client';
 
 export const CALL_SURFACE_ID = 'live-call-surface';
 
 const hasTimer = (a: AnyActivity | null) => !!a && ((a.kind === 'call' && !!a.state.connectedAt) || a.kind === 'recording');
 
 export function Island() {
+  const t = useT();
   const activities = useActivities((st) => st.activities);
   const presentation = useActivities((st) => st.presentation);
   const expandedId = useActivities((st) => st.expandedId);
@@ -139,7 +141,7 @@ export function Island() {
               transition={{ duration: 0.16 }}
             >
               {view.leading}
-              <span className={s.label}>{view.label}</span>
+              <span className={s.label}>{t(view.label)}</span>
               {view.trailing}
             </motion.button>
           )}
@@ -156,7 +158,7 @@ export function Island() {
             type="button"
             className={s.minimal}
             onClick={() => setPinned(secondary.id)}
-            aria-label={`${present(secondary, ctx).spoken}. Show`}
+            aria-label={t("{spoken}. Show", { spoken: present(secondary, ctx).spoken })}
             transition={motionPreset.morph}
             initial={motionPreset.appear.initial}
             animate={motionPreset.appear.animate}

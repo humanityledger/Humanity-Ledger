@@ -6,8 +6,10 @@ import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { X, Settings, LogOut } from 'lucide-react';
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { TerminalSettingsPanel } from '@/components/terminal/TerminalSettingsPanel';
+import { useT } from '@/lib/i18n/client';
 
 export function GlobalSettingsModal() {
+  const t = useT();
     const { isSettingsOpen, setSettingsOpen } = useSettingsStore();
 
     const { nuclearDisconnect } = useSystemSignOut();
@@ -47,12 +49,12 @@ export function GlobalSettingsModal() {
                                     <Settings size={16} />
                                  </div>
                                  <div className="flex flex-col">
-                                    <h2 className="text-[13px] font-black text-black  uppercase tracking-widest">Global Terminal Parameters</h2>
+                                    <h2 className="text-[13px] font-black text-black  uppercase tracking-widest">{t("Global Terminal Parameters")}</h2>
                                  </div>
                              </div>
                              <div className="flex items-center gap-4">
                                 <button onClick={handleDisconnect} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50  text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-100  transition-colors">
-                                    <LogOut size={14} /> Sever Connection
+                                    <LogOut size={14} />{" "}{t("Sever Connection")}
                                 </button>
                                 <button onClick={() => setSettingsOpen(false)} className="p-2 text-black/40 hover:text-black   transition-colors bg-black/5  rounded-full"><X size={18} /></button>
                              </div>

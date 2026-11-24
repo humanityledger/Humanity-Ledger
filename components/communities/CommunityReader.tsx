@@ -34,6 +34,7 @@ import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '
 import { tintFor, initials } from '@/components/chat/ui/kit';
 import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
+import { useT } from '@/lib/i18n/client';
 
 export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';
 /** For a community whose posts live in an XMTP MLS group (lib/communities/mls.ts). */
@@ -127,6 +128,7 @@ export function authorLabel(p: ReaderPost, me: string, nameFor?: (address: strin
 }
 
 export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, fetchImpl, xmtpClient }: CommunityReaderProps) {
+  const tr = useT();
   // Stable across renders: the loaders below depend on it, and a new function each render would refetch in a loop.
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
   const me = myAddress.toLowerCase();
@@ -270,7 +272,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title: 'Community post', content: body, contentHtml: body }),
+        body: JSON.stringify({ title: tr("Community post"), content: body, contentHtml: body }),
       });
       status = res.status;
       const d = await res.json().catch(() => ({}));
@@ -289,9 +291,9 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const copy = async (text: string, done: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(done);
+      toast.success(tr(done));
     } catch {
-      toast.error('Could not copy on this device.');
+      toast.error(tr("Could not copy on this device."));
     }
   };
 
@@ -304,22 +306,22 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         body: JSON.stringify({ action: 'PIN_MESSAGE', communityId, messageId: id }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d?.ok) toast.success('Pin added. You find it in Manage.');
-      else toast.error(typeof d?.error === 'string' ? d.error : 'The pin was not added. Try again.');
+      if (res.ok && d?.ok) toast.success(tr("Pin added. You find it in Manage."));
+      else toast.error(typeof d?.error === 'string' ? d.error : tr("The pin was not added. Try again."));
     } catch {
-      toast.error('This device could not reach the server. Check your connection and try again.');
+      toast.error(tr("This device could not reach the server. Check your connection and try again."));
     }
   };
 
   const menuItems = (p: Shown): MenuItem[] => {
     const addr = (p.authorAddress || '').toLowerCase();
     const mine = addr === me;
-    const items: MenuItem[] = [{ label: 'Copy text', icon: <Copy size={16} strokeWidth={1.9} />, onSelect: () => copy(postText(p), 'Text copied.') }];
+    const items: MenuItem[] = [{ label: tr("Copy text"), icon: <Copy size={16} strokeWidth={1.9} />, onSelect: () => copy(postText(p), 'Text copied.') }];
     if (/^0x[0-9a-f]{40}$/.test(addr)) {
       items.push({ label: mine ? 'Copy your wallet' : 'Copy wallet address', icon: <Wallet size={16} strokeWidth={1.9} />, onSelect: () => copy(addr, 'Wallet address copied.') });
-      if (!mine && onMessage) items.push({ label: 'Message privately', icon: <MessageCircle size={16} strokeWidth={1.9} />, onSelect: () => onMessage(addr) });
+      if (!mine && onMessage) items.push({ label: tr("Message privately"), icon: <MessageCircle size={16} strokeWidth={1.9} />, onSelect: () => onMessage(addr) });
     }
-    if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: 'Pin', icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
+    if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: tr("Pin"), icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
     return items;
   };
 
@@ -329,18 +331,18 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   return (
     <section className="flex-1 flex flex-col h-full min-h-0 bg-white" aria-label={title}>
       <header className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-[#d4d8de] bg-white">
-        <button type="button" onClick={onBack} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label="Back to your communities">
+        <button type="button" onClick={onBack} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Back to your communities")}>
           <span aria-hidden="true" className="text-[22px] leading-none">‹</span>
-          <span className="hidden sm:inline">Back</span>
+          <span className="hidden sm:inline">{tr("Back")}</span>
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[21px] sm:text-[22px] font-semibold leading-tight truncate" style={{ color: INK }}>{title}</h1>
           {members !== null && (
-            <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? '1 member' : `${members} members`}</p>
+            <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? tr("1 member") : tr("{members} members", { members })}</p>
           )}
         </div>
         <button type="button" onClick={onManage} className={`${btn} border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`} style={{ color: INK }}>
-          Manage
+          {tr("Manage")}
         </button>
       </header>
 
@@ -350,22 +352,22 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4" aria-live="polite">
         {load === 'loading' && posts.length === 0 && (
-          <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading the posts…</p>
+          <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">{tr("Loading the posts…")}</p>
         )}
         {load === 'waiting' && posts.length === 0 && (
           <div className="py-10 text-center" role="status" data-testid="mls-waiting">
-            <p className="text-[18px] leading-snug" style={{ color: INK }}>You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.</p>
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.")}</p>
           </div>
         )}
         {load === 'error' && posts.length === 0 && (
           <div className="py-10 text-center" role="alert">
-            <p className="text-[18px] leading-snug" style={{ color: INK }}>The posts could not be loaded. Check your connection and try again.</p>
-            <button type="button" onClick={() => { setLoad('loading'); fetchPosts(); }} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>Try again</button>
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("The posts could not be loaded. Check your connection and try again.")}</p>
+            <button type="button" onClick={() => { setLoad('loading'); fetchPosts(); }} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
           </div>
         )}
         {load === 'ready' && posts.length === 0 && (
           <div className="py-10 text-center">
-            <p className="text-[18px] leading-snug" style={{ color: INK }}>No posts yet. Write the first one below.</p>
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("No posts yet. Write the first one below.")}</p>
           </div>
         )}
         <ol className="flex flex-col gap-4 max-w-[720px] mx-auto">
@@ -379,7 +381,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 key={p.id}
                 failed={p.state === 'failed'}
                 mine={author.mine}
-                label={`Post by ${author.name}`}
+                label={tr("Post by {name}", { name: author.name })}
                 onMenu={(at) => setMenu({ at, post: p })}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -398,13 +400,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 </div>
                 {heading && <p className="text-[19px] font-semibold mt-2" style={{ color: INK }}>{heading}</p>}
                 <p className="text-[18px] leading-relaxed mt-2 whitespace-pre-wrap break-words" style={{ color: INK }}>{text}</p>
-                {p.state === 'sending' && <p className="text-[16px] mt-2" style={{ color: INK_SOFT }} role="status">Sending…</p>}
+                {p.state === 'sending' && <p className="text-[16px] mt-2" style={{ color: INK_SOFT }} role="status">{tr("Sending…")}</p>}
                 {p.state === 'failed' && (
                   <div className="mt-2" role="alert">
                     <p className="text-[17px] font-semibold leading-snug" style={{ color: DANGER }}>{p.error}</p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] text-white hover:bg-[#2a2d34]`}>Try again</button>
-                      <button type="button" onClick={() => dismiss(p.id)} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>Remove</button>
+                      <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
+                      <button type="button" onClick={() => dismiss(p.id)} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>{tr("Remove")}</button>
                     </div>
                   </div>
                 )}
@@ -412,7 +414,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             );
           })}
         </ol>
-        {menu && <ContextMenu at={menu.at} items={menuItems(menu.post)} label="Post actions" onClose={() => setMenu(null)} />}
+        {menu && <ContextMenu at={menu.at} items={menuItems(menu.post)} label={tr("Post actions")} onClose={() => setMenu(null)} />}
         <div ref={listEnd} />
       </div>
 
@@ -422,7 +424,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       >
         <div className="max-w-[720px] mx-auto">
           <label htmlFor={`community-write-${communityId}`} className="block text-[18px] font-semibold mb-2" style={{ color: INK }}>
-            Write a post
+            {tr("Write a post")}
           </label>
           <textarea
             id={`community-write-${communityId}`}
@@ -432,14 +434,14 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             rows={2}
             maxLength={8000}
             data-allow-context
-            placeholder="Write your message here"
+            placeholder={tr("Write your message here")}
             className="w-full rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] leading-relaxed resize-none placeholder:text-[#4a505c] bg-white"
             style={{ color: INK }}
           />
           {/* Send is the only action here. */}
           <div className="flex justify-end gap-2 mt-2">
             <button type="submit" disabled={!draft.trim()} className={`${btn} px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
-              Send
+              {tr("Send")}
             </button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Lock, Info, ChevronDown, ChevronUp, ExternalLink, ArrowRight
 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 const AZTEC_EXPLORER = 'https://aztecscan.xyz';
 
@@ -30,6 +31,7 @@ function ZkPrivacyScoreInner({
   onExploreNotes,
   onShieldMore
 }: ZkPrivacyScoreProps) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
 
   const txUrl = txHash
@@ -52,12 +54,12 @@ function ZkPrivacyScoreInner({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[14px] font-bold tracking-tight">Aztec Privacy Rating</span>
+              <span className="text-[14px] font-bold tracking-tight">{t("Aztec Privacy Rating")}</span>
               <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
                 style={{ background: '#1C1C1E0F', color: '#1C1C1E' }}
               >
-                On-chain
+                {t("On-chain")}
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium">
@@ -95,11 +97,9 @@ function ZkPrivacyScoreInner({
       {/* Summary row */}
       <div className="px-4 py-3 border-b border-black/[0.04] flex items-center gap-2 text-[12px] text-gray-500">
         <Info size={13} className="shrink-0 text-gray-400" />
-        <span>
-          Privacy Score: <strong className="text-gray-700">N/A</strong>
-          {txHash ? (
+        <span>{t("Privacy Score: {0}{value}", { 0: <strong className="text-gray-700">N/A</strong>, value: txHash ? (
             <>
-              {' · transaction '}
+              {t(" · transaction ")}
               <a
                 href={txUrl!}
                 target="_blank"
@@ -111,8 +111,8 @@ function ZkPrivacyScoreInner({
               </a>
             </>
           ) : (
-            ' · no transaction selected'
-          )}
+            t(" · no transaction selected")
+          ) })}
         </span>
       </div>
 
@@ -130,18 +130,16 @@ function ZkPrivacyScoreInner({
               {/* Pending notice */}
               <div className="bg-[#f0f2f5] rounded-2xl p-4 space-y-2">
                 <p className="text-[12px] font-semibold text-gray-700 leading-relaxed">
-                  Full anonymity metrics will be computed from the on-chain anonymity set when
-                  the Aztec node indexer is connected.
+                  {t("Full anonymity metrics will be computed from the on-chain anonymity set when the Aztec node indexer is connected.")}
                 </p>
                 <p className="text-[11px] text-gray-500 leading-relaxed">
-                  Once the indexer is live, scores will reflect your real anonymity-set size,
-                  note maturity and nullifier age, never simulated values.
+                  {t("Once the indexer is live, scores will reflect your real anonymity-set size, note maturity and nullifier age, never simulated values.")}
                 </p>
               </div>
 
               {/* Address */}
               <div className="bg-[#f0f2f5] rounded-2xl p-3 flex items-center justify-between text-[12px]">
-                <span className="text-gray-500 font-medium">Your Aztec Address</span>
+                <span className="text-gray-500 font-medium">{t("Your Aztec Address")}</span>
                 <span className="font-mono font-bold text-gray-900">{truncateAddress(address)}</span>
               </div>
 
@@ -152,7 +150,7 @@ function ZkPrivacyScoreInner({
                     onClick={onShieldMore}
                     className="flex-1 py-2.5 px-3 bg-[#1C1C1E] hover:bg-black text-white text-[12px] font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    Shield More Notes <ArrowRight size={14} />
+                    {t("Shield More Notes")}{" "}<ArrowRight size={14} />
                   </button>
                 )}
                 <a
@@ -161,7 +159,7 @@ function ZkPrivacyScoreInner({
                   rel="noopener noreferrer"
                   className="py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[12px] font-semibold rounded-xl flex items-center justify-center gap-1 transition-colors"
                 >
-                  AztecScan <ExternalLink size={12} />
+                  {t("AztecScan")}{" "}<ExternalLink size={12} />
                 </a>
               </div>
             </div>

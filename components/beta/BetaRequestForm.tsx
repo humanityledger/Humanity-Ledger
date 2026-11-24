@@ -13,6 +13,7 @@
  */
 import React, { useId, useRef, useState } from 'react';
 import s from './BetaGateView.module.css';
+import { useT } from '@/lib/i18n/client';
 
 type Field = 'name' | 'email' | 'wallet' | 'social' | 'message' | 'adult' | 'contact';
 type QStep = 0 | 1 | 2;
@@ -51,6 +52,7 @@ export function BetaRequestForm({
   quietClass: string;
   onBack: () => void;
 }) {
+  const t = useT();
   const id = useId();
   const [values, setValues] = useState({ name: '', email: '', wallet: wallet ?? '', social: '', message: '', website: '' });
   const [interests, setInterests] = useState<string[]>([]);
@@ -69,8 +71,8 @@ export function BetaRequestForm({
   const toggle = (x: string) => setInterests((xs) => (xs.includes(x) ? xs.filter((y) => y !== x) : [...xs, x]));
 
   const stepOneProblem = (): { field: Field; text: string } | null => {
-    if (!values.name.trim()) return { field: 'name', text: 'Tell us your name.' };
-    if (!EMAIL.test(values.email.trim())) return { field: 'email', text: 'Enter an email address we can reply to.' };
+    if (!values.name.trim()) return { field: 'name', text: t("Tell us your name.") };
+    if (!EMAIL.test(values.email.trim())) return { field: 'email', text: t("Enter an email address we can reply to.") };
     return null;
   };
 
@@ -108,7 +110,7 @@ export function BetaRequestForm({
         window.setTimeout(() => refs.current[field]?.focus(), 60);
       }
     } catch {
-      setError({ text: 'Your request could not be sent. Check your connection and try again.' });
+      setError({ text: t("Your request could not be sent. Check your connection and try again.") });
     } finally {
       setBusy(false);
     }
@@ -120,13 +122,10 @@ export function BetaRequestForm({
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#10B981]/12" aria-hidden>
           <svg width="28" height="28" viewBox="0 0 28 28"><path d="M8 14.5l4 4L20.5 10" fill="none" stroke="#047857" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </div>
-        <h2 className={`mt-4 text-center text-[30px] leading-[1.08] ${s.display}`}>Request sent</h2>
-        <p className="mt-3 text-center text-[14.5px] leading-relaxed text-[#475467]">
-          Thank you. We read every request ourselves. If there is a place for you, we will reply to <span className="font-medium text-[#15171C]">{sentTo}</span> with
-          your invitation code.
-        </p>
-        <p className="mt-3 text-center text-[14.5px] leading-relaxed text-[#475467]">When it arrives, come back to this page, sign in with your wallet and enter the code.</p>
-        <button type="button" className={`${primaryClass} mt-7`} onClick={onBack}>Back to the beta</button>
+        <h2 className={`mt-4 text-center text-[30px] leading-[1.08] ${s.display}`}>{t("Request sent")}</h2>
+        <p className="mt-3 text-center text-[14.5px] leading-relaxed text-[#475467]">{t("Thank you. We read every request ourselves. If there is a place for you, we will reply to {0} with your invitation code.", { 0: <span className="font-medium text-[#15171C]">{sentTo}</span> })}</p>
+        <p className="mt-3 text-center text-[14.5px] leading-relaxed text-[#475467]">{t("When it arrives, come back to this page, sign in with your wallet and enter the code.")}</p>
+        <button type="button" className={`${primaryClass} mt-7`} onClick={onBack}>{t("Back to the beta")}</button>
       </section>
     );
   }
@@ -143,19 +142,19 @@ export function BetaRequestForm({
 
   return (
     <form onSubmit={submit} noValidate data-testid="beta-request-form" aria-describedby={error ? errId : undefined}>
-      <p className={s.eyebrow}>Request an invitation</p>
+      <p className={s.eyebrow}>{t("Request an invitation")}</p>
       <h2 className={`mt-2 text-[30px] leading-[1.08] ${s.display}`}>{['A little about you', 'How you would use it', 'Check and send'][step]}</h2>
       <p className="mt-2 text-[14.5px] leading-relaxed text-[#475467]">
-        {step === 0 && 'Tell us who you are and we will reply by email. Places are limited to 100 people.'}
-        {step === 1 && 'All optional. It helps us choose testers who will try what needs testing.'}
-        {step === 2 && 'This goes to the beta team by email. Nothing is stored in our database.'}
+        {step === 0 && t("Tell us who you are and we will reply by email. Places are limited to 100 people.")}
+        {step === 1 && t("All optional. It helps us choose testers who will try what needs testing.")}
+        {step === 2 && t("This goes to the beta team by email. Nothing is stored in our database.")}
       </p>
 
-      <ol className="mt-6 grid grid-cols-3 gap-2" aria-label="Questionnaire steps">
+      <ol className="mt-6 grid grid-cols-3 gap-2" aria-label={t("Questionnaire steps")}>
         {STEPS.map((x, i) => (
           <li key={x} aria-current={i === step ? 'step' : undefined}>
             <span className={`block h-[3px] rounded-full transition-colors duration-300 ${i < step ? 'bg-[#10B981]' : i === step ? 'bg-[#15171C]' : 'bg-slate-200'}`} />
-            <span className={`mt-2 block text-[12px] font-medium ${i === step ? 'text-[#15171C]' : i < step ? 'text-[#047857]' : 'text-[#98A2B3]'}`}>{i + 1}. {x}</span>
+            <span className={`mt-2 block text-[12px] font-medium ${i === step ? 'text-[#15171C]' : i < step ? 'text-[#047857]' : 'text-[#98A2B3]'}`}>{i + 1}. {t(x)}</span>
           </li>
         ))}
       </ol>
@@ -164,19 +163,19 @@ export function BetaRequestForm({
         {step === 0 && (
           <>
             <div>
-              <label htmlFor={`${id}-name`} className={label}>Full name</label>
+              <label htmlFor={`${id}-name`} className={label}>{t("Full name")}</label>
               <input
                 id={`${id}-name`} ref={(el) => { refs.current.name = el; }} className={`${input} h-[50px]`}
                 value={values.name} onChange={set('name')} autoComplete="name" maxLength={80} required aria-invalid={invalid('name')} autoFocus
               />
             </div>
             <div>
-              <label htmlFor={`${id}-email`} className={label}>Email</label>
+              <label htmlFor={`${id}-email`} className={label}>{t("Email")}</label>
               <input
                 id={`${id}-email`} ref={(el) => { refs.current.email = el; }} className={`${input} h-[50px]`} type="email" inputMode="email"
                 value={values.email} onChange={set('email')} autoComplete="email" maxLength={254} required aria-invalid={invalid('email')}
               />
-              <p className={`mt-1.5 ${hint}`}>We send your code here.</p>
+              <p className={`mt-1.5 ${hint}`}>{t("We send your code here.")}</p>
             </div>
           </>
         )}
@@ -184,32 +183,30 @@ export function BetaRequestForm({
         {step === 1 && (
           <>
             <fieldset>
-              <legend className={label}>What would you like to try?</legend>
+              <legend className={label}>{t("What would you like to try?")}</legend>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 {INTERESTS.map((x) => (
                   <button key={x} type="button" className={s.chip} aria-pressed={interests.includes(x)} onClick={() => toggle(x)}>
                     {interests.includes(x) && (
                       <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden><path d="M3 7.2l2.6 2.6L11 4.4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     )}
-                    {x}
+                    {t(x)}
                   </button>
                 ))}
               </div>
             </fieldset>
             <div>
-              <label htmlFor={`${id}-wallet`} className={label}>
-                Ethereum wallet address <span className={hint}>Optional</span>
+              <label htmlFor={`${id}-wallet`} className={label}>{t("Ethereum wallet address {0}", { 0: <span className={hint}>{t("Optional")}</span> })}
               </label>
               <input
                 id={`${id}-wallet`} ref={(el) => { refs.current.wallet = el; }} className={`${input} h-[50px] font-mono text-[14px]`}
                 value={values.wallet} onChange={set('wallet')} autoComplete="off" spellCheck={false} maxLength={42} aria-invalid={invalid('wallet')}
                 placeholder="0x…"
               />
-              <p className={`mt-1.5 ${hint}`}>The wallet you will sign in with.</p>
+              <p className={`mt-1.5 ${hint}`}>{t("The wallet you will sign in with.")}</p>
             </div>
             <div>
-              <label htmlFor={`${id}-social`} className={label}>
-                X or Telegram <span className={hint}>Optional</span>
+              <label htmlFor={`${id}-social`} className={label}>{t("X or Telegram {0}", { 0: <span className={hint}>{t("Optional")}</span> })}
               </label>
               <input
                 id={`${id}-social`} ref={(el) => { refs.current.social = el; }} className={`${input} h-[50px]`}
@@ -217,8 +214,7 @@ export function BetaRequestForm({
               />
             </div>
             <div>
-              <label htmlFor={`${id}-message`} className={label}>
-                What would you like to test <span className={hint}>Optional</span>
+              <label htmlFor={`${id}-message`} className={label}>{t("What would you like to test {0}", { 0: <span className={hint}>{t("Optional")}</span> })}
               </label>
               <textarea
                 id={`${id}-message`} ref={(el) => { refs.current.message = el; }} className={`${input} min-h-[112px] resize-y py-3 leading-relaxed`}
@@ -244,14 +240,14 @@ export function BetaRequestForm({
                   type="checkbox" className="mt-0.5 h-[18px] w-[18px] shrink-0 accent-[#15171C]" checked={adult}
                   onChange={(e) => { setAdult(e.target.checked); if (error?.field === 'adult') setError(null); }} aria-invalid={invalid('adult')}
                 />
-                I am 18 or older.
+                {t("I am 18 or older.")}
               </label>
               <label className="flex cursor-pointer items-start gap-3 text-[14px] leading-snug text-[#344054]">
                 <input
                   type="checkbox" className="mt-0.5 h-[18px] w-[18px] shrink-0 accent-[#15171C]" checked={contact}
                   onChange={(e) => { setContact(e.target.checked); if (error?.field === 'contact') setError(null); }} aria-invalid={invalid('contact')}
                 />
-                You may reply to this email about the beta. My details are only used for that.
+                {t("You may reply to this email about the beta. My details are only used for that.")}
               </label>
             </div>
           </>
@@ -259,7 +255,7 @@ export function BetaRequestForm({
 
         {/* Hidden from people; bots fill it in. */}
         <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
-          <label htmlFor={`${id}-website`}>Website</label>
+          <label htmlFor={`${id}-website`}>{t("Website")}</label>
           <input id={`${id}-website`} tabIndex={-1} autoComplete="off" value={values.website} onChange={set('website')} />
         </div>
       </div>
@@ -271,18 +267,18 @@ export function BetaRequestForm({
       <div className={`mt-6 grid gap-2 ${step > 0 ? 'grid-cols-[auto_1fr]' : ''}`}>
         {step > 0 && (
           <button type="button" className={secondary} disabled={busy} onClick={() => { setError(null); setStep((v) => (Math.max(0, v - 1) as QStep)); }}>
-            Back
+            {t("Back")}
           </button>
         )}
         {step < 2 ? (
-          <button type="submit" className={primaryClass}>Continue</button>
+          <button type="submit" className={primaryClass}>{t("Continue")}</button>
         ) : (
           <button type="submit" className={primaryClass} disabled={busy || !values.name.trim() || !values.email.trim() || !adult || !contact}>
-            {busy ? 'Sending' : 'Send request'}
+            {busy ? t("Sending") : t("Send request")}
           </button>
         )}
       </div>
-      <button type="button" className={`${quietClass} mt-4 block mx-auto`} disabled={busy} onClick={onBack}>I already have a code</button>
+      <button type="button" className={`${quietClass} mt-4 block mx-auto`} disabled={busy} onClick={onBack}>{t("I already have a code")}</button>
     </form>
   );
 }

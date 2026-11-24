@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Lock, Globe, Check, X, UserPlus } from 'lucide-react';
 import type { Client } from '@xmtp/browser-sdk';
+import { useT } from '@/lib/i18n/client';
 
 interface CreateGroupModalProps {
   client: Client;
@@ -20,6 +21,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onClose,
   onGroupCreated,
 }) => {
+  const t = useT();
   // ── Wizard state ──────────────────────────────────────────────────────────
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [groupName, setGroupName] = useState('');
@@ -34,19 +36,19 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const handleAddMember = useCallback(() => {
     const addr = memberInput.trim().toLowerCase();
     if (!isValidEthAddress(addr) && !isValidEthAddress(memberInput.trim())) {
-      toast.error('Invalid Ethereum address format.');
+      toast.error(t("Invalid Ethereum address format."));
       return;
     }
     if (addr === myAddress.toLowerCase()) {
-      toast.error('You are already included as the group creator.');
+      toast.error(t("You are already included as the group creator."));
       return;
     }
     if (members.map(m => m.toLowerCase()).includes(addr)) {
-      toast.error('This address has already been added.');
+      toast.error(t("This address has already been added."));
       return;
     }
     if (members.length >= 99) {
-      toast.error('Maximum group size is 100 members.');
+      toast.error(t("Maximum group size is 100 members."));
       return;
     }
     setMembers(prev => [...prev, memberInput.trim()]);
@@ -58,17 +60,17 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   };
 
   const handleCreate = async () => {
-    if (!groupName.trim()) { toast.error('Please enter a group name.'); return; }
-    if (members.length < 1) { toast.error('Please add at least 1 member.'); return; }
+    if (!groupName.trim()) { toast.error(t("Please enter a group name.")); return; }
+    if (members.length < 1) { toast.error(t("Please add at least 1 member.")); return; }
     setIsCreating(true);
     try {
       const groupId = await createSecureGroup(client, members, groupName.trim(), description.trim());
-      toast.success(`Group "${groupName}" created successfully!`);
+      toast.success(t("Group \"{groupName}\" created successfully!", { groupName }));
       onGroupCreated(groupId, groupName.trim());
       onClose();
     } catch (err: any) {
       console.error('[CreateGroup] Error:', err);
-      toast.error(err?.message || 'Failed to create group. Please try again.');
+      toast.error(err?.message || t("Failed to create group. Please try again."));
     } finally {
       setIsCreating(false);
     }
@@ -96,14 +98,14 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 type="button"
                 onClick={() => setStep(s => (s - 1) as 1 | 2 | 3)}
                 className="p-1.5 rounded-xl hover:bg-black/5 text-black/40 transition-colors"
-                title="Go back to previous step"
+                title={t("Go back to previous step")}
               >
                 <ChevronLeft size={20} />
               </button>
             )}
             <div>
-              <h2 className="text-[17px] font-semibold text-[#15171c]">New Group</h2>
-              <p className="text-[12px] text-[#727a88]">Step {step} of 3</p>
+              <h2 className="text-[17px] font-semibold text-[#15171c]">{t("New Group")}</h2>
+              <p className="text-[12px] text-[#727a88]">{t("Step {step} of 3", { step })}</p>
             </div>
           </div>
           <button
@@ -144,18 +146,18 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                       {groupName.trim().slice(0, 1).toUpperCase() || '#'}
                     </span>
                   </div>
-                  <h3 className="text-[18px] font-semibold text-[#15171c]">Group Details</h3>
-                  <p className="text-[13px] text-[#727a88] mt-1">Provide a clear name so members can identify the group</p>
+                  <h3 className="text-[18px] font-semibold text-[#15171c]">{t("Group Details")}</h3>
+                  <p className="text-[13px] text-[#727a88] mt-1">{t("Provide a clear name so members can identify the group")}</p>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#727a88] mb-1.5 px-1">Group Name *</label>
+                    <label className="block text-[12px] font-semibold text-[#727a88] mb-1.5 px-1">{t("Group Name *")}</label>
                     <input
                       type="text"
                       autoFocus
                       maxLength={64}
-                      placeholder="e.g. Executive Committee, Family, Core Team..."
+                      placeholder={t("e.g. Executive Committee, Family, Core Team...")}
                       value={groupName}
                       onChange={e => setGroupName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && canProceedStep1 && setStep(2)}
@@ -163,11 +165,11 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#727a88] mb-1.5 px-1">Description (optional)</label>
+                    <label className="block text-[12px] font-semibold text-[#727a88] mb-1.5 px-1">{t("Description (optional)")}</label>
                     <input
                       type="text"
                       maxLength={128}
-                      placeholder="What is this group about?"
+                      placeholder={t("What is this group about?")}
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       className="w-full px-4 py-3.5 bg-white rounded-2xl border border-black/[0.08] text-[15px] text-[#15171c] outline-none focus:ring-2 focus:ring-black/20 transition-all placeholder:text-[#c0c5cf]"
@@ -187,21 +189,21 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 className="px-5 py-6 space-y-4"
               >
                 <div className="text-center pb-2">
-                  <h3 className="text-[18px] font-semibold text-[#15171c]">Who can join?</h3>
-                  <p className="text-[13px] text-[#727a88] mt-1">You can change this anytime in group settings</p>
+                  <h3 className="text-[18px] font-semibold text-[#15171c]">{t("Who can join?")}</h3>
+                  <p className="text-[13px] text-[#727a88] mt-1">{t("You can change this anytime in group settings")}</p>
                 </div>
 
                 <div className="space-y-3">
                   {[
                     {
                       id: true,
-                      title: 'Private',
-                      subtitle: 'Members must be invited by an admin or receive an invite link. Recommended for friends, family, and teams.',
+                      title: t("Private"),
+                      subtitle: t("Members must be invited by an admin or receive an invite link. Recommended for friends, family, and teams."),
                     },
                     {
                       id: false,
-                      title: 'Public',
-                      subtitle: 'Anyone can discover and join this group without prior approval.',
+                      title: t("Public"),
+                      subtitle: t("Anyone can discover and join this group without prior approval."),
                     },
                   ].map(option => (
                     <button
@@ -216,10 +218,10 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     >
                       <div className="flex-1 pr-3">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-[15px] font-semibold text-[#15171c]">{option.title}</p>
-                          {isPrivate === option.id && <span className="text-[11px] font-bold text-[#15171c] tracking-wider uppercase">Active</span>}
+                          <p className="text-[15px] font-semibold text-[#15171c]">{t(option.title)}</p>
+                          {isPrivate === option.id && <span className="text-[11px] font-bold text-[#15171c] tracking-wider uppercase">{t("Active")}</span>}
                         </div>
-                        <p className="text-[13px] text-[#727a88] leading-snug">{option.subtitle}</p>
+                        <p className="text-[13px] text-[#727a88] leading-snug">{t(option.subtitle)}</p>
                       </div>
                     </button>
                   ))}
@@ -237,13 +239,13 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 className="px-5 py-6 space-y-5"
               >
                 <div className="text-center pb-2">
-                  <h3 className="text-[18px] font-semibold text-[#15171c]">Add Members</h3>
-                  <p className="text-[13px] text-[#727a88] mt-1">Enter member wallet addresses or identifiers</p>
+                  <h3 className="text-[18px] font-semibold text-[#15171c]">{t("Add Members")}</h3>
+                  <p className="text-[13px] text-[#727a88] mt-1">{t("Enter member wallet addresses or identifiers")}</p>
                 </div>
 
                 {/* Add member input */}
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#727a88] mb-1.5 px-1">Wallet Address (0x...)</label>
+                  <label className="block text-[12px] font-semibold text-[#727a88] mb-1.5 px-1">{t("Wallet Address (0x...)")}</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -258,7 +260,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                       onClick={handleAddMember}
                       className="px-5 py-3 bg-[#15171c] text-white text-[13px] font-semibold rounded-2xl hover:bg-black transition-colors shrink-0"
                     >
-                      Add
+                      {t("Add")}
                     </button>
                   </div>
                 </div>
@@ -267,14 +269,14 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 {members.length > 0 && (
                   <div>
                     <p className="text-[12px] font-semibold text-[#727a88] mb-2 px-1">
-                      {members.length} {members.length === 1 ? 'member added' : 'members added'}
+                      {members.length} {members.length === 1 ? t("member added") : t("members added")}
                     </p>
                     <div className="space-y-1.5 max-h-36 overflow-y-auto">
                       {members.map(addr => (
                         <div key={addr} className="flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-black/[0.05]">
                           <span className="text-[13px] tabular-nums text-[#15171c] font-medium">{addr.slice(0, 10)}…{addr.slice(-6)}</span>
                           <button onClick={() => handleRemoveMember(addr)} className="text-[#d93036] hover:text-red-700 text-[12px] font-semibold transition-colors ml-3">
-                            Remove
+                            {t("Remove")}
                           </button>
                         </div>
                       ))}
@@ -284,26 +286,25 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                 {/* Summary */}
                 <div className="bg-white rounded-2xl p-4 border border-black/[0.05] space-y-2">
-                  <p className="text-[11px] font-semibold text-[#727a88] uppercase tracking-wider">Group Summary</p>
+                  <p className="text-[11px] font-semibold text-[#727a88] uppercase tracking-wider">{t("Group Summary")}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-[14px] text-[#727a88]">Name</span>
+                    <span className="text-[14px] text-[#727a88]">{t("Name")}</span>
                     <span className="text-[14px] font-semibold text-[#15171c]">{groupName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[14px] text-[#727a88]">Visibility</span>
-                    <span className="text-[14px] font-semibold text-[#15171c]">{isPrivate ? 'Private' : 'Public'}</span>
+                    <span className="text-[14px] text-[#727a88]">{t("Visibility")}</span>
+                    <span className="text-[14px] font-semibold text-[#15171c]">{isPrivate ? t("Private") : t("Public")}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[14px] text-[#727a88]">Total Members</span>
-                    <span className="text-[14px] font-semibold text-[#15171c]">{members.length + 1} (including you)</span>
+                    <span className="text-[14px] text-[#727a88]">{t("Total Members")}</span>
+                    <span className="text-[14px] font-semibold text-[#15171c]">{t("{value} (including you)", { value: members.length + 1 })}</span>
                   </div>
                 </div>
 
                 {/* Security notice (Pure Typography) */}
                 <div className="px-4 py-3 bg-black/[0.03] rounded-2xl">
                   <p className="text-[12px] text-[#727a88] leading-relaxed">
-                    <strong className="text-[#15171c]">End-to-End Encrypted:</strong> Messages are protected with XMTP's MLS cryptographic protocol. Removed members immediately lose decryption capability.
-                  </p>
+                    {t("{0} Messages are protected with XMTP's MLS cryptographic protocol. Removed members immediately lose decryption capability.", { 0: <strong className="text-[#15171c]">{t("End-to-End Encrypted:")}</strong> })}</p>
                 </div>
               </motion.div>
             )}
@@ -319,7 +320,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)}
               className="w-full py-4 bg-[#15171c] text-white font-semibold text-[15px] rounded-2xl hover:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              Continue →
+              {t("Continue →")}
             </button>
           ) : (
             <button
@@ -331,10 +332,10 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               {isCreating ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating group…
+                  {t("Creating group…")}
                 </>
               ) : (
-                `Create Group (${members.length + 1} members)`
+                t("Create Group ({value} members)", { value: members.length + 1 })
               )}
             </button>
           )}

@@ -5,9 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { untranslated } from '../../helpers/untranslated';
 
 const root = path.resolve(__dirname, '../../..');
-const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(path.join(root, p), 'utf8'));
 
 describe('a transaction that was sent but not confirmed in time', () => {
   it('is recognised as a confirmation timeout, and its message says to check before sending again', async () => {

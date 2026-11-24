@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { X, Download, Share } from "lucide-react";
+import { useT } from '@/lib/i18n/client';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -9,6 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PWAInstallBanner() {
+  const t = useT();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -83,7 +85,7 @@ export function PWAInstallBanner() {
   return (
     <div
       role="banner"
-      aria-label="Install Ledger Chat"
+      aria-label={t("Install Ledger Chat")}
       style={{
         position: "fixed",
         bottom: "max(16px, env(safe-area-inset-bottom, 16px))",
@@ -108,22 +110,22 @@ export function PWAInstallBanner() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/apple-touch-icon.png"
-        alt="Ledger Chat"
+        alt={t("Ledger Chat")}
         width={42}
         height={42}
         style={{ borderRadius: "10px", flexShrink: 0 }}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "14px", fontWeight: 650, letterSpacing: "-0.01em" }}>
-          Install Ledger Chat
+          {t("Install Ledger Chat")}
         </div>
         <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.72)", marginTop: "2px" }}>
           {isIOS ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              Tap <Share size={12} strokeWidth={2.4} /> then &quot;Add to Home Screen&quot;
+              {t("Tap")}{" "}<Share size={12} strokeWidth={2.4} />{" "}{t("then \"Add to Home Screen\"")}
             </span>
           ) : (
-            "Fast, private access right from your home screen."
+            t("Fast, private access right from your home screen.")
           )}
         </div>
       </div>
@@ -147,13 +149,13 @@ export function PWAInstallBanner() {
           }}
         >
           <Download size={13} strokeWidth={2.4} />
-          Install
+          {t("Install")}
         </button>
       )}
       <button
         type="button"
         onClick={handleDismiss}
-        aria-label="Dismiss"
+        aria-label={t("Dismiss")}
         style={{
           background: "transparent",
           border: "none",

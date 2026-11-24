@@ -35,6 +35,7 @@ import { CHAT_THEMES, chatThemeVars } from "@/lib/chat/themes";
 import { WALLPAPERS, canvasCss, resolveWallpaper } from "@/lib/chat/wallpapers";
 import { BUBBLE_STYLES, bubbleClasses } from "@/lib/chat/bubbleStyles";
 import { STICKER_PACKS, stickerFile } from "@/lib/chat/stickers";
+import { useT } from '@/lib/i18n/client';
 
 export interface ScreenProps {
   p: number;
@@ -89,23 +90,23 @@ function ChatHeader({ name, initials, sub }: { name: string; initials: string; s
  * (lib/aztec/peer-binding.ts, version 2). Value only moves to an address verified this way.
  */
 function VerifiedBinding() {
+  const tr = useT();
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 600, color: "#0f9d63" }}>
-      <span style={{ width: 17, height: 17, borderRadius: 9, background: "#0f9d63", display: "grid", placeItems: "center" }}>
+      {tr("{0}Verified Aztec address", { 0: <span style={{ width: 17, height: 17, borderRadius: 9, background: "#0f9d63", display: "grid", placeItems: "center" }}>
         <Check size={12} strokeWidth={3.2} color="#fff" />
-      </span>
-      Verified Aztec address
-    </span>
+      </span> })}</span>
   );
 }
 
 function Composer() {
+  const tr = useT();
   return (
     <div className={s.composer}>
       <span className={s.composerPlus}>
         <Plus size={22} strokeWidth={2} />
       </span>
-      <span className={s.composerField}>Message</span>
+      <span className={s.composerField}>{tr("Message")}</span>
       <span className={s.composerSend}>
         <SendHorizontal size={19} strokeWidth={2} />
       </span>
@@ -122,42 +123,36 @@ function clock(sec: number) {
 /* ── 1. Conversation ───────────────────────────────────────────────── */
 
 export function ChatScreen({ p }: ScreenProps) {
+  const tr = useT();
   const typing = p >= 0.62 && p < 0.8;
   return (
     <div className={s.screenLight}>
       <StatusBar />
-      <ChatHeader name="Irina Vlad" initials="IV" sub="online" />
+      <ChatHeader name="Irina Vlad" initials="IV" sub={tr("online")} />
       <div className={s.chatBody}>
         <span className={s.e2ee}>
           <Lock size={13} strokeWidth={2.2} />
-          Messages are encrypted end to end
+          {tr("Messages are encrypted end to end")}
         </span>
-        <span className={s.day}>Today</span>
-        <div className={`${s.msgIn} ${s.in}`}>
-          Morning! Are we still on for 11?<span className={s.time}>10:52</span>
+        <span className={s.day}>{tr("Today")}</span>
+        <div className={`${s.msgIn} ${s.in}`}>{tr("Morning! Are we still on for 11?{0}", { 0: <span className={s.time}>10:52</span> })}
         </div>
-        <div className={`${s.msgOut} ${at(p, 0.12)}`}>
-          Yes. I will send you the details here first.
-          <span className={s.time}>
+        <div className={`${s.msgOut} ${at(p, 0.12)}`}>{tr("Yes. I will send you the details here first.{0}", { 0: <span className={s.time}>
             10:53 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
+          </span> })}
         </div>
-        <div className={`${s.msgIn} ${at(p, 0.3)}`}>
-          Perfect. Nice that nobody else can read this.<span className={s.time}>10:53</span>
+        <div className={`${s.msgIn} ${at(p, 0.3)}`}>{tr("Perfect. Nice that nobody else can read this.{0}", { 0: <span className={s.time}>10:53</span> })}
         </div>
-        <div className={`${s.msgOut} ${at(p, 0.46)}`}>
-          No phone number, no email. Just my wallet.
-          <span className={s.time}>
+        <div className={`${s.msgOut} ${at(p, 0.46)}`}>{tr("No phone number, no email. Just my wallet.{0}", { 0: <span className={s.time}>
             10:54 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
+          </span> })}
         </div>
         <div className={`${s.typing} ${typing ? s.in : s.gone}`} aria-hidden="true">
           <i />
           <i />
           <i />
         </div>
-        <div className={`${s.msgIn} ${at(p, 0.8)}`}>
-          Calling you in a minute.<span className={s.time}>10:55</span>
+        <div className={`${s.msgIn} ${at(p, 0.8)}`}>{tr("Calling you in a minute.{0}", { 0: <span className={s.time}>10:55</span> })}
         </div>
       </div>
       <Composer />
@@ -168,6 +163,7 @@ export function ChatScreen({ p }: ScreenProps) {
 /* ── 2. Voice call ─────────────────────────────────────────────────── */
 
 export function VoiceCallScreen({ p, active }: ScreenProps) {
+  const tr = useT();
   const connected = p >= 0.12;
   return (
     <div className={s.screenDark}>
@@ -175,51 +171,43 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
       <div className={s.callTop}>
         <span className={s.callBadge}>
           <Lock size={13} strokeWidth={2.2} />
-          Encrypted · DTLS-SRTP
+          {tr("Encrypted · DTLS-SRTP")}
         </span>
         <span className={`${s.callBadge} ${s.callBadgeSoft} ${at(p, 0.3)}`}>
           <Mic size={13} strokeWidth={2.2} />
-          Noise suppression on
+          {tr("Noise suppression on")}
         </span>
       </div>
       <div className={`${s.callAvatarWrap} ${active && connected ? s.ringing : ""}`}>
         <span className={s.ring} />
         <span className={s.ring} />
-        <span className={s.callAvatar}>IV</span>
+        <span className={s.callAvatar}>{tr("IV")}</span>
       </div>
-      <div className={s.callName}>Irina Vlad</div>
-      <div className={s.callState}>{connected ? clock(3 + Math.floor(p * 96)) : "Calling…"}</div>
+      <div className={s.callName}>{tr("Irina Vlad")}</div>
+      <div className={s.callState}>{connected ? clock(3 + Math.floor(p * 96)) : tr("Calling…")}</div>
       <div className={`${s.wave} ${active && connected ? s.waveOn : ""}`} aria-hidden="true">
         {Array.from({ length: 15 }).map((_, i) => (
           <i key={i} style={{ ["--d" as string]: `${(i % 5) * 0.12}s` } as React.CSSProperties} />
         ))}
       </div>
-      <div className={s.callHint}>Browser to browser. No phone number shared.</div>
+      <div className={s.callHint}>{tr("Browser to browser. No phone number shared.")}</div>
       <div className={s.callControls}>
         <span className={s.ctl}>
-          <span className={`${s.ctlBtn} ${p >= 0.55 ? s.ctlOn : ""}`}>
+          {tr("{0}Mute", { 0: <span className={`${s.ctlBtn} ${p >= 0.55 ? s.ctlOn : ""}`}>
             {p >= 0.55 ? <MicOff size={26} /> : <Mic size={26} />}
-          </span>
-          Mute
-        </span>
+          </span> })}</span>
         <span className={s.ctl}>
-          <span className={s.ctlBtn}>
+          {tr("{0}Share", { 0: <span className={s.ctlBtn}>
             <MonitorUp size={26} />
-          </span>
-          Share
-        </span>
+          </span> })}</span>
         <span className={s.ctl}>
-          <span className={s.ctlBtn}>
+          {tr("{0}Video", { 0: <span className={s.ctlBtn}>
             <Video size={26} />
-          </span>
-          Video
-        </span>
+          </span> })}</span>
         <span className={s.ctl}>
-          <span className={`${s.ctlBtn} ${s.ctlEnd}`}>
+          {tr("{0}End", { 0: <span className={`${s.ctlBtn} ${s.ctlEnd}`}>
             <PhoneOff size={26} />
-          </span>
-          End
-        </span>
+          </span> })}</span>
       </div>
     </div>
   );
@@ -228,34 +216,35 @@ export function VoiceCallScreen({ p, active }: ScreenProps) {
 /* ── 3. Video call (Realistic Portrait without vector puppet) ──────── */
 
 export function VideoCallScreen({ p, active }: ScreenProps) {
+  const tr = useT();
   return (
     <div className={`${s.screenVideo} ${active ? s.videoLive : ""}`}>
       {/* Remote camera: authentic real person video stream */}
       <div className={s.remote} aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         <img
           src="/landing/phones/videocall-person.jpg"
-          alt="Video Call Remote Party"
+          alt={tr("Video Call Remote Party")}
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }}
         />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.65) 100%)', pointerEvents: 'none' }} />
       </div>
       <StatusBar dark />
       <div className={s.videoTop}>
-        <span className={s.videoName}>Comms Weekly</span>
-        <span className={s.videoMeta}>{clock(12 + Math.floor(p * 80))} · 16 people</span>
+        <span className={s.videoName}>{tr("Comms Weekly")}</span>
+        <span className={s.videoMeta}>{tr("{clock} · 16 people", { clock: clock(12 + Math.floor(p * 80)) })}</span>
         <span className={s.videoChips}>
           <span className={s.chip}>
-            <Lock size={12} strokeWidth={2.4} /> Encrypted
+            <Lock size={12} strokeWidth={2.4} />{" "}{tr("Encrypted")}
           </span>
           <span className={`${s.chip} ${at(p, 0.35)}`}>
-            <Lock size={12} strokeWidth={2.4} /> IP hidden, call relayed
+            <Lock size={12} strokeWidth={2.4} />{" "}{tr("IP hidden, call relayed")}
           </span>
         </span>
       </div>
       <div className={s.self} aria-hidden="true">
         <div className={s.selfCam} style={{ background: '#1c1d22', border: '1px solid rgba(255,255,255,0.2)' }}>
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
-            You
+            {tr("You")}
           </div>
         </div>
       </div>
@@ -286,6 +275,7 @@ export function VideoCallScreen({ p, active }: ScreenProps) {
  * device) -> Paid.
  */
 export function InvoiceChatScreen({ p }: ScreenProps) {
+  const tr = useT();
   const proving = p >= 0.46 && p < 0.7;
   const paid = p >= 0.7;
   return (
@@ -295,7 +285,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         <ArrowLeft size={24} strokeWidth={2} />
         <span className={s.chatAvatar} style={{ background: "#ece5ff", color: "#5200ff" }}>A</span>
         <span className={s.chatWho}>
-          <span className={s.chatName}>Alice</span>
+          <span className={s.chatName}>{tr("Alice")}</span>
           <VerifiedBinding />
         </span>
         <Phone size={22} strokeWidth={1.9} />
@@ -304,63 +294,57 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
       <div className={s.chatBody}>
         <span className={s.e2ee}>
           <Lock size={13} strokeWidth={2.2} />
-          End-to-end encrypted · MLS
+          {tr("End-to-end encrypted · MLS")}
         </span>
-        <span className={s.day}>Today</span>
-        <div className={`${s.msgIn} ${s.in}`}>
-          I paid for dinner. Your share is 42 cUSDC.<span className={s.time}>21:04</span>
+        <span className={s.day}>{tr("Today")}</span>
+        <div className={`${s.msgIn} ${s.in}`}>{tr("I paid for dinner. Your share is 42 cUSDC.{0}", { 0: <span className={s.time}>21:04</span> })}
         </div>
-        <div className={`${s.msgOut} ${at(p, 0.1)}`}>
-          Send me a private invoice and I will pay it here.
-          <span className={s.time}>
+        <div className={`${s.msgOut} ${at(p, 0.1)}`}>{tr("Send me a private invoice and I will pay it here.{0}", { 0: <span className={s.time}>
             21:05 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
+          </span> })}
         </div>
 
         <div className={`${s.ledgerInvoiceCard} ${at(p, 0.24)}`}>
           <div className={s.invTop}>
             <span className={s.invDocTag}>
               <Lock size={14} strokeWidth={2.2} />
-              Private invoice
+              {tr("Private invoice")}
             </span>
             <span className={`${s.invStatusTag} ${paid ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>
               <span className={s.invDot} />
-              {paid ? "Paid" : proving ? "Proving" : "Unpaid"}
+              {paid ? tr("Paid") : proving ? tr("Proving") : tr("Unpaid")}
             </span>
           </div>
-          <div className={s.invTitle}>Dinner, Friday</div>
-          <div className={s.invParties}>To Alice · Aztec address verified</div>
+          <div className={s.invTitle}>{tr("Dinner, Friday")}</div>
+          <div className={s.invParties}>{tr("To Alice · Aztec address verified")}</div>
           <div className={s.invItemRow}>
-            <span>Your share</span>
+            <span>{tr("Your share")}</span>
             <span className={s.num}>42.00</span>
           </div>
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
-            <span>Total</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>42.00 cUSDC</span>
+            <span>{tr("Total")}</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>{tr("42.00 cUSDC")}</span>
           </div>
           <div className={s.invFooterRow}>
-            <span className={s.invDue}>Aztec Alpha · mainnet</span>
+            <span className={s.invDue}>{tr("Aztec Alpha · mainnet")}</span>
             <span className={`${s.invActionBtn} ${paid ? s.invActionDone : ""}`}>
               {paid ? (
-                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} /> Paid</span>
+                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} />{" "}{tr("Paid")}</span>
               ) : proving ? (
-                <span className={s.invBtnInner}><span className={s.spinner} /> Making proof</span>
+                <span className={s.invBtnInner}>{tr("{0} Making proof", { 0: <span className={s.spinner} /> })}</span>
               ) : (
-                "Pay privately"
+                tr("Pay privately")
               )}
             </span>
           </div>
         </div>
 
-        <div className={`${s.msgOut} ${at(p, 0.76)}`}>
-          Paid.
-          <span className={s.time}>
+        <div className={`${s.msgOut} ${at(p, 0.76)}`}>{tr("Paid.{0}", { 0: <span className={s.time}>
             21:06 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
+          </span> })}
         </div>
-        <div className={`${s.msgIn} ${at(p, 0.88)}`}>
-          Got it, thank you!<span className={s.time}>21:06</span>
+        <div className={`${s.msgIn} ${at(p, 0.88)}`}>{tr("Got it, thank you!{0}", { 0: <span className={s.time}>21:06</span> })}
         </div>
       </div>
       <Composer />
@@ -375,6 +359,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
  * on the device, then released. Same card shape as the real AgreementCard.
  */
 export function AgreementChatScreen({ p }: ScreenProps) {
+  const tr = useT();
   const proving = p >= 0.34 && p < 0.56;
   const locked = p >= 0.56 && p < 0.8;
   const released = p >= 0.8;
@@ -386,8 +371,8 @@ export function AgreementChatScreen({ p }: ScreenProps) {
         <ArrowLeft size={24} strokeWidth={2} />
         <span className={s.chatAvatar} style={{ background: "#e6f4ea", color: "#1f7a3a" }}>M</span>
         <span className={s.chatWho}>
-          <span className={s.chatName}>Marco</span>
-          <span className={`${s.chatSub} ${s.mono}`}>0x91c4…08bd</span>
+          <span className={s.chatName}>{tr("Marco")}</span>
+          <span className={`${s.chatSub} ${s.mono}`}>{tr("0x91c4…08bd")}</span>
         </span>
         <Phone size={22} strokeWidth={1.9} />
         <Video size={24} strokeWidth={1.9} />
@@ -395,65 +380,59 @@ export function AgreementChatScreen({ p }: ScreenProps) {
       <div className={s.chatBody}>
         <span className={s.e2ee}>
           <Lock size={13} strokeWidth={2.2} />
-          End-to-end encrypted · MLS
+          {tr("End-to-end encrypted · MLS")}
         </span>
-        <span className={s.day}>Today</span>
-        <div className={`${s.msgIn} ${s.in}`}>
-          Logo files by Friday. Half now, half on delivery?<span className={s.time}>09:12</span>
+        <span className={s.day}>{tr("Today")}</span>
+        <div className={`${s.msgIn} ${s.in}`}>{tr("Logo files by Friday. Half now, half on delivery?{0}", { 0: <span className={s.time}>09:12</span> })}
         </div>
-        <div className={`${s.msgOut} ${at(p, 0.08)}`}>
-          Deal. I will lock it in escrow so you know it is there.
-          <span className={s.time}>
+        <div className={`${s.msgOut} ${at(p, 0.08)}`}>{tr("Deal. I will lock it in escrow so you know it is there.{0}", { 0: <span className={s.time}>
             09:13 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
+          </span> })}
         </div>
 
         <div className={`${s.ledgerInvoiceCard} ${at(p, 0.18)}`}>
           <div className={s.invTop}>
             <span className={s.invDocTag}>
               <Lock size={14} strokeWidth={2.2} />
-              Private agreement
+              {tr("Private agreement")}
             </span>
             <span className={`${s.invStatusTag} ${released || locked ? s.invStatusPaid : proving ? s.invStatusProving : s.invStatusUnpaid}`}>
               <span className={s.invDot} />
               {status}
             </span>
           </div>
-          <div className={s.invTitle}>Escrow · logo design</div>
-          <div className={s.invParties}>To Marco · Aztec address verified</div>
+          <div className={s.invTitle}>{tr("Escrow · logo design")}</div>
+          <div className={s.invParties}>{tr("To Marco · Aztec address verified")}</div>
           <div className={s.invItemRow}>
-            <span>Released on delivery</span>
+            <span>{tr("Released on delivery")}</span>
             <span className={s.num}>300.00</span>
           </div>
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
-            <span>Amount</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>300.00 cUSDC</span>
+            <span>{tr("Amount")}</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>{tr("300.00 cUSDC")}</span>
           </div>
           <div className={s.invFooterRow}>
-            <span className={s.invDue}>Aztec Alpha · mainnet</span>
+            <span className={s.invDue}>{tr("Aztec Alpha · mainnet")}</span>
             <span className={`${s.invActionBtn} ${released ? s.invActionDone : ""}`}>
               {released ? (
-                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} /> Released</span>
+                <span className={s.invBtnInner}><Check size={14} strokeWidth={2.6} />{" "}{tr("Released")}</span>
               ) : proving ? (
-                <span className={s.invBtnInner}><span className={s.spinner} /> Making proof</span>
+                <span className={s.invBtnInner}>{tr("{0} Making proof", { 0: <span className={s.spinner} /> })}</span>
               ) : locked ? (
-                "Release"
+                tr("Release")
               ) : (
-                "Fund"
+                tr("Fund")
               )}
             </span>
           </div>
         </div>
 
-        <div className={`${s.msgIn} ${at(p, 0.66)}`}>
-          Files are in the shared folder.<span className={s.time}>17:40</span>
+        <div className={`${s.msgIn} ${at(p, 0.66)}`}>{tr("Files are in the shared folder.{0}", { 0: <span className={s.time}>17:40</span> })}
         </div>
-        <div className={`${s.msgOut} ${at(p, 0.86)}`}>
-          Perfect. Released.
-          <span className={s.time}>
+        <div className={`${s.msgOut} ${at(p, 0.86)}`}>{tr("Perfect. Released.{0}", { 0: <span className={s.time}>
             17:42 <CheckCheck size={15} strokeWidth={2.2} />
-          </span>
+          </span> })}
         </div>
       </div>
       <Composer />
@@ -469,39 +448,40 @@ export function AgreementChatScreen({ p }: ScreenProps) {
  * are not end-to-end encrypted like direct messages), so no lock badge here.
  */
 export function CommunitiesScreen({ p }: ScreenProps) {
+  const tr = useT();
   return (
     <div className={s.screenLight}>
       <StatusBar />
       <div className={s.commHead}>
         <span className={s.commTitleWrap}>
           <span className={s.commAvatar} style={{ background: "#15171c", color: "#fff", width: 38, height: 38, fontSize: 14 }}>
-            HL
+            {tr("HL")}
           </span>
           <span className={s.commTitleText}>
-            <span className={s.commTitle}>Builders</span>
-            <span className={s.commSub}>214 members</span>
+            <span className={s.commTitle}>{tr("Builders")}</span>
+            <span className={s.commSub}>{tr("214 members")}</span>
           </span>
         </span>
-        <span className={s.commManage}>Manage</span>
+        <span className={s.commManage}>{tr("Manage")}</span>
       </div>
-      <div className={s.commNote}>People in this community can read what you write here. It is not a private conversation.</div>
+      <div className={s.commNote}>{tr("People in this community can read what you write here. It is not a private conversation.")}</div>
       <div className={s.commList}>
         <div className={`${s.pinCard} ${s.in}`}>
-          <span className={s.pinTag}>Marta</span>
-          <span className={s.pinText}>Weekly call moves to Thursday 17:00 CET.</span>
+          <span className={s.pinTag}>{tr("Marta")}</span>
+          <span className={s.pinText}>{tr("Weekly call moves to Thursday 17:00 CET.")}</span>
         </div>
         <div className={`${s.pinCard} ${at(p, 0.15)}`}>
-          <span className={s.pinTag}>Ana</span>
-          <span className={s.pinText}>Notes from the last call are in the group folder.</span>
+          <span className={s.pinTag}>{tr("Ana")}</span>
+          <span className={s.pinText}>{tr("Notes from the last call are in the group folder.")}</span>
         </div>
         <div className={`${s.pinCard} ${at(p, 0.45)}`}>
-          <span className={s.pinTag}>You</span>
-          <span className={s.pinText}>Thursday works for me.</span>
+          <span className={s.pinTag}>{tr("You")}</span>
+          <span className={s.pinText}>{tr("Thursday works for me.")}</span>
         </div>
       </div>
       <div className={s.commField}>
-        <span className={s.commFieldText}>Write your message here</span>
-        <span className={s.commSend}>Send</span>
+        <span className={s.commFieldText}>{tr("Write your message here")}</span>
+        <span className={s.commSend}>{tr("Send")}</span>
       </div>
     </div>
   );
@@ -521,6 +501,7 @@ const fade = (p: number, from: number): React.CSSProperties => ({
 /* ── 6. Private wallet ──────────────────────────────────────────────── */
 
 export function WalletScreen({ p }: ScreenProps) {
+  const tr = useT();
   const rows: [string, string][] = [
     ["Fee Juice", "31.42"],
     ["Next fee paid from", "Your Fee Juice"],
@@ -535,12 +516,12 @@ export function WalletScreen({ p }: ScreenProps) {
     <div className={s.screenLight} style={{ background: "#f4f5f7" }}>
       <StatusBar />
       <div style={{ background: "#fff", padding: "18px 26px 24px", borderBottom: `1px solid ${LINE}` }}>
-        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em", color: INKC }}>Private wallet</div>
-        <div style={{ fontSize: 15, color: MUTED, marginTop: 4 }}>Aztec Alpha on Ethereum mainnet</div>
-        <div style={{ fontSize: 15, color: "#8a909c", marginTop: 26 }}>Private balance</div>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em", color: INKC }}>{tr("Private wallet")}</div>
+        <div style={{ fontSize: 15, color: MUTED, marginTop: 4 }}>{tr("Aztec Alpha on Ethereum mainnet")}</div>
+        <div style={{ fontSize: 15, color: "#8a909c", marginTop: 26 }}>{tr("Private balance")}</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4, ...fade(p, 0.05) }}>
           <span style={{ fontSize: 54, fontWeight: 600, letterSpacing: "-0.04em", color: INKC, fontVariantNumeric: "tabular-nums" }}>1,245.00</span>
-          <span style={{ fontSize: 19, color: MUTED, fontWeight: 500 }}>cUSDC</span>
+          <span style={{ fontSize: 19, color: MUTED, fontWeight: 500 }}>{tr("cUSDC")}</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 22 }}>
           {["Send", "Receive", "Add funds"].map((l, i) => (
@@ -558,7 +539,7 @@ export function WalletScreen({ p }: ScreenProps) {
           ))}
         </div>
         <div style={{ background: "#fff", borderRadius: 22, border: `1px solid ${LINE}`, padding: "14px 20px 6px", ...fade(p, 0.45) }}>
-          <div style={{ fontSize: 15, color: "#8a909c", marginBottom: 4 }}>Activity</div>
+          <div style={{ fontSize: 15, color: "#8a909c", marginBottom: 4 }}>{tr("Activity")}</div>
           {activity.map(([a, b, c], i) => (
             <div key={a} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderTop: i ? `1px solid ${LINE}` : "none" }}>
               <span>
@@ -585,6 +566,7 @@ const LOOKS: [string, string, string][] = [
 ];
 
 export function ThemesScreen({ p }: ScreenProps) {
+  const tr = useT();
   const pick = Math.min(LOOKS.length - 1, Math.floor(p * LOOKS.length));
   const [themeId, wallId, bubble] = LOOKS[pick];
   const theme = CHAT_THEMES.find((t) => t.id === themeId) ?? CHAT_THEMES[0];
@@ -600,13 +582,13 @@ export function ThemesScreen({ p }: ScreenProps) {
     >
       <StatusBar dark={tone === "dark"} />
       <div style={{ padding: "8px 26px 0", color: tone === "dark" ? "#fff" : INKC, textShadow: tone === "dark" ? "0 1px 3px rgba(0,0,0,.4)" : "none" }}>
-        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>Leo</div>
-        <div style={{ fontSize: 14.5, opacity: 0.7 }}>{theme.label} · {wall?.label} · {BUBBLE_STYLES.find((b) => b.id === bubble)?.label}</div>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>{tr("Leo")}</div>
+        <div style={{ fontSize: 14.5, opacity: 0.7 }}>{tr(theme.label)} · {tr(wall?.label)} · {tr(BUBBLE_STYLES.find((b) => b.id === bubble)?.label)}</div>
       </div>
       <div key={pick} style={{ padding: "30px 22px 0", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div className={bubbleClasses(bubble, false)} style={{ ...msg, alignSelf: "flex-start" }}>Dinner at 9?</div>
-        <div className={bubbleClasses(bubble, true)} style={{ ...msg, alignSelf: "flex-end" }}>Perfect. I’ll book.</div>
-        <div className={bubbleClasses(bubble, false)} style={{ ...msg, alignSelf: "flex-start" }}>Your theme looks great.</div>
+        <div className={bubbleClasses(bubble, false)} style={{ ...msg, alignSelf: "flex-start" }}>{tr("Dinner at 9?")}</div>
+        <div className={bubbleClasses(bubble, true)} style={{ ...msg, alignSelf: "flex-end" }}>{tr("Perfect. I’ll book.")}</div>
+        <div className={bubbleClasses(bubble, false)} style={{ ...msg, alignSelf: "flex-start" }}>{tr("Your theme looks great.")}</div>
       </div>
       <div style={{ position: "absolute", left: 16, right: 16, bottom: 40, background: "#fff", borderRadius: 30, padding: "20px 22px 22px", boxShadow: "0 20px 50px -20px rgba(0,0,0,0.35)" }}>
         <div style={{ display: "flex", gap: 8, padding: 4, borderRadius: 999, background: "#f2f4f7", fontSize: 15, fontWeight: 600 }}>
@@ -621,8 +603,7 @@ export function ThemesScreen({ p }: ScreenProps) {
           })}
         </div>
         <div style={{ marginTop: 16, fontSize: 15.5, color: MUTED }}>
-          {CHAT_THEMES.length} themes · {WALLPAPERS.length - 1} wallpapers · {BUBBLE_STYLES.length} bubble styles
-        </div>
+          {tr("{length} themes · {value} wallpapers · {length2} bubble styles", { length: tr(CHAT_THEMES.length), value: WALLPAPERS.length - 1, length2: tr(BUBBLE_STYLES.length) })}</div>
       </div>
     </div>
   );
@@ -648,6 +629,7 @@ function Splat({ x, y, k, on }: { x: number; y: number; k: number; on: boolean }
 }
 
 export function StickerScreen({ p }: ScreenProps) {
+  const tr = useT();
   const pickerOpen = p < 0.32;
   const flying = p >= 0.32 && p < 0.44;
   const splatted = p >= 0.44;
@@ -657,12 +639,12 @@ export function StickerScreen({ p }: ScreenProps) {
     <div className={s.screenLight} data-chat-theme={theme.id} data-wallpaper-tone="dark" style={{ ...(chatThemeVars(theme) as unknown as React.CSSProperties), ...canvasCss(resolveWallpaper("nebula"), theme.canvas) }}>
       <StatusBar dark />
       <div style={{ padding: "8px 26px 0", color: "#fff" }}>
-        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>Mia</div>
-        <div style={{ fontSize: 14.5, opacity: 0.7 }}>online</div>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em" }}>{tr("Mia")}</div>
+        <div style={{ fontSize: 14.5, opacity: 0.7 }}>{tr("online")}</div>
       </div>
       <div style={{ padding: "26px 22px 0", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div className={bubbleClasses("aurora", false)} style={{ alignSelf: "flex-start", maxWidth: "78%", padding: "13px 18px", fontSize: 18 }}>We did it!! 🎉</div>
-        <div className={bubbleClasses("aurora", true)} style={{ alignSelf: "flex-end", maxWidth: "78%", padding: "13px 18px", fontSize: 18 }}>This needs a sticker.</div>
+        <div className={bubbleClasses("aurora", false)} style={{ alignSelf: "flex-start", maxWidth: "78%", padding: "13px 18px", fontSize: 18 }}>{tr("We did it!! 🎉")}</div>
+        <div className={bubbleClasses("aurora", true)} style={{ alignSelf: "flex-end", maxWidth: "78%", padding: "13px 18px", fontSize: 18 }}>{tr("This needs a sticker.")}</div>
       </div>
       {SPLATS.map(([x, y, k], i) => <Splat key={i} x={x} y={y} k={k} on={splatted && p < 0.96} />)}
       <img
@@ -689,32 +671,33 @@ export function StickerScreen({ p }: ScreenProps) {
 /* ── 8. Ledger Studio: build an app inside the chat ────────────────── */
 
 export function StudioScreen({ p }: ScreenProps) {
+  const tr = useT();
   const built = p >= 0.4;
   return (
     <div className={s.screenLight}>
       <StatusBar />
       <div style={{ padding: "8px 26px 14px", borderBottom: `1px solid ${LINE}` }}>
-        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em", color: INKC }}>Ledger Studio</div>
-        <div style={{ fontSize: 14.5, color: MUTED }}>Build it where you talk</div>
+        <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: "-0.02em", color: INKC }}>{tr("Ledger Studio")}</div>
+        <div style={{ fontSize: 14.5, color: MUTED }}>{tr("Build it where you talk")}</div>
       </div>
       <div style={{ padding: "18px 20px 0", display: "grid", gap: 12 }}>
         <div style={{ justifySelf: "end", maxWidth: "84%", padding: "14px 18px", borderRadius: 24, background: INKC, color: "#fff", fontSize: 17.5, ...fade(p, 0.02) }}>
-          Make a page for my café with the menu.
+          {tr("Make a page for my café with the menu.")}
         </div>
-        <div style={{ justifySelf: "start", fontSize: 15, color: MUTED, ...fade(p, 0.18) }}>{built ? "Built" : "Building…"}</div>
+        <div style={{ justifySelf: "start", fontSize: 15, color: MUTED, ...fade(p, 0.18) }}>{built ? tr("Built") : tr("Building…")}</div>
       </div>
       <div style={{ margin: "14px 20px 0", borderRadius: 26, border: `1px solid ${LINE}`, overflow: "hidden", background: "#faf8f4", ...fade(p, 0.4) }}>
         <div style={{ padding: "26px 24px 10px" }}>
-          <div style={{ fontSize: 13.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7f6c" }}>Since 2019</div>
-          <div style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", color: "#1d1a14", marginTop: 6 }}>Café Aurora</div>
+          <div style={{ fontSize: 13.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7f6c" }}>{tr("Since 2019")}</div>
+          <div style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", color: "#1d1a14", marginTop: 6 }}>{tr("Café Aurora")}</div>
         </div>
         {[["Flat white", "3.20"], ["Croissant", "2.80"], ["Cold brew", "3.90"]].map(([n, v], i) => (
           <div key={n} style={{ display: "flex", justifyContent: "space-between", padding: "15px 24px", borderTop: i === 0 ? "none" : "1px solid #ece6da", fontSize: 18, color: "#1d1a14" }}>
-            <span>{n}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{v} cUSDC</span>
+            <span>{n}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{tr("{v} cUSDC", { v })}</span>
           </div>
         ))}
         <div style={{ padding: "16px 24px 24px" }}>
-          <span style={{ display: "grid", placeItems: "center", height: 54, borderRadius: 27, background: "#1d1a14", color: "#fff", fontSize: 17.5, fontWeight: 600 }}>Share the menu</span>
+          <span style={{ display: "grid", placeItems: "center", height: 54, borderRadius: 27, background: "#1d1a14", color: "#fff", fontSize: 17.5, fontWeight: 600 }}>{tr("Share the menu")}</span>
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, padding: "16px 20px 0", ...fade(p, 0.7) }}>

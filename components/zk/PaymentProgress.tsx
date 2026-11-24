@@ -22,6 +22,7 @@ import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
 import s from './PaymentProgress.module.css';
+import { useT } from '@/lib/i18n/client';
 
 export type PaymentStage = 'preparing' | 'proving' | 'sending' | 'settled' | 'failed';
 
@@ -76,6 +77,7 @@ function elapsedLabel(ms: number) {
 }
 
 export function PaymentProgress(p: PaymentProgressProps) {
+  const tr = useT();
   // Median of this device's recent proving times (lib/perf/proof-timings.ts); null until there are three.
   const [typical] = useState(() => typicalMs());
   const [now, setNow] = useState(() => Date.now());
@@ -155,18 +157,18 @@ export function PaymentProgress(p: PaymentProgressProps) {
       </p>
       <p className={s.sub}>
         {failed
-          ? (feeHint || p.error || 'Nothing left your wallet.')
+          ? (feeHint || p.error || tr("Nothing left your wallet."))
           : done
-            ? `Included in L2 block ${p.blockNumber?.toLocaleString('en') ?? '…'}`
-            : `${elapsedLabel(now - p.startedAt)} · keep this page open`}
+            ? tr("Included in L2 block {value}", { value: p.blockNumber?.toLocaleString('en') ?? '…' })
+            : tr("{elapsedLabel} · keep this page open", { elapsedLabel: elapsedLabel(now - p.startedAt) })}
       </p>
       {!failed && !done && (
         <p className={s.sub} data-testid="proof-expectation">
           {isSlow(now - p.startedAt, typical)
-            ? 'Taking longer than usual on this device. The Aztec network may be busy; it can still go through.'
+            ? tr("Taking longer than usual on this device. The Aztec network may be busy; it can still go through.")
             : typical !== null
-              ? `Usually about ${Math.max(1, Math.round(typical / 1000))}s on this device.`
-              : 'The proof is made on this device, so the first payment takes the longest.'}
+              ? tr("Usually about {max}s on this device.", { max: Math.max(1, Math.round(typical / 1000)) })
+              : tr("The proof is made on this device, so the first payment takes the longest.")}
         </p>
       )}
       {failed && feeHint && p.error && <p className={s.rawError}>{p.error}</p>}
@@ -188,8 +190,8 @@ export function PaymentProgress(p: PaymentProgressProps) {
             <li key={st.key} className={`${s.step} ${s[state]}`} aria-current={state === 'active' || state === 'bad' ? 'step' : undefined}>
               <span className={s.dot} aria-hidden="true">{state === 'done' && <Check size={12} strokeWidth={3} />}</span>
               <span className={s.stepText}>
-                <span className={s.stepLabel}>{st.label}</span>
-                <span className={s.stepNote}>{state === 'bad' ? 'Stopped here' : st.note}</span>
+                <span className={s.stepLabel}>{tr(st.label)}</span>
+                <span className={s.stepNote}>{state === 'bad' ? tr("Stopped here") : tr( st.note)}</span>
               </span>
             </li>
           );
@@ -197,20 +199,20 @@ export function PaymentProgress(p: PaymentProgressProps) {
       </ol>
 
       <dl className={s.facts}>
-        <div><dt>To</dt><dd className={s.mono}>{short(p.recipient)}</dd></div>
-        <div><dt>Network</dt><dd>{p.network}</dd></div>
-        <div><dt>Visible on chain</dt><dd>{FEE_PRIVACY.onChain}</dd></div>
-        <div><dt>Fee</dt><dd>Paid in Fee Juice; only the gas used is charged</dd></div>
+        <div><dt>{tr("To")}</dt><dd className={s.mono}>{short(p.recipient)}</dd></div>
+        <div><dt>{tr("Network")}</dt><dd>{p.network}</dd></div>
+        <div><dt>{tr("Visible on chain")}</dt><dd>{tr(FEE_PRIVACY.onChain)}</dd></div>
+        <div><dt>{tr("Fee")}</dt><dd>{tr("Paid in Fee Juice; only the gas used is charged")}</dd></div>
         {p.txHash && (
           <div>
-            <dt>Transaction</dt>
+            <dt>{tr("Transaction")}</dt>
             <dd className={s.hashRow}>
               <span className={s.mono}>{short(p.txHash)}</span>
-              <button type="button" onClick={copy} className={s.iconBtn} aria-label="Copy transaction hash">
+              <button type="button" onClick={copy} className={s.iconBtn} aria-label={tr("Copy transaction hash")}>
                 {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
               {p.explorerUrl && (
-                <a href={p.explorerUrl} target="_blank" rel="noopener noreferrer" className={s.iconBtn} aria-label="Open in the explorer">
+                <a href={p.explorerUrl} target="_blank" rel="noopener noreferrer" className={s.iconBtn} aria-label={tr("Open in the explorer")}>
                   <ExternalLink size={14} />
                 </a>
               )}
@@ -222,9 +224,9 @@ export function PaymentProgress(p: PaymentProgressProps) {
       {(done || failed) && (
         <div className={s.actions}>
           {failed && p.onRetry && (
-            <button type="button" className={s.secondary} onClick={p.onRetry}>Try again</button>
+            <button type="button" className={s.secondary} onClick={p.onRetry}>{tr("Try again")}</button>
           )}
-          <button type="button" className={s.primary} onClick={p.onDone}>Done</button>
+          <button type="button" className={s.primary} onClick={p.onDone}>{tr("Done")}</button>
         </div>
       )}
     </div>

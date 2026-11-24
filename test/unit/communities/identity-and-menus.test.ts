@@ -6,8 +6,9 @@ vi.mock('@/lib/prisma', () => ({ prisma: { user: { findMany } } }));
 
 import { cleanName, memberNames } from '@/lib/communities/member-names';
 import { authorLabel, shortWallet } from '@/components/communities/CommunityReader';
+import { untranslated } from '../../helpers/untranslated';
 
-const read = (p: string) => fs.readFileSync(p, 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(p, 'utf8'));
 const A = '0x1111111111111111111111111111111111111111';
 const B = '0x2222222222222222222222222222222222222222';
 

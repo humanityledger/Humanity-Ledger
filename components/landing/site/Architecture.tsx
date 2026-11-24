@@ -14,6 +14,7 @@
  */
 import React from 'react';
 import s from './site.module.css';
+import { useT } from '@/lib/i18n/client';
 
 type NodeId = 'device' | 'xmtp' | 'peer' | 'turn' | 'aztec' | 'ethereum' | 'server' | 'onDevice' | 'relays';
 type Node = { name: string; text: string; sees: string };
@@ -52,6 +53,7 @@ export function Architecture({
   states: { today: string; relay: string };
   goal: string;
 }) {
+  const tr = useT();
   const [state, setState] = React.useState<State>('today');
   const [active, setActive] = React.useState<NodeId>('device');
   const visible = state === 'today' ? TODAY : RELAY;
@@ -72,11 +74,11 @@ export function Architecture({
   return (
     <div className={s.arch} data-state={state}>
       <div className={s.archBar}>
-        <div className={s.toggle} role="group" aria-label="Architecture state">
+        <div className={s.toggle} role="group" aria-label={tr("Architecture state")}>
           <button type="button" className={s.toggleBtn} aria-pressed={state === 'today'} onClick={() => switchTo('today')}>{states.today}</button>
           <button type="button" className={s.toggleBtn} aria-pressed={state === 'relay'} onClick={() => switchTo('relay')}>{states.relay}</button>
         </div>
-        <p className={s.goal} aria-hidden={state !== 'relay'}><b>Goal.</b> {goalText(goal)}</p>
+        <p className={s.goal} aria-hidden={state !== 'relay'}><b>{tr("Goal.")}</b> {tr(goalText(goal))}</p>
       </div>
 
       <div className={s.archCanvas}>
@@ -118,7 +120,7 @@ export function Architecture({
       </div>
 
       <div className={s.archFoot}>
-        <div className={s.legend} role="group" aria-label="Parts of the diagram">
+        <div className={s.legend} role="group" aria-label={tr("Parts of the diagram")}>
           {(['device', 'xmtp', 'peer', 'turn', 'relays', 'aztec', 'ethereum', 'server', 'onDevice'] as NodeId[]).map((id) => (
             <button
               key={id}
@@ -134,9 +136,9 @@ export function Architecture({
         </div>
         <div className={s.detail} aria-live="polite">
           <h3>{node.name}</h3>
-          <p>{node.text}</p>
+          <p>{tr(node.text)}</p>
           <dl>
-            <dt>Can see</dt>
+            <dt>{tr("Can see")}</dt>
             <dd>{node.sees}</dd>
           </dl>
         </div>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, Camera, Loader, RefreshCcw } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
+import { useT } from '@/lib/i18n/client';
 
 
 
@@ -24,6 +25,7 @@ interface QrScannerProps {
 const QR_CONTAINER_ID = 'qr-reader-container';
 
 export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValue, projectTitle, projectDescription }: QrScannerProps) {
+  const t = useT();
     const [state, setState] = useState<ScanState>('idle');
     const [message, setMessage] = useState('');
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -96,14 +98,14 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
             
             if (data.valid) {
                 setState('success');
-                setMessage(data.message ?? 'Device successfully linked to your account!');
+                setMessage(data.message ?? t("Device successfully linked to your account!"));
             } else {
                 setState('error');
-                setMessage(data.error ?? 'Invalid or expired QR code.');
+                setMessage(data.error ?? t("Invalid or expired QR code."));
             }
         } catch {
             setState('error');
-            setMessage('Network error. Please check your connection and try again.');
+            setMessage(t("Network error. Please check your connection and try again."));
         }
     };
 
@@ -168,11 +170,11 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                 setState('error');
                 
                 if (err?.toString().includes("NotAllowedError")) {
-                    setMessage('Camera access denied. Tap "Allow" when prompted, then try again.');
+                    setMessage(t("Camera access denied. Tap \"Allow\" when prompted, then try again."));
                 } else if (err?.toString().includes("NotFound")) {
-                    setMessage('No camera found on this device.');
+                    setMessage(t("No camera found on this device."));
                 } else {
-                    setMessage(`Camera error: ${err.message || 'Check permissions and try again.'}`);
+                    setMessage(t("Camera error: {value}", { value: err.message || 'Check permissions and try again.' }));
                 }
                 await stopCamera();
             }
@@ -228,7 +230,7 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
             await handleDecode(decodedText);
         } catch (err) {
             setState('error');
-            setMessage('Could not detect a valid QR code in the image. Please try another image.');
+            setMessage(t("Could not detect a valid QR code in the image. Please try another image."));
         }
     };
 
@@ -236,9 +238,9 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
         return (
             <div className={`w-full flex flex-col items-center gap-6 ${className ?? ''}`}>
                 <div className="flex flex-col items-center gap-4 text-center">
-                    <h3 className="font-mono text-xl font-semibold tracking-[0.2em] text-[#15171c]">{projectTitle || 'Link Device'}</h3>
+                    <h3 className="font-mono text-xl font-semibold tracking-[0.2em] text-[#15171c]">{projectTitle || t("Link Device")}</h3>
                     <p className="text-xs text-black/50 max-w-xs leading-relaxed font-serif">
-                        {projectDescription || 'Scan this QR code from the HumanID mobile terminal to securely link your sovereign session.'}
+                        {projectDescription || t("Scan this QR code from the HumanID mobile terminal to securely link your sovereign session.")}
                     </p>
                 </div>
                 
@@ -248,17 +250,17 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                     </div>
                 ) : projectData ? (
                     <div className="p-3 bg-white rounded-3xl border border-black/10 shadow-xl overflow-hidden">
-                        <BrandedQr value={projectData.linkUrl} title="Link QR code" style={{ width: 244 }} />
+                        <BrandedQr value={projectData.linkUrl} title={t("Link QR code")} style={{ width: 244 }} />
                     </div>
                 ) : (
                     <button onClick={generateQr} className="px-6 py-3 bg-black text-white font-semibold text-[12.5px] rounded-xl active:scale-95 transition-all">
-                        Generate Link QR
+                        {t("Generate Link QR")}
                     </button>
                 )}
                 
                 {projectData && !projectValue && (
                     <button onClick={generateQr} className="text-[12px] tabular-nums text-black/40 hover:opacity-80 transition-opacity flex items-center gap-2">
-                        <RefreshCcw size={12} /> Refresh QR Code
+                        <RefreshCcw size={12} />{" "}{t("Refresh QR Code")}
                     </button>
                 )}
             </div>
@@ -279,15 +281,15 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                             <div className="absolute bottom-3 left-3 w-7 h-7 border-b-2 border-l-2 border-black/20 rounded-bl-2xl" />
                             <div className="absolute bottom-3 right-3 w-7 h-7 border-b-2 border-r-2 border-black/20 rounded-br-2xl" />
                             <Camera size={36} className="text-black/10 mb-2" />
-                            <span className="text-[12px] tabular-nums text-black/20">Awaiting Activation</span>
+                            <span className="text-[12px] tabular-nums text-black/20">{t("Awaiting Activation")}</span>
                         </div>
                         <div className="w-full space-y-3">
                             <button onClick={startCamera}
                                 className="w-full py-4 rounded-2xl bg-black text-white tabular-nums text-[12.5px] font-semibold shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-                                <Camera size={16} /> Activate Camera
+                                <Camera size={16} />{" "}{t("Activate Camera")}
                             </button>
                             <label className="w-full py-4 rounded-2xl bg-black/5 border border-black/10 text-black tabular-nums text-[12.5px] font-semibold shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer hover:bg-black/10">
-                                <Camera size={16} /> Upload QR Image
+                                <Camera size={16} />{" "}{t("Upload QR Image")}
                                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                             </label>
                         </div>
@@ -299,7 +301,7 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                     <motion.div key="requesting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="flex flex-col items-center gap-4 py-16">
                         <div className="w-14 h-14 rounded-full border-2 border-black/20 border-t-black animate-spin" />
-                        <p className="font-mono text-[12px] text-black/40">Requesting camera access</p>
+                        <p className="font-mono text-[12px] text-black/40">{t("Requesting camera access")}</p>
                     </motion.div>
                 )}
 
@@ -308,7 +310,7 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                     <motion.div key="validating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="flex flex-col items-center gap-4 py-16">
                         <Loader size={36} className="animate-spin text-black/40" />
-                        <p className="font-mono text-[12px] text-black/40">Validating QR token</p>
+                        <p className="font-mono text-[12px] text-black/40">{t("Validating QR token")}</p>
                     </motion.div>
                 )}
 
@@ -330,15 +332,15 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                             </div>
                         </div>
                         <p className="font-mono text-[12px] text-black/30">
-                            Point at the QR code on your PC screen
+                            {t("Point at the QR code on your PC screen")}
                         </p>
                         <div className="w-full space-y-3 pt-2">
                             <label className="w-full py-3 rounded-xl bg-black/5 border border-black/10 text-black tabular-nums text-[12px] font-semibold shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer hover:bg-black/10">
-                                <Camera size={14} /> Upload QR Image
+                                <Camera size={14} />{" "}{t("Upload QR Image")}
                                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                             </label>
                             <button onClick={reset} className="w-full text-black/30 text-xs tabular-nums hover:text-black/60 transition-colors">
-                                Cancel
+                                {t("Cancel")}
                             </button>
                         </div>
                     </motion.div>
@@ -352,11 +354,11 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                             className="w-20 h-20 rounded-full bg-black/5 border border-black/10 flex items-center justify-center">
                             <CheckCircle size={40} className="text-black/40" />
                         </motion.div>
-                        <h3 className="font-mono text-xl font-semibold text-[#15171c]">Bridge Established</h3>
+                        <h3 className="font-mono text-xl font-semibold text-[#15171c]">{t("Bridge Established")}</h3>
                         <p className="text-xs text-black/60 max-w-xs leading-relaxed font-serif">{message}</p>
                         <button onClick={reset}
                             className="mt-2 px-6 py-2 rounded-lg border border-black/10 text-black/50 text-[12px] font-semibold hover:bg-black/5 transition-colors flex items-center gap-2">
-                            <RefreshCcw size={12} /> Scan another
+                            <RefreshCcw size={12} />{" "}{t("Scan another")}
                         </button>
                     </motion.div>
                 )}
@@ -369,16 +371,16 @@ export function QrScanner({ className, mode = 'scan', onScanSuccess, projectValu
                             <XCircle size={40} className="text-red-400" />
                         </div>
                         <h3 className="font-mono text-xl font-semibold text-[#15171c]">
-                            {mode === 'scan' ? 'Scan Failed' : 'Link Failed'}
+                            {mode === 'scan' ? t("Scan Failed") : t("Link Failed")}
                         </h3>
                         <p className="text-xs text-black/60 max-w-xs leading-relaxed font-serif">{message}</p>
                         <div className="w-full space-y-3 pt-2">
                             <button onClick={reset}
                                 className="w-full py-4 rounded-xl bg-black text-white text-[12px] font-semibold hover:bg-black/80 transition-colors">
-                                Try Again
+                                {t("Try Again")}
                             </button>
                             <label className="w-full py-4 rounded-xl bg-black/5 border border-black/10 text-black tabular-nums text-[12px] font-semibold shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer hover:bg-black/10">
-                                <Camera size={14} /> Upload QR Image
+                                <Camera size={14} />{" "}{t("Upload QR Image")}
                                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                             </label>
                         </div>

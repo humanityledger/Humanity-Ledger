@@ -21,6 +21,7 @@ import s from './PaymentProgress.module.css';
 import { NoteField, VAULT_BG } from './wallet/WalletUI';
 
 import { AT, creationSteps, stepStates, type CreationPhase, type StepKey } from './walletCreationSteps';
+import { useT } from '@/lib/i18n/client';
 
 const INK = '#15171c';
 
@@ -46,6 +47,7 @@ export interface WalletCreationProps {
 }
 
 export function WalletCreation(p: WalletCreationProps) {
+  const t = useT();
   const steps = creationSteps(p.alpha, p.networkName, p.linkedComputer);
   // Where an error stopped it: the last step that was running.
   const last = useRef<StepKey | undefined>(undefined);
@@ -90,14 +92,14 @@ export function WalletCreation(p: WalletCreationProps) {
           </div>
         </div>
         {mood === 'idle' && !p.blocked && (
-          <ul className="relative mt-4 flex flex-wrap gap-1.5" aria-label="Before you start">
-            <Fact icon={<Lock size={12} strokeWidth={2.2} />}>Free to sign</Fact>
-            <Fact icon={<KeyRound size={12} strokeWidth={2.2} />}>Keys stay on this device</Fact>
-            <Fact icon={<Timer size={12} strokeWidth={2.2} />}>About a minute</Fact>
+          <ul className="relative mt-4 flex flex-wrap gap-1.5" aria-label={t("Before you start")}>
+            <Fact icon={<Lock size={12} strokeWidth={2.2} />}>{t("Free to sign")}</Fact>
+            <Fact icon={<KeyRound size={12} strokeWidth={2.2} />}>{t("Keys stay on this device")}</Fact>
+            <Fact icon={<Timer size={12} strokeWidth={2.2} />}>{t("About a minute")}</Fact>
           </ul>
         )}
         {mood !== 'idle' && !p.blocked && (
-          <div className="relative mt-4 h-1 rounded-full bg-white/10 overflow-hidden" role="progressbar" aria-label="Opening progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+          <div className="relative mt-4 h-1 rounded-full bg-white/10 overflow-hidden" role="progressbar" aria-label={t("Opening progress")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
             <div
               className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${failed ? 'bg-[#ff8a80]' : 'bg-gradient-to-r from-[#8b7bff] to-[#34d399]'}`}
               style={{ width: `${Math.max(progress, 6)}%` }}
@@ -109,12 +111,12 @@ export function WalletCreation(p: WalletCreationProps) {
       <div className="px-5 pt-4 pb-5">
         {failed && p.errorDetail && (
           <button type="button" className="mb-2 text-[13px] font-medium underline underline-offset-2" style={{ color: INK }} onClick={() => p.onCopyDetails?.(p.errorDetail!)}>
-            Copy details
+            {t("Copy details")}
           </button>
         )}
 
         {!p.blocked && (
-          <ol className={s.steps} aria-label="Steps">
+          <ol className={s.steps} aria-label={t("Steps")}>
             {steps.map((st, i) => {
               const state = states[i];
               return (
@@ -123,8 +125,8 @@ export function WalletCreation(p: WalletCreationProps) {
                     {state === 'done' ? <Check size={12} strokeWidth={3} /> : state === 'todo' ? i + 1 : null}
                   </span>
                   <span className={s.stepText}>
-                    <span className={s.stepLabel}>{st.label}</span>
-                    <span className={s.stepNote}>{state === 'bad' ? 'Stopped here' : st.note}</span>
+                    <span className={s.stepLabel}>{t(st.label)}</span>
+                    <span className={s.stepNote}>{state === 'bad' ? t("Stopped here") : t(st.note)}</span>
                   </span>
                 </li>
               );
@@ -141,7 +143,7 @@ export function WalletCreation(p: WalletCreationProps) {
             className="mt-4 w-full h-[52px] rounded-2xl text-white text-[15px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 bg-gradient-to-b from-[#2b2f3a] to-[#121419] hover:from-[#343947] hover:to-[#181b22] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_12px_26px_-14px_rgba(21,23,28,0.8)] active:scale-[0.99] transition-transform focus:outline-none focus-visible:ring-[3px] focus-visible:ring-[#15171c]/25 focus-visible:ring-offset-1"
           >
             <ShieldCheck size={18} strokeWidth={2} aria-hidden="true" />
-            {failed ? 'Try again' : 'Open private wallet'}
+            {failed ? t("Try again") : t("Open private wallet")}
           </button>
         )}
       </div>

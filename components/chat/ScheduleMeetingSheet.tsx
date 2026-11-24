@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Phone, Video } from 'lucide-react';
 import { Sheet, PrimaryButton } from './ui/kit';
 import { MAX_NOTE, MAX_TITLE, encodeMeeting, newMeetingId, type MeetingKind } from '@/lib/chat/meeting';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * ScheduleMeetingSheet — invite the person in this chat to a call at a set time.
@@ -38,6 +39,7 @@ export function ScheduleMeetingSheet({
   /** Sends the invitation text; resolves true once it is on its way. */
   onSend: (text: string) => Promise<boolean>;
 }) {
+  const t = useT();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -50,7 +52,7 @@ export function ScheduleMeetingSheet({
   useEffect(() => {
     if (!open) return;
     const start = defaultStart();
-    setTitle(`Call with ${peerName}`);
+    setTitle(t("Call with {peerName}", { peerName }));
     setDate(toDateInput(start));
     setTime(toTimeInput(start));
     setDuration(30);
@@ -70,19 +72,19 @@ export function ScheduleMeetingSheet({
 
   const submit = async () => {
     const startsAt = new Date(`${date}T${time}`).getTime();
-    if (!title.trim()) return setError('Give the call a name.');
-    if (!Number.isFinite(startsAt)) return setError('Choose a date and a time.');
-    if (startsAt < Date.now() - 60_000) return setError('Choose a time in the future.');
-    if (startsAt > Date.now() + 366 * 86_400_000) return setError('Choose a time within the next year.');
+    if (!title.trim()) return setError(t("Give the call a name."));
+    if (!Number.isFinite(startsAt)) return setError(t("Choose a date and a time."));
+    if (startsAt < Date.now() - 60_000) return setError(t("Choose a time in the future."));
+    if (startsAt > Date.now() + 366 * 86_400_000) return setError(t("Choose a time within the next year."));
     setError(null);
     setBusy(true);
     try {
       const text = encodeMeeting({ v: 1, id: newMeetingId(), title, startsAt, durationMin: duration, kind, ...(note.trim() ? { note } : {}) });
       const ok = await onSend(text);
       if (ok) onClose();
-      else setError('The invitation was not sent. Check your connection and try again.');
+      else setError(t("The invitation was not sent. Check your connection and try again."));
     } catch {
-      setError('The invitation was not sent. Check your connection and try again.');
+      setError(t("The invitation was not sent. Check your connection and try again."));
     } finally {
       setBusy(false);
     }
@@ -95,8 +97,8 @@ export function ScheduleMeetingSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title="Schedule a call"
-      subtitle={`With ${peerName}`}
+      title={t("Schedule a call")}
+      subtitle={t("With {peerName}", { peerName })}
       footer={
         <div className="flex flex-col gap-3">
           {error && (
@@ -105,11 +107,10 @@ export function ScheduleMeetingSheet({
             </p>
           )}
           <PrimaryButton onClick={submit} disabled={busy} className="w-full">
-            {busy ? 'Sending' : 'Send invitation'}
+            {busy ? t("Sending") : t("Send invitation")}
           </PrimaryButton>
           <p className="text-[12.5px] leading-relaxed text-[#727a88]">
-            Sent as an encrypted message. You both get a Join button ten minutes before, and can add the call to your
-            calendar.
+            {t("Sent as an encrypted message. You both get a Join button ten minutes before, and can add the call to your calendar.")}
           </p>
         </div>
       }
@@ -117,7 +118,7 @@ export function ScheduleMeetingSheet({
       <div className="px-5 pb-4 flex flex-col gap-4">
         <div>
           <label htmlFor="meet-title" className={label}>
-            Name
+            {t("Name")}
           </label>
           <input id="meet-title" className={field} value={title} maxLength={MAX_TITLE} onChange={(e) => setTitle(e.target.value)} />
         </div>
@@ -125,34 +126,34 @@ export function ScheduleMeetingSheet({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="meet-date" className={label}>
-              Date
+              {t("Date")}
             </label>
             <input id="meet-date" type="date" className={field} value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div>
             <label htmlFor="meet-time" className={label}>
-              Time
+              {t("Time")}
             </label>
             <input id="meet-time" type="time" step={300} className={field} value={time} onChange={(e) => setTime(e.target.value)} />
           </div>
         </div>
-        {tz && <p className="-mt-2 text-[12.5px] text-[#727a88]">Your time zone: {tz.replace(/_/g, ' ')}. {peerName} sees it in theirs.</p>}
+        {tz && <p className="-mt-2 text-[12.5px] text-[#727a88]">{t("Your time zone: {replace}. {peerName} sees it in theirs.", { replace: tz.replace(/_/g, ' '), peerName })}</p>}
 
         <div>
           <label htmlFor="meet-duration" className={label}>
-            Length
+            {t("Length")}
           </label>
           <select id="meet-duration" className={field} value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
             {DURATIONS.map((m) => (
               <option key={m} value={m}>
-                {m < 60 ? `${m} minutes` : m === 60 ? '1 hour' : `${m / 60} hours`}
+                {m < 60 ? t("{m} minutes", { m }) : m === 60 ? t("1 hour") : t("{value} hours", { value: m / 60 })}
               </option>
             ))}
           </select>
         </div>
 
         <fieldset>
-          <legend className={label}>Type</legend>
+          <legend className={label}>{t("Type")}</legend>
           <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#f2f4f7]">
             {(['video', 'voice'] as const).map((k) => (
               <button
@@ -165,15 +166,14 @@ export function ScheduleMeetingSheet({
                 }`}
               >
                 {k === 'video' ? <Video size={17} strokeWidth={1.8} aria-hidden="true" /> : <Phone size={17} strokeWidth={1.8} aria-hidden="true" />}
-                {k === 'video' ? 'Video' : 'Voice'}
+                {k === 'video' ? t("Video") : t("Voice")}
               </button>
             ))}
           </div>
         </fieldset>
 
         <div>
-          <label htmlFor="meet-note" className={label}>
-            Note <span className="font-normal text-[#a3a9b4]">(optional)</span>
+          <label htmlFor="meet-note" className={label}>{t("Note {0}", { 0: <span className="font-normal text-[#a3a9b4]">{t("(optional)")}</span> })}
           </label>
           <textarea
             id="meet-note"
@@ -182,7 +182,7 @@ export function ScheduleMeetingSheet({
             className="w-full px-3 py-2.5 rounded-xl border border-[#d0d5dd] bg-white text-[15px] text-[#15171c] outline-none focus:border-[#15171c] resize-none"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="What you want to talk about"
+            placeholder={t("What you want to talk about")}
           />
         </div>
       </div>

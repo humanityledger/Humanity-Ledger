@@ -5,9 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { untranslated } from '../../helpers/untranslated';
 
 const root = path.resolve(__dirname, '../../..');
-const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(path.join(root, p), 'utf8'));
 const exists = (p: string) => fs.existsSync(path.join(root, p));
 
 describe('sign-in without email', () => {

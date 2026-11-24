@@ -6,6 +6,7 @@ import { useAccount, useSendTransaction, useWriteContract } from 'wagmi';
 import { isAddress, parseEther, parseUnits, type Address } from 'viem';
 import { mainnet } from 'viem/chains';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Public tip in ETH or USDC on Ethereum mainnet, sent from the user's own wallet.
@@ -60,6 +61,7 @@ function toUnits(token: TipToken, amount: string): bigint | null {
 }
 
 export function SendTipModal({ open, onClose, recipientAddress, recipientName, onTipSent }: SendTipModalProps) {
+  const tr = useT();
   const [token, setToken] = useState<TipToken>('USDC');
   const [amount, setAmount] = useState('5');
   const [isSending, setIsSending] = useState(false);
@@ -77,19 +79,19 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
   const handleSendTip = async () => {
     if (inFlight.current) return;
     if (!isConnected) {
-      toast.error('Connect your wallet first.');
+      toast.error(tr("Connect your wallet first."));
       return;
     }
     if (!recipientOk) {
-      toast.error('This recipient has no valid Ethereum address.');
+      toast.error(tr("This recipient has no valid Ethereum address."));
       return;
     }
     if (units === null) {
-      toast.error('Enter an amount greater than zero.');
+      toast.error(tr("Enter an amount greater than zero."));
       return;
     }
     if (chainId !== mainnet.id) {
-      toast.error('Switch your wallet to Ethereum mainnet to send a tip.');
+      toast.error(tr("Switch your wallet to Ethereum mainnet to send a tip."));
       return;
     }
 
@@ -108,13 +110,13 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
               chainId: mainnet.id,
             });
 
-      toast.success(`Tip of ${amount} ${token} submitted.`);
+      toast.success(tr("Tip of {amount} {token} submitted.", { amount, token }));
       onTipSent({ amount, token, txHash, to: recipientAddress });
       onClose();
     } catch (err: unknown) {
       console.error('[SendTipModal]', err);
       const e = err as { shortMessage?: string; message?: string };
-      toast.error(e?.shortMessage || e?.message || 'The tip was not sent.');
+      toast.error(e?.shortMessage || e?.message || tr("The tip was not sent."));
     } finally {
       inFlight.current = false;
       setIsSending(false);
@@ -126,12 +128,12 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
       <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-[#E4E7EC] space-y-5">
         <div className="flex items-center justify-between">
           <h2 id="tip-title" className="text-[15px] font-semibold text-[#15171C]">
-            Send a tip
+            {tr("Send a tip")}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={tr("Close")}
             className="w-11 h-11 -mr-2 rounded-xl flex items-center justify-center text-[#475467] hover:bg-[#F7F8FA] transition-colors duration-150 ease-out"
           >
             <X size={18} strokeWidth={1.75} />
@@ -143,16 +145,16 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
             {recipientName ? recipientName.slice(0, 2).toUpperCase() : 'W'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold text-[#15171C] truncate">{recipientName || 'Recipient'}</p>
+            <p className="text-[14px] font-semibold text-[#15171C] truncate">{recipientName || tr("Recipient")}</p>
             <p className="text-[12.5px] tabular-nums text-[#475467] truncate">{recipientAddress}</p>
           </div>
         </div>
 
         <p className="text-[12.5px] leading-relaxed text-[#475467]">
-          A public transfer on Ethereum mainnet from your wallet. It is not private and cannot be undone.
+          {tr("A public transfer on Ethereum mainnet from your wallet. It is not private and cannot be undone.")}
         </p>
 
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Token">
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={tr("Token")}>
           {(['USDC', 'ETH'] as const).map((t) => (
             <button
               key={t}
@@ -182,14 +184,13 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
                 amount === p ? 'bg-[#15171C] text-white' : 'bg-[#F7F8FA] text-[#475467] hover:bg-[#EFF1F4]'
               }`}
             >
-              {p}
+              {tr(p)}
             </button>
           ))}
         </div>
 
         <div>
-          <label htmlFor="tip-amount" className="text-[12.5px] font-semibold text-[#475467] block mb-1">
-            Amount in {token}
+          <label htmlFor="tip-amount" className="text-[12.5px] font-semibold text-[#475467] block mb-1">{tr("Amount in {token}", { token })}
           </label>
           <input
             id="tip-amount"
@@ -198,12 +199,12 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
             autoComplete="off"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder={PRESETS[token][0]}
+            placeholder={tr(PRESETS[token][0])}
             className="w-full min-h-[44px] px-4 bg-white border border-[#E4E7EC] rounded-xl outline-none text-[16px] font-semibold tabular-nums text-[#15171C] focus:border-[#15171C]"
           />
           {amount.trim() !== '' && units === null && (
             <p className="mt-1.5 text-[12.5px] text-[#B42318]" role="alert">
-              Enter an amount greater than zero, with a dot for decimals.
+              {tr("Enter an amount greater than zero, with a dot for decimals.")}
             </p>
           )}
         </div>
@@ -215,10 +216,10 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
           className="w-full min-h-[48px] bg-[#15171C] text-white font-semibold rounded-xl text-[14px] flex items-center justify-center gap-2 disabled:opacity-50 transition-colors duration-150 ease-out"
         >
           {isSending ? (
-            'Confirm in your wallet…'
+            tr("Confirm in your wallet…")
           ) : (
             <>
-              <Heart size={16} strokeWidth={1.75} /> Send {amount || '0'} {token}
+              <Heart size={16} strokeWidth={1.75} />{" "}{tr("Send")}{" "}{amount || '0'} {token}
             </>
           )}
         </button>

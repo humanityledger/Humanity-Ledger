@@ -31,6 +31,7 @@ import { useAddressFingerprint } from '@/components/chat/useAddressFingerprint';
 import { checkPrivateRail, invoicePayee } from '@/lib/payments/rails';
 import { NativeCryptoSendModal } from '@/components/chat/NativeCryptoSendModal';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Settling an invoice. The payee is always the invoice's ISSUER
@@ -72,6 +73,7 @@ export function ZkInvoiceModal({
   onInvoiceCreated,
   onInvoicePaid,
 }: ZkInvoiceModalProps) {
+  const __t = useT();
   const [payeeAztec, setPayeeAztec] = useState<{ address?: string; verified: boolean }>({ verified: false });
   const issuerFingerprint = useAddressFingerprint(payeeAztec.address);
   const [showPublicRail, setShowPublicRail] = useState(false);
@@ -168,7 +170,7 @@ export function ZkInvoiceModal({
     if (!existingInvoice) return;
     markInvoicePaid(existingInvoice.id, txHash, '');
     onInvoicePaid?.({ ...existingInvoice, status: 'paid', settlementTxHash: txHash, settledAt: Date.now() });
-    toast.success(rail === 'aztec' ? `Invoice paid privately on ${networkLabel()}` : 'Invoice paid on Ethereum');
+    toast.success(rail === 'aztec' ? __t("Invoice paid privately on {networkLabel}", { networkLabel: networkLabel() }) : __t("Invoice paid on Ethereum"));
     onClose();
   };
 
@@ -189,7 +191,7 @@ export function ZkInvoiceModal({
     } catch (err: any) {
       // A failed Aztec transaction changes nothing: no funds left the wallet.
       console.error('[Invoice] private payment failed:', err?.message || err);
-      setPayError(`${humanError(err)} Nothing was sent. You can try again or pay on Ethereum.`);
+      setPayError(__t("{humanError} Nothing was sent. You can try again or pay on Ethereum.", { humanError: humanError(err) }));
     } finally {
       payingRef.current = false;
       setIsPaying(false);
@@ -213,10 +215,10 @@ export function ZkInvoiceModal({
             </div>
             <div>
               <h2 className="text-[16px] font-semibold text-gray-900 leading-tight">
-                {existingInvoice ? existingInvoice.invoiceNumber : 'New invoice'}
+                {existingInvoice ? existingInvoice.invoiceNumber : __t("New invoice")}
               </h2>
               <p className="text-[12.5px] text-gray-500">
-                {existingInvoice ? 'Review and pay' : `Sent as an encrypted message in this chat. ${FEE_PRIVACY.short}`}
+                {existingInvoice ? __t("Review and pay") : __t("Sent as an encrypted message in this chat. {short}", { short: FEE_PRIVACY.short })}
               </p>
             </div>
           </div>
@@ -234,8 +236,8 @@ export function ZkInvoiceModal({
             <div className="bg-[#f7f8fa] border border-black/[0.06] rounded-2xl p-4 space-y-2">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-[15px] font-semibold text-gray-900">{existingInvoice.title}</h3>
-                  <p className="text-[12px] text-gray-500">From: {existingInvoice.senderTag}</p>
+                  <h3 className="text-[15px] font-semibold text-gray-900">{__t(existingInvoice.title)}</h3>
+                  <p className="text-[12px] text-gray-500">{__t("From: {senderTag}", { senderTag: existingInvoice.senderTag })}</p>
                 </div>
                 <span
                   className={`text-[12px] font-semibold px-2.5 py-0.5 rounded-full ${
@@ -255,17 +257,17 @@ export function ZkInvoiceModal({
               <table className="w-full text-left text-[12px]">
                 <thead className="bg-[#f2f4f7] text-gray-500 font-semibold border-b border-black/[0.06]">
                   <tr>
-                    <th className="p-3">Description</th>
-                    <th className="p-3 text-center">Qty</th>
-                    <th className="p-3 text-right">Unit Price</th>
-                    <th className="p-3 text-right">Total</th>
+                    <th className="p-3">{__t("Description")}</th>
+                    <th className="p-3 text-center">{__t("Qty")}</th>
+                    <th className="p-3 text-right">{__t("Unit Price")}</th>
+                    <th className="p-3 text-right">{__t("Total")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/[0.04]">
                   {existingInvoice.items.map((it, idx) => (
                     <tr key={idx}>
-                      <td className="p-3 font-medium text-gray-800">{it.description}</td>
-                      <td className="p-3 text-center text-gray-600">{it.quantity}</td>
+                      <td className="p-3 font-medium text-gray-800">{__t(it.description)}</td>
+                      <td className="p-3 text-center text-gray-600">{__t(it.quantity)}</td>
                       <td className="p-3 text-right text-gray-600 tabular-nums">${it.unitPrice.toFixed(2)}</td>
                       <td className="p-3 text-right font-semibold text-gray-900 tabular-nums">${it.total.toFixed(2)}</td>
                     </tr>
@@ -276,18 +278,17 @@ export function ZkInvoiceModal({
 
             {/* Summary */}
             <div className="bg-[#f7f8fa] rounded-2xl p-4 flex justify-between items-center">
-              <div className="text-[12px] text-gray-500">
-                Due Date: <span className="font-semibold text-gray-800">{new Date(existingInvoice.dueDate).toLocaleDateString()}</span>
+              <div className="text-[12px] text-gray-500">{__t("Due Date: {0}", { 0: <span className="font-semibold text-gray-800">{new Date(existingInvoice.dueDate).toLocaleDateString()}</span> })}
               </div>
               <div className="text-right">
-                <span className="text-[12.5px] text-gray-400 font-medium block">Total Amount</span>
+                <span className="text-[12.5px] text-gray-400 font-medium block">{__t("Total Amount")}</span>
                 <span className="text-[20px] font-semibold text-[#15171c] tabular-nums">
                   {existingInvoice.totalAmount} {existingInvoice.token}
                 </span>
               </div>
             </div>
 
-            {isPaying && <ProvingStatus label={proofStep || 'Preparing'} startedAt={provingSince || Date.now()} />}
+            {isPaying && <ProvingStatus label={proofStep || __t("Preparing")} startedAt={provingSince || Date.now()} />}
 
             {existingInvoice.status === 'unpaid' && payee && !payee.ok && (
               <p className="text-[13px] text-gray-600">{payee.reason}</p>
@@ -298,19 +299,18 @@ export function ZkInvoiceModal({
                 {payeeAztec.address && (
                   <div className="rounded-2xl border border-black/[0.08] bg-[#f9fafb] p-3 text-[12px] space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 font-medium">Issuer Aztec Address:</span>
+                      <span className="text-gray-600 font-medium">{__t("Issuer Aztec Address:")}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${payeeAztec.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-                        {payeeAztec.verified ? '✓ Verified (G7)' : 'Not verified: payment blocked'}
+                        {payeeAztec.verified ? __t("✓ Verified (G7)") : __t("Not verified: payment blocked")}
                       </span>
                     </div>
                     <div className="font-mono text-[11px] text-gray-800 flex justify-between items-center bg-white border border-black/[0.06] rounded-lg px-2.5 py-1.5">
                       <span className="truncate mr-2">{payeeAztec.address.slice(0, 16)}…{payeeAztec.address.slice(-8)}</span>
-                      <span className="font-bold bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10.5px] flex-shrink-0">
-                        FP: {issuerFingerprint ?? '…'}
+                      <span className="font-bold bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10.5px] flex-shrink-0">{__t("FP: {value}", { value: issuerFingerprint ?? '…' })}
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-500">
-                      G7 confirms the issuer signed for this address. For large amounts, read this fingerprint with them over another channel.
+                      {__t("G7 confirms the issuer signed for this address. For large amounts, read this fingerprint with them over another channel.")}
                     </p>
                   </div>
                 )}
@@ -320,11 +320,11 @@ export function ZkInvoiceModal({
                   disabled={isPaying || !privateRail.ok || (AZTEC_WALLET_CONFIG.network === 'mainnet' && !acked(ack))}
                   className="w-full min-h-[44px] py-3.5 bg-[#15171c] text-white text-[14px] font-semibold rounded-2xl hover:bg-[#000000] transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-40"
                 >
-                  <Shield size={16} /> Pay privately on {networkLabel()} ({existingInvoice.totalAmount} {existingInvoice.token})
+                  <Shield size={16} />{" "}{__t("Pay privately on")}{" "}{__t(networkLabel())} ({existingInvoice.totalAmount} {existingInvoice.token})
                 </button>
                 {!privateRail.ok && <p className="text-[12.5px] text-gray-500">{privateRail.reason}</p>}
                 {AZTEC_WALLET_CONFIG.network === 'testnet' && privateRail.ok && (
-                  <p className="text-[12.5px] text-gray-500">The private rail uses Aztec test network tokens, which have no value.</p>
+                  <p className="text-[12.5px] text-gray-500">{__t("The private rail uses Aztec test network tokens, which have no value.")}</p>
                 )}
                 {payError && <p role="alert" className="text-[13px] text-[#d93036]">{payError}</p>}
 
@@ -333,18 +333,16 @@ export function ZkInvoiceModal({
                   disabled={isPaying}
                   className="w-full min-h-[44px] py-3 bg-[#f2f4f7] text-[#15171c] text-[14px] font-semibold rounded-2xl hover:bg-[#e4e7ec] transition flex items-center justify-center gap-2 disabled:opacity-40"
                 >
-                  <CreditCard size={16} /> Pay publicly on Ethereum ({existingInvoice.totalAmount} {existingInvoice.token})
+                  <CreditCard size={16} />{" "}{__t("Pay publicly on Ethereum (")}{existingInvoice.totalAmount} {existingInvoice.token})
                 </button>
-                <p className="text-[12px] text-gray-500 leading-relaxed">
-                  Ethereum pays the issuer&apos;s address {payee.payee!.slice(0, 8)}…{payee.payee!.slice(-6)} with real {existingInvoice.token}. Anyone can see the amount and both addresses.
-                </p>
+                <p className="text-[12px] text-gray-500 leading-relaxed">{__t("Ethereum pays the issuer's address {slice}…{slice2} with real {token}. Anyone can see the amount and both addresses.", { slice: payee.payee!.slice(0, 8), slice2: payee.payee!.slice(-6), token: existingInvoice.token })}</p>
               </div>
             )}
 
             {showPublicRail && payee?.ok && (
               <NativeCryptoSendModal
                 isOpen
-                title={`Pay ${existingInvoice.invoiceNumber}`}
+                title={__t("Pay {invoiceNumber}", { invoiceNumber: existingInvoice.invoiceNumber })}
                 recipientAddress={payee.payee!}
                 defaultToken={existingInvoice.token}
                 presetAmount={String(existingInvoice.totalAmount)}
@@ -361,11 +359,11 @@ export function ZkInvoiceModal({
           // ─── Create New Invoice ───────────────────────────────────────
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="text-[12.5px] font-semibold text-gray-500">Invoice Title</label>
+              <label className="text-[12.5px] font-semibold text-gray-500">{__t("Invoice Title")}</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Protocol Security Audit Milestone 1"
+                placeholder={__t("e.g. Protocol Security Audit Milestone 1")}
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 className="w-full mt-1 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-[#15171c]"
@@ -374,26 +372,26 @@ export function ZkInvoiceModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[12.5px] font-semibold text-gray-500">Client / Recipient Address or Tag</label>
+                <label className="text-[12.5px] font-semibold text-gray-500">{__t("Client / Recipient Address or Tag")}</label>
                 <input
                   type="text"
                   required
                   value={recipientTag}
                   onChange={e => setRecipientTag(e.target.value)}
-                  placeholder="0x... or zk:handle"
+                  placeholder={__t("0x... or zk:handle")}
                   className="w-full mt-1 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] tabular-nums outline-none focus:border-[#15171c]"
                 />
               </div>
               <div>
-                <label className="text-[12.5px] font-semibold text-gray-500">Payment Currency</label>
+                <label className="text-[12.5px] font-semibold text-gray-500">{__t("Payment Currency")}</label>
                 <select
                   value={token}
                   onChange={e => setToken(e.target.value as any)}
                   className="w-full mt-1 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[13px] font-semibold outline-none"
                 >
-                  <option value="USDC">USDC</option>
-                  <option value="ETH">ETH</option>
-                  <option value="DAI">DAI</option>
+                  <option value="USDC">{__t("USDC")}</option>
+                  <option value="ETH">{__t("ETH")}</option>
+                  <option value="DAI">{__t("DAI")}</option>
                 </select>
               </div>
             </div>
@@ -401,13 +399,13 @@ export function ZkInvoiceModal({
             {/* Line Items */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[12.5px] font-semibold text-gray-500">Itemized Deliverables</label>
+                <label className="text-[12.5px] font-semibold text-gray-500">{__t("Itemized Deliverables")}</label>
                 <button
                   type="button"
                   onClick={handleAddItem}
                   className="text-[12.5px] font-semibold text-[#15171c] hover:underline flex items-center gap-1"
                 >
-                  <Plus size={12} /> Add Item
+                  <Plus size={12} />{" "}{__t("Add Item")}
                 </button>
               </div>
 
@@ -416,7 +414,7 @@ export function ZkInvoiceModal({
                   <input
                     type="text"
                     required
-                    placeholder="Deliverable description or milestone"
+                    placeholder={__t("Deliverable description or milestone")}
                     value={item.description}
                     onChange={e => handleUpdateItem(idx, 'description', e.target.value)}
                     className="flex-3 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#15171c]"
@@ -424,7 +422,7 @@ export function ZkInvoiceModal({
                   <input
                     type="number"
                     min="1"
-                    placeholder="Qty"
+                    placeholder={__t("Qty")}
                     value={item.quantity || ''}
                     onChange={e => handleUpdateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 0))}
                     className="w-16 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-2 py-2 text-[12px] text-center outline-none"
@@ -433,7 +431,7 @@ export function ZkInvoiceModal({
                     type="number"
                     min="0"
                     step="any"
-                    placeholder="Price"
+                    placeholder={__t("Price")}
                     value={item.unitPrice || ''}
                     onChange={e => handleUpdateItem(idx, 'unitPrice', Math.max(0, parseFloat(e.target.value) || 0))}
                     className="w-24 bg-[#f2f4f7] border border-black/[0.06] rounded-xl px-2 py-2 text-[12px] tabular-nums outline-none"
@@ -453,11 +451,10 @@ export function ZkInvoiceModal({
 
             {/* Total calculation */}
             <div className="bg-[#f7f8fa] border border-black/[0.06] rounded-2xl p-4 flex justify-between items-center">
-              <div className="text-[12px] text-gray-500">
-                Settlement Rail: <span className="font-semibold text-gray-800">Private Aztec Alpha L2 or Public Ethereum L1</span>
+              <div className="text-[12px] text-gray-500">{__t("Settlement Rail: {0}", { 0: <span className="font-semibold text-gray-800">{__t("Private Aztec Alpha L2 or Public Ethereum L1")}</span> })}
               </div>
               <div className="text-right">
-                <span className="text-[12.5px] text-gray-400 font-semibold">Total Due</span>
+                <span className="text-[12.5px] text-gray-400 font-semibold">{__t("Total Due")}</span>
                 <span className="text-[20px] tabular-nums font-semibold text-gray-900 block">
                   {total.toFixed(2)} {token}
                 </span>
@@ -473,7 +470,7 @@ export function ZkInvoiceModal({
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
               }`}
             >
-              <FileText size={16} /> Send invoice
+              <FileText size={16} />{" "}{__t("Send invoice")}
             </button>
           </form>
         )}

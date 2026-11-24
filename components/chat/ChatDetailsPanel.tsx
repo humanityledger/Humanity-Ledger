@@ -6,6 +6,7 @@ import { PeerAvatar, shortAddr } from './ui/kit';
 import { GLYPH_COUNT, safetyGlyphs, type InboxDevices } from '@/lib/chat/safety-glyphs';
 import { ContactInfoSections } from './ContactInfoPanel';
 import { ChatCredit } from './ChatCredit';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * ChatDetailsPanel — the details column beside a conversation on wide screens.
@@ -46,6 +47,7 @@ export function ChatDetailsPanel({
   onBlock: () => void;
   onClearChat?: () => void;
 }) {
+  const t = useT();
   const selfInboxId: string | undefined = client?.inboxId;
   const [glyphs, setGlyphs] = useState<string[] | null>(null);
   const [glyphState, setGlyphState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
@@ -97,9 +99,9 @@ export function ChatDetailsPanel({
 
   const ic = { size: 19, strokeWidth: 1.75, 'aria-hidden': true } as const;
   const actions = [
-    { label: 'Call', icon: <Phone {...ic} />, onClick: () => onCall('audio') },
-    { label: 'Video', icon: <Video {...ic} />, onClick: () => onCall('video') },
-    { label: 'Pay', icon: <Wallet {...ic} />, onClick: onPay },
+    { label: t("Call"), icon: <Phone {...ic} />, onClick: () => onCall('audio') },
+    { label: t("Video"), icon: <Video {...ic} />, onClick: () => onCall('video') },
+    { label: t("Pay"), icon: <Wallet {...ic} />, onClick: onPay },
     { label: isMuted ? 'Unmute' : 'Mute', icon: isMuted ? <Bell {...ic} /> : <BellOff {...ic} />, onClick: onToggleMute, pressed: isMuted },
   ];
 
@@ -107,7 +109,7 @@ export function ChatDetailsPanel({
     <aside
       id="chat-details-column"
       tabIndex={-1}
-      aria-label={`About ${peerName}`}
+      aria-label={t("About {peerName}", { peerName })}
       className="hidden min-[1400px]:flex w-[340px] shrink-0 flex-col gap-5 border-l border-black/[0.08] bg-white px-[22px] pt-7 pb-6 overflow-y-auto outline-none"
     >
       <div className="flex flex-col items-center gap-2.5 text-center">
@@ -128,20 +130,20 @@ export function ChatDetailsPanel({
             className="h-[68px] rounded-2xl border border-[#e4e7ec] bg-white text-[#15171c] flex flex-col items-center justify-center gap-2 hover:bg-[#f7f8fa] transition-colors"
           >
             {a.icon}
-            <span className="text-[12px] font-semibold leading-none">{a.label}</span>
+            <span className="text-[12px] font-semibold leading-none">{t(a.label)}</span>
           </button>
         ))}
       </div>
 
-      <section aria-label="Safety glyphs" className="rounded-[20px] bg-[#f4f5f7] p-4 flex flex-col gap-3">
+      <section aria-label={t("Safety glyphs")} className="rounded-[20px] bg-[#f4f5f7] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-[13px] font-semibold text-[#15171c]">Safety glyphs</h4>
-          {glyphState === 'ready' && <span className="text-[12px] font-medium text-[#5b606b]">Compare</span>}
+          <h4 className="text-[13px] font-semibold text-[#15171c]">{t("Safety glyphs")}</h4>
+          {glyphState === 'ready' && <span className="text-[12px] font-medium text-[#5b606b]">{t("Compare")}</span>}
         </div>
         {glyphState === 'ready' && glyphs ? (
           <div
             role="img"
-            aria-label="Safety pattern for this chat"
+            aria-label={t("Safety pattern for this chat")}
             className="grid grid-cols-12 gap-[2px] font-mono text-[14px] leading-[18px] text-center text-[#15171c]"
           >
             {glyphs.slice(0, GLYPH_COUNT).map((g, i) => (
@@ -152,16 +154,12 @@ export function ChatDetailsPanel({
           </div>
         ) : glyphState === 'loading' ? (
           <p className="h-[78px] flex items-center justify-center rounded-xl bg-white/70 text-[12.5px] text-[#5b606b]" role="status">
-            Reading both devices
+            {t("Reading both devices")}
           </p>
         ) : (
-          <p className="text-[12.5px] leading-relaxed text-[#5b606b]">
-            Shown once {peerName} has written in this chat from Ledger Chat.
-          </p>
+          <p className="text-[12.5px] leading-relaxed text-[#5b606b]">{t("Shown once {peerName} has written in this chat from Ledger Chat.", { peerName })}</p>
         )}
-        <p className="text-[12px] leading-relaxed text-[#4a4f59]">
-          Compare it with {peerName}&rsquo;s screen. It changes if a device is added to either account.
-        </p>
+        <p className="text-[12px] leading-relaxed text-[#4a4f59]">{t("Compare it with {peerName}’s screen. It changes if a device is added to either account.", { peerName })}</p>
       </section>
 
       <ContactInfoSections

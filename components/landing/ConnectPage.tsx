@@ -63,6 +63,7 @@ import { detectConnectedMobileWallet, isExternalMobileBrowser } from "@/lib/wall
 import { purgeLegacyHandshakeSecrets } from "@/lib/scan/sessionHandshake";
 import { setSelfLink } from "@/lib/link/channel";
 import { ONE_CLICK_AUTH } from "@/config/appkit";
+import { useT } from '@/lib/i18n/client';
 
 /** A signature request with no answer after this long is abandoned; a late answer is ignored. */
 const SIGN_TIMEOUT_MS = 120_000;
@@ -184,6 +185,7 @@ function signErrorDetailOf(e: unknown, connector?: string): string {
 }
 
 export default function ConnectPage() {
+  const t = useT();
   const isMobile = useIsMobile();
   const [externalMobile, setExternalMobile] = useState(false);
   const { isConnected, address, status: accountStatus, connector: activeConnector } = useAccount();
@@ -243,18 +245,18 @@ export default function ConnectPage() {
     if (isCaip25ScopeError(error)) {
       // MetaMask pre-selected Tron and refused its own approval (lib/auth/metamask-scope.ts). The next
       // tap on MetaMask revokes that permission and asks for Ethereum only.
-      toast.error("MetaMask could not connect.", { description: CAIP25_HELP, duration: 10000 });
+      toast.error(t("MetaMask could not connect."), { description: CAIP25_HELP, duration: 10000 });
       return;
     }
     if (msg.includes("provider not found") || msg.includes("not installed")) {
-      toast.error("That wallet extension is not installed in this browser.", {
-        action: { label: "Get MetaMask", onClick: () => window.open("https://metamask.io/download/", "_blank") },
+      toast.error(t("That wallet extension is not installed in this browser."), {
+        action: { label: t("Get MetaMask"), onClick: () => window.open("https://metamask.io/download/", "_blank") },
         duration: 7000,
       });
     } else if (msg.includes("rejected")) {
-      toast.error("You declined the connection request.");
+      toast.error(t("You declined the connection request."));
     } else {
-      toast.error("The wallet could not connect.", { description: error.message });
+      toast.error(t("The wallet could not connect."), { description: error.message });
     }
   }, [isError, error]);
 
@@ -268,7 +270,7 @@ export default function ConnectPage() {
       // Set by sign-out when an Aztec wallet store could not be deleted (lib/aztec/wallet/wipe.ts).
       if (sessionStorage.getItem("hl.aztec.wipe_incomplete")) {
         sessionStorage.removeItem("hl.aztec.wipe_incomplete");
-        toast.warning("Some private wallet data could not be removed from this browser. Close other Ledger Chat tabs and sign out again, or clear this site's data.");
+        toast.warning(t("Some private wallet data could not be removed from this browser. Close other Ledger Chat tabs and sign out again, or clear this site's data."));
       }
     } catch {
       /* storage unavailable */
@@ -511,7 +513,7 @@ export default function ConnectPage() {
             }
             // The server already has this wallet's session, yet the app keeps sending the user back here.
             // A new signature would not change that and would only restart the loop: stop and say so.
-            setSignError(LOOP_MESSAGE);
+            setSignError(t(LOOP_MESSAGE));
             setAuthStatus("failed");
             signingRef.current = false;
             return;
@@ -556,7 +558,7 @@ export default function ConnectPage() {
           }
         }
         if (stale()) return;
-        setSignError("The sign-in was not completed in your wallet. Tap 'Try again'.");
+        setSignError(t("The sign-in was not completed in your wallet. Tap 'Try again'."));
         setAuthStatus("failed");
         signingRef.current = false;
         return;
@@ -574,8 +576,8 @@ export default function ConnectPage() {
         if (!nonceRes.ok) {
           setSignError(
             nonceRes.status === 429
-              ? "Too many attempts to sign in from this network. Wait a minute and try again."
-              : "We could not start signing you in. Try again in a moment.",
+              ? t("Too many attempts to sign in from this network. Wait a minute and try again.")
+              : t("We could not start signing you in. Try again in a moment."),
           );
           setAuthStatus("failed");
           signingRef.current = false;
@@ -728,7 +730,7 @@ export default function ConnectPage() {
           // The same loop breaker as every other automatic redirect from this page: if the app has sent
           // the user back here too often, stop instead of opening the chat only to be bounced again.
           if (!allowAutoRedirect()) {
-            setSignError(LOOP_MESSAGE);
+            setSignError(t(LOOP_MESSAGE));
             setAuthStatus("failed");
             signingRef.current = false;
             return;
@@ -741,14 +743,14 @@ export default function ConnectPage() {
         }
 
         const detail = await vr.json().catch(() => null);
-        setSignError(detail?.error || "Your signature could not be verified. Try again.");
+        setSignError(detail?.error || t("Your signature could not be verified. Try again."));
         setAuthStatus("failed");
         signingRef.current = false;
       } catch (e: unknown) {
         if (stale()) return;
         console.warn("[SIWE] signature did not complete:", (e as { message?: string })?.message);
-        setSignError(SIGN_MESSAGES[classifySignError(e)]);
-        setSignErrorDetail(signErrorDetailOf(e, activeConnector?.name));
+        setSignError(t(SIGN_MESSAGES[classifySignError(e)]));
+        setSignErrorDetail(t(signErrorDetailOf(e, activeConnector?.name)));
         setAuthStatus("failed");
         signingRef.current = false;
       }
@@ -849,7 +851,7 @@ export default function ConnectPage() {
                 const scoped = await requestEvmOnlyAccounts(provider, wagmiConfig.chains.map((c) => c.id));
                 if (scoped === "rejected") {
                   setPendingWallet(null);
-                  toast.error("You declined the connection request.");
+                  toast.error(t("You declined the connection request."));
                   return;
                 }
               }
@@ -863,7 +865,7 @@ export default function ConnectPage() {
         connect({ connector: conn });
       } else {
         openAppKitSafe();
-        toast.info(`${w.name} is not installed here. Scan the code with the ${w.name} app on your phone instead.`);
+        toast.info(t("{name} is not installed here. Scan the code with the {name2} app on your phone instead.", { name: w.name, name2: w.name }));
       }
     },
     [connect, connectors, openAppKitSafe, wagmiConfig],
@@ -903,7 +905,7 @@ export default function ConnectPage() {
     setAuthStatus("idle");
     setSignError(null);
     signingRef.current = false;
-    toast.success("Signed out.");
+    toast.success(t("Signed out."));
     nuclearDisconnect();
   }, [nuclearDisconnect, stopQr]);
 
@@ -959,7 +961,7 @@ export default function ConnectPage() {
         signLink={signLink}
         signReady={signReady}
         signPreview={stage === "signing" ? signPreview : null}
-        qr={qrData ? <BrandedQr value={qrData} title="Sign-in QR code" /> : null}
+        qr={qrData ? <BrandedQr value={qrData} title={t("Sign-in QR code")} /> : null}
         qrPin={qrPin}
         qrExpired={qrExpired}
         onWallet={(id) => (isMobile ? handleMobileWallet(id) : handleDesktopWallet(id))}
@@ -987,7 +989,7 @@ export default function ConnectPage() {
           mode="session-only"
           onScan={() => {
             setShowMobileScanner(false);
-            toast.success("The other device is now signed in.");
+            toast.success(t("The other device is now signed in."));
           }}
         />
       )}

@@ -8,8 +8,10 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useT } from '@/lib/i18n/client';
 
 export default function ProfileLinkPage() {
+  const t = useT();
   const router = useRouter();
   const [bad, setBad] = useState(false);
   useEffect(() => {
@@ -20,9 +22,9 @@ export default function ProfileLinkPage() {
   return (
     <main className="min-h-[60vh] flex items-center justify-center p-6">
       <div className="max-w-sm text-center">
-        <p className="text-[17px] font-semibold text-[#15171c]">{bad ? 'This link is not complete' : 'Opening Ledger Chat…'}</p>
+        <p className="text-[17px] font-semibold text-[#15171c]">{bad ? t("This link is not complete") : t("Opening Ledger Chat…")}</p>
         <p className="mt-2 text-[14px] text-[#5b606b] leading-relaxed">
-          {bad ? 'Ask the person for their link or QR code again.' : 'Sign in, and the chat with the person who shared this link opens.'}
+          {bad ? t("Ask the person for their link or QR code again.") : t("Sign in, and the chat with the person who shared this link opens.")}
         </p>
       </div>
     </main>

@@ -10,6 +10,7 @@ import {
   Send, Zap, Lock, ChevronRight, Copy, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 const AZTEC_NETWORK_METADATA = {
   testnetImage: 'azteclabs/aztec:6.0.0-rc.3',
@@ -29,6 +30,7 @@ interface ZkSequencerDashboardProps {
 }
 
 function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkSequencerDashboardProps) {
+  const t = useT();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeNetwork, setActiveNetwork] = useState<'testnet' | 'mainnet'>('testnet');
@@ -61,13 +63,13 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
     await new Promise(r => setTimeout(r, 1200));
     setSignalled(true);
     setSignalling(false);
-    toast.success('Señalización V6 enviada exitosamente para el Sequencer');
+    toast.success(t("Señalización V6 enviada exitosamente para el Sequencer"));
   };
 
   const handleCopyPayload = () => {
     navigator.clipboard.writeText(AZTEC_NETWORK_METADATA.governanceProposerPayload);
     setCopiedPayload(true);
-    toast.success('Dirección del Proposer Payload copiada');
+    toast.success(t("Dirección del Proposer Payload copiada"));
     setTimeout(() => setCopiedPayload(false), 2000);
   };
 
@@ -81,12 +83,12 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-[17px] font-bold text-white">Aztec Sequencer &amp; Node Operations</h2>
+              <h2 className="text-[17px] font-bold text-white">{t("Aztec Sequencer & Node Operations")}</h2>
               <span className="text-[10px] font-black uppercase tracking-wider bg-[#1C1C1E]/20 text-[#FFFFFF] px-2 py-0.5 rounded-full border border-[#1C1C1E]/30">
-                Rollup v6 Active
+                {t("Rollup v6 Active")}
               </span>
             </div>
-            <p className="text-[12px] text-white/60">Monitoreo de bloques rollup, clientes Nethermind y gobernanza descentralizada</p>
+            <p className="text-[12px] text-white/60">{t("Monitoreo de bloques rollup, clientes Nethermind y gobernanza descentralizada")}</p>
           </div>
         </div>
 
@@ -99,18 +101,14 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
                 activeNetwork === 'testnet' ? 'bg-[#1C1C1E] text-white shadow' : 'text-white/60 hover:text-white'
               }`}
-            >
-              Testnet ({AZTEC_NETWORK_METADATA.testnetVersion})
-            </button>
+            >{t("Testnet ({testnetVersion})", { testnetVersion: t(AZTEC_NETWORK_METADATA.testnetVersion) })}</button>
             <button
               type="button"
               onClick={() => setActiveNetwork('mainnet')}
               className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
                 activeNetwork === 'mainnet' ? 'bg-[#1C1C1E] text-white shadow' : 'text-white/60 hover:text-white'
               }`}
-            >
-              Mainnet ({AZTEC_NETWORK_METADATA.mainnetVersion})
-            </button>
+            >{t("Mainnet ({mainnetVersion})", { mainnetVersion: t(AZTEC_NETWORK_METADATA.mainnetVersion) })}</button>
           </div>
 
           <button
@@ -133,15 +131,12 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-[14px]">Testnet Node v6.0.0-rc.3 Desplegado</h4>
+                  <h4 className="font-bold text-[14px]">{t("Testnet Node v6.0.0-rc.3 Desplegado")}</h4>
                   <span className="text-[10px] font-black uppercase bg-emerald-200/80 text-emerald-800 px-2 py-0.5 rounded-full">
-                    Obligatorio
+                    {t("Obligatorio")}
                   </span>
                 </div>
-                <p className="text-[12px] text-emerald-800/80 mt-0.5 leading-relaxed">
-                  Imagen recomendada: <code className="bg-emerald-100 font-mono font-bold px-1.5 py-0.5 rounded text-emerald-900">{AZTEC_NETWORK_METADATA.testnetImage}</code>.
-                  Los nodos no actualizados antes de las 10:00 UTC serán penalizados (slashed) por el sequencer.
-                </p>
+                <p className="text-[12px] text-emerald-800/80 mt-0.5 leading-relaxed">{t("Imagen recomendada: {0}. Los nodos no actualizados antes de las 10:00 UTC serán penalizados (slashed) por el sequencer.", { 0: <code className="bg-emerald-100 font-mono font-bold px-1.5 py-0.5 rounded text-emerald-900">{AZTEC_NETWORK_METADATA.testnetImage}</code> })}</p>
               </div>
             </div>
             <a
@@ -150,7 +145,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               rel="noopener noreferrer"
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[12px] shrink-0 flex items-center gap-1.5 shadow-sm"
             >
-              Guía Oficial <ExternalLink size={13} />
+              {t("Guía Oficial")}{" "}<ExternalLink size={13} />
             </a>
           </div>
         ) : (
@@ -162,13 +157,12 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-[14px]">Nethermind v{AZTEC_NETWORK_METADATA.nethermindVersion} Operativo en Mainnet</h4>
-                  <span className="text-[10px] font-black uppercase bg-amber-200/80 text-amber-800 px-2 py-0.5 rounded-full">
-                    Rollup Block #{AZTEC_NETWORK_METADATA.rollupDeployBlock}
+                  <h4 className="font-bold text-[14px]">{t("Nethermind v{nethermindVersion} Operativo en Mainnet", { nethermindVersion: t(AZTEC_NETWORK_METADATA.nethermindVersion) })}</h4>
+                  <span className="text-[10px] font-black uppercase bg-amber-200/80 text-amber-800 px-2 py-0.5 rounded-full">{t("Rollup Block #{rollupDeployBlock}", { rollupDeployBlock: t(AZTEC_NETWORK_METADATA.rollupDeployBlock) })}
                   </span>
                 </div>
                 <p className="text-[12px] text-amber-800/80 mt-0.5 leading-relaxed">
-                  Configuración Path 1 activa (preserva base de datos sin resync). Historial L1 preservado desde el bloque de génesis del Rollup.
+                  {t("Configuración Path 1 activa (preserva base de datos sin resync). Historial L1 preservado desde el bloque de génesis del Rollup.")}
                 </p>
               </div>
             </div>
@@ -178,7 +172,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               rel="noopener noreferrer"
               className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[12px] shrink-0 flex items-center gap-1.5 shadow-sm"
             >
-              Ver Noticia <ExternalLink size={13} />
+              {t("Ver Noticia")}{" "}<ExternalLink size={13} />
             </a>
           </div>
         )}
@@ -188,7 +182,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Radio size={18} className="text-[#1C1C1E] " />
-              <h3 className="text-[15px] font-bold text-[#1C1C1E]">Señalización de Gobernanza V6 para Sequencers</h3>
+              <h3 className="text-[15px] font-bold text-[#1C1C1E]">{t("Señalización de Gobernanza V6 para Sequencers")}</h3>
             </div>
             <a
               href="https://forum.aztec.network/t/proposal-v6-payload/8671"
@@ -196,18 +190,18 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               rel="noopener noreferrer"
               className="text-[12px] text-[#1C1C1E] font-bold flex items-center gap-1 hover:underline"
             >
-              Ver Propuesta en Forum <ExternalLink size={12} />
+              {t("Ver Propuesta en Forum")}{" "}<ExternalLink size={12} />
             </a>
           </div>
           <p className="text-[13px] text-black/60 mb-3 leading-relaxed">
-            La propuesta AZUP V6 está lista para señalización de sequencers previa a la votación formal on-chain.
+            {t("La propuesta AZUP V6 está lista para señalización de sequencers previa a la votación formal on-chain.")}
           </p>
 
           <div className="bg-white rounded-xl p-3 border border-black/5 flex items-center justify-between gap-3 mb-4">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-black/40">GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-black/40">{t("GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS")}</p>
               <p className="font-mono text-[13px] font-bold text-[#1C1C1E] truncate mt-0.5">
-                {AZTEC_NETWORK_METADATA.governanceProposerPayload}
+                {t(AZTEC_NETWORK_METADATA.governanceProposerPayload)}
               </p>
             </div>
             <button
@@ -216,7 +210,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
               className="px-3 py-1.5 rounded-lg bg-black/5 hover:bg-black/10 text-[12px] font-semibold text-black/70 flex items-center gap-1 shrink-0"
             >
               {copiedPayload ? <Check size={13} className="text-[#1C1C1E]" /> : <Copy size={13} />}
-              {copiedPayload ? 'Copiado' : 'Copiar'}
+              {copiedPayload ? t("Copiado") : t("Copiar")}
             </button>
           </div>
 
@@ -233,15 +227,15 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
             >
               {signalling ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" /> Transmitiendo señalización...
+                  <RefreshCw size={16} className="animate-spin" />{" "}{t("Transmitiendo señalización...")}
                 </>
               ) : signalled ? (
                 <>
-                  <CheckCircle2 size={16} /> Sequencer Señalizado a favor de V6
+                  <CheckCircle2 size={16} />{" "}{t("Sequencer Señalizado a favor de V6")}
                 </>
               ) : (
                 <>
-                  <Send size={15} /> Señalizar V6 Payload en mi Sequencer
+                  <Send size={15} />{" "}{t("Señalizar V6 Payload en mi Sequencer")}
                 </>
               )}
             </button>
@@ -251,35 +245,35 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">Bloque Rollup</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">{t("Bloque Rollup")}</p>
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               #{data?.currentBlock || '14,824'}
             </p>
-            <p className="text-[11px] text-[#1C1C1E] font-semibold mt-0.5">Época #{data?.currentEpoch || '463'}</p>
+            <p className="text-[11px] text-[#1C1C1E] font-semibold mt-0.5">{t("Época #{value}", { value: data?.currentEpoch || '463' })}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">Tiempo Promedio Prover</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">{t("Tiempo Promedio Prover")}</p>
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
-              {data?.sequencerMetrics?.avgProverTimeMs || '940'} <span className="text-[13px] font-semibold text-black/40">ms</span>
+              {data?.sequencerMetrics?.avgProverTimeMs || '940'} <span className="text-[13px] font-semibold text-black/40">{t("ms")}</span>
             </p>
-            <p className="text-[11px] text-black/40 font-semibold mt-0.5">UltraHonk BN254</p>
+            <p className="text-[11px] text-black/40 font-semibold mt-0.5">{t("UltraHonk BN254")}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">Ahorro de Gas vs L1</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">{t("Ahorro de Gas vs L1")}</p>
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               {data?.sequencerMetrics?.avgGasSavedVsL1 || '99.4%'}
             </p>
-            <p className="text-[11px] text-black/40 font-semibold mt-0.5">Amortización por Lote</p>
+            <p className="text-[11px] text-black/40 font-semibold mt-0.5">{t("Amortización por Lote")}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#F9F9FB] border border-black/5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">Transacciones Lote</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-black/40">{t("Transacciones Lote")}</p>
             <p className="text-[20px] font-black text-[#1C1C1E] font-mono mt-1">
               {data?.sequencerMetrics?.avgTxPerBatch || '24.2'}
             </p>
-            <p className="text-[11px] text-black/40 font-semibold mt-0.5">zkDAI / zkUSDC / zkETH</p>
+            <p className="text-[11px] text-black/40 font-semibold mt-0.5">{t("zkDAI / zkUSDC / zkETH")}</p>
           </div>
         </div>
 
@@ -288,21 +282,21 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-[14px] font-bold text-[#1C1C1E] flex items-center gap-1.5">
               <Activity size={16} className="text-[#1C1C1E]" />
-              Lotes Recientes Procesados por el Sequencer
+              {t("Lotes Recientes Procesados por el Sequencer")}
             </h4>
-            <span className="text-[11px] font-mono text-black/40">Cadencia: ~12s por lote</span>
+            <span className="text-[11px] font-mono text-black/40">{t("Cadencia: ~12s por lote")}</span>
           </div>
 
           <div className="border border-black/10 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse text-[12px]">
               <thead className="bg-[#F2F2F7] border-b border-black/5 text-black/60 font-bold uppercase text-[10px]">
                 <tr>
-                  <th className="py-3 px-4">Lote ID</th>
-                  <th className="py-3 px-4">Bloque</th>
-                  <th className="py-3 px-4">Tx Privadas</th>
-                  <th className="py-3 px-4">Restricciones Circuit</th>
-                  <th className="py-3 px-4">Gas Amortizado</th>
-                  <th className="py-3 px-4">Estado</th>
+                  <th className="py-3 px-4">{t("Lote ID")}</th>
+                  <th className="py-3 px-4">{t("Bloque")}</th>
+                  <th className="py-3 px-4">{t("Tx Privadas")}</th>
+                  <th className="py-3 px-4">{t("Restricciones Circuit")}</th>
+                  <th className="py-3 px-4">{t("Gas Amortizado")}</th>
+                  <th className="py-3 px-4">{t("Estado")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5 bg-white font-mono">
@@ -311,7 +305,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
                     <tr key={b.batchId} className="hover:bg-black/[0.02] transition-colors">
                       <td className="py-3 px-4 font-bold text-[#1C1C1E] truncate max-w-[130px]">{b.batchId}</td>
                       <td className="py-3 px-4 text-black/70">#{b.blockNumber}</td>
-                      <td className="py-3 px-4 font-bold text-emerald-600">{b.transactions} txs</td>
+                      <td className="py-3 px-4 font-bold text-emerald-600">{t("{transactions} txs", { transactions: b.transactions })}</td>
                       <td className="py-3 px-4 text-black/60">{b.circuitConstraints.toLocaleString()}</td>
                       <td className="py-3 px-4 text-black/60">{b.gasAmortized}</td>
                       <td className="py-3 px-4">
@@ -324,7 +318,7 @@ function ZkSequencerDashboardInner({ userAddress, onClose, className = '' }: ZkS
                 ) : (
                   <tr>
                     <td colSpan={6} className="text-center py-6 text-black/40">
-                      Cargando historial de lotes Aztec…
+                      {t("Cargando historial de lotes Aztec…")}
                     </td>
                   </tr>
                 )}

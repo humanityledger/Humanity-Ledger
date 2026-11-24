@@ -9,8 +9,9 @@ import { requestPlace, requestState, type RequestRow, type RequestStore } from '
 import { NOTHING_RESERVED, redeemBetaInvite, type BetaStore } from '@/lib/beta/cusdc-beta-store';
 import type { BetaMemberRow } from '@/lib/beta/cusdc-beta-store';
 import { BETA_NOTICE_VERSION } from '@/lib/beta/cusdc-beta';
+import { untranslated } from '../../helpers/untranslated';
 
-const read = (p: string) => fs.readFileSync(path.resolve(__dirname, '../../..', p), 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(path.resolve(__dirname, '../../..', p), 'utf8'));
 const W = '0x' + 'ab'.repeat(20);
 const now = new Date('2026-11-23T15:00:00Z');
 
@@ -112,7 +113,7 @@ describe('wiring', () => {
   it('/beta offers the request form without a code, and joins with a reserved place', () => {
     const view = read('components/beta/BetaGateView.tsx');
     expect(view).toMatch(/Request an invitation/);
-    expect(view).toMatch(/I don&apos;t have a code yet/);
+    expect(view).toMatch(/I don(?:&apos;|')t have a code yet/);
     expect(view).toMatch(/<BetaRequestForm/);
     expect(view).toMatch(/reserved: true, notice: true/);
   });

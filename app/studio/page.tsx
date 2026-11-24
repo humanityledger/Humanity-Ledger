@@ -1,4 +1,5 @@
 'use client';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * /studio is closed. The studio application is not loaded.
@@ -6,6 +7,7 @@
  */
 
 export default function StudioPage() {
+  const t = useT();
   return (
     <main
       className="h-[100dvh] flex flex-col items-center justify-center gap-3 bg-white px-6 text-center"
@@ -20,12 +22,12 @@ export default function StudioPage() {
           <path d="M8 11V8a4 4 0 0 1 8 0v3" />
         </svg>
       </span>
-      <h1 className="text-[18px] font-semibold text-[#15171c]">Ledger Studio is closed</h1>
+      <h1 className="text-[18px] font-semibold text-[#15171c]">{t("Ledger Studio is closed")}</h1>
       <p className="max-w-sm text-[14px] leading-relaxed text-[#4a505c]">
-        It is not available. Nothing on this page can be opened, typed into, or sent.
+        {t("It is not available. Nothing on this page can be opened, typed into, or sent.")}
       </p>
       <a href="/chat" className="mt-2 text-[14px] font-semibold text-[#15171c] underline">
-        Back to Ledger Chat
+        {t("Back to Ledger Chat")}
       </a>
     </main>
   );

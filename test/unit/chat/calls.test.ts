@@ -11,9 +11,10 @@ import { createHmac } from 'node:crypto';
 import { CALL_AUDIO, FALLBACK_ICE, callConstraints, callVideo, loadIceConfig, loadIceServers, peerServerOptions, preferRed, tuneOpusSdp, tuneSenders } from '@/lib/calls/media';
 import { finishCallMetrics, markFirstAudio, markSetup, recentCallMetrics, sampleHeap, startCallMetrics } from '@/lib/calls/metrics';
 import { RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, basePeerId, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
+import { untranslated } from '../../helpers/untranslated';
 
 const root = path.resolve(__dirname, '../../..');
-const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(path.join(root, p), 'utf8'));
 
 const SDP = [
   'v=0',

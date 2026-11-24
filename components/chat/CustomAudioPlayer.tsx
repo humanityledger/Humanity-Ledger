@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMediaUrl } from '@/lib/chat/media-url';
 import { Play, Pause, Download } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: boolean }) => {
+  const t = useT();
   // data: voice notes are played from a blob: URL, which the CSP allows (lib/chat/media-url.ts).
   const src = useMediaUrl(rawSrc) ?? '';
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -229,7 +231,7 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
         <button
           type="button"
           onClick={togglePlay}
-          aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
+          aria-label={isPlaying ? t("Pause voice message") : t("Play voice message")}
           className="w-9 h-9 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white flex items-center justify-center shrink-0 transition-all active:scale-95"
         >
           {isPlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
@@ -245,7 +247,7 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
               step="0.05"
               value={progress}
               onChange={handleSeek}
-              aria-label="Position in voice message"
+              aria-label={t("Position in voice message")}
               className="absolute z-20 w-full opacity-0 cursor-pointer h-full inset-0"
             />
             {/* Generate 30 bars for the waveform */}
@@ -274,7 +276,7 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
         <button
           type="button"
           onClick={togglePlaybackRate}
-          aria-label="Playback speed"
+          aria-label={t("Playback speed")}
           className="px-2 py-0.5 rounded-full text-[12px] font-medium tabular-nums bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#4a505c] transition-colors shrink-0"
         >
           {playbackRate}x
@@ -282,16 +284,14 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
       </div>
 
       {unplayable && (
-        <p className="flex items-center gap-2 px-0.5 text-[12.5px] text-[#727a88]">
-          This browser cannot play this recording.
-          <a href={src} download="voice-message" className="inline-flex items-center gap-1 font-medium text-[#15171c] underline underline-offset-2">
-            <Download size={13} strokeWidth={2} aria-hidden="true" /> Save it
-          </a>
+        <p className="flex items-center gap-2 px-0.5 text-[12.5px] text-[#727a88]">{t("This browser cannot play this recording.{0}", { 0: <a href={src} download="voice-message" className="inline-flex items-center gap-1 font-medium text-[#15171c] underline underline-offset-2">
+            <Download size={13} strokeWidth={2} aria-hidden="true" />{" "}{t("Save it")}
+          </a> })}
         </p>
       )}
       {showTranscript && (
         <div className="px-3 py-1.5 rounded-xl text-[13px] bg-[#f2f4f7] text-[#4a505c]">
-          Transcribing
+          {t("Transcribing")}
         </div>
       )}
     </div>

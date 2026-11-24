@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { untranslated } from '../../helpers/untranslated';
 
 // Regressions found in the November 2026 audit of Ledger Chat.
-const src = readFileSync(join(process.cwd(), 'components/terminal/LedgerChatV2.tsx'), 'utf8');
+const src = untranslated(readFileSync(join(process.cwd(), 'components/terminal/LedgerChatV2.tsx'), 'utf8'));
 const xmtp = readFileSync(join(process.cwd(), 'lib/xmtp/client.ts'), 'utf8');
 
 describe('voice messages', () => {

@@ -6,6 +6,7 @@ import { versions } from '@/lib/landing/facts';
 import { VISIBILITY } from '@/lib/landing/chapters';
 import { SiteFooter, SiteHeader, Arrow } from '@/components/landing/site/Chrome';
 import s from '@/components/landing/site/site.module.css';
+import { getT } from '@/lib/i18n/server';
 
 /**
  * /security: the security architecture, part by part (verdict prompt, "Enterprise-grade landing
@@ -23,7 +24,8 @@ export const metadata: Metadata = {
 const REPO = EXTERNAL_LINKS.github.repo;
 const review = (mainnet as { internalReview?: { report: string; date: string } }).internalReview;
 
-export default function SecurityPage() {
+export default async function SecurityPage() {
+  const __t = await getT();
   const v = versions();
   const crypto: { part: string; how: string; standard: string; keys: string }[] = [
     { part: 'Messages', how: `XMTP browser SDK${v.xmtp ? ` ${v.xmtp}` : ''}; group state and keys updated as members and time change`, standard: 'MLS, RFC 9420', keys: 'Made and kept on your device. The local message database is encrypted, its key held under a non-extractable browser key' },
@@ -51,22 +53,22 @@ export default function SecurityPage() {
 
   return (
     <div className={s.site} data-site="public">
-      <a href="#main" className={s.skip}>Skip to content</a>
+      <a href="#main" className={s.skip}>{__t("Skip to content")}</a>
       <SiteHeader home={false} />
       <main id="main">
         <section className={s.pageHead}>
           <div className={s.wrap}>
-            <p className={s.eyebrow}>Security</p>
-            <h1 className={s.h1}>How Ledger Chat protects you, part by part.</h1>
+            <p className={s.eyebrow}>{__t("Security")}</p>
+            <h1 className={s.h1}>{__t("How Ledger Chat protects you, part by part.")}</h1>
             <p className={s.lede}>
-              The standard each part uses, where its keys live, what every party can see, and the limits, each next to the part it limits.
+              {__t("The standard each part uses, where its keys live, what every party can see, and the limits, each next to the part it limits.")}
             </p>
-            <nav className={s.toc} aria-label="On this page">
-              <a href="#cryptography">Cryptography</a>
-              <a href="#visibility">What each party sees</a>
-              <a href="#threats">Threat model</a>
-              <a href="#limits">Limits</a>
-              <a href="#report">Report a vulnerability</a>
+            <nav className={s.toc} aria-label={__t("On this page")}>
+              <a href="#cryptography">{__t("Cryptography")}</a>
+              <a href="#visibility">{__t("What each party sees")}</a>
+              <a href="#threats">{__t("Threat model")}</a>
+              <a href="#limits">{__t("Limits")}</a>
+              <a href="#report">{__t("Report a vulnerability")}</a>
             </nav>
           </div>
         </section>
@@ -74,12 +76,12 @@ export default function SecurityPage() {
         <section id="cryptography" className={s.section} aria-labelledby="cryptography-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="cryptography-title">Cryptography and keys</h2>
-              <p className={s.body}>No new cryptography of our own: every part uses a published standard or the primitives of the network it runs on.</p>
+              <h2 className={s.h2} id="cryptography-title">{__t("Cryptography and keys")}</h2>
+              <p className={s.body}>{__t("No new cryptography of our own: every part uses a published standard or the primitives of the network it runs on.")}</p>
             </header>
             <div className={`${s.tableWrap} ${s.tableCard}`}>
               <table className={`${s.table} ${s.vis}`}>
-                <thead><tr><th scope="col">Part</th><th scope="col">How</th><th scope="col">Standard</th><th scope="col">Keys</th></tr></thead>
+                <thead><tr><th scope="col">{__t("Part")}</th><th scope="col">{__t("How")}</th><th scope="col">{__t("Standard")}</th><th scope="col">{__t("Keys")}</th></tr></thead>
                 <tbody>
                   {crypto.map((r) => (
                     <tr key={r.part}>
@@ -98,19 +100,19 @@ export default function SecurityPage() {
         <section id="visibility" className={`${s.section} ${s.sectionWash}`} aria-labelledby="visibility-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="visibility-title">What each party can see</h2>
-              <p className={s.body}>{VISIBILITY.body}</p>
+              <h2 className={s.h2} id="visibility-title">{__t("What each party can see")}</h2>
+              <p className={s.body}>{__t(VISIBILITY.body)}</p>
             </header>
             <div className={`${s.tableWrap} ${s.tableCard}`}>
               <table className={`${s.table} ${s.vis}`}>
-                <thead><tr>{VISIBILITY.head.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+                <thead><tr>{VISIBILITY.head.map((h) => <th key={h} scope="col">{__t(h)}</th>)}</tr></thead>
                 <tbody>
                   {VISIBILITY.rows.map((r) => (
                     <tr key={r.part}>
-                      <th scope="row">{r.part}</th>
-                      <td data-k={VISIBILITY.head[1]}>{r.who}</td>
-                      <td data-k={VISIBILITY.head[2]}>{r.server}</td>
-                      <td data-k={VISIBILITY.head[3]}>{r.next || 'No change needed'}</td>
+                      <th scope="row">{__t(r.part)}</th>
+                      <td data-k={VISIBILITY.head[1]}>{__t(r.who)}</td>
+                      <td data-k={VISIBILITY.head[2]}>{__t(r.server)}</td>
+                      <td data-k={VISIBILITY.head[3]}>{__t(r.next) || __t("No change needed")}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -122,14 +124,14 @@ export default function SecurityPage() {
         <section id="threats" className={s.section} aria-labelledby="threats-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="threats-title">Threat model, in short</h2>
+              <h2 className={s.h2} id="threats-title">{__t("Threat model, in short")}</h2>
               <p className={s.body}>
-                Who might attack, what they could do today, what they cannot, and what limits them. The full model, component by component, is in the repository.
+                {__t("Who might attack, what they could do today, what they cannot, and what limits them. The full model, component by component, is in the repository.")}
               </p>
             </header>
             <div className={`${s.tableWrap} ${s.tableCard}`}>
               <table className={`${s.table} ${s.vis}`}>
-                <thead><tr><th scope="col">Who</th><th scope="col">Can today</th><th scope="col">Cannot</th><th scope="col">What limits it</th></tr></thead>
+                <thead><tr><th scope="col">{__t("Who")}</th><th scope="col">{__t("Can today")}</th><th scope="col">{__t("Cannot")}</th><th scope="col">{__t("What limits it")}</th></tr></thead>
                 <tbody>
                   {threats.map((t) => (
                     <tr key={t.who}>
@@ -143,20 +145,17 @@ export default function SecurityPage() {
               </table>
             </div>
             <p className={s.note}>
-              <a className={s.extLink} href={`${REPO}/blob/main/docs/security/THREAT_MODEL.md`} target="_blank" rel="noopener noreferrer">The full threat model (STRIDE and LINDDUN)</a>
+              <a className={s.extLink} href={`${REPO}/blob/main/docs/security/THREAT_MODEL.md`} target="_blank" rel="noopener noreferrer">{__t("The full threat model (STRIDE and LINDDUN)")}</a>
             </p>
           </div>
         </section>
 
         <section id="limits" className={`${s.section} ${s.sectionWash}`} aria-labelledby="limits-title">
           <div className={`${s.wrap} ${s.prose}`}>
-            <h2 className={s.h2} id="limits-title">Limits</h2>
+            <h2 className={s.h2} id="limits-title">{__t("Limits")}</h2>
             <ul>{limits.map((l) => <li key={l}>{l}</li>)}</ul>
             {review ? (
-              <p className={s.note}>
-                Internal security review of {review.date}:{' '}
-                <a className={s.extLink} href={`${REPO}/blob/main/${review.report}`} target="_blank" rel="noopener noreferrer">read the report</a>.
-              </p>
+              <p className={s.note}>{__t("Internal security review of {date}:{value}{0}.", { date: review.date, value: ' ', 0: <a className={s.extLink} href={`${REPO}/blob/main/${review.report}`} target="_blank" rel="noopener noreferrer">{__t("read the report")}</a> })}</p>
             ) : null}
           </div>
         </section>
@@ -164,10 +163,10 @@ export default function SecurityPage() {
         <section id="report" className={s.section} aria-labelledby="report-title">
           <div className={s.wrap}>
             <div className={s.closing}>
-              <h2 className={s.h2} id="report-title">Found a vulnerability?</h2>
-              <p className={s.body}>Report it privately, first. Please do not open a public issue. The disclosure policy is in the trust centre.</p>
-              <a className={s.btn} href={EXTERNAL_LINKS.github.security} target="_blank" rel="noopener noreferrer">Report privately on GitHub<Arrow /></a>
-              <p style={{ marginTop: 20 }}><a href="/trust#disclosure" style={{ color: '#fff', textDecoration: 'underline' }}>Read the disclosure policy</a></p>
+              <h2 className={s.h2} id="report-title">{__t("Found a vulnerability?")}</h2>
+              <p className={s.body}>{__t("Report it privately, first. Please do not open a public issue. The disclosure policy is in the trust centre.")}</p>
+              <a className={s.btn} href={EXTERNAL_LINKS.github.security} target="_blank" rel="noopener noreferrer">{__t("Report privately on GitHub")}<Arrow /></a>
+              <p style={{ marginTop: 20 }}><a href="/trust#disclosure" style={{ color: '#fff', textDecoration: 'underline' }}>{__t("Read the disclosure policy")}</a></p>
             </div>
           </div>
         </section>

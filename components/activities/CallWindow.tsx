@@ -32,6 +32,7 @@ import { useMotionPreset } from './motion';
 import { useNow } from './useNow';
 import { useViewport } from './useViewport';
 import s from './activities.module.css';
+import { useT } from '@/lib/i18n/client';
 
 const CORNER_KEY = 'hl_call_window_corner';
 const SIZE_KEY = 'hl_call_window_size';
@@ -43,6 +44,7 @@ const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } ca
 const I = { size: 16, strokeWidth: 2, 'aria-hidden': true } as const;
 
 export function CallWindow({ announce }: { announce: (text: string) => void }) {
+  const t = useT();
   const activities = useActivities((st) => st.activities);
   const presentation = useActivities((st) => st.presentation);
   const setPresentation = useActivities((st) => st.setPresentation);
@@ -181,7 +183,7 @@ export function CallWindow({ announce }: { announce: (text: string) => void }) {
       exit={motionPreset.appear.exit}
       tabIndex={0}
       role="group"
-      aria-roledescription="Floating call window"
+      aria-roledescription={t("Floating call window")}
       aria-label={spoken}
       onKeyDown={onKeyDown}
       onDoubleClick={() => controls?.openStage()}
@@ -198,7 +200,7 @@ export function CallWindow({ announce }: { announce: (text: string) => void }) {
           )}
           <span className={s.chip} aria-hidden="true">
             <span className={`${s.chipDot} ${warn ? s.chipDotWarn : ''}`} />
-            {warn ? 'Reconnecting' : timer}
+            {warn ? t("Reconnecting") : timer}
           </span>
           <motion.div
             className={s.bar}
@@ -207,26 +209,26 @@ export function CallWindow({ announce }: { announce: (text: string) => void }) {
             transition={{ duration: 0.18 }}
             style={{ pointerEvents: showChrome ? 'auto' : 'none' }}
           >
-            <button type="button" className={`${s.barBtn} ${micMuted ? s.barBtnOn : ''}`} onClick={controls?.toggleMic} aria-pressed={micMuted} aria-label={micMuted ? 'Unmute' : 'Mute'}>
+            <button type="button" className={`${s.barBtn} ${micMuted ? s.barBtnOn : ''}`} onClick={controls?.toggleMic} aria-pressed={micMuted} aria-label={micMuted ? t("Unmute") : t("Mute")}>
               {micMuted ? <MicOff {...I} /> : <Mic {...I} />}
             </button>
             {controls?.toggleCamera && (
-              <button type="button" className={`${s.barBtn} ${cameraOff ? s.barBtnOn : ''}`} onClick={controls.toggleCamera} aria-pressed={cameraOff} aria-label={cameraOff ? 'Turn camera on' : 'Turn camera off'}>
+              <button type="button" className={`${s.barBtn} ${cameraOff ? s.barBtnOn : ''}`} onClick={controls.toggleCamera} aria-pressed={cameraOff} aria-label={cameraOff ? t("Turn camera on") : t("Turn camera off")}>
                 {cameraOff ? <CameraOff {...I} /> : <Camera {...I} />}
               </button>
             )}
             {pipAvailable && (
-              <button type="button" className={s.barBtn} onClick={openPip} aria-label="Picture in picture, with both cameras">
+              <button type="button" className={s.barBtn} onClick={openPip} aria-label={t("Picture in picture, with both cameras")}>
                 <PictureInPicture2 {...I} />
               </button>
             )}
-            <button type="button" className={s.barBtn} onClick={() => resize(size === 'small' ? 'large' : 'small')} aria-label={size === 'small' ? 'Larger window' : 'Smaller window'}>
+            <button type="button" className={s.barBtn} onClick={() => resize(size === 'small' ? 'large' : 'small')} aria-label={size === 'small' ? t("Larger window") : t("Smaller window")}>
               {size === 'small' ? <Plus {...I} /> : <Minus {...I} />}
             </button>
-            <button type="button" className={s.barBtn} onClick={controls?.openStage} aria-label="Open the full call">
+            <button type="button" className={s.barBtn} onClick={controls?.openStage} aria-label={t("Open the full call")}>
               <Maximize2 {...I} />
             </button>
-            <button type="button" className={`${s.barBtn} ${s.barBtnDanger}`} onClick={controls?.end} aria-label="End call">
+            <button type="button" className={`${s.barBtn} ${s.barBtnDanger}`} onClick={controls?.end} aria-label={t("End call")}>
               <PhoneOff {...I} />
             </button>
           </motion.div>
@@ -239,18 +241,18 @@ export function CallWindow({ announce }: { announce: (text: string) => void }) {
           </span>
           <div className={s.voiceText}>
             <p className={s.voiceName}>{peer}</p>
-            <p className={s.voiceTime}>{inBrowserPip ? 'In picture in picture' : warn ? 'Reconnecting…' : timer}</p>
+            <p className={s.voiceTime}>{inBrowserPip ? t("In picture in picture") : warn ? t("Reconnecting…") : timer}</p>
           </div>
-          <button type="button" className={`${s.vBtn} ${micMuted ? s.vBtnOn : ''}`} onClick={controls?.toggleMic} aria-pressed={micMuted} aria-label={micMuted ? 'Unmute' : 'Mute'}>
+          <button type="button" className={`${s.vBtn} ${micMuted ? s.vBtnOn : ''}`} onClick={controls?.toggleMic} aria-pressed={micMuted} aria-label={micMuted ? t("Unmute") : t("Mute")}>
             {micMuted ? <MicOff {...I} /> : <Mic {...I} />}
           </button>
-          <button type="button" className={s.vBtn} onClick={() => setPresentation('island')} aria-label="Put the call in the island">
+          <button type="button" className={s.vBtn} onClick={() => setPresentation('island')} aria-label={t("Put the call in the island")}>
             <Minimize2 {...I} />
           </button>
-          <button type="button" className={s.vBtn} onClick={controls?.openStage} aria-label="Open the full call">
+          <button type="button" className={s.vBtn} onClick={controls?.openStage} aria-label={t("Open the full call")}>
             <Maximize2 {...I} />
           </button>
-          <button type="button" className={`${s.vBtn} ${s.vBtnDanger}`} onClick={controls?.end} aria-label="End call">
+          <button type="button" className={`${s.vBtn} ${s.vBtnDanger}`} onClick={controls?.end} aria-label={t("End call")}>
             <PhoneOff {...I} />
           </button>
         </>

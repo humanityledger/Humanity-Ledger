@@ -8,6 +8,7 @@
  */
 import React from 'react';
 import s from './site.module.css';
+import { useT } from '@/lib/i18n/client';
 
 interface Step { title: string; text: string }
 
@@ -67,6 +68,7 @@ function Vis({ i }: { i: number }) {
 }
 
 export function ProofSequence({ steps, label }: { steps: readonly Step[]; label: React.ReactNode }) {
+  const t = useT();
   const ref = React.useRef<HTMLOListElement>(null);
   const [armed, setArmed] = React.useState(false);
   const [played, setPlayed] = React.useState(false);
@@ -102,14 +104,14 @@ export function ProofSequence({ steps, label }: { steps: readonly Step[]; label:
     <div>
       <div className={s.proofBar}>
         {label}
-        <button type="button" className={s.replay} onClick={replay}>Replay</button>
+        <button type="button" className={s.replay} onClick={replay}>{t("Replay")}</button>
       </div>
       <ol ref={ref} className={`${s.proof} ${armed ? s.armed : ''} ${played ? s.played : ''}`} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {steps.map((st, i) => (
           <li key={st.title} className={s.proofStep}>
             <div className={s.proofVis}><Vis i={i} /></div>
-            <h3 className={s.proofTitle}>{st.title}</h3>
-            <p className={s.proofText}>{st.text}</p>
+            <h3 className={s.proofTitle}>{t(st.title)}</h3>
+            <p className={s.proofText}>{t(st.text)}</p>
           </li>
         ))}
       </ol>
