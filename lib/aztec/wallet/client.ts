@@ -42,6 +42,19 @@ import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_C
 import { assertNewValueAllowed, EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '../value-mode';
 import { assertCusdcBetaAllows, refreshCusdcBeta } from '../../beta/cusdc-beta-client';
 import { TOKEN_CALLS, emitsPrivateTransferEvents, type TokenDialect } from '../token-dialect';
+import {
+  DOM_SEP__FPC_BRIDGE_SECRET,
+  DOM_SEP__HL_PRIVATE_FEE_SALT,
+  PRIVATE_FEES_BUILD_ON,
+  PRIVATE_FPC_ADDRESS,
+  PRIVATE_FPC_SALT,
+  loadPrivateDeposits,
+  nextPrivateSaltIndex,
+  privateFeeChoice,
+  savePrivateDeposits,
+  versionMatches,
+  type PrivateFeeDeposit,
+} from '../private-fees';
 import { BINDING_SCHEME_V2, bindingStatement, networkTagOf, sdkBindingCrypto, valueBindingContext, verifyAddressProof, type AddressProof, type BindingNetworkContext } from '../peer-binding';
 import {
   assertNodeFeeJuiceMatchesPins,
@@ -87,7 +100,17 @@ export interface FeeJuiceState {
   plan: FeePlan['kind'];
   /** Fee Juice a transaction must be able to cover (its maximum fee), 0 if unknown. */
   minForTx: bigint;
+  /** Private fees (lib/aztec/private-fees.ts), when on: this account's balance in the shared PrivateFPC. */
+  privateBalance?: bigint;
+  /** Deposits made to the PrivateFPC for this account, and whether each has reached Aztec. */
+  privateDeposits?: { deposit: PrivateFeeDeposit; ready: boolean }[];
 }
+
+/** A fee paid through the PrivateFPC: its payment method, the estimated gas settings, and the deposit it claims (if any). */
+type PrivateFee = { method: any; gasSettings: any; deposit?: PrivateFeeDeposit } | null;
+
+/** Ceiling on what one privately paid fee may cost, checked on the client (the PrivateFPC keeps the whole maximum). */
+export const PRIVATE_FEE_MAX_COST = 5n * 10n ** 18n;
 
 export interface TokenBalance {
   key: TokenKey;
@@ -245,6 +268,8 @@ class PrivateWallet {
   private handoff: ReturnType<typeof createTabHandoff> | null = null;
 
   private snapshot: WalletSnapshot = { phase: 'idle', balances: [], activity: [], busy: false };
+  /** The shared PrivateFPC, registered with this PXE when private fees are on and the node runs its Aztec version. */
+  private privateFpc: { mod: any; address: any } | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -489,6 +514,7 @@ class PrivateWallet {
       }
 
       this.set({ phase: 'ready', step: undefined, errorDetail: undefined });
+      this.enablePrivateFees().catch((e) => console.warn('[aztec] private fees not enabled:', (e as Error)?.message));
       await this.refreshQuietly();
       if (tokenIssues.length) this.set({ error: tokenIssuesMessage(tokenIssues) });
     } catch (err: any) {
@@ -746,6 +772,15 @@ class PrivateWallet {
       .catch(() => 0n);
     const plan = feePlan({ network: 'mainnet', hasSponsor: false, feeJuiceBalance: balance, minBalance: minForTx > 0n ? minForTx : 1n, claims }).kind;
     const state: FeeJuiceState = { balance, claims, plan, minForTx };
+    if (this.privateFpc) {
+      state.privateBalance = await this.privateFeeBalance().catch(() => undefined);
+      state.privateDeposits = await Promise.all(
+        loadPrivateDeposits(me).map(async (deposit) => ({
+          deposit,
+          ready: await sdk.isL1ToL2MessageReady(this.node, sdk.Fr.fromHexString(deposit.messageHash)).catch(() => false),
+        })),
+      );
+    }
     this.set({ feeJuice: state });
     return state;
   }
@@ -771,6 +806,107 @@ class PrivateWallet {
       console.warn('[aztec] gas estimate failed; using the default limits:', (e as Error)?.message);
       return undefined;
     }
+  }
+
+  /* ---------------------------------------------------------- private fees */
+
+  /** True when this wallet can pay network fees through the shared PrivateFPC (lib/aztec/private-fees.ts). */
+  privateFeesAvailable(): boolean {
+    return this.privateFpc !== null;
+  }
+
+  /** Registers the canonical PrivateFPC (no transaction) when the build has it on and the node runs its Aztec version. */
+  private async enablePrivateFees() {
+    this.privateFpc = null;
+    if (!PRIVATE_FEES_BUILD_ON || AZTEC_WALLET_CONFIG.network !== 'mainnet' || !this.wallet || !this.sdk) return;
+    const info: any = await this.node.getNodeInfo();
+    if (!versionMatches(info?.nodeVersion)) {
+      console.warn(`[aztec] private fees off: the node runs ${info?.nodeVersion}, the PrivateFPC address is for another version`);
+      return;
+    }
+    const mod: any = await import('@alejoamiras/private-fee-juice');
+    // assertCanonical: a wrong salt or a different derived address throws before anything is registered.
+    const contract = await mod.registerPrivateContract(this.wallet, this.sdk.Fr.fromString(PRIVATE_FPC_SALT), { assertCanonical: true });
+    if (String(contract.address.toString()).toLowerCase() !== PRIVATE_FPC_ADDRESS) throw new Error('PrivateFPC address mismatch');
+    this.privateFpc = { mod, address: contract.address };
+    await this.refreshFeeJuice().catch(() => undefined);
+  }
+
+  private async privateFeeBalance(): Promise<bigint> {
+    const { mod, address } = this.privateFpc!;
+    const c = mod.PrivateFPCContract.at(address, this.wallet);
+    const r: any = await c.methods.balance_of(this.me).simulate({ from: this.me });
+    const v = r && typeof r === 'object' && 'result' in r ? r.result : r;
+    return BigInt(typeof v === 'object' && v && 'toBigInt' in v ? v.toBigInt() : String(v));
+  }
+
+  /** Bridge salt and secret for deposit `index`: derived from the wallet signature, so another device finds them again. */
+  private async privateBridgeMaterial(index: number): Promise<{ salt: any; secret: any }> {
+    const base = this.claimSecrets[index];
+    if (base === undefined) throw new Error('This private Fee Juice deposit was made with a key this wallet does not have.');
+    const { poseidon2WithSeparator } = await import('../poseidon');
+    const salt = await poseidon2WithSeparator([new this.sdk!.Fr(base)], DOM_SEP__HL_PRIVATE_FEE_SALT);
+    const secret = await poseidon2WithSeparator([salt, this.me.toField()], DOM_SEP__FPC_BRIDGE_SECRET);
+    return { salt, secret };
+  }
+
+  /**
+   * Adds Fee Juice that pays later fees privately: an L1 deposit to the Fee Juice portal with the
+   * PrivateFPC as recipient and a secret bound to this account. The deposit on Ethereum is public;
+   * which Aztec account later uses it is not.
+   */
+  async bridgePrivateFeeJuice(l1: L1Clients, amount: string | bigint, onStep?: (step: BridgeStep, l1TxHash?: string) => void) {
+    if (!this.privateFpc) throw new Error('Private fees are not available on this network right now.');
+    if (!this.me || !this.sdk) throw new Error('Open your private wallet first.');
+    await this.assertNodeStillPinned();
+    const info: any = await this.node.getNodeInfo();
+    if (!versionMatches(info?.nodeVersion)) throw new Error('The network changed version: private fees are off until Ledger Chat is updated. Nothing was sent.');
+    const units = typeof amount === 'bigint' ? amount : parseUnits(amount, 18);
+    const me = this.me.toString();
+    const pending = loadPrivateDeposits(me);
+    const index = nextPrivateSaltIndex(pending);
+    if (index >= SPONSOR_SECRET_INDEX) throw new Error('Too many private Fee Juice deposits on their way. Wait for them to arrive.');
+    const { secret } = await this.privateBridgeMaterial(index);
+    const secretHash = (await this.sdk.computeSecretHash(secret)).toString();
+    const claim = await bridgeOnL1(l1, { network: 'mainnet', recipient: PRIVATE_FPC_ADDRESS, amount: units, secretHash, secretIndex: index }, onStep);
+    savePrivateDeposits(me, [...pending, { ...claim, claimer: me.toLowerCase() }]);
+    await this.refreshFeeJuice();
+    return claim;
+  }
+
+  /**
+   * A private fee for this interaction, or null to pay as before. The PrivateFPC keeps the whole
+   * maximum fee, so the gas settings come from a simulation with a client-side ceiling, and the
+   * balance or one ready deposit must cover that maximum on its own.
+   */
+  private async privateFeeFor(interaction: any, from: any): Promise<PrivateFee> {
+    if (!this.privateFpc) return null;
+    const { mod, address } = this.privateFpc;
+    const state = await this.refreshFeeJuice();
+    const estimate = async (method: any) => {
+      const gs = await mod.estimateGasSettings(interaction, { aztecNode: this.node, from, paymentMethod: method, maxAcceptableGasCost: PRIVATE_FEE_MAX_COST });
+      return { gs, cost: BigInt(mod.maxGasCostFor(gs.maxFeesPerGas, gs.gasLimits)) };
+    };
+    const balance = state.privateBalance ?? 0n;
+    if (balance > 0n) {
+      const method = new mod.FPCFeePaymentMethod(address);
+      const { gs, cost } = await estimate(method);
+      if (privateFeeChoice({ enabled: true, versionOk: true, balance, maxFee: cost, deposits: [] }).kind === 'balance') return { method, gasSettings: gs };
+    }
+    const ready = (state.privateDeposits ?? []).filter((d) => d.ready).sort((a, b) => (BigInt(a.deposit.claimAmount) < BigInt(b.deposit.claimAmount) ? -1 : 1));
+    for (const { deposit } of ready) {
+      const { salt, secret } = await this.privateBridgeMaterial(deposit.secretIndex);
+      const method = new mod.PrivateMintAndPayFeePaymentMethod(address, BigInt(deposit.claimAmount), secret, salt, new this.sdk!.Fr(BigInt(deposit.messageLeafIndex)));
+      const { gs, cost } = await estimate(method);
+      const c = privateFeeChoice({ enabled: true, versionOk: true, balance: 0n, maxFee: cost, deposits: [{ deposit, ready: true }] });
+      if (c.kind === 'mint-and-pay') return { method, gasSettings: gs, deposit };
+    }
+    return null;
+  }
+
+  private dropPrivateDeposit(d: PrivateFeeDeposit) {
+    const me = this.me.toString();
+    savePrivateDeposits(me, loadPrivateDeposits(me).filter((x) => x.messageHash !== d.messageHash));
   }
 
   /** Fee options for the next transaction, and the deposit it consumes (if any). */
@@ -1427,8 +1563,18 @@ class PrivateWallet {
     // the entry must say failed, or it stays "Proving on this device" forever (14 Nov 2026).
     let fee: any;
     let consumes: any;
+    // Private fee first (lib/aztec/private-fees.ts): the shared PrivateFPC is the public fee payer,
+    // not this account. Any problem keeps the previous behaviour below.
+    const interaction = build(contract);
+    let privateFee: PrivateFee = null;
+    if (this.privateFpc) {
+      privateFee = await this.privateFeeFor(interaction, from ?? this.me).catch((e) => {
+        console.warn('[aztec] private fee not used:', (e as Error)?.message);
+        return null;
+      });
+    }
     try {
-      ({ fee, consumes } = await this.resolveFee({ estimated: true }));
+      if (!privateFee) ({ fee, consumes } = await this.resolveFee({ estimated: true }));
     } catch (err: any) {
       upsertActivity(this.me.toString(), { id, kind, status: 'failed', error: humanError(err), createdAt: Date.now() });
       this.set({ activity: await this.loadActivity().catch(() => this.snapshot.activity) });
@@ -1438,15 +1584,19 @@ class PrivateWallet {
     // Gas limits from a simulation, so the network asks the fee payer to hold the fee this
     // transfer can cost rather than the protocol's maximum (README question 6). Any failure keeps
     // the previous behaviour: the wallet's own per-transaction limits.
-    const interaction = build(contract);
-    const gasSettings = await this.estimatedGasSettings(interaction, from ?? this.me, fee);
-    const sendFee = gasSettings ? { ...(fee ?? {}), gasSettings } : fee;
+    const gasSettings = privateFee ? privateFee.gasSettings : await this.estimatedGasSettings(interaction, from ?? this.me, fee);
+    const sendFee = privateFee ? { paymentMethod: privateFee.method, gasSettings } : gasSettings ? { ...(fee ?? {}), gasSettings } : fee;
     const receipt = await this.sendAndWait(
       () => interaction.send({ from: from ?? this.me, fee: sendFee, wait: this.sdk!.NO_WAIT }),
       id,
       kind,
     );
     if (receipt && consumes) this.dropClaim(consumes);
+    if (receipt && privateFee?.deposit) this.dropPrivateDeposit(privateFee.deposit);
+    // A private deposit another transaction already claimed is in the private balance: forget it.
+    if (!receipt && privateFee?.deposit && consumedMessageHash(this.lastSendError) !== null && sameMessageHash(privateFee.deposit.messageHash, consumedMessageHash(this.lastSendError)!)) {
+      this.dropPrivateDeposit(privateFee.deposit);
+    }
     // Confirmed means confirmed: a failed balance read afterwards must not read as a failed payment.
     await this.refreshQuietly();
     if (!receipt) throw new Error(this.snapshot.activity.find((a) => a.id === id)?.error ?? 'The transaction failed.');

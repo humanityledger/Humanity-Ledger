@@ -121,6 +121,10 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   const [recovering, setRecovering] = useState(false);
   // Explicit per-deposit consent to what becomes public; never persisted.
   const [ackPublic, setAckPublic] = useState(false);
+  // Private fees (lib/aztec/private-fees.ts): offered once the account exists and the shared PrivateFPC is registered.
+  const privateOffered = state.phase === 'ready' && getPrivateWallet().privateFeesAvailable();
+  const [privateFees, setPrivateFees] = useState(true);
+  const usePrivate = privateOffered && privateFees;
   // Idempotency: one deposit at a time, whatever the number of taps.
   const submitting = useRef(false);
 
@@ -160,10 +164,12 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
     setL1Tx(undefined);
     try {
       const l1 = l1ClientsFromViem(publicClient, walletClient);
-      await getPrivateWallet().bridgeFeeJuice(l1, units, (s, hash) => {
+      const onStep = (s: BridgeStep, hash?: string) => {
         setStep(s);
         if (hash) setL1Tx(hash);
-      });
+      };
+      if (usePrivate) await getPrivateWallet().bridgePrivateFeeJuice(l1, units, onStep);
+      else await getPrivateWallet().bridgeFeeJuice(l1, units, onStep);
       setAmount('');
       setAckPublic(false);
       refetchAztec();
@@ -174,7 +180,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
     } finally {
       submitting.current = false;
     }
-  }, [units, walletClient, publicClient, refetchAztec, ackPublic]);
+  }, [units, walletClient, publicClient, refetchAztec, ackPublic, usePrivate]);
 
   const recover = useCallback(async () => {
     if (!publicClient || recovering) return;
@@ -263,8 +269,18 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
         <>
         <label className="flex items-start gap-2 text-[12.5px] leading-snug text-[#475467]">
           <input type="checkbox" className="mt-0.5" checked={ackPublic} disabled={busy} onChange={(e) => setAckPublic(e.target.checked)} />
-          <span>{t("I understand this deposit is public on Ethereum, links my Ethereum and Aztec addresses, and that my Aztec account pays each fee publicly, so my transactions can be linked. Fee Juice cannot be sent back.")}</span>
+          {usePrivate ? (
+            <span>{t("I understand this deposit is public on Ethereum. My later fees are paid by a shared private fee contract, so my Aztec account is not shown as the payer. That contract keeps the maximum fee of each payment, with no refund, and Fee Juice cannot be sent back.")}</span>
+          ) : (
+            <span>{t("I understand this deposit is public on Ethereum, links my Ethereum and Aztec addresses, and that my Aztec account pays each fee publicly, so my transactions can be linked. Fee Juice cannot be sent back.")}</span>
+          )}
         </label>
+        {privateOffered && (
+          <label data-testid="private-fees-choice" className="flex items-start gap-2 text-[12.5px] leading-snug text-[#475467]">
+            <input type="checkbox" className="mt-0.5" checked={privateFees} disabled={busy} onChange={(e) => { setPrivateFees(e.target.checked); setAckPublic(false); }} />
+            <span>{t("Pay my network fees privately (shared PrivateFPC, maintained by the Aztec community; Ledger Chat runs none)")}</span>
+          </label>
+        )}
         <button
           type="button"
           disabled={!units || tooMuch || tooSmall || busy || !walletClient || !ackPublic}
