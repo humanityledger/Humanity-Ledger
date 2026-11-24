@@ -114,6 +114,8 @@ contract LedgerDeadmanSwitch is Ownable2Step, ReentrancyGuard, Pausable {
     ) Ownable(_initialOwner) {
         if (_backupWallet == address(0))       revert InvalidBackupWallet();
         if (_backupWallet == _initialOwner)    revert CannotBeOwner();
+        // Assets forwarded to this contract could never leave it.
+        if (_backupWallet == address(this))    revert InvalidBackupWallet();
         if (_timeoutDays * 1 days < MIN_TIMEOUT) revert TimeoutTooShort();
 
         backupWallet   = _backupWallet;
@@ -153,6 +155,9 @@ contract LedgerDeadmanSwitch is Ownable2Step, ReentrancyGuard, Pausable {
     function proposeBackupWallet(address newBackup) external onlyOwner {
         if (newBackup == address(0))  revert InvalidBackupWallet();
         if (newBackup == owner())     revert CannotBeOwner();
+        // Found by invariant_deadman_rules: a trigger would move the owner's
+        // tokens into this contract, which has no way to send them on.
+        if (newBackup == address(this)) revert InvalidBackupWallet();
         pendingBackupWallet = newBackup;
         pendingBackupTime   = block.timestamp + BACKUP_COOLDOWN;
         emit BackupWalletProposed(newBackup, pendingBackupTime);
