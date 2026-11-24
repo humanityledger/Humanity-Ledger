@@ -106,8 +106,9 @@ export function relayUrl(): string | null {
 }
 
 /** Node client options for the wallet: batch limit of the public endpoint, plus the failover fetch. */
-export async function walletNodeClientOptions(maxBatchSize: number): Promise<{ maxBatchSize: number; fetch?: RpcFetch }> {
-  const relay = relayUrl();
+export async function walletNodeClientOptions(maxBatchSize: number, opts: { relay?: boolean } = {}): Promise<{ maxBatchSize: number; fetch?: RpcFetch }> {
+  // A node the person chose (node-choice.ts) is never replaced by this site's relay.
+  const relay = opts.relay === false ? null : relayUrl();
   if (!relay) return { maxBatchSize };
   const { makeFetch } = (await import('@aztec-labs/foundation/json-rpc/client')) as any;
   if (typeof makeFetch !== 'function') return { maxBatchSize };

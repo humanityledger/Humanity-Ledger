@@ -33,6 +33,7 @@ import { issueCap, recordedAdmin } from '../token-issuer';
 import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type ActivityKind } from './history';
 import { paymentReason, reportPayment } from './payment-report';
 import { assertFeeChoice, identifyNode } from '../fees';
+import { walletNodeRoute } from './node-choice';
 import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
 import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
@@ -394,7 +395,9 @@ class PrivateWallet {
       const { Fr, Fq } = sdk;
 
       // Direct to the public node, with this site's relay as the fallback route (node-fetch.ts).
-      this.node = sdk.createAztecNodeClient(AZTEC_WALLET_CONFIG.nodeUrl, await walletNodeClientOptions(RPC_OPTIONS.maxBatchSize));
+      // The person's own node when they chose one (node-choice.ts): same identity checks, no relay.
+      const route = walletNodeRoute(AZTEC_WALLET_CONFIG.nodeUrl);
+      this.node = sdk.createAztecNodeClient(route.url, await walletNodeClientOptions(RPC_OPTIONS.maxBatchSize, { relay: route.relay }));
       const info = await this.node.getNodeInfo();
       assertNetworkAllowed(Number(info.l1ChainId));
       // A node on another rollup or release fails later in obscure ways
@@ -405,6 +408,11 @@ class PrivateWallet {
       const blocking = identity.drift.filter((d) => d.field !== 'nodeVersion');
       for (const d of identity.drift.filter((x) => x.field === 'nodeVersion')) {
         console.warn(`[wallet] Aztec node ${d.actual}, this build was made for ${d.expected}`);
+      }
+      if (blocking.some((d) => d.field === 'rollupVersion' || d.field === 'rollupAddress') && !blocking.some((d) => d.field === 'l1ChainId')) {
+        // Same L1, different rollup: Aztec has moved to a new rollup version (an upgrade), or a chosen
+        // node follows another one. Value actions stay off until this build pins the new rollup.
+        throw new Error(`${ROLLUP_CHANGED_MESSAGE} (${blocking.map((d) => `${d.field} ${d.actual}, expected ${d.expected}`).join('; ')})`);
       }
       if (blocking.length) {
         throw new Error(
@@ -1604,6 +1612,10 @@ export function errorDetailFor(step: string | undefined, err: any): string {
   return `Ledger Chat private wallet · ${AZTEC_WALLET_CONFIG.network} · step: ${step ?? 'unknown'} · ${new Date().toISOString()}\n${raw}${causes}`.slice(0, 2000);
 }
 
+/** Shown when the node follows another rollup than the one this build pins (R8, docs/AZTEC_UPGRADE_MIGRATION.md). */
+export const ROLLUP_CHANGED_MESSAGE =
+  'Aztec is on a different rollup version than this version of Ledger Chat. Private payments are paused here until Ledger Chat supports it. Nothing was sent.';
+
 export function humanError(err: any): string {
   // Several node requests failing together (the PXE's allToCompletion: "N of M concurrent operations
   // failed"): explain the first reason that is not just the network, else the network failure.
@@ -1612,6 +1624,7 @@ export function humanError(err: any): string {
     return humanError(reasons.find((r) => !isTransientNodeError(r)) ?? reasons[0]);
   }
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
+  if (msg.startsWith(ROLLUP_CHANGED_MESSAGE)) return ROLLUP_CHANGED_MESSAGE;
   if (msg === HANDED_OFF_MESSAGE || msg === BUSY_ELSEWHERE_MESSAGE || msg === PAUSED_MESSAGE || msg === IDLE_CLOSED_MESSAGE) return msg;
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE || msg === UNCONFIRMED_MESSAGE) return msg;
