@@ -21,6 +21,8 @@ const E2E = process.env.NEXT_PUBLIC_E2E_HARNESS === '1';
 const SettingsHarness = E2E ? dynamic(() => import('@/components/chat/e2e/SettingsHarness'), { ssr: false }) : null;
 // /chat?e2e=payments: the two-session payment flow (scripts/ui/payments-e2e.mjs).
 const PaymentsHarness = E2E ? dynamic(() => import('@/components/chat/e2e/PaymentsHarness'), { ssr: false }) : null;
+// /chat?e2e=r8: R8 between two real browsers on the test network (scripts/ui/r8-two-browser.mjs).
+const R8Harness = E2E ? dynamic(() => import('@/components/chat/e2e/R8Harness'), { ssr: false }) : null;
 // Decided during render, not in an effect: TuringShieldGate's effect would run first and send a
 // visitor without a session to /connect before an effect here could switch.
 const harnessName = () => (E2E && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('e2e') : null);
@@ -54,6 +56,7 @@ export function ChatSurface({ visible, onRequestVisible }: { visible: boolean; o
   const debugDelivery = useDebugDelivery();
   if (SettingsHarness && harnessOn()) return <SettingsHarness />;
   if (PaymentsHarness && harnessName() === 'payments') return <PaymentsHarness />;
+  if (R8Harness && harnessName() === 'r8') return <R8Harness />;
   return (
     <TuringShieldGate>
       {/* Only the chat on screen follows the keyboard; hidden, it must not resize other pages. */}
