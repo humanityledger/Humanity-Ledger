@@ -173,6 +173,45 @@ export class ChatDatabase {
       transaction.onerror = () => reject(transaction.error);
     });
   }
+
+  /** Every record of one store, for the encrypted history archive. */
+  async getAll(store: 'messages' | 'conversations'): Promise<any[]> {
+    if (!this.db) await this.init();
+    if (!this.db) return [];
+    return new Promise((resolve, reject) => {
+      const req = this.db!.transaction([store], 'readonly').objectStore(store).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
 }
 
 export const chatDB = new ChatDatabase();
+
+/** Everything this device keeps of the chat history, for an encrypted archive (lib/backup). */
+export interface ChatHistorySnapshot {
+  kind: 'chat-history';
+  exportedAt: string;
+  conversations: any[];
+  messages: any[];
+}
+
+export async function snapshotChatHistory(db: ChatDatabase = chatDB): Promise<ChatHistorySnapshot> {
+  const [conversations, messages] = await Promise.all([db.getAll('conversations'), db.getAll('messages')]);
+  return { kind: 'chat-history', exportedAt: new Date().toISOString(), conversations, messages };
+}
+
+/** Merges a snapshot into this device: existing records with the same id are overwritten, nothing is deleted. */
+export async function restoreChatHistory(snapshot: ChatHistorySnapshot, db: ChatDatabase = chatDB): Promise<{ conversations: number; messages: number }> {
+  if (!snapshot || snapshot.kind !== 'chat-history' || !Array.isArray(snapshot.messages) || !Array.isArray(snapshot.conversations)) {
+    throw new Error('This archive does not contain a chat history.');
+  }
+  const messages = snapshot.messages.filter((m) => m && typeof m.id === 'string');
+  await db.saveMessages(messages);
+  let conversations = 0;
+  for (const c of snapshot.conversations) {
+    if (c && typeof c.peerAddress === 'string') { await db.saveConversation(c); conversations++; }
+  }
+  return { conversations, messages: messages.length };
+}
+

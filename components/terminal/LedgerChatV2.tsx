@@ -49,6 +49,7 @@ import { ledgerAnalytics, trackMessageSent, trackCallStarted, trackCallAnswered,
 import { notificationEngine } from '@/lib/wallet/NotificationEngine';
 import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
 import { EncryptionInfoSheet } from '@/components/chat/EncryptionInfoSheet';
+import { hidesNotificationContent, messageNotification } from '@/lib/privacy/defaults';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
@@ -5228,7 +5229,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         `Ledger Chat: ${shortAddr(msgConvPeer)}`,
                         formatMessagePreview(content),
                         msgConvPeer,
-                        !!(ledgerSettings as any)?.hide_notification_content
+                        hidesNotificationContent(ledgerSettings as any)
                       );
                     }
                   }
@@ -5256,9 +5257,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const notifEnabled = ledgerSettings?.notifications_private !== false;
                 const mutedPeer = (() => { try { return !!localStorage.getItem('ledger_muted_' + String(msgConvPeer || '').toLowerCase()); } catch { return false; } })();
                 if (!dnd && !mutedPeer && notifEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                  const showPreview = !(ledgerSettings as any)?.hide_notification_content;
-                  new Notification(`Ledger Chat: ${shortAddr(msgConvPeer || 'Unknown')}`, {
-                    body: showPreview ? formatMessagePreview(content) : 'New message',
+                  const note = messageNotification(ledgerSettings as any, shortAddr(msgConvPeer || 'Unknown'), formatMessagePreview(content));
+                  new Notification(note.title, {
+                    body: note.body,
                     icon: '/favicon.ico'
                   });
                 }
@@ -6735,6 +6736,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             onBlock={() => blockPeer(activePeer)}
             isMuted={mutedPeers.has(activePeer.toLowerCase())}
             onToggleMute={() => toggleMute(activePeer)}
+            client={client}
           />
         )}
       </AnimatePresence>
@@ -7508,6 +7510,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               myAddress={address || ''}
               peerAddress={activePeer || ''}
               serverCount={messages.filter(m => m.conversationId?.toLowerCase() === `dm-${(activePeer || '').toLowerCase()}` && m.viaServer).length}
+              client={client}
             />
 
             {/* Dynamic Chat Background */}
@@ -9132,7 +9135,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
        )}
 
        {/* Incoming private payments found by the wallet (lib/payments/incoming.ts): a notice with the amount in the app, none outside it. */}
-       <IncomingPaymentNotifier muted={!!(ledgerSettings as any)?.do_not_disturb || (ledgerSettings as any)?.notifications_private === false} hideContent={!!(ledgerSettings as any)?.hide_notification_content} />
+       <IncomingPaymentNotifier muted={!!(ledgerSettings as any)?.do_not_disturb || (ledgerSettings as any)?.notifications_private === false} hideContent={hidesNotificationContent(ledgerSettings as any)} />
 
        {/* Private payment (Aztec, experimental) */}
        {showZkModal && activePeer && (

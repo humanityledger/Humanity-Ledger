@@ -38,11 +38,11 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 9 | One-click group invites | 4 | SIN VERIFICAR | `app/join/[code]/page.tsx` exists; flow not checked |
 | 10 | 90-second tutorial | 6 | PARCIAL | `components/chat/LedgerChatOnboarding.tsx` |
 | 12 | Themes | 6 | EXCLUIDO for now | `app/ledger-tokens.css`: one light theme by decision |
-| 13 | Typing and online, efficient | 1 | PARCIAL | Mutual contacts, cached (PR #153). No user opt-out found |
+| 13 | Typing and online, efficient | 1 | EXISTÍA | Mutual contacts, cached (PR #153); toggles for typing, read receipts and last seen (`LedgerSettingsFull.tsx`) |
 | 14 | Voice with local transcription | 5 | PARCIAL | Voice notes exist; "Transcribing" in `CustomAudioPlayer.tsx`: where it runs is not verified |
 | 15 | Reactions and replies | 6 | PARCIAL | Quick reactions disabled (`MessageBubble.tsx:577`) |
 | 16 | Edit or delete within a window | 6 | PARCIAL | Edit via `__EDIT__` signal and delete exist (`LedgerChatV2.tsx`); no time window found |
-| 17 | Notification centre | 1 | PARCIAL | `hideContent` option (`lib/wallet/NotificationEngine.ts`); not the default |
+| 17 | Notification centre | 1 | HECHO | Previews hidden by default, no sender in the title (`lib/privacy/defaults.ts`) |
 | 18 | Dark mode and high contrast | 6 | DECISIÓN | One light theme by decision (`app/ledger-tokens.css`) |
 | 19 | Mobile gestures | 6 | SIN VERIFICAR | — |
 | 21 | Faster proofs in the browser | 5 | PARCIAL | Worker prover (`lib/zk/prover-client.ts`); no measurements in the repo |
@@ -66,19 +66,19 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 39 | Smart reconnection | 5 | SIN VERIFICAR | — |
 | 40, 98 | 10× peaks | 7 | PARCIAL | `scripts/load-test-k6.js` exists; one replica (doc of 18 Nov) |
 | 41 | Payments say exactly what is revealed | 1 | HECHO | Same as 6. Copy that said the sender is hidden on Alpha was corrected |
-| 42 | Safety numbers | 1 | PARCIAL | `EncryptionInfoSheet.tsx` derives it from the two **wallet addresses**, not from keys: it cannot detect a changed key |
-| 43 | Disappearing messages | 1 | PARCIAL | Burn timer (`components/chat/BurnTimerSheet.tsx`); honest copy about the recipient's copy to check |
-| 45 | Encrypted export | 1 | FALTA | — |
-| 46 | What the server sees | 1 | HECHO | `docs/privacy/DATA_INVENTORY.md` (in-app trust centre still to do) |
+| 42 | Safety numbers | 1 | HECHO | 60 digits from both inboxes and every device (`lib/chat/safety-glyphs.ts` `safetyDigits`), same digest as the glyphs; was derived from wallet addresses |
+| 43 | Disappearing messages | 1 | HECHO | Burn timer with honest copy: the other person can copy before it ends (`BurnTimerSheet.tsx`) |
+| 45 | Encrypted export | 1 | HECHO | `lib/backup/encrypted-archive.ts` (PBKDF2 600k + AES-256-GCM), `HistoryBackupSheet.tsx` |
+| 46 | What the server sees | 1 | HECHO | `docs/privacy/DATA_INVENTORY.md` and the page `/docs/data-inventory` |
 | 47 | Key rotation | 1 | PARCIAL | MLS rotates; Aztec keys are tied to the address (`lib/aztec/wallet/passkey.ts`: rotation = new account) |
 | 48 | New device warnings | 1 | SIN VERIFICAR | — |
 | 49 | Revoke devices | 1 | PARCIAL | `lib/xmtp/client.ts:406` `revokeInstallations`; UI not checked |
 | 50 | Threat model, accessible | 1 | PARCIAL | `docs/SECURITY.md`, `/security`; to link from the app |
-| 51 | Maximum privacy by default | 1 | FALTA | Read receipts, presence and previews are opt-out, not opt-in |
+| 51 | Maximum privacy by default | 1 | HECHO (decision) | Notification previews off by default. Read receipts and typing stay on by default, as in Signal, each with its toggle; last seen is contacts or nobody |
 | 52 | G7 verifiable by the user | 1 | PARCIAL | v2 binding (`lib/aztec/peer-binding.ts`); proves the signing key only (R6) |
-| 53 | Alert on Aztec address change | 1 | PARCIAL | Conflicts are never pinned silently (`peer-binding.ts:16`); UI alert to check |
+| 53 | Alert on Aztec address change | 1 | EXISTÍA | `AgreementCard.tsx`: conflict and failed proof shown as security warnings, never pinned |
 | 54 | Audit (reformulated) | 8 | PARCIAL | `docs/AUDIT_SCOPE.md`, `docs/BUG_BOUNTY.md`; no external audit |
-| 55 | Trust centre in the app | 1 | PARCIAL | `/trust`, `/security`, `/record` pages exist; not inside the chat |
+| 55 | Trust centre in the app | 1 | HECHO | Settings, Data and backup, Who sees what → `/docs/data-inventory` |
 | 56 | Payments never block chat | 3 | EXISTÍA | |
 | 57 | Request payment in chat | 3 | EXISTÍA | `components/chat/PaymentRequestCard.tsx` (restyled in this branch) |
 | 58 | Payment history | 3 | EXISTÍA | `components/zk/wallet/WalletActivity.tsx` (local) |
@@ -104,7 +104,7 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 86 | Flags to switch payments off | 7 | PARCIAL | `lib/feature-flags/index.ts` (Redis); payments use env switches |
 | 87 | Public status page | 7 | EXISTÍA | `app/status/page.tsx` |
 | 88 | Runbooks | 7 | EXISTÍA | `docs/INCIDENT_RESPONSE.md` |
-| 90 | Backups under the user's control | 1 | FALTA | — |
+| 90 | Backups under the user's control | 1 | HECHO | Same file as 45, restore merges and never deletes |
 | 91 | Portable messaging layer | 7 | FALTA | — |
 | 94 | Cost model | 7 | SIN VERIFICAR | — |
 | 95 | Scalable support | 7 | SIN VERIFICAR | — |
@@ -118,7 +118,7 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R | Item | Phase | State | Note |
 |---|---|---|---|---|
 | R1 | One QR with a verified binding | 2 | PARCIAL | QR exists; it does not carry the G7 proof |
-| R2 | Blur on hide, hidden previews | 1 | PARCIAL | `hideContent` for notifications only |
+| R2 | Blur on hide, hidden previews | 1 | EXISTÍA + HECHO | Screen privacy blur already existed (`LedgerChatV2.tsx`); previews now hidden by default |
 | R3 | Recipient-claimed stream | 3 | PARCIAL | Contract exists; not offered as "recurring" |
 | R4 | Private FPC | 3 | DECISIÓN | Who funds the Fee Juice, legal position of the operator |
 | R5 | User-chosen Aztec node | 2 | FALTA | Node identity checks exist (`identifyNode`) |
@@ -129,7 +129,12 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R10 | Verifiable receipt | 3 | FALTA | Note-inclusion API to verify |
 | R11 | On-device tax report | 3 | FALTA | |
 
-## Done in this branch (`claude/align-fase-0-1`)
+## Phase 1 (`claude/align-fase-1`)
+
+- 17, 42, 43, 45, 46, 51, 55, 90 and R2 as marked above. 13 and 53 already existed.
+- Still open in phase 1: 47 (documented), 48 and 49 (device list UI, see phase 2), R6 (G7 v3, phase 8).
+
+## Done in phase 0 (`claude/align-fase-0-1`)
 
 - Items 6, 41, 46, 66: the disclosure map, its panel in the send review, shield, unshield and both
   chat cards, and this inventory.
