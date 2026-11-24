@@ -17,6 +17,7 @@
  * only, and stops under prefers-reduced-motion.
  */
 
+import { isSlow, typicalMs } from '@/lib/perf/proof-timings';
 import { FEE_PRIVACY } from '@/lib/landing/content';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
@@ -75,6 +76,8 @@ function elapsedLabel(ms: number) {
 }
 
 export function PaymentProgress(p: PaymentProgressProps) {
+  // Median of this device's recent proving times (lib/perf/proof-timings.ts); null until there are three.
+  const [typical] = useState(() => typicalMs());
   const [now, setNow] = useState(() => Date.now());
   const [stageStart, setStageStart] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
@@ -157,6 +160,15 @@ export function PaymentProgress(p: PaymentProgressProps) {
             ? `Included in L2 block ${p.blockNumber?.toLocaleString('en') ?? '…'}`
             : `${elapsedLabel(now - p.startedAt)} · keep this page open`}
       </p>
+      {!failed && !done && (
+        <p className={s.sub} data-testid="proof-expectation">
+          {isSlow(now - p.startedAt, typical)
+            ? 'Taking longer than usual on this device. The Aztec network may be busy; it can still go through.'
+            : typical !== null
+              ? `Usually about ${Math.max(1, Math.round(typical / 1000))}s on this device.`
+              : 'The proof is made on this device, so the first payment takes the longest.'}
+        </p>
+      )}
       {failed && feeHint && p.error && <p className={s.rawError}>{p.error}</p>}
 
       <ol className={s.steps}>
