@@ -50,7 +50,7 @@ describe('LedgerChat app lock', () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
     const src = fs.readFileSync(path.resolve(__dirname, '../../../components/terminal/LedgerChatV2.tsx'), 'utf8');
-    expect(src).toMatch(/if \(ledgerSettings\?\.biometric_lock && !isBiometricallyUnlocked\) \{/);
+    expect(src).toMatch(/if \(ledgerSettings\?\.biometric_lock && pinLockEnabled\(\) && !isBiometricallyUnlocked\) \{/);
     expect(src).not.toMatch(/\n\s*if \(!isBiometricallyUnlocked\) \{/);
   });
 });

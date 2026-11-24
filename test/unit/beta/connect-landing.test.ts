@@ -23,6 +23,10 @@ describe('where sign-in lands', () => {
     expect(landingAfterSignIn(null, { ...gated, remaining: 0 })).toBe('/chat');
     expect(landingAfterSignIn(null, null)).toBe('/chat');
   });
+});
+
+describe('reading the status right after sign-in', () => {
+  const noWait = async () => {};
   it('retries once when the cookie is not there yet', async () => {
     let n = 0;
     const f = (async () => (++n === 1 ? reply(401, {}) : reply(200, { member: true, active: true, open: true, remaining: 3 }))) as unknown as typeof fetch;
@@ -49,7 +53,7 @@ describe('wiring', () => {
   });
   it('/beta sends a member straight to the chat and keeps the gate pieces', () => {
     const view = fs.readFileSync('components/beta/BetaGateView.tsx', 'utf8');
-    expect(view).toMatch(/if \(stage === 'member' && step !== 'done'\) router\.replace\('\/chat'\)/);
+    expect(view).toMatch(/if \(stage !== 'member' \|\| step === 'done'\) return;\s*if \(allowAutoRedirect\(\)\) router\.replace\('\/chat'\);/);
     expect(view).toMatch(/Closed Beta/);
     expect(view).toMatch(/Ledger Chat · Aztec Alpha Privacy Layer/);
     expect(fs.readFileSync('app/beta/page.tsx', 'utf8')).toMatch(/title: 'Closed Beta · Ledger Chat'/);

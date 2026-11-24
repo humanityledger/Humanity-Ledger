@@ -53,6 +53,7 @@ describe('wiring', () => {
   it('the chat mounts the notifier with the person’s notification settings', () => {
     const chat = fs.readFileSync('components/terminal/LedgerChatV2.tsx', 'utf8');
     expect(chat).toMatch(/<IncomingPaymentNotifier muted=\{/);
-    expect(chat).toMatch(/hideContent=\{!!\(ledgerSettings as any\)\?\.hide_notification_content\}/);
+    // Hidden by default since 24 Nov 2026 (lib/privacy/defaults.ts).
+    expect(chat).toMatch(/hideContent=\{hidesNotificationContent\(ledgerSettings as any\)\}/);
   });
 });

@@ -240,7 +240,9 @@ describe('call screen and chat', () => {
     expect(chat.match(/ref=\{remoteAudioRef\}/g)).toHaveLength(1);
     expect(chat).not.toMatch(/muted=\{false\}/);
     const remoteVideos = chat.match(/<video\s+ref=\{el => attachVideo\(el, (remoteStream|remoteScreen)\)\}[^>]*>/g) ?? [];
-    expect(remoteVideos.length).toBeGreaterThanOrEqual(3);
+    // The camera and the shared screen; the earlier picture-in-picture copy is gone.
+    expect(remoteVideos.length).toBeGreaterThanOrEqual(2);
+    for (const v of chat.match(/<video[\s\S]*?>/g) ?? []) expect(v).toMatch(/\bmuted\b/);
     for (const v of remoteVideos) expect(v).toMatch(/\bmuted\b/);
     // attachVideo mutes again in code, whatever the markup says.
     expect(chat).toMatch(/function attachVideo\(el: HTMLVideoElement \| null, stream: MediaStream \| null\) \{[\s\S]{0,200}el\.muted = true;/);

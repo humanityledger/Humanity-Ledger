@@ -31,11 +31,11 @@ describe('cUSDC slot', () => {
     // The only other path is the closed cUSDC beta, for members only (lib/beta/cusdc-beta.ts).
     expect(src).toMatch(/return tokensFor\(betaVisibility\);/);
   });
-  it('the planned record is still unverified on chain', () => {
+  it('the planned record is verified on chain and stays out of the general token list', () => {
     const m = JSON.parse(fs.readFileSync('deployments/aztec-mainnet.json', 'utf8'));
     const p = m.plannedTokens.find((t: { symbol: string }) => t.symbol === 'cUSDC');
     expect(p.address).toBe(CUSDC);
-    expect(p.verifiedOnChain).toBe(false);
+    expect(p.verifiedOnChain).toBe(true);
     expect(m.tokens.some((t: { symbol: string }) => t.symbol === 'cUSDC')).toBe(false);
   });
 });
