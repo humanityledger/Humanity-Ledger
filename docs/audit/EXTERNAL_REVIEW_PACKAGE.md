@@ -1,5 +1,7 @@
 # External security review: preparation package (NLnet D-4, D-5)
 
+Start at [`START_HERE.md`](START_HERE.md) for the current state, the scope by priority and the known issues.
+
 **No external audit or external review of Ledger Chat exists.** `deployments/aztec-mainnet.json` has `"audit": null`. This file lists what a reviewer would receive. It is a preparation, not a claim. D-4 and D-5 are deliverables proposed in `docs/NLNET_DRAFT.md`, which has not been submitted or granted.
 
 ## Scope proposed

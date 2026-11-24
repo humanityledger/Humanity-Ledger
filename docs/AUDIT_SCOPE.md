@@ -1,4 +1,7 @@
 # Humanity Ledger — External Audit Scope
+
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](audit/START_HERE.md) (24 November 2026).
+
 **Version 1.0 — 2026-10-31**  
 **Branch**: `claude/sync-and-hardening`  
 **Authority**: `docs/PROTOCOL_SPEC.md` §6 (Threat Model), §8 (Circuit Versioning)

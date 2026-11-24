@@ -445,6 +445,8 @@ Each value is copied from its source; [`docs/readme/FACTS.md`](docs/readme/FACTS
 
 ---
 
+Reviewers: start at [`docs/audit/START_HERE.md`](docs/audit/START_HERE.md), which covers the scope by priority, the known issues and how to reproduce.
+
 ## 11. What the tests prove, and what they do not
 
 | Suite | Count and date | What it shows | What it does not |
@@ -478,7 +480,7 @@ The TXE counts are read from the log of the "Aztec contracts" run named in the t
 9. **The portal is not live.** `HLPortal`, the receiver addresses and `PortalToken` are deployed on no network and hold nothing.
 10. **A passkey is not the signing key.** It unwraps the account root; the Schnorr signing key is still derived in the browser.
 11. **No affiliation.** Aztec Labs, the Aztec Foundation, XMTP Labs and human.tech have not reviewed, endorsed or audited this project.
-12. **The cUSDC beta is not a launch.** It is a closed technical test for at most 100 invited people. The gates for offering cUSDC to everyone are unmet, and the landing keeps saying "Not enabled yet" for USDC. Ledger Chat does not issue, hold, exchange or redeem cUSDC.
+12. **The cUSDC beta is not a launch.** It is a closed technical test for at most 100 invited people. The gates for offering cUSDC to everyone are unmet, and the landing labels it "Closed alpha".
 
 ---
 
