@@ -5,6 +5,7 @@ import { FEE_PRIVACY } from '@/lib/landing/content';
 import { hidesNotificationContent } from '@/lib/privacy/defaults';
 import { HistoryBackupSheet } from '@/components/chat/settings/HistoryBackupSheet';
 import { NodeChoiceSheet } from '@/components/chat/settings/NodeChoiceSheet';
+import { PaymentsSettingsSheet } from '@/components/chat/settings/PaymentsSettingsSheet';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -735,6 +736,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
               <Group title="Data and backup">
+                <Row
+                  icon={<Wallet size={18} />}
+                  label="Payments"
+                  sublabel="Receive only, limits per payment, a 30-day summary and a CSV report."
+                  onTap={() => setModal('payments_settings')}
+                />
                 <Row
                   icon={<Globe size={18} />}
                   label="Aztec node"
@@ -1634,6 +1641,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {/* ── Clear Cache ── */}
               {modal === 'history_backup' && <HistoryBackupSheet onClose={() => setModal(null)} />}
               {modal === 'aztec_node' && <NodeChoiceSheet onClose={() => setModal(null)} />}
+              {modal === 'payments_settings' && <PaymentsSettingsSheet onClose={() => setModal(null)} />}
               {modal === 'clearCache' && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Clear cache</h3>

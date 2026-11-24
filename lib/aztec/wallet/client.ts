@@ -34,6 +34,7 @@ import { loadLocalActivity, mergeActivity, upsertActivity, type Activity, type A
 import { paymentReason, reportPayment } from './payment-report';
 import { assertFeeChoice, identifyNode } from '../fees';
 import { walletNodeRoute } from './node-choice';
+import { personalLimitProblem, RECEIVE_ONLY_MESSAGE } from '@/lib/payments/personal-limits';
 import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
 import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
@@ -1274,6 +1275,9 @@ class PrivateWallet {
     await assertNewValueAllowed();
     await assertCusdcBetaAllows(key);
     const units = parseUnits(amount, tokenConfig(key).decimals);
+    // The person's own limits (receive-only, per-payment cap), before any proof is made.
+    const own = personalLimitProblem(tokenConfig(key), units);
+    if (own) throw new Error(own);
     const target = await this.validAddress(to);
     if (target.equals?.(this.me)) throw new Error('That is your own address.');
     return this.run('send', key, units, to.trim().toLowerCase(), (c) => TOKEN_CALLS[this.dialectOf(key)].send(c, this.me, target, units));
@@ -1625,6 +1629,7 @@ export function humanError(err: any): string {
   }
   const msg = String(err?.shortMessage || err?.message || err || 'Unknown error');
   if (msg.startsWith(ROLLUP_CHANGED_MESSAGE)) return ROLLUP_CHANGED_MESSAGE;
+  if (msg === RECEIVE_ONLY_MESSAGE || /^Above your limit of /.test(msg)) return msg;
   if (msg === HANDED_OFF_MESSAGE || msg === BUSY_ELSEWHERE_MESSAGE || msg === PAUSED_MESSAGE || msg === IDLE_CLOSED_MESSAGE) return msg;
   if (/user (rejected|denied)|rejected the request|denied message signature/i.test(msg)) return 'You declined the signature in your wallet.';
   if (msg === EXITS_ONLY_MESSAGE || msg === VALUE_MODE_UNCONFIRMED_MESSAGE || msg === UNCONFIRMED_MESSAGE) return msg;
