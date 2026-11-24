@@ -1,0 +1,294 @@
+[
+  {
+    "page": "home",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NzE1OWQ1MWMtZDNjZS00N2MxLTk0MWItYmZiYTg0ODU2ZWRi' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MjhiOTJlMzAtNWNiMS00NWE2LWIxNjUtYzQwOWQxYmMxMDE4' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MjU5Yzg1MzItYzY1Zi00MTFjLWE1OTEtOWJhZWZkMzI3ODEz' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MmY0MTkyNzUtYThkOC00MjQwLWI1OTYtYzhlZjFlM2IzMTAx' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "docs-ecosystem",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/ecosystem",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YmE4NWM1OGEtOTJkOS00MDRkLWE2YzItZWFmYWI0YjYzODI2' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "docs-whitepaper",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/whitepaper",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NDdkMjM4ZDQtMmY5Ni00NmI3LWIwODMtZjYzYzBkZjQ2YjQy' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZDYxZTZlNTUtMmUxYi00Yzk4LWJhMDEtZDhlZTk5NTAwOTk0' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2E0ZmUwNmUtZTU1OS00Njk4LWJjMzQtMmU0ZWQ5NTNjNTMy' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2M0MzhjY2ItMzRhMy00MTcyLWI3ZTEtMDFkMjBhODM4Yzky' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "hub-redirect",
+    "viewport": "desktop",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-M2Q5MmVmY2EtYmI5ZS00NTYzLTg0MTUtZTY5YWJiNWFjMDc1' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MzJjMjllMGQtNTYzYy00NmUzLWI3ZDgtNWFjY2U3MDA3YjE5' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "home",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZTliYjg2NGItYmU5My00M2NlLWEzOWEtNjJiNTc1MDRkMDA5' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "connect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect",
+    "errors": [
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YTRkMTVlMWEtOGE1MC00NjY2LTg2YjctYzM4MzU1YTE0NWJm' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "docs",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/overview",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MGE3Zjk3ZTUtNmU3My00MWM4LThlZGQtOWE5ODU4Y2FkNDE3' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "docs-privacy",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/privacy",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MmE3NTRlOWMtODQwNi00YmQ3LTkyZTctNzM3Njg2YWExZjE4' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "docs-ecosystem",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/ecosystem",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MTQ4MTExMzEtNTJjZC00MWU2LWIzYWQtNTRkMWE4ZDU1MDM1' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "docs-whitepaper",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/whitepaper",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YTgyMTFkOWItNjE2OC00NjhlLTkxNmYtNmYwM2U3NWJiMWQy' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "chat",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MjI1NzZlYzEtYzU5Yi00ZjFhLTgxNDAtNWY2OGJmN2FjZjRm' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-NzhiOTc2ZDctMzY4OS00OTVlLTlkN2ItNTdhZjQwYWQ1N2I3' 'wasm-unsafe-eval' htt"
+    ]
+  },
+  {
+    "page": "changelog",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/docs/changelog",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500",
+      "Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on this error instance ",
+      "[HL] Page error: Error: An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details. A digest property is included on thi",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-MDUwOWIyYTAtYjdmMC00Y2RjLTllNWQtZmVjYmUyODI0MDdh' 'wasm-unsafe-eval' htt",
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Error checking Cross-Origin-Opener-Policy: HTTP error! status: 500"
+    ]
+  },
+  {
+    "page": "hub-redirect",
+    "viewport": "mobile",
+    "finalUrl": "http://localhost:3100/connect?redirect=%2Fchat",
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ODQ1MjQ3ZDAtMzkyYS00ZGMwLTg3NjEtZGExYTNjY2E2OWU1' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "[next-auth][error][CLIENT_FETCH_ERROR] \nhttps://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/session, message: Failed to fetch}",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-YjdhMjJiZmEtNTM5Ny00MzJhLWEzMWYtZTM0NWVjZTUyOGJk' 'wasm-unsafe-eval' htt",
+      "Error checking Cross-Origin-Opener-Policy: Failed to fetch",
+      "Refused to execute inline script because it violates the following Content Security Policy directive: \"script-src 'self' 'nonce-ZWMyNGMzZmUtZDYzMi00NGE5LTg3MzItZmNiODcwYWMxNTcy' 'wasm-unsafe-eval' htt"
+    ]
+  }
+]
