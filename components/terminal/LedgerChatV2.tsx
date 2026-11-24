@@ -50,6 +50,7 @@ import { notificationEngine } from '@/lib/wallet/NotificationEngine';
 import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
 import { EncryptionInfoSheet } from '@/components/chat/EncryptionInfoSheet';
 import { hidesNotificationContent, messageNotification } from '@/lib/privacy/defaults';
+import { mayEdit, mayRevoke, withinEditWindow } from '@/lib/chat/message-authority';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
@@ -4879,9 +4880,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             }
             if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
               const revokeId = content.replace('__REVOKE__', '');
-              markRevoked(revokeId);
-              setMessages(prev => prev.filter(m => m.id !== revokeId));
-              chatDB.deleteMessages([revokeId]).catch(() => {});
+              // Only the message's own author can delete it for everyone (lib/chat/message-authority.ts).
+              if (mayRevoke(messagesRef.current.find((m: any) => m.id === revokeId), msg.senderInboxId)) {
+                markRevoked(revokeId);
+                setMessages(prev => prev.filter(m => m.id !== revokeId));
+                chatDB.deleteMessages([revokeId]).catch(() => {});
+              }
               continue;
             }
 
@@ -4915,9 +4919,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               if (editParts.length >= 2) {
                 const editTargetId = editParts[0];
                 const editNewContent = editParts.slice(1).join('__::');
-                setMessages(prev => prev.map(m =>
-                  m.id === editTargetId ? { ...m, content: editNewContent, edited: true } : m
-                ));
+                // Only the author, within 24 hours (lib/chat/message-authority.ts).
+                if (mayEdit(messagesRef.current.find((m: any) => m.id === editTargetId), msg.senderInboxId)) {
+                  setMessages(prev => prev.map(m =>
+                    m.id === editTargetId ? { ...m, content: editNewContent, edited: true } : m
+                  ));
+                }
               }
               continue;
             }
@@ -5586,6 +5593,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           }
         }
 
+        // Revokes in history count only from the author of the message they name (message-authority.ts).
+        const historyById = new Map<string, any>(combined.map((x: any) => [x.id, x]));
         for (const m of combined) {
           const content = m.content;
           if (typeof content === 'string' && content.startsWith('__REACT__')) {
@@ -5609,9 +5618,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             latestPinnedId = null;
           } else if (typeof content === 'string' && content.startsWith('__REVOKE__')) {
             const revId = content.replace('__REVOKE__', '');
-            revokedIds.add(revId);
-            markRevoked(revId);
-            chatDB.deleteMessages([revId]).catch(() => {});
+            if (mayRevoke(historyById.get(revId), m.senderInboxId)) {
+              revokedIds.add(revId);
+              markRevoked(revId);
+              chatDB.deleteMessages([revId]).catch(() => {});
+            }
           // [BUG FIX] Skip __VOTE__ signals from main message list — they are control signals only
           } else if (typeof content === 'string' && content.startsWith('__VOTE__')) {
             // Already processed above — skip rendering as bubble
@@ -8745,7 +8756,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                  <button role="menuitem" type="button" onClick={() => { toggleSaveMessage(contextMenu.id, contextMenu.content); setContextMenu(null); }} className={item}>
                    <Bookmark size={16} strokeWidth={1.8} className="text-[#4a505c]" /> {savedMessages.some(m => m.id === contextMenu.id) ? 'Remove saved' : 'Save message'}
                  </button>
-                 {mine && (
+                 {mine && targetMsg && withinEditWindow(targetMsg as any) && (
                    <button role="menuitem" type="button" onClick={() => { setEditingMsg({ id: contextMenu.id, content: contextMenu.content }); setContextMenu(null); }} className={item}>
                      <Pencil size={16} strokeWidth={1.8} className="text-[#4a505c]" /> Edit
                    </button>
