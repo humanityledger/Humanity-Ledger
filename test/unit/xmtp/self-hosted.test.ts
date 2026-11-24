@@ -77,7 +77,7 @@ describe('credentials for our own XMTP backend', () => {
 
   it('the backend config asks for exactly these tokens', () => {
     const cfg = fs.readFileSync('infra/xmtp-backend/config.toml', 'utf8');
-    expect(cfg).toMatch(/\[auth\]\nenabled = true/);
+    expect(cfg).toMatch(/\[auth\](?:\n#[^\n]*)*\nenabled = true/);
     expect(cfg).toContain(`audiences = ["${TOKEN_AUDIENCE}"]`);
     expect(cfg).toContain(`issuers = ["${TOKEN_ISSUER}"]`);
     expect(cfg).toContain(`required_scopes = ["${TOKEN_SCOPE}"]`);
