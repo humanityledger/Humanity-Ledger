@@ -106,6 +106,17 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
       console.warn('[XMTP] Static inboxStateFromInboxIds failed', e);
     }
 
+    // browser-sdk 5 reads inbox state through the client (preferences), not a static method: the
+    // static call is absent there, so without this every unknown sender stayed unresolved and
+    // their chat was filed under an inbox id (24 November 2026, "Not sent" in "71e71fd9…8f34").
+    if ((!states || !states[0]) && (client as any)?.preferences?.inboxStateFromInboxIds) {
+      try {
+        states = await (client as any).preferences.inboxStateFromInboxIds([inboxId], true);
+      } catch (e) {
+        console.warn('[XMTP] preferences.inboxStateFromInboxIds failed', e);
+      }
+    }
+
     if (states && states[0]) {
       const state = states[0];
       const identifiers: any[] = state.identifiers ?? state.accountIdentifiers ?? [];
@@ -139,7 +150,10 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
         const members: any[] = typeof dmAny.members === 'function' ? await dmAny.members() : (dmAny.members ?? []);
         const targetMember = members.find((m: any) => m.inboxId?.toLowerCase() === inboxId.toLowerCase());
         if (targetMember) {
-          const addrs = targetMember.accountAddresses || targetMember.addresses || [];
+          const addrs: string[] = targetMember.accountAddresses || targetMember.addresses
+            || (targetMember.accountIdentifiers ?? [])
+              .filter((id: any) => id?.identifierKind === 'Ethereum' && id?.identifier)
+              .map((id: any) => id.identifier);
           if (addrs && addrs.length > 0) {
             const addr = addrs[0].toLowerCase();
             cacheInboxId(inboxId.toLowerCase(), addr);
@@ -571,13 +585,25 @@ export async function sendMessage(
     throw new Error('Direct messaging to Aztec address is not supported over XMTP MLS');
   }
 
-  const normalizedTo = await getRegisteredAddress(toAddress);
-  const finalTo = (normalizedTo && normalizedTo.length === 42) ? normalizedTo : toAddress;
+  // A chat is not always keyed by an Ethereum address. When the stream could not resolve who
+  // wrote (24 November 2026: a chat titled "71e71fd9…8f34"), the chat is filed under the sender's
+  // XMTP inbox id or the conversation id, and every reply in it failed with "Not sent": the id
+  // was handed to XMTP as if it were an Ethereum address. Those chats now reach the same DM.
+  const route = await routeFor(client, toAddress);
+  const finalTo = route.kind === 'address'
+    ? await (async () => {
+        const normalizedTo = await getRegisteredAddress(route.address);
+        return (normalizedTo && normalizedTo.length === 42) ? normalizedTo : route.address;
+      })()
+    : route.ref;
 
   const identifier: XmtpIdentifier = {
     identifier: finalTo,
     identifierKind: 'Ethereum',
   };
+  const openDm = (): Promise<any> => route.kind === 'address'
+    ? client.conversations.newDmWithIdentifier(identifier)
+    : route.open();
 
   const cacheKey = `${client.inboxId || ''}:${finalTo.toLowerCase()}`;
   let lastError: any = null;
@@ -596,7 +622,7 @@ export async function sendMessage(
   for (let i = 0; i < 4; i++) {
     try {
       if (!dm) {
-        dm = await withTimeout(client.conversations.newDmWithIdentifier(identifier), 8000, 'newDm timeout');
+        dm = await withTimeout(openDm(), 8000, 'newDm timeout');
         // Not awaited (it added up to 3 s to the first message), but queued in the same per-
         // conversation order as the publishes: a sync racing the first publish of a new
         // conversation is the kind of collision the serial queue exists to prevent.
@@ -621,7 +647,7 @@ export async function sendMessage(
         // more attempts (that delayed every following message): publish in the background.
         break;
       }
-      if (isSyncWaitError(sendErr)) {
+      if (route.kind === 'address' && isSyncWaitError(sendErr)) {
         // "synced N messages … from cursor": the DM was created and its commit published; only
         // the wait for the network's receipt ran out. Use that DM instead of creating another
         // handle, so the welcome that lets the other person see the chat is not left behind.
@@ -652,6 +678,53 @@ export async function sendMessage(
   diag('send_failed', { error: String(lastError?.message ?? lastError).slice(0, 120) });
   reportDelivery('send_failed', lastError);
   throw new Error(`Message delivery failed via XMTP: ${lastError?.message || 'Network error'}`);
+}
+
+const INBOX_ID_RE = /^[0-9a-f]{64}$/i;
+const CONVERSATION_ID_RE = /^[0-9a-f]{32}$/i;
+
+type SendRoute =
+  | { kind: 'address'; address: string }
+  | { kind: 'ref'; ref: string; open: () => Promise<any> };
+
+/**
+ * Where a message for this chat key goes. An Ethereum address is the normal case. An XMTP inbox
+ * id is resolved to its address when the network knows it, and otherwise used directly
+ * (getDmByInboxId, then newDm). A conversation id opens that conversation, which only exists
+ * on this device if we are a member of it. Anything else fails with a sentence a person can act
+ * on, never an SDK error about an invalid address.
+ */
+export async function routeFor(client: Client, key: string): Promise<SendRoute> {
+  const k = (key || '').trim();
+  if (ETH_ADDR_RE.test(k)) return { kind: 'address', address: k };
+  const conversations: any = client.conversations;
+  if (INBOX_ID_RE.test(k)) {
+    const inboxId = k.toLowerCase();
+    const addr = await resolveInboxIdToAddress(inboxId, client).catch(() => null);
+    if (addr && ETH_ADDR_RE.test(addr)) return { kind: 'address', address: addr };
+    return {
+      kind: 'ref',
+      ref: inboxId,
+      open: async () => (await conversations.getDmByInboxId?.(inboxId)) ?? conversations.newDm(inboxId),
+    };
+  }
+  if (CONVERSATION_ID_RE.test(k)) {
+    const convId = k.toLowerCase();
+    return {
+      kind: 'ref',
+      ref: convId,
+      open: async () => {
+        let convo = await conversations.getConversationById?.(convId);
+        if (!convo) {
+          try { await conversations.sync(); } catch { /* the local copy may still be enough */ }
+          convo = await conversations.getConversationById?.(convId);
+        }
+        if (!convo) throw new Error('This conversation is not on this device any more. Start a new chat with their address.');
+        return convo;
+      },
+    };
+  }
+  throw new Error('This chat has no address to send to. Start a new chat with their address.');
 }
 
 /** Typing, read receipts and similar control messages: not worth a delivery report each. */

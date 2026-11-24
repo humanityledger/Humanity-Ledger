@@ -47,7 +47,7 @@ const STORED: { what: string; why: string }[] = [
 
 export default function TrustPage() {
   return (
-    <div className={s.site}>
+    <div className={s.site} data-site="public">
       <a href="#main" className={s.skip}>Skip to content</a>
       <SiteHeader home={false} />
       <main id="main">

@@ -11,7 +11,10 @@ describe('chat on a phone', () => {
   it('the page is never laid out wider than the screen, and iOS keeps it so after Next.js rewrites the tag', () => {
     const layout = read('app/layout.tsx');
     expect(layout).toMatch(/minimumScale: 1,/);
-    expect(layout).toMatch(/initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, shrink-to-fit=no/);
+    expect(layout).toMatch(/initial-scale=1, minimum-scale=1, viewport-fit=cover/);
+    // Pinch zoom stays available (WCAG 1.4.4): the iOS tag never caps or disables it.
+    const iosTag = layout.match(/var ci='([^']+)'/)?.[1] ?? '';
+    expect(iosTag).not.toMatch(/maximum-scale|user-scalable=(no|0)/);
     expect(layout).toMatch(/new MutationObserver\(si\)\.observe\(document\.head/);
   });
 

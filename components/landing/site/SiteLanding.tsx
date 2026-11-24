@@ -49,7 +49,7 @@ export function SiteLanding() {
   const stack = K.stackRows(v);
 
   return (
-    <div className={s.site}>
+    <div className={s.site} data-site="public">
       <a href="#main" className={s.skip}>Skip to content</a>
       <SiteHeader />
 

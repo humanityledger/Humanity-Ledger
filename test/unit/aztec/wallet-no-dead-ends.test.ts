@@ -21,7 +21,9 @@ describe('a transaction that was sent but not confirmed in time', () => {
 
   it('is recorded as pending, never as failed (client.ts)', () => {
     const src = read('lib/aztec/wallet/client.ts');
-    expect(src).toMatch(/if \(txHash && isConfirmationTimeout\(err\)\) \{\s*\/\/[^\n]*\n\s*upsertActivity\(me, \{ id, kind, txHash, status: 'pending'/);
+    // The branch may report the event first (reportPayment); what it records is pending, never failed.
+    const branch = src.slice(src.indexOf('if (txHash && isConfirmationTimeout(err)) {'));
+    expect(branch).toMatch(/^if \(txHash && isConfirmationTimeout\(err\)\) \{(?:\s*(?:\/\/[^\n]*|reportPayment\([^\n]*\);))*\s*upsertActivity\(me, \{ id, kind, txHash, status: 'pending'/);
   });
 });
 
@@ -29,7 +31,8 @@ describe('a failed balance read never undoes an open wallet or a confirmed payme
   it('open, account creation and every sent transaction refresh quietly', () => {
     const src = read('lib/aztec/wallet/client.ts');
     expect(src).toMatch(/this\.set\(\{ phase: 'ready', step: undefined \}\);\s*await this\.refreshQuietly\(\);/);
-    expect(src).toMatch(/if \(receipt && consumes\) this\.dropClaim\(consumes\);[\s\S]{0,200}await this\.refreshQuietly\(\);/);
+    // After the fee bookkeeping (Fee Juice claim, private deposit), and before the receipt check.
+    expect(src).toMatch(/if \(receipt && consumes\) this\.dropClaim\(consumes\);[\s\S]{0,700}await this\.refreshQuietly\(\);\s*if \(!receipt\) throw/);
     expect(src).not.toMatch(/phase: 'ready', step: undefined \}\);\s*await this\.refresh\(\);/);
   });
 });

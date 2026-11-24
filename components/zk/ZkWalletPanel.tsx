@@ -47,8 +47,8 @@ import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AlphaInfoBox } from '@/components/zk/AlphaNetworkBanner';
 import { WalletCreation } from '@/components/zk/WalletCreation';
 import {
-  Card, CardHead, CopyKV, Figure, FOCUS, IconButton, INK, INK_2, INK_3, KV, NetworkChip, Notice,
-  PrimaryButton, Segmented, Sheet as SheetFrame, Spinner, TextButton, cleanAmount, shortHex, useHiddenAmounts,
+  Card, CardHead, CopyKV, Figure, FOCUS, IconButton, INK, INK_2, INK_3, KV, NetworkChip, NoteField, Notice,
+  PrimaryButton, Segmented, Sheet as SheetFrame, Spinner, TextButton, TokenMark, VAULT_BG, cleanAmount, shortHex, useHiddenAmounts,
 } from '@/components/zk/wallet/WalletUI';
 import { ActivityList, NotesCard, isInFlight } from '@/components/zk/wallet/WalletActivity';
 import { feeRunway } from '@/components/zk/wallet/walletLogic';
@@ -181,11 +181,20 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
     >
       {/* 1. The network and Close */}
       <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 pt-[max(20px,env(safe-area-inset-top))] pb-3">
-        <div className="min-w-0 flex flex-col gap-1.5">
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em] leading-none" style={{ color: INK }}>
-            Private wallet
-          </h1>
-          <NetworkChip label={ALPHA ? 'Aztec Alpha · Ethereum mainnet' : networkLabel()} live={ready} />
+        <div className="min-w-0 flex items-center gap-3">
+          <span
+            className="w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_18px_-10px_rgba(21,23,28,0.7)]"
+            style={{ background: VAULT_BG }}
+            aria-hidden="true"
+          >
+            <ShieldCheck size={21} strokeWidth={1.9} />
+          </span>
+          <div className="min-w-0 flex flex-col gap-1.5">
+            <h1 className="text-[20px] font-semibold tracking-[-0.02em] leading-none" style={{ color: INK }}>
+              Private wallet
+            </h1>
+            <NetworkChip label={ALPHA ? 'Aztec Alpha · Ethereum mainnet' : networkLabel()} live={ready} />
+          </div>
         </div>
         <IconButton label="Close" onClick={onClose}>
           <X size={20} strokeWidth={2} />
@@ -410,9 +419,12 @@ function ActionDock({ actions }: { actions: { id: string; label: string; icon: R
           className={`group flex flex-col items-center gap-2 py-1 rounded-2xl ${FOCUS}`}
         >
           <span
-            className={`w-[54px] h-[54px] rounded-full flex items-center justify-center transition-[background-color,transform] duration-150 group-active:scale-95 ${
-              a.primary ? 'bg-[#15171c] text-white group-hover:bg-[#262932]' : 'bg-[#f2f4f7] text-[#15171c] group-hover:bg-[#e8ebef]'
+            className={`w-[56px] h-[56px] rounded-[20px] flex items-center justify-center transition-[background-color,transform,box-shadow] duration-150 group-active:scale-95 motion-reduce:transition-none ${
+              a.primary
+                ? 'text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_12px_24px_-14px_rgba(21,23,28,0.85)]'
+                : 'bg-white text-[#15171c] border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)] group-hover:bg-[#f7f8fa]'
             }`}
+            style={a.primary ? { background: VAULT_BG } : undefined}
             aria-hidden="true"
           >
             {a.icon}
@@ -473,19 +485,29 @@ function BalanceHero({
   const main = balances[0];
   const runway = feeJuice ? feeRunway(feeJuice.balance, feeJuice.minForTx) : null;
   const [whole, frac] = main ? splitAmountText(formatUnits(main.privateUnits, main.decimals)) : ['0', ''];
-  const muted = 'rgba(255,255,255,0.62)';
+  const muted = 'rgba(255,255,255,0.64)';
+  const quiet = 'rgba(255,255,255,0.5)';
+  // How much of this token is private, for the bar under the amount. Only drawn when part is public.
+  const total = main ? main.privateUnits + main.publicUnits : 0n;
+  const privatePct = main && total > 0n ? Number((main.privateUnits * 1000n) / total) / 10 : 100;
   return (
-    <div className="relative rounded-[24px] bg-[#15171c] text-white px-5 pt-4 pb-5 overflow-hidden shadow-[0_1px_2px_rgba(21,23,28,0.2),0_24px_48px_-28px_rgba(21,23,28,0.7)]">
-      {/* One quiet light, in the brand violet, from the top right. The only ornament. */}
+    <div
+      className="relative rounded-[28px] text-white px-5 pt-4 pb-5 overflow-hidden shadow-[0_1px_2px_rgba(21,23,28,0.25),0_28px_56px_-30px_rgba(21,23,28,0.85)]"
+      style={{ background: VAULT_BG }}
+    >
+      {/* The private notes as a field of dots, one violet light from the top right, a hairline of light on the top edge. */}
+      <NoteField at="100% 0%" opacity={0.15} />
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(110% 80% at 100% 0%, rgba(82,0,255,0.38), rgba(82,0,255,0) 62%)' }}
+        style={{ background: 'radial-gradient(95% 70% at 100% 0%, rgba(98,64,255,0.42), rgba(98,64,255,0) 60%), radial-gradient(70% 60% at 0% 100%, rgba(39,84,214,0.22), rgba(39,84,214,0) 65%)' }}
         aria-hidden="true"
       />
+      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-white/0 via-white/40 to-white/0" aria-hidden="true" />
+
       <div className="relative">
         <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: muted }}>
-            <ShieldCheck size={15} strokeWidth={2} aria-hidden="true" />
+          <span className="inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-white/[0.08] border border-white/[0.12] text-[12.5px] font-semibold" style={{ color: 'rgba(255,255,255,0.86)' }}>
+            <ShieldCheck size={14} strokeWidth={2.1} aria-hidden="true" />
             Private balance
           </span>
           <span className="flex items-center -mr-1.5">
@@ -498,12 +520,22 @@ function BalanceHero({
           </span>
         </div>
 
-        <div className="mt-3 flex items-baseline gap-2 min-w-0" data-testid="wallet-balance" aria-label={hidden ? 'Balance hidden' : `${whole}${frac} ${main?.symbol ?? ''}`}>
-          <span className="font-semibold tracking-[-0.04em] tabular-nums leading-none text-[46px] sm:text-[54px] truncate" aria-hidden="true">
-            {hidden ? '••••' : whole}
-            {!hidden && frac ? <span className="text-[28px] sm:text-[32px] tracking-[-0.03em]" style={{ color: muted }}>{frac}</span> : null}
-          </span>
-          {main ? <span className="text-[17px] font-semibold shrink-0" style={{ color: muted }} aria-hidden="true">{main.symbol}</span> : null}
+        <div className="mt-4 flex items-center gap-3 min-w-0">
+          {main ? <TokenMark symbol={main.symbol} size={40} /> : null}
+          <div className="flex items-baseline gap-2 min-w-0" data-testid="wallet-balance" aria-label={hidden ? 'Balance hidden' : `${whole}${frac} ${main?.symbol ?? ''}`}>
+            <motion.span
+              key={hidden ? 'hidden' : `${whole}${frac}`}
+              initial={{ opacity: 0.35, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="font-semibold tracking-[-0.045em] tabular-nums leading-none text-[44px] sm:text-[54px] truncate"
+              aria-hidden="true"
+            >
+              {hidden ? '••••' : whole}
+              {!hidden && frac ? <span className="text-[26px] sm:text-[32px] tracking-[-0.03em]" style={{ color: muted }}>{frac}</span> : null}
+            </motion.span>
+            {main ? <span className="text-[16px] font-semibold shrink-0" style={{ color: muted }} aria-hidden="true">{main.symbol}</span> : null}
+          </div>
         </div>
         {main && isTestToken(main.symbol) && (
           <p className="mt-1.5 text-[12.5px] font-semibold" style={{ color: muted }} data-testid="test-token-note">
@@ -511,25 +543,34 @@ function BalanceHero({
           </p>
         )}
 
-        <p className="mt-2 text-[12.5px] tabular-nums" style={{ color: 'rgba(255,255,255,0.5)' }} role="status" aria-live="polite">
+        <p className="mt-2.5 inline-flex items-center gap-1.5 text-[12.5px] tabular-nums" style={{ color: quiet }} role="status" aria-live="polite">
+          <span className={`w-1.5 h-1.5 rounded-full ${refreshing ? 'bg-white/60 animate-pulse motion-reduce:animate-none' : syncedAt ? 'bg-[#34d399]' : 'bg-white/30'}`} aria-hidden="true" />
           {refreshing ? 'Syncing with Aztec…' : syncedAt ? `Synced at ${new Date(syncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet'}
         </p>
 
         {main && main.publicUnits > 0n && (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-white/[0.07] border border-white/[0.09] pl-4 pr-2 py-2">
-            <span className="min-w-0">
-              <span className="block text-[14px] font-semibold tabular-nums">
-                {hidden ? '••••' : formatUnits(main.publicUnits, main.decimals)} {main.symbol} public
+          <div className="mt-4 rounded-2xl bg-white/[0.06] border border-white/[0.10] p-3">
+            {/* Private and public parts of this token, side by side. */}
+            <div className="flex h-1.5 rounded-full overflow-hidden bg-white/10" role="img" aria-label={hidden ? 'Share of this balance that is private, hidden' : `${privatePct}% of your ${main.symbol} is private`}>
+              <span className="h-full bg-white rounded-full" style={{ width: `${hidden ? 50 : privatePct}%` }} />
+              <span className="h-full flex-1" style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(251,191,36,0.85) 0 3px, rgba(251,191,36,0.35) 3px 6px)' }} />
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block text-[14px] font-semibold tabular-nums">
+                  {hidden ? '••••' : formatUnits(main.publicUnits, main.decimals)} {main.symbol} public
+                </span>
+                <span className="block text-[12.5px]" style={{ color: muted }}>
+                  Not yet shielded, visible on the network
+                </span>
               </span>
-              <span className="block text-[12.5px]" style={{ color: muted }}>
-                Not yet shielded, visible on the network
-              </span>
-            </span>
-            {onShield && (
-              <button type="button" onClick={onShield} className="h-9 px-3.5 rounded-full bg-white text-[#15171c] text-[13px] font-semibold hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
-                Shield
-              </button>
-            )}
+              {onShield && (
+                <button type="button" onClick={onShield} className="h-9 px-3.5 rounded-full bg-white text-[#15171c] text-[13px] font-semibold inline-flex items-center gap-1.5 hover:bg-white/90 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                  <Lock size={13} strokeWidth={2.3} aria-hidden="true" />
+                  Shield
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -537,11 +578,14 @@ function BalanceHero({
           <ul className="mt-4 divide-y divide-white/10 border-t border-white/10">
             {balances.slice(1).map((b) => (
               <li key={b.key} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-[14px] font-semibold">
-                  {b.symbol}
-                  {isTestToken(b.symbol) && (
-                    <span className="block text-[12px] font-medium" style={{ color: muted }}>{TEST_TOKEN_NOTE}</span>
-                  )}
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <TokenMark symbol={b.symbol} size={28} />
+                  <span className="text-[14px] font-semibold min-w-0">
+                    {b.symbol}
+                    {isTestToken(b.symbol) && (
+                      <span className="block text-[12px] font-medium" style={{ color: muted }}>{TEST_TOKEN_NOTE}</span>
+                    )}
+                  </span>
                 </span>
                 <span className="text-right">
                   <span className="block text-[16px] font-semibold tabular-nums">{hidden ? '••••' : formatUnits(b.privateUnits, b.decimals)}</span>
@@ -569,6 +613,18 @@ function BalanceHero({
                 {runway === null ? 'Pays the network fee, publicly' : runway === 0 ? 'Not enough for the next transaction' : `Enough for at least ${runway} transaction${runway === 1 ? '' : 's'}`}
               </span>
             </span>
+            {runway !== null && (
+              // A fuel gauge: one bar per transaction the Fee Juice covers, up to five.
+              <span className="flex items-end gap-[3px] h-4 shrink-0" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span
+                    key={i}
+                    className="w-[4px] rounded-full"
+                    style={{ height: 6 + i * 2.5, background: i < Math.min(runway, 5) ? (runway <= 1 ? '#fbbf24' : '#34d399') : 'rgba(255,255,255,0.16)' }}
+                  />
+                ))}
+              </span>
+            )}
           </div>
         )}
 
