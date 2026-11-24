@@ -141,7 +141,7 @@ const DESKTOP = [
     id: "chats",
     title: "Chats",
     text: "Messages, voice notes and private payments in one thread.",
-    alt: "Ledger Chat on desktop. The chat list, a conversation with Maya with a private payment of 48 HLC, a voice note, and the contact panel with safety glyphs.",
+    alt: "Ledger Chat on desktop. The chat list, a conversation with Maya with a private payment of 48 cUSDC, a voice note, and the contact panel with safety glyphs.",
   },
   {
     id: "calls",

@@ -165,10 +165,12 @@
 
 .title {
   margin: 0 0 10px;
-  font-size: clamp(28px, 3vw, 34px);
-  line-height: 1.1;
-  font-weight: 650;
-  letter-spacing: -0.032em;
+  /* The corporate display serif, as on the landing and in the documentation. */
+  font-family: var(--hl-font-display);
+  font-size: clamp(34px, 3.6vw, 42px);
+  line-height: 1.04;
+  font-weight: 400;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
@@ -776,10 +778,11 @@
 
 .aboutTitle {
   margin: 0;
-  font-size: clamp(28px, 3.1vw, 44px);
-  line-height: 1.06;
-  font-weight: 650;
-  letter-spacing: -0.034em;
+  font-family: var(--hl-font-display);
+  font-size: clamp(34px, 3.8vw, 54px);
+  line-height: 1.02;
+  font-weight: 400;
+  letter-spacing: -0.015em;
   text-wrap: balance;
   max-width: 620px;
 }

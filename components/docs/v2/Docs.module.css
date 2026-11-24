@@ -2534,7 +2534,7 @@ ol.list li::marker {
 .dgAccent rect,
 .dgAccent path,
 .dgAccent ellipse {
-  stroke: #5200ff;
+  stroke: #2754d6;
   stroke-width: 1.5;
 }
 
@@ -2645,13 +2645,13 @@ ol.list li::marker {
 }
 
 .dgNote rect {
-  fill: #f1ebff;
-  stroke: #ddd0ff;
+  fill: #eef2fd;
+  stroke: #d6e0fb;
 }
 
 .dgNote text {
   font-size: 12.5px;
-  fill: #3d00bf;
+  fill: #1d3fa8;
 }
 
 .dgNum circle {

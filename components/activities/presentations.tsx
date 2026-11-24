@@ -181,7 +181,7 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
               {leading}
               <div className={s.titles}>
                 <p className={s.title}>Private payment to {to}</p>
-                <p className={s.subtitle}>{failed ? 'It did not go through. Nothing was sent.' : 'Amount and parties stay private on Aztec'}</p>
+                <p className={s.subtitle}>{failed ? 'It did not go through. Nothing was sent.' : 'Amount and recipient stay private on Aztec'}</p>
               </div>
               <span className={s.amount}>{amount}</span>
             </div>
