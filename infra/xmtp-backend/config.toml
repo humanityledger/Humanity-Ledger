@@ -49,10 +49,8 @@ key_package_seconds = 7776000
 # Usernames map to handles of the form name#1234 (phase M4 of the plan).
 min_name_length = 3
 
-[rate_limits]
-enabled = true
-# The load balancer's addresses, so per-caller limits see the real client.
-trusted_proxies = []
+# [rate_limits] is documented upstream but the 8.0.0-rc4 image refuses it ("is not a configuration
+# key", staging deploy of 24 Nov 2026). Add it back with the image that knows it.
 
 [chains]
 # Needed only to verify smart-contract wallets (ERC-1271).

@@ -1,6 +1,6 @@
 # Moving Ledger Chat to its own XMTP backend
 
-Status: 24 November 2026. This is a plan; phase M2 is in code and inert (section 4). Nothing is deployed.
+Status: 24 November 2026. M0 decided (staging on Railway, `xmtp.ledgerchat.org`, users move only on stable releases). M1 staging deployed, waiting for DNS and the app's JWKS. M2 in code, with keys set on the app. No user is on our backend.
 
 ## 1. Why
 
@@ -73,8 +73,8 @@ Each phase is a pull request (or several), with tests in CI, and ends with an up
 
 | Phase | What | Done when | Who |
 |---|---|---|---|
-| **M0** | Decisions: host, domain (`xmtp.ledgerchat.org`), Postgres provider, budget, the date we leave the Labs network | Recorded in `docs/alpha/OPERATOR_DECISIONS.md` | Stefan |
-| **M1** | Staging backend: image pinned by digest, Postgres 17, `config.toml`, TLS, private metrics, health check | `grpc-health-probe` green, and `GetConfiguration` answers with our identifier | Stefan deploys; Claude prepares |
+| **M0** | Decisions: host, domain, Postgres provider, budget, the date we leave the Labs network | **Decided 24 Nov 2026:** staging on Railway with its own Postgres; `xmtp.ledgerchat.org`; users move only once stable releases exist. Still open: the production host (Fly.io, AWS or Kubernetes) and the budget | Stefan |
+| **M1** | Staging backend: image pinned by digest, Postgres 17+, `config.toml`, TLS, private metrics, health check | **Deployed 24 Nov 2026** (`infra/xmtp-backend/README.md`). The config validates; startup waits on the app's JWKS (the app must redeploy with its new keys) and on the DNS records for `xmtp.ledgerchat.org`. Remaining: `grpc-health-probe` green, `GetConfiguration` answering with `org.ledgerchat.xmtp.staging`, and the image pinned by digest | Stefan (DNS, redeploy); Claude |
 | **M2** | Backend authentication | **Done in code (24 Nov).** Remaining: generate the keys and set `XMTP_JWKS_URL` | Stefan sets the secrets |
 | **M3** | SDK 8 client behind the build flag. Covers: the signer (`identity`, `kind`, `sign`); `Client.create({ backend, storage, credentials })` with credential refresh from `/api/xmtp/token`; `createDm`; send and publish; streams with `onConnectionStateChange`; consent records; errors by `details.code`, never by text; one tab at a time | Two installations on staging pass: send, read, restart, stream recovery, multi-tab notice, and a 1,000-message soak | Claude |
 | **M4** | Identity and usernames. Decide between XMTP handles and our registry, map one to the other, keep G7 (the Aztec address binding) on the new inbox ids | The username lookup and the G7 binding tests run against staging | Claude, with Stefan deciding |
