@@ -32,7 +32,7 @@ import { toast } from 'sonner';
 import { Copy, MessageCircle, Pin, Wallet } from 'lucide-react';
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
-import { mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
+import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
 
 export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';
@@ -137,11 +137,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [mayPin, setMayPin] = useState(false);
   const [menu, setMenu] = useState<{ at: MenuAt; post: Shown } | null>(null);
   const [posts, setPosts] = useState<Shown[]>([]);
-  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error' | 'waiting'>('loading');
   const [draft, setDraft] = useState('');
   // Set from the community: the XMTP group that carries the posts, when the community is on MLS.
   const [mlsGroup, setMlsGroup] = useState<string | null>(null);
   const [mlsAdmin, setMlsAdmin] = useState<CommunityLike | null>(null);
+  const [mlsMember, setMlsMember] = useState<CommunityLike | null>(null);
   const senders = useRef(new Map<string, string>());
   const listEnd = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -162,6 +163,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       const group = mlsGroupOf(c);
       setMlsGroup(group);
       setMlsAdmin(group && (owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
+      setMlsMember(group && mine && !(owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
     } catch { /* the header falls back to "Community" */ }
   }, [communityId, f, headers, me]);
 
@@ -170,6 +172,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       // Posts live in the XMTP group: read them there, never from the server.
       if (!xmtpClient) { setLoad('error'); return; }
       try {
+        // Not in the group yet: a member who is online adds people who joined (lib/communities/mls.ts).
+        await xmtpClient.conversations?.sync?.().catch?.(() => {});
+        const inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
+        if (!inGroup) { setLoad((st) => (st === 'ready' ? 'ready' : 'waiting')); return; }
         const list = await readGroupPosts(xmtpClient, mlsGroup);
         const incoming: ReaderPost[] = [];
         for (const m of list) {
@@ -218,6 +224,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     if (!mlsGroup || !mlsAdmin || !xmtpClient) return;
     syncGroupMembers(xmtpClient, mlsGroup, mlsAdmin, me).catch(() => { /* retried next time the community opens */ });
   }, [mlsGroup, mlsAdmin, xmtpClient, me]);
+  // Any other member's client adds people who joined while no admin was online (never removes).
+  useEffect(() => {
+    if (!mlsGroup || !mlsMember || !xmtpClient) return;
+    addMissingMembers(xmtpClient, mlsGroup, mlsMember, me).catch(() => { /* retried next time the community opens */ });
+  }, [mlsGroup, mlsMember, xmtpClient, me]);
 
   useEffect(() => {
     setLoad('loading');
@@ -340,6 +351,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4" aria-live="polite">
         {load === 'loading' && posts.length === 0 && (
           <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading the posts…</p>
+        )}
+        {load === 'waiting' && posts.length === 0 && (
+          <div className="py-10 text-center" role="status" data-testid="mls-waiting">
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.</p>
+          </div>
         )}
         {load === 'error' && posts.length === 0 && (
           <div className="py-10 text-center" role="alert">

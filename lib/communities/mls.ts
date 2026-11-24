@@ -6,9 +6,15 @@
  * (`CommunityChannel.xmtpGroupId`). Our server then holds the community's metadata (name, members,
  * channels, invite codes) and never the posts: its post route answers 410 for these communities.
  *
- * Membership: the server decides who is a member (invite codes, approvals); an admin's client makes
- * the group match it, because only a group member can add or remove members. Removing a member
- * starts a new MLS epoch, so they cannot read what is posted afterwards.
+ * Membership: the server decides who is a member (invite codes, approvals). Any member's client adds
+ * the server's members who are not in the group yet (XMTP's default group policy lets members add),
+ * so a person who joins while no admin is online can read as soon as any member opens the
+ * community. Only an admin's client removes, from a complete member list. Removing a member starts
+ * a new MLS epoch, so they cannot read what is posted afterwards.
+ *
+ * New communities start on MLS (24/11/2026): the creator's client makes the first channel's group,
+ * with the creator only, before the community is created, and the server stores its id
+ * (app/api/chat/communities/route.ts POST). Existing communities are not migrated.
  */
 
 import { getGroupMessages, sendGroupMessage, addGroupMember, removeGroupMember, createSecureGroup } from '@/lib/xmtp/groups';
@@ -69,6 +75,18 @@ export async function syncGroupMembers(client: any, groupId: string, c: Communit
   const remove = membersComplete(c) ? plan.remove : [];
   for (const a of remove) await removeGroupMember(client, groupId, a);
   return { added: plan.add.length, removed: remove.length };
+}
+
+/** Non-admin members: add the server's members missing from the group, never remove anyone. */
+export async function addMissingMembers(client: any, groupId: string, c: CommunityLike, self: string): Promise<number> {
+  const plan = reconcileMembers(serverMembers(c), await groupMemberAddresses(client, groupId), self);
+  for (const a of plan.add) await addGroupMember(client, groupId, a);
+  return plan.add.length;
+}
+
+/** The first channel's group of a community being created: the creator only, members join later. */
+export async function createCommunityGroup(client: any, communityName: string): Promise<string> {
+  return createSecureGroup(client, [], `${communityName} · general`.slice(0, 100), '', { allowCreatorOnly: true });
 }
 
 /** Creates the group for a new channel of an MLS community, with every current member but `self`. */

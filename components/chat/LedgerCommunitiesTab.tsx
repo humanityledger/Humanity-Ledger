@@ -19,6 +19,8 @@ interface Community {
 
 interface LedgerCommunitiesTabProps {
   myAddress: string;
+  /** The XMTP client: with it a new community starts on MLS (its posts never reach our server). */
+  xmtpClient?: any;
   onOpenCommunity: (id: string) => void;
   /** Opens the community straight on Manage (right click > Manage). */
   onManageCommunity?: (id: string) => void;
@@ -80,7 +82,7 @@ function CommunityRow({ c, onOpen, onManage }: { c: Community; onOpen: () => voi
   );
 }
 
-export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, onOpenCommunity, onManageCommunity }) => {
+export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, xmtpClient, onOpenCommunity, onManageCommunity }) => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [view, setView] = useState<'mine' | 'discover'>('mine');
   const [showCreate, setShowCreate] = useState(false);
@@ -117,11 +119,20 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
     if (!newName.trim() || creating) return;
     setCreating(true);
     try {
+      // The first channel's XMTP group, made here, so the server stores its id and never the posts.
+      // If XMTP is not ready the community is created as before (server-stored posts).
+      let xmtpGroupId: string | null = null;
+      if (xmtpClient) {
+        try {
+          const { createCommunityGroup } = await import('@/lib/communities/mls');
+          xmtpGroupId = await createCommunityGroup(xmtpClient, newName.trim());
+        } catch { /* falls back to a server-stored community */ }
+      }
       const res = await fetch('/api/chat/communities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
         credentials: 'include',
-        body: JSON.stringify({ name: newName.trim(), description: newDesc.trim(), isPrivate }),
+        body: JSON.stringify({ name: newName.trim(), description: newDesc.trim(), isPrivate, ...(xmtpGroupId ? { mls: true, xmtpGroupId } : {}) }),
       });
       if (res.ok) {
         const d = await res.json().catch(() => ({}));

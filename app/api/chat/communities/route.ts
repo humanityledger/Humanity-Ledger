@@ -109,6 +109,11 @@ export async function POST(req: NextRequest) {
     const name = clean(body?.name, MAX_NAME);
     if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
     const description = clean(body?.description, MAX_DESCRIPTION);
+    // New communities start on MLS (R-17): the creator's client made the first channel's XMTP group
+    // and sends only its id, so this server never holds their posts. Without a valid id, or with
+    // COMMUNITY_MLS_NEW=off (operator switch back), the community is created as before. Existing
+    // communities are never changed here.
+    const mlsGroupId = body?.mls === true && process.env.COMMUNITY_MLS_NEW !== 'off' && isPersistableXmtpGroupId(body?.xmtpGroupId) ? String(body.xmtpGroupId) : null;
 
     // The database is the only place a community lives. When it cannot be written, nothing is
     // created and the caller is told so: a copy kept in this server's memory used to be returned as
@@ -125,12 +130,19 @@ export async function POST(req: NextRequest) {
             ownerAddress: caller.toLowerCase(),
             joinCode,
             members: { create: { walletAddress: caller.toLowerCase(), role: 'ADMIN' } },
-            channels: {
-              create: [
-                { name: 'general', description: 'General discussion', isPaid: false, position: 0 },
-                { name: 'announcements', description: 'Announcements', isPaid: false, position: 1 },
-              ],
-            },
+            ...(mlsGroupId
+              ? {
+                  communityMls: true,
+                  channels: { create: [{ name: 'general', description: 'General discussion', isPaid: false, position: 0, xmtpGroupId: mlsGroupId }] },
+                }
+              : {
+                  channels: {
+                    create: [
+                      { name: 'general', description: 'General discussion', isPaid: false, position: 0 },
+                      { name: 'announcements', description: 'Announcements', isPaid: false, position: 1 },
+                    ],
+                  },
+                }),
             permissions: { create: {} },
           },
         });

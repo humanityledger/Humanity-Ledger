@@ -261,7 +261,7 @@ describe('Schema: communityMls and xmtpGroupId fields exist in Prisma schema', (
   });
 });
 
-describe('guard: communityMls stays off until the R-17 checklist is met', () => {
+describe('guard: only a new community with a client-made XMTP group starts on MLS', () => {
   const { readFileSync, readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
   const { join } = require('node:path') as typeof import('node:path');
 
@@ -291,14 +291,23 @@ describe('guard: communityMls stays off until the R-17 checklist is met', () => 
     return out;
   }
 
-  it('does not write communityMls true in application code, schema, or migrations', () => {
+  it('writes communityMls true only when creating a community whose group id the client made', () => {
+    const CREATE_ROUTE = join(process.cwd(), 'app/api/chat/communities/route.ts');
     const hits: string[] = [];
     for (const root of ['app', 'components', 'lib']) {
       for (const file of filesUnder(join(process.cwd(), root), /\.(ts|tsx)$/)) {
-        if (turnsFlagOn(readFileSync(file, 'utf8'))) hits.push(file);
+        if (file !== CREATE_ROUTE && turnsFlagOn(readFileSync(file, 'utf8'))) hits.push(file);
       }
     }
     expect(hits).toEqual([]);
+
+    // The one write (24/11/2026): POST creates a new community on MLS only with a valid group id made
+    // by the creator's client, and the operator can switch it off. No update path writes the flag.
+    const route = readFileSync(CREATE_ROUTE, 'utf8');
+    expect(route).toMatch(/const mlsGroupId = body\?\.mls === true && process\.env\.COMMUNITY_MLS_NEW !== 'off' && isPersistableXmtpGroupId\(body\?\.xmtpGroupId\)/);
+    expect(route).toMatch(/\.\.\.\(mlsGroupId\s*\?\s*\{\s*communityMls: true,/);
+    expect(route.match(/communityMls: true,/g)?.length).toBe(1);
+    expect(route).not.toMatch(/\.update\([\s\S]{0,200}communityMls: true/);
 
     // Channels are added from Manage. For a community already flagged by the operator it creates the
     // XMTP group through lib/communities/mls.ts; it never calls the SDK directly or flips the flag.
