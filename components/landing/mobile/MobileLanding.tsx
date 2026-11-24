@@ -15,6 +15,7 @@
  * All copy comes from lib/landing/content.ts.
  */
 import React from 'react';
+import Link from 'next/link';
 import * as C from '@/lib/landing/content';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel } from '@/lib/aztec/wallet/config';
 import { countTests, versions } from '@/lib/landing/facts';
@@ -189,11 +190,11 @@ export function MobileLanding() {
       <Enhance />
 
       <header className={s.bar}>
-        <a href="/" className={s.home} aria-label="Ledger Chat home">
+        <Link href="/" className={s.home} aria-label="Ledger Chat home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`${IMG}/mark-96.webp`} alt="" width={28} height={28} className={s.logo} />
           <span>Ledger Chat</span>
-        </a>
+        </Link>
         <details className={s.menu}>
           <summary aria-label="Sections"><span aria-hidden="true" className={s.menuIcon} /></summary>
           <nav aria-label="Sections" className={s.sheet}>
@@ -380,9 +381,9 @@ export function MobileLanding() {
           <ul className={s.no}>{C.PROTECTS.notYet.map((x) => <li key={x}>{x}</li>)}</ul>
           <p className={s.note}>{C.FEE_PRIVACY.long}</p>
           <p className={s.links}>
-            <a href="/docs/security-model">Security model</a>
+            <Link href="/docs/security-model">Security model</Link>
             <a href="/chat">Wallet → Security view</a>
-            <a href="/docs/overview">Documentation</a>
+            <Link href="/docs/overview">Documentation</Link>
           </p>
         </Section>
 

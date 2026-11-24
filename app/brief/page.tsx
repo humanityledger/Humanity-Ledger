@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import React from 'react';
+import Link from 'next/link';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { EXTERNAL_LINKS } from '@/lib/constants/links';
 import { LEGAL_ENTITY } from '@/lib/constants/legalEntity';
@@ -41,7 +42,7 @@ export default function BriefPage() {
   return (
     <div className={s.desk}>
       <div className={s.bar}>
-        <a href="/">Ledger Chat</a>
+        <Link href="/">Ledger Chat</Link>
         <PrintButton className={s.print} />
       </div>
 
