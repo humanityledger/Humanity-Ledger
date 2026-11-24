@@ -32,7 +32,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useAccount, useChainId, useConnect, useSignMessage } from "wagmi";
+import { useAccount, useChainId, useConfig, useConnect, useSignMessage } from "wagmi";
+import { CAIP25_HELP, isCaip25ScopeError, requestEvmOnlyAccounts, type Eip1193Like } from "@/lib/auth/metamask-scope";
 import { SiweMessage } from "siwe";
 import { useAppKit } from "@reown/appkit/react";
 import { allowAutoRedirect, clearLocalSessionMarkers, hasServerSession } from "@/lib/auth/session-check";
@@ -188,6 +189,7 @@ export default function ConnectPage() {
   const { isConnected, address, status: accountStatus, connector: activeConnector } = useAccount();
   const chainId = useChainId();
   const { connect, connectors, isPending, isError, error } = useConnect();
+  const wagmiConfig = useConfig();
   const { signMessageAsync } = useSignMessage();
   const { open: openAppKit } = useAppKit();
   const { isLinked, setLinked } = useUIStore();
@@ -238,6 +240,12 @@ export default function ConnectPage() {
     setPendingWallet(null);
     const msg = (error.message ?? "").toLowerCase();
     if (msg.includes("already connected")) return;
+    if (isCaip25ScopeError(error)) {
+      // MetaMask pre-selected Tron and refused its own approval (lib/auth/metamask-scope.ts). The next
+      // tap on MetaMask revokes that permission and asks for Ethereum only.
+      toast.error("MetaMask could not connect.", { description: CAIP25_HELP, duration: 10000 });
+      return;
+    }
     if (msg.includes("provider not found") || msg.includes("not installed")) {
       toast.error("That wallet extension is not installed in this browser.", {
         action: { label: "Get MetaMask", onClick: () => window.open("https://metamask.io/download/", "_blank") },
@@ -832,13 +840,33 @@ export default function ConnectPage() {
         connectors.find((c) => c.id === "injected" || (c as { type?: string }).type === "injected");
       if (conn) {
         setPendingWallet({ id: w.id, name: w.name, logo: w.logo });
+        if (w.id === "metamask") {
+          // Ethereum only, so MetaMask does not pre-select Tron and refuse its own approval.
+          void (async () => {
+            try {
+              const provider = (await conn.getProvider()) as Eip1193Like | undefined;
+              if (provider?.request) {
+                const scoped = await requestEvmOnlyAccounts(provider, wagmiConfig.chains.map((c) => c.id));
+                if (scoped === "rejected") {
+                  setPendingWallet(null);
+                  toast.error("You declined the connection request.");
+                  return;
+                }
+              }
+            } catch {
+              /* no provider yet: the usual connect below reports it */
+            }
+            connect({ connector: conn });
+          })();
+          return;
+        }
         connect({ connector: conn });
       } else {
         openAppKitSafe();
         toast.info(`${w.name} is not installed here. Scan the code with the ${w.name} app on your phone instead.`);
       }
     },
-    [connect, connectors, openAppKitSafe],
+    [connect, connectors, openAppKitSafe, wagmiConfig],
   );
 
   const handleMobileWallet = useCallback(
