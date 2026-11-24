@@ -4,7 +4,7 @@
  * grows settles in about 0.4 s with no visible bounce; a thrown window lands with a soft one.
  * With "reduce motion" every change is a 120 ms cross-fade and nothing moves.
  */
-import { useReducedMotion, type Transition } from 'framer-motion';
+import { useReducedMotion, type TargetAndTransition, type Transition } from 'framer-motion';
 
 export const SPRING_MORPH: Transition = { type: 'spring', stiffness: 420, damping: 36, mass: 0.9 };
 export const SPRING_THROW: Transition = { type: 'spring', stiffness: 360, damping: 30, mass: 1 };
@@ -15,7 +15,7 @@ export interface MotionPreset {
   morph: Transition;
   throw: Transition;
   /** enter/exit for whole surfaces */
-  appear: { initial: object; animate: object; exit: object; transition: Transition };
+  appear: { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition; transition: Transition };
 }
 
 export function useMotionPreset(): MotionPreset {
