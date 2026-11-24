@@ -80,6 +80,7 @@ The read-only checks against Alpha are `aztec-mainnet-preflight.yml` and `aztec-
 | XMTP-PUBLISH | Reliability | Some sends log "Sync failed to wait for intent" and are retried. Under investigation, with no loss of confidentiality | Messages may arrive late |
 | DEADMAN-SELF | Funds stuck (owner's own mistake) | `LedgerDeadmanSwitch` accepted its own address as backup, so a trigger locked the owner's tokens in it. Found by the Foundry invariant `invariant_deadman_rules` | Fixed in #260. Not deployed |
 | CI-RED | Hygiene | Two checks fail on `main` for reasons outside the code: `npm audit` (prisma and effect rated high, next rated moderate; the lockfile needs updating) and a check that the owner's name does not appear in files outside its exception list | Waiting on the operator |
+| XMTP-LABS-CLOSING | Dependency | XMTP announced on 22 Oct 2026 that the network hosted by XMTP Labs, which carries all our direct messages, shuts down in early 2027. Our own backend is planned in `docs/xmtp/SELF_HOSTED_MIGRATION.md`; backend authentication is in code and off | Plan, phases M0 to M7 |
 | G7-R8 | Test gap | The address binding has not been run between two different people | Unit tests only |
 | PASSKEY-DEVICE | Test gap | The passkey path (WebAuthn PRF) has not been tested on a real device | Unit tests only |
 
