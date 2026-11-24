@@ -43,6 +43,24 @@ jobs:
             echo "::endgroup::"
           done
 
+      # Item 37: the size of every circuit, so a pull request that makes proving heavier shows it.
+      # Report only (job summary); a baseline with a ceiling is added once the first numbers exist.
+      - name: Circuit size report (ACIR opcodes)
+        run: |
+          {
+            echo "### Circuit size (ACIR opcodes, nargo info)"
+            echo ""
+            echo "| Circuit | Function | ACIR opcodes |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for dir in circuits/*/; do
+            [ -f "$dir/Nargo.toml" ] || continue
+            c="$(basename "$dir")"
+            json="$(cd "$dir" && nargo info --json 2>/dev/null)" || { echo "| $c | (not reported) | |" >> "$GITHUB_STEP_SUMMARY"; continue; }
+            echo "$json" | jq -r --arg c "$c" '.programs[]? | .functions[]? | "| \($c) | \(.name) | \(.opcodes) |"' >> "$GITHUB_STEP_SUMMARY" \
+              || echo "| $c | (unreadable report) | |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
       - name: Committed ACIR of the pinned circuits equals a fresh compile
         run: |
           set -euo pipefail
