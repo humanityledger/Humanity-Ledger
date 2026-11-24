@@ -187,7 +187,7 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
 
         {adding ? (
           <div className="mt-4 rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] p-4">
-            <label className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }} htmlFor={inputId}>
+            <label className="block text-[14px] font-medium" style={{ color: INK_3 }} htmlFor={inputId}>
               {t("Name")}
             </label>
             <input

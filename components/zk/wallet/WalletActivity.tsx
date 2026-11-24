@@ -112,7 +112,7 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
         <div className="pb-2">
           {groups.map((g) => (
             <div key={g.day}>
-              <div className="sticky top-0 z-[1] bg-white/95 backdrop-blur-sm px-5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+              <div className="sticky top-0 z-[1] bg-white/95 backdrop-blur-sm px-5 py-1.5 text-[14px] font-medium" style={{ color: INK_3 }}>
                 {g.day}
               </div>
               <ul>

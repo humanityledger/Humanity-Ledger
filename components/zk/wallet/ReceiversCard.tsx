@@ -457,7 +457,7 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
         ))}
       </div>
       <label className="block">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>{tr("Amount")}</span>
+        <span className="block text-[14px] font-medium" style={{ color: INK_3 }}>{tr("Amount")}</span>
         <span className="mt-1.5 flex items-center h-14 px-4 rounded-2xl border-2 border-[#e4e7ec] focus-within:border-[#15171c]">
           <input
             value={amount}
@@ -472,7 +472,7 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
         </span>
       </label>
       <label className="block">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>{tr("{l1Name} address", { l1Name })}</span>
+        <span className="block text-[14px] font-medium" style={{ color: INK_3 }}>{tr("{l1Name} address", { l1Name })}</span>
         <input
           value={to}
           onChange={(e) => setTo(e.target.value.trim())}

@@ -18,7 +18,7 @@
 
 import { PRIVATE_ASSET } from '@/lib/payments/private-asset';
 import React, { useState } from 'react';
-import { AlertTriangle, X, ExternalLink, Coins, Cpu, Fuel, ShieldAlert, Undo2 } from 'lucide-react';
+import { AlertTriangle, X, ExternalLink, Coins, Cpu, Fuel, Undo2 } from 'lucide-react';
 import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { useT } from '@/lib/i18n/client';
 
@@ -167,20 +167,20 @@ export function AlphaInfoBox({ className = '' }: { className?: string }) {
     { icon: <Coins size={15} strokeWidth={1.9} />, text: `Private payments in ${PRIVATE_ASSET.phrase}` },
     { icon: <Cpu size={15} strokeWidth={1.9} />, text: t("Every transfer is proven on this device; amount and recipient stay private") },
     { icon: <Fuel size={15} strokeWidth={1.9} />, text: t("Network fees in Fee Juice, bridged from Ethereum, paid by your own account") },
-    { icon: <ShieldAlert size={15} strokeWidth={1.9} />, text: t("No external audit yet. Each payment has a cap; keep amounts small"), warn: true },
+    { icon: <AlertTriangle size={15} strokeWidth={1.8} />, text: t("No external audit yet. Each payment has a cap; keep amounts small"), warn: true },
     { icon: <Undo2 size={15} strokeWidth={1.9} />, text: t("Transactions cannot be reversed") },
   ];
   return (
-    <section className={`rounded-2xl border border-[#E4E7EC] bg-white ${className}`} aria-label={t("How the private wallet works")}>
-      <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
-        <p className="text-[14px] font-semibold text-[#15171C]">{t("How it works")}</p>
-        <span className="rounded-full bg-[#F7F8FA] border border-[#E4E7EC] px-2.5 py-0.5 text-[11.5px] font-medium text-[#475467]">{t("Aztec Alpha")}</span>
+    <section className={`rounded-[24px] border border-[#eef0f3] bg-white ${className}`} aria-label={t("How the private wallet works")}>
+      <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+        <p className="text-[16px] font-semibold tracking-[-0.01em] text-[#15171C]">{t("How it works")}</p>
+        <span className="rounded-full bg-[#F4F5F7] px-2.5 py-0.5 text-[12px] font-medium text-[#5b606b]">{t("Aztec Alpha")}</span>
       </div>
-      <ul className="divide-y divide-[#F2F4F7] border-t border-[#F2F4F7]">
+      <ul className="divide-y divide-[#F0F1F4] border-t border-[#F0F1F4]">
         {rows.map((r) => (
-          <li key={r.text} className="flex items-start gap-3 px-4 py-2.5">
-            <span className={`mt-[1px] shrink-0 ${r.warn ? 'text-[#C2410C]' : 'text-[#5200FF]'}`} aria-hidden="true">{r.icon}</span>
-            <span className={`text-[13px] leading-snug ${r.warn ? 'text-[#9A3412] font-medium' : 'text-[#344054]'}`}>{r.text}</span>
+          <li key={r.text} className="flex items-start gap-3 px-5 py-3">
+            <span className={`mt-[1px] shrink-0 ${r.warn ? 'text-[#B54708]' : 'text-[#8A909C]'}`} aria-hidden="true">{r.icon}</span>
+            <span className={`text-[14px] leading-snug ${r.warn ? 'text-[#93370D] font-medium' : 'text-[#3d424b]'}`}>{r.text}</span>
           </li>
         ))}
       </ul>

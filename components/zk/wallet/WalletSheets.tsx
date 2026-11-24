@@ -20,7 +20,7 @@ import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { toast } from 'sonner';
-import { ArrowDown, ClipboardPaste, Lock, ScanLine, Share2, LockOpen, UserPlus } from 'lucide-react';
+import { ArrowDown, ArrowRight, ClipboardPaste, Lock, ScanLine, Share2, LockOpen, UserPlus } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, isAztecAddress } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
@@ -188,20 +188,16 @@ export function SendFlow({
       <div className="space-y-4" data-testid="send-review">
         <StepDots steps={['Details', 'Review']} at={1} />
         <div className="relative pt-1 pb-2 flex flex-col items-center text-center">
-          {/* From your private balance to this address: the two ends of the payment, face to face. */}
-          <div className="flex items-center gap-2" aria-hidden="true">
-            <TokenMark symbol={symbol} size={44} shielded />
-            <span className="flex items-center gap-1">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#15171c]" style={{ opacity: 0.25 + i * 0.25 }} />
-              ))}
-            </span>
+          {/* From your private balance to this address: the two ends of the payment. */}
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <TokenMark symbol={symbol} size={44} />
+            <ArrowRight size={18} strokeWidth={1.8} style={{ color: '#a3a9b4' }} />
             <AddressAvatar address={to} size={44} />
           </div>
-          <p className="mt-3 text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+          <p className="mt-4 text-[14px] font-medium" style={{ color: INK_3 }}>
             {tr("You send privately")}
           </p>
-          <p className="mt-1 text-[40px] font-semibold tracking-[-0.035em] tabular-nums leading-tight" style={{ color: INK }}>
+          <p className="mt-1 text-[44px] font-semibold tracking-[-0.045em] tabular-nums leading-tight" style={{ color: INK }}>
             {amount} <span className="text-[20px]" style={{ color: INK_2 }}>{symbol}</span>
           </p>
         </div>
@@ -221,7 +217,7 @@ export function SendFlow({
           {isTestToken(symbol) && <KV k="Asset" v={`${symbol}, ${TEST_TOKEN_NOTE.toLowerCase()}`} />}
           <KV k="Network fee" v={ALPHA ? 'Fee Juice' : 'Sponsored'} hint={ALPHA ? tr("Paid by your account, in public.") : tr("Paid by the network’s sponsored fee contract.")} />
         </Card>
-        <p className="font-mono text-[12.5px] leading-[1.6] break-all rounded-2xl bg-[#f7f8fa] border border-[#e4e7ec] px-4 py-3" style={{ color: INK_2 }} aria-label={tr("Full recipient address")}>
+        <p className="font-mono text-[12.5px] leading-[1.6] break-all rounded-[20px] bg-[#f7f8fa] px-4 py-3" style={{ color: INK_2 }} aria-label={tr("Full recipient address")}>
           {groupHex(to)}
         </p>
         <DisclosurePanel action="send" />
@@ -260,7 +256,7 @@ export function SendFlow({
 
       <div>
         <div className="flex items-center justify-between">
-          <label htmlFor="wallet-send-to" className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+          <label htmlFor="wallet-send-to" className="text-[14px] font-medium" style={{ color: INK_3 }}>
             {tr("Recipient's Aztec address")}
           </label>
           <div className="flex items-center gap-1">
@@ -289,8 +285,8 @@ export function SendFlow({
           autoCapitalize="off"
           autoCorrect="off"
           aria-invalid={toErr ? true : undefined}
-          className={`mt-1.5 w-full rounded-2xl border-2 px-4 py-3 font-mono text-[14px] leading-[1.5] resize-none outline-none break-all ${
-            toErr ? 'border-[#b42318]' : 'border-[#e4e7ec] focus:border-[#15171c]'
+          className={`mt-1.5 w-full rounded-[20px] border px-4 py-3 font-mono text-[14px] leading-[1.5] resize-none outline-none break-all ${
+            toErr ? 'border-[#f3c9c4] bg-[#fffafa]' : 'border-transparent bg-[#f7f8fa] focus:bg-white focus:border-[#e4e7ec]'
           }`}
           style={{ color: INK }}
         />
@@ -386,7 +382,7 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
 
       <TokenChips tokens={tokens} value={token} onChange={setToken} />
       <label className="block">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <span className="text-[14px] font-medium" style={{ color: INK_3 }}>
           {tr("Amount to request (optional)")}
         </span>
         <input
@@ -533,7 +529,7 @@ function BalanceLeg({
 }: { title: string; label: string; units: bigint; icon: React.ReactNode; decimals: number; symbol: string; after?: bigint; gains?: boolean }) {
   const tr = useT();
   return (
-    <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] px-4 py-3 flex items-center gap-3">
+    <div className="rounded-[20px] bg-[#f7f8fa] px-4 py-3.5 flex items-center gap-3">
       <span className="relative shrink-0">
         <TokenMark symbol={symbol} size={38} />
         <span className="absolute -right-1 -bottom-1 w-[18px] h-[18px] rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center [&>svg]:w-[11px] [&>svg]:h-[11px]" style={{ color: INK }}>
@@ -541,7 +537,7 @@ function BalanceLeg({
         </span>
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <span className="block text-[14px] font-medium" style={{ color: INK_3 }}>
           {title}
         </span>
         <span className="block text-[15px] font-semibold" style={{ color: INK }}>
