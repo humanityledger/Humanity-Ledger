@@ -22,6 +22,7 @@ import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
+import { OTHER_TAB_NOTICE, watchOtherTabs } from '@/lib/xmtp/tab-presence';
 import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
@@ -5361,6 +5362,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       if (activeAbortController) activeAbortController.abort();
     };
   }, [client, address]);
+
+  // XMTP must not run in two tabs of one browser at once (lib/xmtp/tab-presence.ts): say so,
+  // never block, and report it so the delivery log shows whether it explains publish_gave_up.
+  useEffect(() => {
+    if (!client) return;
+    return watchOtherTabs(() => {
+      toast(OTHER_TAB_NOTICE.title, { description: OTHER_TAB_NOTICE.description, duration: 20_000 });
+      reportDelivery('multi_tab', 'another tab runs an XMTP client');
+    });
+  }, [client]);
 
   //  Load messages when active peer changes 
   useEffect(() => {

@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
     {
       // The signed-in wallet, so /beta shows which account joins.
       wallet: w,
-      // While the switch is on, /chat opens only for members (middleware, lib/beta/pass.ts).
+      // The chat is open to everyone; the pass marks a member, and cUSDC is checked per payment.
       gate: input.entry?.enabled === true,
       open: program.ok,
       reasons: program.ok ? [] : program.reasons,
