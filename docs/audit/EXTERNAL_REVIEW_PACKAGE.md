@@ -9,6 +9,17 @@
 3. The wallet's key handling: `lib/aztec/wallet/keys.ts` and the encrypted store.
 4. The closed alpha admission: `/api/alpha/*` and `scripts/alpha/*`.
 
+5. Added on 24 November 2026 (alignment phases 1 to 7), each small and with its own tests:
+   - `lib/chat/message-authority.ts`: who may edit or delete a message (a security fix);
+   - `lib/backup/encrypted-archive.ts`: the passphrase-sealed history file (PBKDF2-SHA256 600,000, AES-256-GCM);
+   - `lib/chat/safety-glyphs.ts` `safetyDigits`: the device-based safety number;
+   - `lib/aztec/wallet/node-choice.ts` and the rollup check in `lib/aztec/wallet/client.ts`;
+   - `lib/payments/personal-limits.ts`, checked inside `wallet.send`;
+   - `lib/communities/mls.ts`: membership sync of communities on MLS (off until the operator flips one).
+6. The address binding, written as a standalone specification: `docs/aztec/G7_BINDING_SPEC.md`.
+7. Candidates for a second round, not built: a WebAuthn account contract with guardian recovery
+   (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) and a private membership proof (`docs/design/PRIVATE_MEMBERSHIP.md`).
+
 ## What is ready
 
 - **Artifacts and class ids.** `test/unit/aztec/wave1-classes.test.ts` ties them together, and the "Aztec contracts" workflow recompiles them with 6.0.0.
