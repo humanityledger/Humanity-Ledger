@@ -83,15 +83,15 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 57 | Request payment in chat | 3 | EXISTÍA | `components/chat/PaymentRequestCard.tsx` (restyled in this branch) |
 | 58 | Payment history | 3 | EXISTÍA | `components/zk/wallet/WalletActivity.tsx` (local) |
 | 59 | Payment received notice (reformulated) | 3 | EXISTÍA | The payer's chat message carries the hash; the receiver confirms against its own wallet (`PaymentCard.tsx`) |
-| 60 | Fee Juice friction / private FPC | 3 | PARCIAL | Fee Juice station exists; FPC evaluated, not in use (`docs/aztec/FPC_EVALUATION.md`). DECISIÓN |
+| 60 | Fee Juice friction / private FPC | 3 | EXISTÍA + DECISIÓN | Fee Juice station exists. Private fees: option A kept (`docs/aztec/FPC_EVALUATION.md`); our own FPC would be a custodial role that needs counsel first |
 | 61 | More private tokens, modular | 3 | EXISTÍA | `lib/aztec/token-check.ts`, `lib/payments/assets.ts` |
 | 62 | Escrow and streams | 3 | EXISTÍA | `PrivateEscrow`, `PaymentStream` with caps (`lib/aztec/keyed-deploy.ts`) |
-| 63 | Network cost before confirming | 3 | PARCIAL | The review names the fee payer, not an estimate |
-| 64 | Verifiable confirmation | 3 | PARCIAL | Transaction hash and explorer link on the card |
+| 63 | Network cost before confirming | 3 | PARCIAL | The review names who pays and that it is public; a numeric estimate needs a simulation API not verified against the pinned SDK |
+| 64 | Verifiable confirmation | 3 | HECHO | Card shows the transaction and its link; Copy receipt (R10) |
 | 66 | Shield and unshield (reformulated) | 3 | HECHO | Both now show what becomes public, from the shared map |
-| 67 | Spending limits | 3 | PARCIAL | Per-payment cap in the beta (`lib/beta/gate.ts`); no user limit |
-| 68 | Receive-only mode | 3 | FALTA | — |
-| 69 | Private statistics | 3 | FALTA | — |
+| 67 | Spending limits | 3 | HECHO | Per-payment limit per token, checked in `wallet.send` before any proof (`lib/payments/personal-limits.ts`) |
+| 68 | Receive-only mode | 3 | HECHO | Same module; the request card shows it instead of Pay |
+| 69 | Private statistics | 3 | HECHO | 30-day totals computed on the device (`lib/payments/activity-report.ts`) |
 | 72 | Use cases | 8 | DECISIÓN | Remittances need legal advice |
 | 73 | Communities with privacy controls | 4 | PARCIAL | Posts readable by the server (`communityMls` false) |
 | 74 | Public group search | 4 | SIN VERIFICAR | — |
@@ -119,15 +119,19 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 |---|---|---|---|---|
 | R1 | One QR with a verified binding | 2 | HECHO (decision) | The QR stays minimal (no address in it); the binding is proved inside the encrypted chat (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) |
 | R2 | Blur on hide, hidden previews | 1 | EXISTÍA + HECHO | Screen privacy blur already existed (`LedgerChatV2.tsx`); previews now hidden by default |
-| R3 | Recipient-claimed stream | 3 | PARCIAL | Contract exists; not offered as "recurring" |
-| R4 | Private FPC | 3 | DECISIÓN | Who funds the Fee Juice, legal position of the operator |
+| R3 | Recipient-claimed stream | 3 | EXISTÍA | `PaymentStream` with caps is the answer to recurring payments; no server ever holds keys |
+| R4 | Private FPC | 3 | DECISIÓN taken: not now | Revisit when Aztec publishes an FPC on Alpha (`docs/aztec/FPC_EVALUATION.md`) |
 | R5 | User-chosen Aztec node | 2 | HECHO | `lib/aztec/wallet/node-choice.ts`, Settings → Aztec node; same identity checks, never replaced by the relay |
 | R6 | G7 v3 and open-source contracts | 1, 8 | FALTA | |
 | R7 | Invites without an inviter | 4 | PARCIAL | HMAC codes with pepper exist |
 | R8 | Rollup upgrade readiness | 2 | HECHO | Different rollup on the same L1 → `ROLLUP_CHANGED_MESSAGE`, nothing opens or moves |
 | R9 | Private membership proof | 4 | FALTA | New contract; test network only |
-| R10 | Verifiable receipt | 3 | FALTA | Note-inclusion API to verify |
-| R11 | On-device tax report | 3 | FALTA | |
+| R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
+| R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## Phase 3 (`claude/align-fase-3`)
+
+- 64, 67, 68, 69, R10 and R11 built; R3 already existed; R4 and 60 decided (no FPC of our own).
 
 ## Phase 2 (`claude/align-fase-2`)
 
