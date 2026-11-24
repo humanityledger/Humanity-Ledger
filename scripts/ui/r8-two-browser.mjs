@@ -71,7 +71,9 @@ async function open(who) {
     return account.signTypedData({ domain: td.domain, types: td.types, primaryType: td.primaryType, message: td.message });
   });
   await page.goto(`${base}/chat?e2e=r8&as=${who}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await page.waitForFunction(() => !!window.__r8, null, { timeout: 120000 });
+  // The app's CSP has no 'unsafe-eval' (kept on purpose): wait on the DOM, then evaluate.
+  await page.waitForSelector(`[data-testid="r8-harness"][data-as="${who}"]`, { timeout: 120000 });
+  for (let i = 0; i < 60 && !(await page.evaluate(() => !!window.__r8)); i++) await page.waitForTimeout(500);
   const call = (fn, ...args) => page.evaluate(([f, a]) => window.__r8[f](...a), [fn, args]);
   return { who, account, page, errors, call };
 }
