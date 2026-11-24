@@ -83,6 +83,7 @@ jobs:
           test/unit/backup
           test/unit/chat/safety-digits.test.ts
           test/unit/chat/message-authority.test.ts
+          test/unit/chat/verified-contacts.test.ts
           test/unit/chat/community-mls.test.ts
           test/unit/aztec/node-choice.test.ts
           test/unit/aztec/wallet-ui-logic.test.ts

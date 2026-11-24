@@ -51,6 +51,7 @@ import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
 import { EncryptionInfoSheet } from '@/components/chat/EncryptionInfoSheet';
 import { hidesNotificationContent, messageNotification } from '@/lib/privacy/defaults';
 import { mayEdit, mayRevoke, withinEditWindow } from '@/lib/chat/message-authority';
+import { wasVerified } from '@/lib/chat/verified-contacts';
 
 import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
@@ -7415,6 +7416,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               <div className="flex items-center gap-0.5 md:gap-2 shrink-0">
                 {/* The rail (and its reading above Settings) is hidden on a phone. */}
                 <LiveLatency className="md:hidden mr-1" />
+                {/* Verify: compare the safety number with this person (lib/chat/verified-contacts.ts). */}
+                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="h-10 md:h-[42px] px-2.5 md:px-3 rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] inline-flex items-center gap-1.5 text-[#15171c] text-[13.5px] font-semibold transition-colors" title="Verify encryption" aria-label="Verify encryption with this person" data-testid="verify-button">
+                  <ShieldCheck size={18} strokeWidth={1.8} className={activePeer && wasVerified(activePeer) ? 'text-[#0a7a55]' : ''} />
+                  <span className="hidden sm:inline">{activePeer && wasVerified(activePeer) ? 'Verified' : 'Verify'}</span>
+                </button>
                 <button type="button" onClick={() => handleStartCall('audio')} className="w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title="Voice call" aria-label="Voice call">
                   <Phone size={19} strokeWidth={1.8} />
                 </button>
