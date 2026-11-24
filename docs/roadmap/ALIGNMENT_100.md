@@ -35,7 +35,7 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 6 | Privacy state per action | 1 | HECHO | `lib/privacy/disclosure.ts`, `components/privacy/DisclosurePanel.tsx` in send, shield, unshield and the chat cards |
 | 7 | Contacts by QR, link, username | 2 | EXISTÍA | `components/chat/profile/BrandedQr.tsx`, `app/u/page.tsx` |
 | 8 | Username search, privacy kept | 2 | EXISTÍA | Exact match only, 30 per minute (`app/api/chat/username/lookup/route.ts`) |
-| 9 | One-click group invites | 4 | SIN VERIFICAR | `app/join/[code]/page.tsx` exists; flow not checked |
+| 9 | One-click group invites | 4 | EXISTÍA | Invite link `app/join/[code]/page.tsx`; joining opens the community |
 | 10 | 90-second tutorial | 6 | PARCIAL | `components/chat/LedgerChatOnboarding.tsx` |
 | 12 | Themes | 6 | EXCLUIDO for now | `app/ledger-tokens.css`: one light theme by decision |
 | 13 | Typing and online, efficient | 1 | EXISTÍA | Mutual contacts, cached (PR #153); toggles for typing, read receipts and last seen (`LedgerSettingsFull.tsx`) |
@@ -93,8 +93,8 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 68 | Receive-only mode | 3 | HECHO | Same module; the request card shows it instead of Pay |
 | 69 | Private statistics | 3 | HECHO | 30-day totals computed on the device (`lib/payments/activity-report.ts`) |
 | 72 | Use cases | 8 | DECISIÓN | Remittances need legal advice |
-| 73 | Communities with privacy controls | 4 | PARCIAL | Posts readable by the server (`communityMls` false) |
-| 74 | Public group search | 4 | SIN VERIFICAR | — |
+| 73 | Communities with privacy controls | 4 | HECHO (off until flipped) | `lib/communities/mls.ts`: an MLS community reads and posts through its XMTP group, the admin's client keeps group members equal to the server's, new channels are created as groups. The operator flips `communityMls` per community |
+| 74 | Public group search | 4 | EXISTÍA | "Find one" lists discoverable communities (`LedgerCommunitiesTab.tsx`) |
 | 75 | Full web version | 8 | EXISTÍA | |
 | 77 | Templates | 6 | PARCIAL | Invoice and agreement composers exist |
 | 79 | Spanish and English | 6 | PARCIAL | `lib/i18n/dictionaries.ts`; chat strings are English |
@@ -123,11 +123,15 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R4 | Private FPC | 3 | DECISIÓN taken: not now | Revisit when Aztec publishes an FPC on Alpha (`docs/aztec/FPC_EVALUATION.md`) |
 | R5 | User-chosen Aztec node | 2 | HECHO | `lib/aztec/wallet/node-choice.ts`, Settings → Aztec node; same identity checks, never replaced by the relay |
 | R6 | G7 v3 and open-source contracts | 1, 8 | FALTA | |
-| R7 | Invites without an inviter | 4 | PARCIAL | HMAC codes with pepper exist |
+| R7 | Invites without an inviter | 4 | EXISTÍA | Operator-issued HMAC codes; no person-to-person referral graph is stored |
 | R8 | Rollup upgrade readiness | 2 | HECHO | Different rollup on the same L1 → `ROLLUP_CHANGED_MESSAGE`, nothing opens or moves |
-| R9 | Private membership proof | 4 | FALTA | New contract; test network only |
+| R9 | Private membership proof | 4 | DECISIÓN taken: later | `docs/design/PRIVATE_MEMBERSHIP.md` |
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## Phase 4 (`claude/align-fase-4`)
+
+- 73 built (client side of R-17, off until the operator flips a community); 9, 74 and R7 already existed; R9 decided.
 
 ## Phase 3 (`claude/align-fase-3`)
 
