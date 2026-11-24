@@ -80,7 +80,9 @@ describe('the wallet screen keeps its promises', () => {
     .map((f) => fs.readFileSync(f, 'utf8'))
     .join('\n');
   it('says the fee is public and the payment is not, and claims no audit', () => {
-    expect(src).toContain('Paid by your account. The fee is public; the amount, you and the recipient are not.');
+    expect(src).toContain('Paid by your account, in public.');
+    expect(src).toContain('<DisclosurePanel action="send" />');
+    expect(src).not.toMatch(/not the amount, you|you and the recipient are not/i);
     expect(src).not.toMatch(/(has been|was|is) (externally )?audited|audited by|audit (passed|complete)/i);
     expect(src).not.toMatch(/Fee Juice is private|private fee/i);
   });

@@ -19,7 +19,7 @@ export function AlphaRiskAck({ value, onChange, disabled, kind = 'agreement' }: 
       </label>
       <label className={row}>
         <input type="checkbox" className="mt-0.5" checked={value.publicFeePayer} onChange={(e) => onChange({ ...value, publicFeePayer: e.target.checked })} />
-        <span>My account pays the network fee publicly, so my transactions can be linked to each other. Amounts and parties stay private.</span>
+        <span>My account pays the network fee publicly, so my transactions can be linked to each other. Amounts and recipients stay private.</span>
       </label>
     </fieldset>
   );

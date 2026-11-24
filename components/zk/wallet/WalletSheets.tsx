@@ -10,10 +10,10 @@
  *   Receive   encodePaymentRequest(...) in a QR code; wallet.addSender(...) for a new sender
  *
  * Send has two steps: the details, then a review that says exactly what is
- * public (the Fee Juice fee your account pays) and what is not (amount, sender,
- * recipient). The payment itself then runs in PaymentProgress, whose stages come
- * from the wallet's own activity record. A payment cannot be reversed; the review
- * says so before the button.
+ * public (on Alpha, the Fee Juice fee your account pays, which links its transactions) and
+ * what is not (amount, recipient), from lib/privacy/disclosure.ts. The payment itself then
+ * runs in PaymentProgress (stages from the wallet's own activity record). A payment
+ * cannot be reversed; the review says so before the button.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -34,10 +34,14 @@ import {
   AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, groupHex, shortHex,
 } from './WalletUI';
 import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
+import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
+import { disclosureFor, feeModeFor } from '@/lib/privacy/disclosure';
 
 const QrScanner = dynamic(() => import('@/components/terminal/QrScanner').then((m) => m.QrScanner), { ssr: false });
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
+/** What a send reveals on this network (lib/privacy/disclosure.ts): one source for every sentence below. */
+const SEND_DISCLOSURE = disclosureFor('send', feeModeFor(AZTEC_WALLET_CONFIG.network));
 export const symbolOf = (key: TokenKey) => AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.symbol ?? key;
 /** Read on every render: cUSDC is listed for beta members only once their membership is known. */
 const listedTokens = () => AZTEC_WALLET_CONFIG.tokens.map((t) => ({ key: t.key, symbol: t.symbol }));
@@ -194,11 +198,12 @@ export function SendFlow({
           <KV k="From" v="Your private balance" />
           <KV k="Network" v={networkLabel()} />
           {isTestToken(symbol) && <KV k="Asset" v={`${symbol}, ${TEST_TOKEN_NOTE.toLowerCase()}`} />}
-          <KV k="Network fee" v="Fee Juice" hint="Paid by your account. The fee is public; the amount, you and the recipient are not." />
+          <KV k="Network fee" v={ALPHA ? 'Fee Juice' : 'Sponsored'} hint={ALPHA ? 'Paid by your account, in public.' : 'Paid by the network’s sponsored fee contract.'} />
         </Card>
         <p className="font-mono text-[12.5px] leading-[1.6] break-all rounded-2xl bg-[#f7f8fa] border border-[#e4e7ec] px-4 py-3" style={{ color: INK_2 }} aria-label="Full recipient address">
           {groupHex(to)}
         </p>
+        <DisclosurePanel action="send" />
         <Notice tone="warn">Check the address. A payment cannot be reversed.</Notice>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
           <SecondaryButton onClick={() => setStep('details')}>Edit</SecondaryButton>
@@ -295,7 +300,7 @@ export function SendFlow({
         Review
       </PrimaryButton>
       <p className="text-[13px] leading-relaxed text-center" style={{ color: INK_3 }}>
-        Paid from your private balance. The network sees that a transaction happened, not the amount, you or the recipient.
+        Paid from your private balance. {SEND_DISCLOSURE.summary}
       </p>
     </form>
   );
@@ -451,10 +456,9 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
   return (
     <form onSubmit={submit} className="space-y-4">
       <p className="text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-        {mode === 'shield'
-          ? 'Moves tokens from your public Aztec balance into private notes. The amount you shield is visible on the network; what you do with it afterwards is not.'
-          : 'Moves tokens from your private notes to your public Aztec balance. The amount becomes visible on the network.'}
+        {mode === 'shield' ? 'Moves tokens from your public Aztec balance into private notes.' : 'Moves tokens from your private notes to your public Aztec balance.'}
       </p>
+      <DisclosurePanel action={mode} />
 
       <div className="relative" aria-label={`${from.label} to ${to.label}`}>
         <BalanceLeg title="From" {...from} decimals={decimals} symbol={symbol} />

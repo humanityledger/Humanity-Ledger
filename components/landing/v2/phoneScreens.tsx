@@ -308,7 +308,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
         </span>
         <span className={s.day}>Today</span>
         <div className={`${s.msgIn} ${s.in}`}>
-          I paid for dinner. Your share is 42 HLC.<span className={s.time}>21:04</span>
+          I paid for dinner. Your share is 42 cUSDC.<span className={s.time}>21:04</span>
         </div>
         <div className={`${s.msgOut} ${at(p, 0.1)}`}>
           Send me a private invoice and I will pay it here.
@@ -337,7 +337,7 @@ export function InvoiceChatScreen({ p }: ScreenProps) {
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
             <span>Total</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>42.00 HLC</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>42.00 cUSDC</span>
           </div>
           <div className={s.invFooterRow}>
             <span className={s.invDue}>Aztec Alpha · mainnet</span>
@@ -428,7 +428,7 @@ export function AgreementChatScreen({ p }: ScreenProps) {
           <div className={s.invDivider} />
           <div className={s.invTotalRow}>
             <span>Amount</span>
-            <span className={`${s.invTotalVal} ${s.num}`}>300.00 HLC</span>
+            <span className={`${s.invTotalVal} ${s.num}`}>300.00 cUSDC</span>
           </div>
           <div className={s.invFooterRow}>
             <span className={s.invDue}>Aztec Alpha · mainnet</span>
@@ -527,8 +527,8 @@ export function WalletScreen({ p }: ScreenProps) {
     ["Proofs", "Made on this iPhone"],
   ];
   const activity: [string, string, string][] = [
-    ["Sent to Maya", "−25.00 HLC", "Settled"],
-    ["Received from Leo", "+120.00 HLC", "Settled"],
+    ["Sent to Maya", "−25.00 cUSDC", "Settled"],
+    ["Received from Leo", "+120.00 cUSDC", "Settled"],
     ["Account created", "", "Block 48,211"],
   ];
   return (
@@ -540,7 +540,7 @@ export function WalletScreen({ p }: ScreenProps) {
         <div style={{ fontSize: 15, color: "#8a909c", marginTop: 26 }}>Private balance</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4, ...fade(p, 0.05) }}>
           <span style={{ fontSize: 54, fontWeight: 600, letterSpacing: "-0.04em", color: INKC, fontVariantNumeric: "tabular-nums" }}>1,245.00</span>
-          <span style={{ fontSize: 19, color: MUTED, fontWeight: 500 }}>HLC</span>
+          <span style={{ fontSize: 19, color: MUTED, fontWeight: 500 }}>cUSDC</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 22 }}>
           {["Send", "Receive", "Add funds"].map((l, i) => (
@@ -710,7 +710,7 @@ export function StudioScreen({ p }: ScreenProps) {
         </div>
         {[["Flat white", "3.20"], ["Croissant", "2.80"], ["Cold brew", "3.90"]].map(([n, v], i) => (
           <div key={n} style={{ display: "flex", justifyContent: "space-between", padding: "15px 24px", borderTop: i === 0 ? "none" : "1px solid #ece6da", fontSize: 18, color: "#1d1a14" }}>
-            <span>{n}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{v} HLC</span>
+            <span>{n}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{v} cUSDC</span>
           </div>
         ))}
         <div style={{ padding: "16px 24px 24px" }}>

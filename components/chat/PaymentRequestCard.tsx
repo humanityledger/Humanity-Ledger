@@ -16,7 +16,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Receipt } from 'lucide-react';
 import { formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AZTEC_WALLET_CONFIG, BETA_TOKENS, networkLabel } from '@/lib/aztec/wallet/config';
 import { getPrivateWallet, type WalletSnapshot } from '@/lib/aztec/wallet/client';
@@ -24,9 +23,10 @@ import { betaApplies } from '@/lib/beta/cusdc-beta-client';
 import { parsePaymentRequest, requestCardState } from '@/lib/payments/payment-message';
 import { onPaidRequestsChange, requestSettlement } from '@/lib/payments/paid-requests';
 import { PAY_REQUEST_EVENT, plainUnits, type PayPrefill } from '@/lib/payments/request-draft';
+import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
+import { CardAmount, PaymentCardFrame, SpecRow, type CardTone } from './paymentCardUi';
 
-const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
-const BTN = 'h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors bg-[#15171c] text-white hover:bg-[#2a2d35] disabled:opacity-50';
+const BTN = 'h-10 w-full rounded-[10px] text-[13.5px] font-semibold transition-colors bg-[#15171c] text-white hover:bg-[#2b2f38] disabled:opacity-50';
 
 /** The wallet's activity, and a re-render whenever a payment is recorded on this device. */
 function useSettlementInputs(): { activity: WalletSnapshot['activity']; tick: number } {
@@ -50,7 +50,7 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
   const token = AZTEC_WALLET_CONFIG.tokens.find((t) => t.address.toLowerCase() === req.token.address);
   const settlement = requestSettlement({ id: req.id, amount: req.amount, tokenKey: token?.key ?? null }, activity);
   const state = requestCardState(req, { network: AZTEC_WALLET_CONFIG.network, now, paidRequestIds: settlement === 'paid' ? new Set([req.id]) : new Set<string>() });
-  const amountText = token ? `${formatUnits(BigInt(req.amount), token.decimals, token.decimals)} ${req.token.symbol}` : req.token.symbol;
+  const amountValue = token ? formatUnits(BigInt(req.amount), token.decimals, token.decimals) : undefined;
   const expires = new Date(req.expiresAt);
   const status =
     state.kind === 'paid' ? 'Paid'
@@ -58,7 +58,15 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
         : state.kind === 'wrongNetwork' ? `Asked on another network than ${networkLabel()}`
           : settlement === 'failed' ? 'The payment failed. Nothing was paid; you can pay again.'
             : settlement === 'announced' && isMe ? 'A payment was announced. It shows as paid once your wallet finds it.'
-              : isMe ? 'Waiting for payment' : `Open until ${expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+              : isMe ? 'Waiting for payment.' : 'You pay from your private balance. The amount is set by the request.';
+
+  const pill: { tone: CardTone; label: string } =
+    state.kind === 'paid' ? { tone: 'ok', label: 'Paid' }
+      : state.kind === 'expired' ? { tone: 'bad', label: 'Expired' }
+        : state.kind === 'wrongNetwork' ? { tone: 'bad', label: 'Other network' }
+          : settlement === 'failed' ? { tone: 'bad', label: 'Failed' }
+            : settlement === 'announced' && isMe ? { tone: 'wait', label: 'Announced' }
+              : { tone: 'neutral', label: 'Open' };
 
   const pay = () => {
     if (!token) return;
@@ -67,21 +75,22 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
   };
 
   return (
-    <div className={`${CARD} w-[280px] max-w-full p-3.5`} data-testid="payment-request-card" data-state={state.kind}>
-      <div className="flex items-center gap-2">
-        <Receipt className="w-4 h-4 text-[#5200FF]" aria-hidden />
-        <span className="text-[14px] font-semibold text-[#15171c]">{isMe ? 'You asked for a payment' : 'Payment request'}</span>
-      </div>
-      <div className="mt-1.5 text-[20px] font-semibold text-[#15171c] tracking-tight">{amountText}</div>
-      {req.memo && <p className="mt-1 text-[13px] text-[#15171c] break-words">{req.memo}</p>}
-      <p className={`mt-1 text-[12.5px] ${state.kind === 'paid' ? 'text-[#10B981]' : state.kind === 'open' ? 'text-[#4a505c]' : 'text-[#FF3B30]'}`}>{status}</p>
+    <PaymentCardFrame eyebrow={`${isMe ? 'You asked' : 'Payment request'} · ${req.token.symbol}`} status={pill} testId="payment-request-card" state={state.kind}>
+      <CardAmount value={amountValue} symbol={req.token.symbol} />
+      {req.memo && <p className="mt-2 break-words text-[13.5px] leading-snug text-[#15171c]">{req.memo}</p>}
+      <p className={`mt-1.5 text-[12.5px] leading-snug ${state.kind === 'paid' ? 'text-[#0a7a55]' : state.kind === 'open' ? 'text-[#3d424b]' : 'text-[#b42318]'}`}>{status}</p>
+      <dl className="mt-3 border-t border-[#eef0f3] pt-1.5">
+        <SpecRow label="Network">{networkLabel()}</SpecRow>
+        <SpecRow label="Open until">{expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</SpecRow>
+      </dl>
       {!isMe && state.kind === 'open' && (
         token
           ? <button type="button" className={`${BTN} mt-3`} onClick={pay}>Pay privately</button>
           : betaApplies() && BETA_TOKENS.some((t) => t.address.toLowerCase() === req.token.address)
-            ? <p className="mt-2 text-[12.5px] text-[#4a505c]">cUSDC payments are in a closed beta. <Link href="/beta" className="font-semibold text-[#5200FF] hover:underline">Join with an invitation</Link></p>
-            : <p className="mt-2 text-[12.5px] text-[#4a505c]">This token is not available in your private wallet.</p>
+            ? <p className="mt-3 text-[12.5px] text-[#3d424b]">cUSDC payments are in a closed beta. <Link href="/beta" className="font-semibold text-[#2754d6] hover:underline">Join with an invitation</Link></p>
+            : <p className="mt-3 text-[12.5px] text-[#3d424b]">This token is not available in your private wallet.</p>
       )}
-    </div>
+      <DisclosurePanel action="request" compact />
+    </PaymentCardFrame>
   );
 });

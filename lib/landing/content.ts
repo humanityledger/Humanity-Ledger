@@ -106,7 +106,7 @@ export const NAME = {
 };
 export const PAYMENTS = {
   title: ['Private payments on ', 'Aztec Network', '.'],
-  line: 'Amounts and parties stay private. Escrow and payment streams run on Aztec Alpha with HLC, a test token with no monetary value.',
+  line: 'Amounts and recipients stay private; the account that pays the fee is public. Escrow and payment streams run on Aztec Alpha with HLC, a test token with no monetary value.',
   small: HAS_EXTERNAL_AUDIT
     ? 'Aztec Alpha is an early network.'
     : 'Aztec Alpha is an early network. Our contracts have had an internal security review, not an external audit.',
@@ -148,7 +148,7 @@ export const FEATURES: { group: string; items: { title: string; body: string }[]
   {
     group: 'Payments',
     items: [
-      { title: 'Private payments', body: 'Send HLC on Aztec Alpha. The amount and the parties stay private.' },
+      { title: 'Private payments', body: 'Send privately on Aztec Alpha. The amount and the recipient stay private; the account that pays the fee is public.' },
       { title: 'Requests in the chat', body: 'Ask for a payment inside the conversation and get paid in one tap.' },
       { title: 'Shield and unshield', body: 'Move tokens between your public and private balances.' },
       { title: 'Your own fees', body: 'Network fees are paid in Fee Juice from your wallet. Ledger Chat pays no one’s fees.' },

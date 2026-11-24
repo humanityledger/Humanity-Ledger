@@ -19,7 +19,7 @@ function Vis({ i }: { i: number }) {
       <svg viewBox="0 0 220 120" aria-hidden="true" className={`${s.pv} ${s.pv1}`}>
         <rect x="30" y="38" width="160" height="44" rx="8" fill="#fff" stroke="#15171c" />
         <text x="46" y="67" style={{ fontFamily: 'var(--mono)' }} fontSize="20" fill="#15171c">{AMOUNT}</text>
-        <rect x="112" y="50" width="1.5" height="20" fill="#5200ff" />
+        <rect x="112" y="50" width="1.5" height="20" fill="#2754d6" />
         <text x="170" y="66" textAnchor="end" fontSize="11" fill="#5f6673">USDC</text>
       </svg>
     );
