@@ -30,8 +30,8 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 |---|---|---|---|---|
 | 1, 3, 20 | Chat without Fee Juice; chat-only; progressive onboarding | 6 | EXISTÍA | Chat runs on XMTP; the wallet opens only for payments (`components/zk/ZkWalletPanel.tsx`) |
 | 2 | Onboarding under 45 s | 6 | SIN VERIFICAR | Not measured |
-| 4 | Recovery without a single wallet | 2 | PARCIAL | Passkeys wrap the account root (`lib/aztec/wallet/passkey.ts`). No account-contract recovery; DECISIÓN for a contract |
-| 5 | Passkey sign-in | 2 | PARCIAL | Passkey unlock exists (PRF). A secp256r1 account contract is design work only |
+| 4 | Recovery without a single wallet | 2 | EXISTÍA + DECISIÓN | Passkeys wrap the account root (`passkey.ts`). Guardian recovery needs an audited account contract: after G8 (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) |
+| 5 | Passkey sign-in | 2 | EXISTÍA + DECISIÓN | Passkey unlock (PRF). A WebAuthn account contract waits for G8 (same document) |
 | 6 | Privacy state per action | 1 | HECHO | `lib/privacy/disclosure.ts`, `components/privacy/DisclosurePanel.tsx` in send, shield, unshield and the chat cards |
 | 7 | Contacts by QR, link, username | 2 | EXISTÍA | `components/chat/profile/BrandedQr.tsx`, `app/u/page.tsx` |
 | 8 | Username search, privacy kept | 2 | EXISTÍA | Exact match only, 30 per minute (`app/api/chat/username/lookup/route.ts`) |
@@ -71,8 +71,8 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 45 | Encrypted export | 1 | HECHO | `lib/backup/encrypted-archive.ts` (PBKDF2 600k + AES-256-GCM), `HistoryBackupSheet.tsx` |
 | 46 | What the server sees | 1 | HECHO | `docs/privacy/DATA_INVENTORY.md` and the page `/docs/data-inventory` |
 | 47 | Key rotation | 1 | PARCIAL | MLS rotates; Aztec keys are tied to the address (`lib/aztec/wallet/passkey.ts`: rotation = new account) |
-| 48 | New device warnings | 1 | SIN VERIFICAR | — |
-| 49 | Revoke devices | 1 | PARCIAL | `lib/xmtp/client.ts:406` `revokeInstallations`; UI not checked |
+| 48 | New device warnings | 2 | PARCIAL | A new device on either inbox changes the safety number and glyphs (phase 1); no push alert |
+| 49 | Revoke devices | 2 | EXISTÍA | Linked devices: unlink revokes the session at once (`components/link/LinkedDevicesPanel.tsx`) |
 | 50 | Threat model, accessible | 1 | PARCIAL | `docs/SECURITY.md`, `/security`; to link from the app |
 | 51 | Maximum privacy by default | 1 | HECHO (decision) | Notification previews off by default. Read receipts and typing stay on by default, as in Signal, each with its toggle; last seen is contacts or nobody |
 | 52 | G7 verifiable by the user | 1 | PARCIAL | v2 binding (`lib/aztec/peer-binding.ts`); proves the signing key only (R6) |
@@ -117,17 +117,21 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 
 | R | Item | Phase | State | Note |
 |---|---|---|---|---|
-| R1 | One QR with a verified binding | 2 | PARCIAL | QR exists; it does not carry the G7 proof |
+| R1 | One QR with a verified binding | 2 | HECHO (decision) | The QR stays minimal (no address in it); the binding is proved inside the encrypted chat (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) |
 | R2 | Blur on hide, hidden previews | 1 | EXISTÍA + HECHO | Screen privacy blur already existed (`LedgerChatV2.tsx`); previews now hidden by default |
 | R3 | Recipient-claimed stream | 3 | PARCIAL | Contract exists; not offered as "recurring" |
 | R4 | Private FPC | 3 | DECISIÓN | Who funds the Fee Juice, legal position of the operator |
-| R5 | User-chosen Aztec node | 2 | FALTA | Node identity checks exist (`identifyNode`) |
+| R5 | User-chosen Aztec node | 2 | HECHO | `lib/aztec/wallet/node-choice.ts`, Settings → Aztec node; same identity checks, never replaced by the relay |
 | R6 | G7 v3 and open-source contracts | 1, 8 | FALTA | |
 | R7 | Invites without an inviter | 4 | PARCIAL | HMAC codes with pepper exist |
-| R8 | Rollup upgrade readiness | 2 | PARCIAL | Drift checks in the preflight; no app freeze; `docs/AZTEC_UPGRADE_MIGRATION.md` |
+| R8 | Rollup upgrade readiness | 2 | HECHO | Different rollup on the same L1 → `ROLLUP_CHANGED_MESSAGE`, nothing opens or moves |
 | R9 | Private membership proof | 4 | FALTA | New contract; test network only |
 | R10 | Verifiable receipt | 3 | FALTA | Note-inclusion API to verify |
 | R11 | On-device tax report | 3 | FALTA | |
+
+## Phase 2 (`claude/align-fase-2`)
+
+- R5 and R8 built; R1, 4 and 5 decided (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`); 49 already existed.
 
 ## Phase 1 (`claude/align-fase-1`)
 

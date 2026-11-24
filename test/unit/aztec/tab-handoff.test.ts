@@ -102,7 +102,8 @@ describe('private wallet: stores are never left locked', () => {
 
   it('the PXE uses the same node client (and failover route) as the checks', () => {
     expect(src).toMatch(/EmbeddedWallet\.create\(this\.node,/);
-    expect(src).toMatch(/createAztecNodeClient\(AZTEC_WALLET_CONFIG\.nodeUrl, await walletNodeClientOptions\(/);
+    expect(src).toMatch(/const route = walletNodeRoute\(AZTEC_WALLET_CONFIG\.nodeUrl\);/);
+    expect(src).toMatch(/createAztecNodeClient\(route\.url, await walletNodeClientOptions\(RPC_OPTIONS\.maxBatchSize, \{ relay: route\.relay \}\)\)/);
   });
 });
 
