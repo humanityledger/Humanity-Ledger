@@ -13,8 +13,8 @@
 
 import { getGroupMessages, sendGroupMessage, addGroupMember, removeGroupMember, createSecureGroup } from '@/lib/xmtp/groups';
 
-import { reconcileMembers, serverMembers, type CommunityLike } from './mls-membership';
-export { isMlsCommunity, mlsGroupOf, reconcileMembers, serverMembers, type CommunityLike } from './mls-membership';
+import { membersComplete, reconcileMembers, serverMembers, type CommunityLike } from './mls-membership';
+export { isMlsCommunity, membersComplete, mlsGroupOf, reconcileMembers, serverMembers, type CommunityLike } from './mls-membership';
 
 const ADDR = /^0x[0-9a-fA-F]{40}$/;
 
@@ -64,8 +64,11 @@ export async function groupMemberAddresses(client: any, groupId: string): Promis
 export async function syncGroupMembers(client: any, groupId: string, c: CommunityLike, self: string): Promise<{ added: number; removed: number }> {
   const plan = reconcileMembers(serverMembers(c), await groupMemberAddresses(client, groupId), self);
   for (const a of plan.add) await addGroupMember(client, groupId, a);
-  for (const a of plan.remove) await removeGroupMember(client, groupId, a);
-  return { added: plan.add.length, removed: plan.remove.length };
+  // Removing needs a complete list (membersComplete): a partial answer from the server must never
+  // empty the group.
+  const remove = membersComplete(c) ? plan.remove : [];
+  for (const a of remove) await removeGroupMember(client, groupId, a);
+  return { added: plan.add.length, removed: remove.length };
 }
 
 /** Creates the group for a new channel of an MLS community, with every current member but `self`. */

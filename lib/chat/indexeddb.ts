@@ -192,19 +192,25 @@ export const chatDB = new ChatDatabase();
 export interface ChatHistorySnapshot {
   kind: 'chat-history';
   exportedAt: string;
+  /** The wallet whose history this is (lower case); restore refuses another wallet's archive. */
+  account?: string;
   conversations: any[];
   messages: any[];
 }
 
-export async function snapshotChatHistory(db: ChatDatabase = chatDB): Promise<ChatHistorySnapshot> {
+export async function snapshotChatHistory(db: ChatDatabase = chatDB, account?: string): Promise<ChatHistorySnapshot> {
   const [conversations, messages] = await Promise.all([db.getAll('conversations'), db.getAll('messages')]);
-  return { kind: 'chat-history', exportedAt: new Date().toISOString(), conversations, messages };
+  return { kind: 'chat-history', exportedAt: new Date().toISOString(), ...(account ? { account: account.toLowerCase() } : {}), conversations, messages };
 }
 
 /** Merges a snapshot into this device: existing records with the same id are overwritten, nothing is deleted. */
-export async function restoreChatHistory(snapshot: ChatHistorySnapshot, db: ChatDatabase = chatDB): Promise<{ conversations: number; messages: number }> {
+export async function restoreChatHistory(snapshot: ChatHistorySnapshot, db: ChatDatabase = chatDB, account?: string): Promise<{ conversations: number; messages: number }> {
   if (!snapshot || snapshot.kind !== 'chat-history' || !Array.isArray(snapshot.messages) || !Array.isArray(snapshot.conversations)) {
     throw new Error('This archive does not contain a chat history.');
+  }
+  // One wallet's conversations never land in another wallet's chat list on a shared browser.
+  if (snapshot.account && account && snapshot.account.toLowerCase() !== account.toLowerCase()) {
+    throw new Error('This archive belongs to another wallet. Sign in with that wallet to restore it.');
   }
   const messages = snapshot.messages.filter((m) => m && typeof m.id === 'string');
   await db.saveMessages(messages);

@@ -149,3 +149,121 @@
     width: 100%;
   }
 }
+
+/* ── Glass stage (24 November 2026): the landing's corporate system, in glass ─────────────────
+   A cool, deep wash with three slow light fields behind one frosted card. Glass only where the
+   browser can blur what is behind it; elsewhere the card is near-opaque white, so text contrast
+   never depends on the effect. */
+
+.stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #eef2fb 0%, rgba(238, 242, 251, 0) 60%),
+    linear-gradient(180deg, #f6f8fc 0%, #eef1f8 55%, #e9edf6 100%);
+}
+
+.stage::after {
+  /* A fine grain so large gradients do not band on wide screens. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(18, 24, 52, 0.06) 1px, transparent 1px);
+  background-size: 3px 3px;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  z-index: -2;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.75;
+  pointer-events: none;
+  will-change: transform;
+}
+.orbA { width: 520px; height: 520px; left: -160px; top: -120px; background: radial-gradient(circle at 35% 35%, #9db5ff, rgba(157, 181, 255, 0) 70%); animation: driftA 22s ease-in-out infinite alternate; }
+.orbB { width: 460px; height: 460px; right: -140px; top: 18%; background: radial-gradient(circle at 60% 40%, #c7b8ff, rgba(199, 184, 255, 0) 70%); animation: driftB 26s ease-in-out infinite alternate; }
+.orbC { width: 560px; height: 560px; left: 20%; bottom: -260px; background: radial-gradient(circle at 50% 50%, #a8e6d6, rgba(168, 230, 214, 0) 70%); opacity: 0.55; animation: driftC 30s ease-in-out infinite alternate; }
+
+@keyframes driftA { to { transform: translate3d(80px, 60px, 0) scale(1.08); } }
+@keyframes driftB { to { transform: translate3d(-70px, 50px, 0) scale(0.94); } }
+@keyframes driftC { to { transform: translate3d(40px, -60px, 0) scale(1.05); } }
+
+.glass {
+  position: relative;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 0 0 1px rgba(18, 24, 52, 0.05),
+    0 24px 60px -28px rgba(18, 28, 72, 0.35),
+    0 60px 120px -60px rgba(18, 28, 72, 0.3);
+}
+.glassSoft {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 2px rgba(18, 24, 52, 0.05);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.58));
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    backdrop-filter: blur(28px) saturate(170%);
+  }
+  .glass::before {
+    /* A light edge along the top, like a pane catching the light. */
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.15) 40%, rgba(255, 255, 255, 0.4));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .glassSoft {
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+  }
+}
+
+.display {
+  font-family: var(--hl-font-display), 'Iowan Old Style', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+.eyebrow {
+  font-family: var(--font-aztec-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #2754d6;
+}
+
+/* The questionnaire: one question group at a time, sliding in. */
+.qStep { animation: qIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes qIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px;
+  border-radius: 9999px; font-size: 14px; font-weight: 500; color: #3d424b;
+  background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(18, 24, 52, 0.1);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.chip:hover { border-color: rgba(18, 24, 52, 0.25); }
+.chip:active { transform: scale(0.97); }
+.chip[aria-pressed='true'] { background: #15171c; border-color: #15171c; color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbA, .orbB, .orbC, .qStep { animation: none; }
+}

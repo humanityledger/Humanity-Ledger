@@ -25,6 +25,14 @@ export interface SceneOptions {
   /** The sticker's bubble on screen, where the moment starts and ends. */
   from?: DOMRect | null;
   reducedMotion?: boolean;
+  /** Length of the moment (default SCENE_MS). The offered packs play the short, frame-breaking one. */
+  durationMs?: number;
+  /**
+   * Native width of a raster sticker. The hero is never drawn wider than the picture can stay sharp
+   * on this screen (native pixels / device pixel ratio, with a small allowance): a 128 px sticker is
+   * not blown up into a blur.
+   */
+  maxHeroPx?: number;
 }
 
 export interface ScenePlayback {
@@ -79,7 +87,7 @@ function blobPath(pts: [number, number][]): string {
 
 /* ── Particles ───────────────────────────────────────────────────────── */
 
-type Shape = 'heart' | 'confetti' | 'circle' | 'spark' | 'drop' | 'coin' | 'bill' | 'flame' | 'bubble' | 'star' | 'streak' | 'blob' | 'z';
+type Shape = 'heart' | 'confetti' | 'circle' | 'spark' | 'drop' | 'coin' | 'bill' | 'flame' | 'bubble' | 'star' | 'streak' | 'blob' | 'z' | 'flake';
 
 interface P {
   x: number; y: number; vx: number; vy: number;
@@ -159,6 +167,23 @@ function drawParticle(ctx: CanvasRenderingContext2D, p: P, fade: number) {
       ctx.fillStyle = '#fff';
       ctx.fill(sparkPath2D(s * 0.45));
       break;
+    case 'flake': {
+      // Six arms with two barbs each: a snowflake that stays crisp at any size.
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = Math.max(1, s * 0.12);
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(255,255,255,0.9)'; ctx.shadowBlur = 6;
+      ctx.beginPath();
+      for (let k = 0; k < 6; k++) {
+        const ang = (k * Math.PI) / 3, ca = Math.cos(ang), sa = Math.sin(ang);
+        ctx.moveTo(0, 0); ctx.lineTo(ca * s, sa * s);
+        const bx = ca * s * 0.55, by = sa * s * 0.55, b = s * 0.28;
+        ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang + 0.7) * b, by + Math.sin(ang + 0.7) * b);
+        ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ang - 0.7) * b, by + Math.sin(ang - 0.7) * b);
+      }
+      ctx.stroke();
+      break;
+    }
     case 'star':
       ctx.scale(fl, 1);
       ctx.shadowColor = p.color; ctx.shadowBlur = 10;
@@ -275,8 +300,10 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
     resolveDone();
   };
 
-  // Where the sticker starts: its bubble, or the bottom of the chat.
-  const heroSize = Math.round(Math.min(W * 0.62, H * 0.42, 340));
+  // Where the sticker starts: its bubble, or the bottom of the chat. A raster sticker is capped at
+  // what its pixels can show sharply on this screen (1.35 x native / device pixel ratio).
+  const sharpCap = o.maxHeroPx ? (o.maxHeroPx * 1.35) / Math.max(1, Math.min(3, window.devicePixelRatio || 1)) : Infinity;
+  const heroSize = Math.round(Math.max(96, Math.min(W * 0.62, H * 0.42, 340, sharpCap)));
   const cx = W / 2, cy = H * 0.44;
   const fx = o.from ? o.from.left + o.from.width / 2 - hostRect.left : cx;
   const fy = o.from ? o.from.top + o.from.height / 2 - hostRect.top : H - 80;
@@ -286,9 +313,10 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
     position: 'absolute', left: `${cx - heroSize / 2}px`, top: `${cy - heroSize / 2}px`, width: `${heroSize}px`, height: `${heroSize}px`,
     filter: 'drop-shadow(0 22px 30px rgba(16,24,40,0.35))', willChange: 'transform, opacity', backfaceVisibility: 'visible',
   }, root) as HTMLImageElement;
-  hero.src = o.src;
   hero.alt = '';
   hero.decoding = 'async';
+  (hero.style as CSSStyleDeclaration & { imageRendering: string }).imageRendering = 'auto';
+  hero.src = o.src;
   const at = (x: number, y: number) => `translate(${(x - cx).toFixed(1)}px, ${(y - cy).toFixed(1)}px)`;
 
   if (o.reducedMotion) {
@@ -302,7 +330,7 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
     return { done, cancel: cleanup };
   }
 
-  const T = SCENE_MS;
+  const T = Math.max(1200, Math.min(SCENE_MS, o.durationMs ?? SCENE_MS));
   const tint = hex(o.tint, '#ff5c8a');
   const scene = o.scene ?? 'sparkle';
 
@@ -447,6 +475,14 @@ export function playStickerScene(o: SceneOptions): ScenePlayback {
       break;
     }
 
+    case 'snow': {
+      // A cold, bright wash and snow drifting over the whole screen, thicker behind the sticker.
+      wash('radial-gradient(120% 90% at 50% 40%, rgba(210,232,255,0.42), rgba(120,160,215,0.38))', 1);
+      every(0, T * 0.8, 70, () => add({ shape: 'flake', color: pick(['#ffffff', '#eaf4ff', '#d6e9ff']), x: rand(-30, W + 30), y: -24, vx: rand(-25, 25), vy: rand(70, 150), z: rand(0.6, 1.4), size: rand(6, 14), life: rand(2200, 3200), vr: rand(-1.2, 1.2), wobble: rand(20, 55) }));
+      every(0, T * 0.8, 40, () => add({ shape: 'circle', color: 'rgba(255,255,255,0.92)', x: rand(0, W), y: -10, vx: rand(-15, 15), vy: rand(90, 170), size: rand(1.6, 3.4), life: rand(1800, 2800), wobble: rand(15, 40) }));
+      later(T * 0.12, () => { for (let i = 0; i < 26; i++) { const a = rand(0, TAU), v = rand(160, 420); add({ shape: 'flake', color: '#ffffff', x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.2, size: rand(7, 13), life: rand(900, 1500), vr: rand(-4, 4) }); } });
+      break;
+    }
     case 'rain': {
       wash('linear-gradient(180deg, rgba(30,45,90,0.5), rgba(70,100,160,0.35))', 1);
       every(0, T * 0.82, 110, () => add({ shape: 'streak', color: pick(['rgba(200,225,255,0.95)', 'rgba(150,190,245,0.9)']), x: rand(-40, W), y: -20, vx: 60, vy: rand(700, 1000), z: rand(0.6, 1.4), life: 1600, bounce: H - rand(10, 60) }));

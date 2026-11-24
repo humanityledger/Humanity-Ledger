@@ -27,6 +27,10 @@ export const RELEASES: Release[] = [
     title: "Not yet released",
     note: "In the repository, waiting for the next deployment.",
     changes: [
+      { kind: "improved", text: "Stickers: three new packs, Hoops, Hammy and Noel, 40 stickers in all. Each one plays a short moment of under three seconds across the whole screen when it arrives or when you tap it; you can keep typing and scrolling while it plays. Stickers sent from earlier packs, Spike the cactus included, still show in your chats." },
+      { kind: "improved", text: "The closed beta page has a new look, and asking for an invitation is now three short steps with a summary to check before you send." },
+      { kind: "security", text: "Communities moving to encrypted groups: an admin's app only removes people from a group when it has the full member list, so a partial answer from the server can never empty a group." },
+      { kind: "security", text: "A chat history backup now belongs to the wallet that made it and cannot be restored into another wallet's chats on a shared browser." },
       { kind: "security", text: "HLC is a test token with no monetary value, used only to test private payments in the closed alpha. It is never sold or offered, and the wallet says so next to every HLC balance. Real payments are planned in cUSDC, issued by human.tech, and stay off until a legal review and other conditions are met." },
       { kind: "security", text: "The closed alpha admits a tester only after they accept the signed terms in three separate boxes, and after the operator's sanctions and age checks. Only the results of the checks are kept, and they are deleted 6 months after the alpha ends." },
       { kind: "improved", text: "Aztec Network is named in text, with a link, until Aztec's brand rules for this use are in writing." },

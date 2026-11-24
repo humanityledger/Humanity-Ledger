@@ -22,12 +22,12 @@ describe('stickers', () => {
       const ids = p.stickers.map(s => s.id);
       expect(new Set(ids).size).toBe(ids.length);
       expect(ids.includes(p.cover)).toBe(true);
-      for (const s of p.stickers) expect(fs.existsSync(`public/stickers/${p.id}/${s.id}.svg`)).toBe(true);
+      for (const s of p.stickers) expect(fs.existsSync(`public/stickers/${p.id}/${s.id}.${p.format ?? 'svg'}`)).toBe(true);
     }
   });
 
   it('the drawn stickers are self-contained: no scripts, no external references', () => {
-    for (const p of ALL_STICKER_PACKS) {
+    for (const p of ALL_STICKER_PACKS.filter(x => (x.format ?? 'svg') === 'svg')) {
       for (const s of p.stickers) {
         const svg = fs.readFileSync(`public/stickers/${p.id}/${s.id}.svg`, 'utf8');
         expect(svg).not.toMatch(/<script|javascript:|href=|xlink:|@import|url\((?!#)/i);
@@ -47,8 +47,25 @@ describe('stickers', () => {
     expect(stickerRef(stickerMessage('nubi-sol', 'kiss'))?.sticker.scene).toBe('kiss');
   });
 
-  it('the picker offers only Spike, the cactus; stickers already sent from other packs still render', () => {
-    expect(STICKER_PACKS.map(p => p.id)).toEqual(['spike']);
+  it('the picker offers Hoops, Hammy and Noel (40 stickers); the cactus and older packs still render', () => {
+    expect(STICKER_PACKS.map(p => p.id)).toEqual(['hoops', 'hammy', 'noel']);
+    expect(STICKER_PACKS.reduce((n, p) => n + p.stickers.length, 0)).toBe(40);
+    expect(stickerSrc(stickerMessage('hoops', 'nailed-it'))).toBe('/stickers/hoops/nailed-it.webp');
+    expect(stickerSrc(stickerMessage('spike', 'slay'))).toBe('/stickers/spike/slay.svg');
     expect(stickerSrc(stickerMessage('lumi', 'splash'))).toBe('/stickers/lumi/splash.svg');
+  });
+
+  it('the offered packs play the short, frame-breaking moment and stay sharp', () => {
+    for (const p of STICKER_PACKS) {
+      expect(p.sceneMs).toBeGreaterThanOrEqual(1000);
+      expect(p.sceneMs).toBeLessThanOrEqual(3000);
+      expect(p.px).toBe(512);
+      for (const s of p.stickers) expect(s.scene).toBeTruthy();
+    }
+    const host = fs.readFileSync('components/chat/StickerSceneHost.tsx', 'utf8');
+    expect(host).toMatch(/createPortal\(/);
+    expect(host).toMatch(/fixed inset-0 z-\[300000\] pointer-events-none/);
+    expect(fs.readFileSync('lib/chat/sticker-scenes.ts', 'utf8')).toMatch(/case 'snow':/);
+    expect(fs.existsSync('public/stickers/CREDITS.md')).toBe(true);
   });
 });

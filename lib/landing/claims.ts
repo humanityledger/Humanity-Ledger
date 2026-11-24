@@ -87,12 +87,13 @@ export const CLAIMS = [
     id: 'usdc',
     topic: 'USDC',
     // cUSDC for everyone (lib/payments/cusdc-public.ts) is the operator's switch; CUSDC_GATES stay a record.
-    label: CUSDC_PUBLIC ? 'Live' : 'Not enabled yet',
+    // Since 23 November 2026 cUSDC runs in a closed beta of up to 100 members (lib/beta/cusdc-beta.ts).
+    label: CUSDC_PUBLIC ? 'Live' : 'Closed alpha',
     may: CUSDC_PUBLIC
       ? 'Private cUSDC payments in the chat on Aztec Alpha, with a cap per payment and no external audit.'
-      : 'Private USDC payments in the chat are the design.',
-    mustNot: CUSDC_PUBLIC ? 'That payments have an external audit, no limit or no risk.' : 'That USDC works today.',
-    evidence: ['lib/payments/assets.ts', 'lib/payments/cusdc-public.ts'],
+      : 'Private cUSDC payments in the chat on Aztec Alpha, for members of a closed beta of up to 100 people, with a cap per payment and no external audit.',
+    mustNot: CUSDC_PUBLIC ? 'That payments have an external audit, no limit or no risk.' : 'That anyone can pay in cUSDC today, or that payments have an external audit.',
+    evidence: ['lib/payments/assets.ts', 'lib/payments/cusdc-public.ts', 'lib/beta/cusdc-beta.ts'],
     switch: { name: 'cusdcPublic', on: CUSDC_PUBLIC || cusdcReady() },
   },
   {
