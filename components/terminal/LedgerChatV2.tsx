@@ -7063,6 +7063,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           {sidebarTab === 'communities' && (
             <LedgerCommunitiesTab
               myAddress={address || ''}
+              xmtpClient={client}
               onOpenCommunity={(id) => {
                 setActivePeer(null);
                 setActiveCommunity(id);

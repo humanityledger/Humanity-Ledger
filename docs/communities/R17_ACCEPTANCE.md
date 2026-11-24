@@ -2,7 +2,7 @@
 
 **Documento:** `docs/communities/R17_ACCEPTANCE.md`
 **Fuente:** `docs/communities/MLS_MIGRATION.md` — criterios de aceptación convertidos en checklist verificable.
-**Estado:** parcial, 16 noviembre 2026. AC-01 y AC-02 tienen test de ruta con Prisma simulado: `communityMls = true` responde 410 y no llama a `communityPost.create`. No sustituyen un `pg_dump` real. AC-03 sigue manual y sin cablear. Las comunidades existentes siguen en `false`.
+**Estado (24 noviembre 2026):** las comunidades nuevas nacen en MLS cuando el cliente XMTP del creador está listo; el servidor solo guarda el `groupId` (`POST /api/chat/communities`, interruptor `COMMUNITY_MLS_NEW=off`). Cualquier miembro conectado añade a quien se unió; solo un admin elimina. Las comunidades existentes no se migran. AC-03 se comprueba con dos clientes XMTP reales en el workflow «R8 two browsers (testnet)». **Estado anterior:** parcial, 16 noviembre 2026. AC-01 y AC-02 tienen test de ruta con Prisma simulado: `communityMls = true` responde 410 y no llama a `communityPost.create`. No sustituyen un `pg_dump` real. AC-03 sigue manual y sin cablear. Las comunidades existentes siguen en `false`.
 **Creado:** 15 noviembre 2026
 
 > [!IMPORTANT]
