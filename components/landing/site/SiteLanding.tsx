@@ -140,7 +140,7 @@ export async function SiteLanding() {
               <p>{__t(K.PAYMENT.body)}</p>
             </div>
           </div>
-          <ProofSequence steps={K.PAYMENT.steps} label={<StatusLabel label={__t(K.PAYMENT.label)} />} />
+          <ProofSequence steps={K.PAYMENT.steps} label={<StatusLabel label={K.PAYMENT.label} />} />
           <p className={s.honest}><Info />{K.PAYMENT.honest}</p>
         </Section>
 
@@ -229,7 +229,7 @@ export async function SiteLanding() {
             <div>
               <div className={s.relayHead}>
                 <p className={s.eyebrow}>{__t("For organisations")}</p>
-                <StatusLabel label={__t(K.RELAY.label)} />
+                <StatusLabel label={K.RELAY.label} />
               </div>
               <h2 className={s.h2} id="relay-title">{__t(K.RELAY.title)}</h2>
               <p className={s.body}>{__t(K.RELAY.body)}</p>
@@ -268,7 +268,7 @@ export async function SiteLanding() {
           <ul className={s.next} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {K.NEXT.items.map((n) => (
               <li key={n.title} className={s.nextItem}>
-                <StatusLabel label={__t(labelOf(n.claim))} />
+                <StatusLabel label={labelOf(n.claim)} />
                 <h3>{__t(n.title)}</h3>
                 <p>{__t(n.text)}</p>
               </li>

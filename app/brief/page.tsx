@@ -32,8 +32,8 @@ export default async function BriefPage() {
   const row = (id: string) => FEATURES_ROWS.find((r) => r.id === id)!;
   type StatusRow = { label: ClaimLabel; items: string[] };
   const rows: StatusRow[] = [
-    { label: t("Live"), items: ['Direct and group messages', 'Voice and video calls', '@usernames and QR codes'] },
-    { label: t("Closed alpha"), items: ['Private payments on Aztec Network, with a cap per payment'] },
+    { label: 'Live', items: ['Direct and group messages', 'Voice and video calls', '@usernames and QR codes'] },
+    { label: 'Closed alpha', items: ['Private payments on Aztec Network, with a cap per payment'] },
     ...(['Not enabled yet', 'In design'] as ClaimLabel[]).map((label) => ({
       label,
       items: [...NEXT.items.filter((n) => labelOf(n.claim) === label).map((n) => n.title), ...(label === labelOf('files') ? ['Files of up to 32 GB'] : [])],
@@ -93,7 +93,7 @@ export default async function BriefPage() {
             <h2 className={s.h}>{t("Where Ledger Chat stands")}</h2>
             <ul className={s.status}>
               {status.map((c) => (
-                <li key={c.label}><b>{c.label}</b><span>{c.items.join('. ')}.</span></li>
+                <li key={c.label}><b>{t(c.label)}</b><span>{c.items.join('. ')}.</span></li>
               ))}
             </ul>
           </div>

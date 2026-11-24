@@ -14,6 +14,7 @@ import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
 import { NAV } from '@/lib/landing/chapters';
 import s from './site.module.css';
 import { getT } from '@/lib/i18n/server';
+import type { Translate } from '@/lib/i18n/runtime';
 
 export const Arrow = () => (
   <svg className={s.arrow} width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
@@ -107,7 +108,7 @@ const LEGAL: L[] = [
 const MAKER = LEGAL_ENTITY.kind === 'company' ? LEGAL_ENTITY.name : LEGAL_ENTITY.tradingName;
 const ALPHA_LIVE = AZTEC_WALLET_CONFIG.network === 'mainnet' && AZTEC_WALLET_CONFIG.alphaEnabled;
 
-const Item = ({ l }: { l: L }) => (
+const Item = ({ l, t }: { l: L; t: Translate }) => (
   <a href={l.href} {...(l.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{t(l.label)}</a>
 );
 
@@ -128,13 +129,13 @@ export async function SiteFooter() {
             {COLUMNS.map((c) => (
               <div key={c.title} className={s.footCol}>
                 <p className={s.footTitle}>{t(c.title)}</p>
-                <nav aria-label={t(c.title)}>{c.links.map((l) => <Item key={l.label} l={l} />)}</nav>
+                <nav aria-label={t(c.title)}>{c.links.map((l) => <Item key={l.label} l={l} t={t} />)}</nav>
               </div>
             ))}
           </div>
         </div>
         <div className={s.fine}>
-          <nav aria-label={t("Legal")} className={s.legal}>{LEGAL.map((l) => <Item key={l.label} l={l} />)}</nav>
+          <nav aria-label={t("Legal")} className={s.legal}>{LEGAL.map((l) => <Item key={l.label} l={l} t={t} />)}</nav>
           <p>© 2026 {t(LEGAL_ENTITY.tradingName)}</p>
           <p>{t("Ledger Chat is in early access. Our contracts have had an internal security review, not an external audit, and private payments run{value}Please do not rely on the service to protect information or funds you cannot afford to lose.", { value: ALPHA_LIVE
               ? t(" on Aztec Alpha with real funds and a cap per payment. ")

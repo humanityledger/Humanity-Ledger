@@ -195,7 +195,7 @@ async function TimerScreen() {
  * alternating down the page. The small wall photo (580 px wide, its screen 22% smaller) is not used:
  * it showed soft on high-density displays and shrank the screen text.
  */
-const SCREENS: Record<Screen, { el: () => React.ReactElement; label: string; dark?: boolean; photo: MockupId }> = {
+const SCREENS: Record<Screen, { el: () => React.ReactElement | Promise<React.ReactElement>; label: string; dark?: boolean; photo: MockupId }> = {
   profile: { el: ProfileScreen, photo: 'hand-tilt', label: 'A hand holding a phone with a Ledger Chat profile: an @username and a QR code, without a phone number' },
   chats: { el: ChatsScreen, photo: 'hand-front-l', label: 'A hand holding a phone with the chat list of Ledger Chat, every conversation end-to-end encrypted' },
   call: { el: CallScreen, photo: 'hand-tilt-l', label: 'A hand holding a phone with a video call in Ledger Chat, encrypted in transit device to device', dark: true },

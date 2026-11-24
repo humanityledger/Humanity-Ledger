@@ -508,14 +508,17 @@ const CallOfferBubble = React.memo(({ content }: { content: string; isMe: boolea
 });
 CallOfferBubble.displayName = 'CallOfferBubble';
 
-const MissedCallBubble = React.memo(({ isMe }: { content: string; isMe: boolean }) => (
-  <CallRow
-    icon={<PhoneMissed size={16} strokeWidth={1.9} />}
-    title={isMe ? tr("Outgoing call") : tr("Missed call")}
-    text={isMe ? tr("No answer") : tr("You missed this call")}
-    tone={isMe ? 'neutral' : 'missed'}
-  />
-));
+const MissedCallBubble = React.memo(({ isMe }: { content: string; isMe: boolean }) => {
+  const tr = useT();
+  return (
+    <CallRow
+      icon={<PhoneMissed size={16} strokeWidth={1.9} />}
+      title={isMe ? tr("Outgoing call") : tr("Missed call")}
+      text={isMe ? tr("No answer") : tr("You missed this call")}
+      tone={isMe ? 'neutral' : 'missed'}
+    />
+  );
+});
 MissedCallBubble.displayName = 'MissedCallBubble';
 
 // Group calls are not built yet: nothing in Ledger Chat creates or joins a
