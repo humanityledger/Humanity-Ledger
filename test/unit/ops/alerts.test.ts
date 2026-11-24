@@ -24,11 +24,14 @@ describe('alpha alerts', () => {
   });
 });
 
+/** What a person or a log can see: the header comments say what is never kept or claimed. */
+const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
 describe('measured status only', () => {
   it('counters hold codes and hours, never an account', () => {
     const c = fs.readFileSync('lib/ops/counters.ts', 'utf8');
     expect(c).toMatch(/`ops:\$\{group\}:\$\{code\}:\$\{hour\}`/);
-    expect(c).not.toMatch(/wallet|address|inbox/i);
+    expect(stripComments(c)).not.toMatch(/wallet|address|inbox/i);
   });
   it('the payment route counts only Alpha; the delivery route counts only production', () => {
     expect(fs.readFileSync('app/api/wallet/payment-report/route.ts', 'utf8')).toMatch(/if \(network === 'mainnet'\)/);
@@ -37,7 +40,7 @@ describe('measured status only', () => {
   it('the page and the API show measurements, no uptime or target claims', () => {
     for (const f of ['app/status/page.tsx', 'app/api/status/alpha/route.ts']) {
       const src = fs.readFileSync(f, 'utf8');
-      expect(src).not.toMatch(/uptime|99\.9|SLA|guarantee/i);
+      expect(stripComments(src)).not.toMatch(/uptime|99\.9|SLA|guarantee/i);
     }
     expect(fs.readFileSync('app/status/page.tsx', 'utf8')).toMatch(/at most one report of each kind per minute per page/);
   });

@@ -11,7 +11,10 @@ describe('app lock (Settings › Security)', () => {
     // Only the PIN screen (checked by the server) or an account without a PIN opens it.
     const calls = chat.match(/setIsBiometricallyUnlocked\(true\)/g) || [];
     expect(calls).toHaveLength(2);
-    const lock = chat.slice(chat.indexOf('if (ledgerSettings?.biometric_lock && !isBiometricallyUnlocked) {'));
+    // The lock exists only while PINs can be created (pinLockEnabled, lib/auth/pin-lock.ts).
+    const at = chat.search(/if \(ledgerSettings\?\.biometric_lock && (?:pinLockEnabled\(\) && )?!isBiometricallyUnlocked\) \{/);
+    expect(at).toBeGreaterThan(-1);
+    const lock = chat.slice(at);
     expect(lock).toMatch(/<PinPrompt[^]*?onUnlock=\{\(\) => setIsBiometricallyUnlocked\(true\)\}[^]*?onNeedsSetup=/);
   });
 });

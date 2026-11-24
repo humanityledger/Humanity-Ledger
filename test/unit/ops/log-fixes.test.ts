@@ -46,7 +46,7 @@ describe('XMTP "Sync failed to wait for intent" and publish_gave_up', () => {
   });
   it('a retry after an intent wait syncs first; giving up is shown with Retry and retried on reconnect', () => {
     const c = read('lib/xmtp/client.ts');
-    expect(c).toMatch(/if \(isSyncWaitError\(err\)\) await runSerial\(cacheKey, \(\) => withTimeout\(entry\.dm\.sync\(\)/);
+    expect(c).toMatch(/if \(isSyncWaitError\(err\)\) \{?\s*await runSerial\(cacheKey, \(\) => withTimeout\(entry\.dm\.sync\(\)/);
     expect(c).toMatch(/undelivered\.set\(cacheKey, dm\);/);
     expect(c).toMatch(/action: \{ label: 'Retry'/);
     expect(c).toMatch(/if \(undelivered\.size\) await retryUndelivered\(\);/);

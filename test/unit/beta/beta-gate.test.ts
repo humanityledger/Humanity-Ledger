@@ -298,7 +298,10 @@ describe('redeem → visibility → payment capability', () => {
     expect(balanceProblem('2', t, undefined)).toBeNull();
     expect(balanceProblem('abc', t, { privateUnits: 0n, publicUnits: 0n })).toBeNull();
     const modal = fs.readFileSync('components/chat/ZkMoneyModal.tsx', 'utf8');
-    expect(modal).toMatch(/const blocked = !!paused \|\| !!recipientIssue \|\| !!lowBalance/);
+    // Send stays blocked while paused, for a recipient problem or a low balance (other checks may join).
+    const blockedLine = modal.match(/const blocked = [^\n]*;/)?.[0] ?? '';
+    for (const cond of ['!!paused', '!!recipientIssue', '!!lowBalance']) expect(blockedLine).toContain(cond);
+    expect(blockedLine).not.toMatch(/&&\s*!!(paused|recipientIssue|lowBalance)/);
     expect(modal).toMatch(/token === 'CUSDC' && betaApplies\(\)/);
     const route = fs.readFileSync('app/api/beta/cusdc/member/route.ts', 'utf8');
     expect(route).toMatch(/getVerifiedCaller/);
