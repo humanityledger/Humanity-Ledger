@@ -6,8 +6,9 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { manageRows, canPin } from '@/components/communities/CommunityManage';
+import { untranslated } from '../../helpers/untranslated';
 
-const read = (p: string) => fs.readFileSync(p, 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(p, 'utf8'));
 /** Source without comments: the headers name the old chrome to say it is gone. */
 const code = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const require_ = createRequire(import.meta.url);
