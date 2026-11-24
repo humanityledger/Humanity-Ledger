@@ -35,6 +35,7 @@ import { paymentReason, reportPayment } from './payment-report';
 import { assertFeeChoice, identifyNode } from '../fees';
 import { walletNodeRoute } from './node-choice';
 import { personalLimitProblem, RECEIVE_ONLY_MESSAGE } from '@/lib/payments/personal-limits';
+import { recordTiming } from '@/lib/perf/proof-timings';
 import { valueActionsRunning } from '../single-flight';
 import { walletNodeClientOptions, isTransientNodeError } from './node-fetch';
 import { BUSY_ELSEWHERE_MESSAGE, HANDED_OFF_MESSAGE, IDLE_CLOSED_MESSAGE, IDLE_CLOSE_MS, PAUSED_MESSAGE, createTabHandoff, isStoreBusyError } from './tab-handoff';
@@ -1485,6 +1486,7 @@ class PrivateWallet {
       const sent = await sendFn();
       txHash = sent.txHash?.toString?.() ?? String(sent.txHash);
       reportPayment('sent', { kind, network: net, ms: Date.now() - started });
+      recordTiming(Date.now() - started);
       upsertActivity(me, { id, kind, txHash, status: 'pending', createdAt: Date.now() });
       this.set({ activity: await this.loadActivity() });
       const receipt = await this.sdk!.waitForTx(this.node, sent.txHash, { timeout: 600, interval: 2 });
