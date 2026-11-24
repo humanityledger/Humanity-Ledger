@@ -143,6 +143,18 @@ describe("LedgerDeadmanSwitch", function () {
             await expect(contract.connect(owner).proposeBackupWallet(owner.address))
                 .to.be.revertedWithCustomError(contract, "CannotBeOwner");
         });
+
+        it("reverts propose with the switch itself: assets sent there could never leave", async function () {
+            await expect(contract.connect(owner).proposeBackupWallet(contract.target))
+                .to.be.revertedWithCustomError(contract, "InvalidBackupWallet");
+        });
+
+        it("reverts deploy when the backup is the switch's own future address", async function () {
+            const Switch = await ethers.getContractFactory("LedgerDeadmanSwitch", owner);
+            const self = ethers.getCreateAddress({ from: owner.address, nonce: await owner.getNonce() });
+            await expect(Switch.deploy(owner.address, self, TIMEOUT_DAYS))
+                .to.be.revertedWithCustomError(contract, "InvalidBackupWallet");
+        });
     });
 
     //  setTimeout 

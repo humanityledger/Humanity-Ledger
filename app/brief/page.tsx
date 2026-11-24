@@ -8,6 +8,7 @@ import { FEATURES_ROWS, HERO, NEXT, PAYMENT, VISIBILITY } from '@/lib/landing/ch
 import { labelOf, type ClaimLabel } from '@/lib/landing/claims';
 import { PrintButton } from './PrintButton';
 import s from './brief.module.css';
+import Link from 'next/link';
 
 /**
  * /brief: a printable one-page A4 summary for events (landing brief, "Also build"). The same
@@ -41,7 +42,7 @@ export default function BriefPage() {
   return (
     <div className={s.desk}>
       <div className={s.bar}>
-        <a href="/">Ledger Chat</a>
+        <Link href="/">Ledger Chat</Link>
         <PrintButton className={s.print} />
       </div>
 
