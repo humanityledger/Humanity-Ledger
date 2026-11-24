@@ -77,7 +77,7 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 51 | Maximum privacy by default | 1 | HECHO (decision) | Notification previews off by default. Read receipts and typing stay on by default, as in Signal, each with its toggle; last seen is contacts or nobody |
 | 52 | G7 verifiable by the user | 1 | PARCIAL | v2 binding (`lib/aztec/peer-binding.ts`); proves the signing key only (R6) |
 | 53 | Alert on Aztec address change | 1 | EXISTÍA | `AgreementCard.tsx`: conflict and failed proof shown as security warnings, never pinned |
-| 54 | Audit (reformulated) | 8 | PARCIAL | `docs/AUDIT_SCOPE.md`, `docs/BUG_BOUNTY.md`; no external audit |
+| 54 | Audit (reformulated) | 8 | PARCIAL | Review package updated with every new security-relevant path (`docs/audit/EXTERNAL_REVIEW_PACKAGE.md`); choosing a reviewer is Stefan's; no external audit |
 | 55 | Trust centre in the app | 1 | HECHO | Settings, Data and backup, Who sees what → `/docs/data-inventory` |
 | 56 | Payments never block chat | 3 | EXISTÍA | |
 | 57 | Request payment in chat | 3 | EXISTÍA | `components/chat/PaymentRequestCard.tsx` (restyled in this branch) |
@@ -92,7 +92,7 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | 67 | Spending limits | 3 | HECHO | Per-payment limit per token, checked in `wallet.send` before any proof (`lib/payments/personal-limits.ts`) |
 | 68 | Receive-only mode | 3 | HECHO | Same module; the request card shows it instead of Pay |
 | 69 | Private statistics | 3 | HECHO | 30-day totals computed on the device (`lib/payments/activity-report.ts`) |
-| 72 | Use cases | 8 | DECISIÓN | Remittances need legal advice |
+| 72 | Use cases | 8 | DECISIÓN taken | Freelance invoices and private groups, yes; remittances not until counsel (`claude/nota-juridica-preliminar`) |
 | 73 | Communities with privacy controls | 4 | HECHO (off until flipped) | `lib/communities/mls.ts`: an MLS community reads and posts through its XMTP group, the admin's client keeps group members equal to the server's, new channels are created as groups. The operator flips `communityMls` per community |
 | 74 | Public group search | 4 | EXISTÍA | "Find one" lists discoverable communities (`LedgerCommunitiesTab.tsx`) |
 | 75 | Full web version | 8 | EXISTÍA | |
@@ -122,12 +122,16 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R3 | Recipient-claimed stream | 3 | EXISTÍA | `PaymentStream` with caps is the answer to recurring payments; no server ever holds keys |
 | R4 | Private FPC | 3 | DECISIÓN taken: not now | Revisit when Aztec publishes an FPC on Alpha (`docs/aztec/FPC_EVALUATION.md`) |
 | R5 | User-chosen Aztec node | 2 | HECHO | `lib/aztec/wallet/node-choice.ts`, Settings → Aztec node; same identity checks, never replaced by the relay |
-| R6 | G7 v3 and open-source contracts | 1, 8 | FALTA | |
+| R6 | G7 as an open standard | 8 | HECHO | `docs/aztec/G7_BINDING_SPEC.md`: the binding as a specification other Aztec apps can implement. "v3 binding privacy keys": the address already commits to them; proving possession of their secrets has no standard Aztec mechanism, stated in the spec |
 | R7 | Invites without an inviter | 4 | EXISTÍA | Operator-issued HMAC codes; no person-to-person referral graph is stored |
 | R8 | Rollup upgrade readiness | 2 | HECHO | Different rollup on the same L1 → `ROLLUP_CHANGED_MESSAGE`, nothing opens or moves |
 | R9 | Private membership proof | 4 | DECISIÓN taken: later | `docs/design/PRIVATE_MEMBERSHIP.md` |
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## Phase 8 (`claude/align-fase-8`)
+
+- R6 as a specification, the review package updated, 72 decided. The external audit itself is outside the code.
 
 ## Phase 7 (`claude/align-fase-7`)
 
