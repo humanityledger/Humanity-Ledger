@@ -31,6 +31,10 @@ describe('choosing an Aztec node', () => {
   it('a different rollup on the same L1 gets its own message, before any key is used', () => {
     const src = fs.readFileSync('lib/aztec/wallet/client.ts', 'utf8');
     expect(src).toMatch(/throw new Error\(`\$\{ROLLUP_CHANGED_MESSAGE\}/);
-    expect(src.indexOf('ROLLUP_CHANGED_MESSAGE} (')).toBeLessThan(src.indexOf("this.set({ step: 'Initializing encrypted storage' })"));
+    // The store that holds keys opens after the check ('Initializing encrypted storage' also
+    // appears earlier, in the tab handoff's finally, which opens nothing).
+    const storeOpens = src.indexOf('// One encrypted store pair per network');
+    expect(storeOpens).toBeGreaterThan(0);
+    expect(src.indexOf('ROLLUP_CHANGED_MESSAGE} (')).toBeLessThan(storeOpens);
   });
 });

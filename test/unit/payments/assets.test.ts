@@ -24,12 +24,12 @@ describe('payment assets (PA-1)', () => {
     expect(TEST_TOKEN_NOTE).toBe('Test token · no monetary value');
   });
 
-  it('cUSDC is planned, unverified, issued by human.tech, and never in the list the wallet may use', () => {
+  it('cUSDC is planned, verified on chain since the beta (23 Nov 2026), issued by human.tech, and never in the general token list', () => {
     const c = PLANNED_TOKENS.find((t) => t.symbol === 'cUSDC')!;
     expect(c).toBeDefined();
     expect(c.status).toBe('planned');
     expect(c.role).toBe('real');
-    expect(c.verifiedOnChain).toBe(false);
+    expect(c.verifiedOnChain).toBe(true); // checked against the node when the beta was switched on (cce13a9)
     expect(c.issuer).toMatch(/human\.tech/);
     expect(c.address).toMatch(/^0x[0-9a-f]{64}$/);
     expect(c.source).toBe('https://support.shield.human.tech/contracts');
