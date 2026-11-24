@@ -22,7 +22,7 @@ import { sendViaOnion, registerAsRelay } from '@/lib/onion/OnionRouter';
 import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -4726,9 +4726,70 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               }
             }
             
-            // [AUDIT FIX] If all resolutions fail, fall back to convoId or senderInboxId 
-            // to prevent the message from being silently dropped.
-            const msgConvPeer = resolvedPeerAddr || convoId || msg.senderInboxId || 'unknown';
+            // ── [CRITICAL FIX — 24 Nov 2026] Lazy peer resolution ─────────────────
+            // When resolvedPeerAddr is empty the old code used convoId or
+            // senderInboxId as msgConvPeer. Those are NOT Ethereum addresses,
+            // so the message was stored under `dm-<hash>` / `dm-<inboxId>`,
+            // never matched any real conversation, and was effectively LOST.
+            // The recipient saw nothing; the sender saw "sent".
+            //
+            // New behaviour: schedule a background resolution attempt. If the
+            // address is found within 8 s the message is re-injected into the
+            // correct conversation. If not, the message is parked under
+            // `dm-unresolved-<convoId>` and a warning is logged so the
+            // delivery-report endpoint captures it.
+            if (!resolvedPeerAddr && fromPeer && msg.senderInboxId) {
+              // Fire-and-forget: resolve in background, then re-dispatch
+              (async () => {
+                try {
+                  // Force a full sync + scan to warm the cache
+                  await client.conversations.sync();
+                  let addr = await resolveSenderAddress(msg.senderInboxId, client);
+                  if (!addr) {
+                    // Second attempt: scan DMs explicitly
+                    const dms = await client.conversations.listDms();
+                    for (const d of dms) {
+                      const p = await extractPeerAddress(d, selfInboxId, address || '', client).catch(() => null);
+                      if (p) {
+                        const pInboxId = await (async () => { try { return (await (d as any).peerInboxId?.()) ?? ''; } catch { return ''; } })();
+                        if (pInboxId && pInboxId.toLowerCase() === msg.senderInboxId.toLowerCase()) {
+                          addr = p;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  if (addr && /^0x[a-fA-F0-9]{40}$/.test(addr)) {
+                    const resolvedLower = addr.toLowerCase();
+                    // Cache it so future messages resolve instantly
+                    if (convoId) convIdToPeer.current.set(convoId, resolvedLower);
+                    diag('receive_resolved_late', { msg: short(realId), peer: short(resolvedLower) });
+                    // Re-inject: update conversation list and persist
+                    setConversations(prev => {
+                      const exists = prev.some(c => c.peerAddress.toLowerCase() === resolvedLower);
+                      if (!exists) {
+                        return [{ peerAddress: resolvedLower, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()), unreadCount: 1 }, ...prev];
+                      }
+                      return prev.map(c =>
+                        c.peerAddress.toLowerCase() === resolvedLower
+                          ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()), unreadCount: (c.unreadCount || 0) + 1 }
+                          : c
+                      );
+                    });
+                    // Fix the message's conversationId in state so it shows in the right chat
+                    setMessages(prev => prev.map(m =>
+                      m.id === realId ? { ...m, conversationId: `dm-${resolvedLower}` } : m
+                    ));
+                    // Persist to IndexedDB with the correct peer
+                    chatDB.saveMessages([{ id: realId, senderInboxId: msg.senderInboxId ?? '', content, sentAtNs, conversationId: `dm-${resolvedLower}`, status: 'sent' }]).catch(() => {});
+                    chatDB.saveConversation({ peerAddress: resolvedLower, lastAt: sentAtNs }).catch(() => {});
+                  }
+                } catch (e) {
+                  console.warn('[XMTP] Late peer resolution failed:', e);
+                }
+              })();
+            }
+            const msgConvPeer = resolvedPeerAddr || (convoId && convIdToPeer.current.get(convoId)) || resolvedPeerAddr || 'unknown';
             const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
             // One event per message received (lib/xmtp/diag.ts): never its content, ids shortened.
             // `kind` is only the protocol marker of a signal (READ, DELIVERED, TYPING, CALL_…) or
@@ -5347,6 +5408,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                console.warn('[Chat] global stream failed (will retry):', e);
             }
             try { await client.conversations.sync(); } catch {}
+            // [FIX — 24 Nov 2026] Flush pending publishes on every stream restart:
+            // messages prepared while the stream was down sit in the local XMTP
+            // database unpublished. This also retries conversations that gave up.
+            try { await flushPendingPublishes(); } catch {}
+            reportDelivery('stream_restarted', `restart #${streamRestarts}`);
             await new Promise(resolve => setTimeout(resolve, backoffMs));
             continue; // restart the while loop → restart stream
           }

@@ -462,9 +462,17 @@ export async function canReceiveMessages(
     return false;
   } catch (err) {
     console.warn('[XMTP] canReceiveMessages error:', err);
-    // On error, ASSUME they can receive — let newDmWithIdentifier handle it
-    // This prevents all messages from going to the offline queue on network blips
-    return true;
+    // [FIX — 24 Nov 2026] The old code returned `true` on any error, which meant
+    // messages to wallets WITHOUT an XMTP identity appeared to send successfully
+    // but vanished into a ghost DM. The sender saw "sent" with ticks, the
+    // recipient saw nothing. This was the #1 cause of "messages not arriving".
+    //
+    // New behaviour: return false on error. The caller (sendMessage) will then
+    // throw, and the UI shows "Not sent" with a retry action. A transient
+    // network error is retried by sendMessage's own retry loop; a permanent
+    // "not registered" is surfaced honestly.
+    reportDelivery('client_failed', err);
+    return false;
   }
 }
 
@@ -787,10 +795,21 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
   if (attempt === 0 && existing) { existing.dm = dm; return; } // already retrying
   if (attempt >= MAX_PUBLISH_RETRIES) {
     publishRetries.delete(cacheKey);
+    // [FIX — 24 Nov 2026] Evict the stale DM handle so the next send creates
+    // a fresh MLS session. A handle stuck in a bad epoch can silently swallow
+    // every message after a key rotation or network partition.
+    activeDmCache.delete(cacheKey);
     undelivered.set(cacheKey, dm);
     reportDelivery('publish_gave_up', 'retries exhausted');
     noticeUndelivered();
     return;
+  }
+  // [FIX — 24 Nov 2026] Every 10 retries, evict the DM handle and force a
+  // fresh one on the next attempt. MLS epoch mismatches accumulate silently
+  // and a stale handle never recovers on its own.
+  if (attempt > 0 && attempt % 10 === 0) {
+    activeDmCache.delete(cacheKey);
+    diag('dm_cache_evict', { key: short(cacheKey), attempt });
   }
   if (attempt === 4) reportDelivery('publish_retrying', `attempt ${attempt}`);
   const entry = { dm, attempt, timer: null as ReturnType<typeof setTimeout> | null };
