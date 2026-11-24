@@ -1,6 +1,6 @@
 # Comunidades: de PostgreSQL legible a grupos MLS de XMTP (tarea R-17)
 
-**Estado:** diseño, no implementado. Hoy las publicaciones de comunidad se guardan legibles en PostgreSQL (`CommunityPost.content`). El comentario del esquema Prisma que dice "ENCRYPTED CIPHERTEXT" no describe lo que se guarda; se corrige en este mismo cambio.
+**Estado (24/11/2026):** implementado en el cliente (`lib/communities/mls.ts`, `CommunityReader`, `CommunityManage`) y apagado: ninguna comunidad tiene `communityMls` activado; solo el operador lo activa. Antes:** diseño, no implementado. Hoy las publicaciones de comunidad se guardan legibles en PostgreSQL (`CommunityPost.content`). El comentario del esquema Prisma que dice "ENCRYPTED CIPHERTEXT" no describe lo que se guarda; se corrige en este mismo cambio.
 
 Integra el documento "Communities → MLS Groups Migration" del paquete de cierre de gaps, corregido contra el código.
 

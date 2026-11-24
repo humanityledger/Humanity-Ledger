@@ -300,9 +300,11 @@ describe('guard: communityMls stays off until the R-17 checklist is met', () => 
     }
     expect(hits).toEqual([]);
 
-    // Channels are added from Manage (the old settings panel is deleted). It has no XMTP client.
+    // Channels are added from Manage. For a community already flagged by the operator it creates the
+    // XMTP group through lib/communities/mls.ts; it never calls the SDK directly or flips the flag.
     const panel = readFileSync(join(process.cwd(), 'components/communities/CommunityManage.tsx'), 'utf8');
     expect(panel).not.toContain('createSecureGroup(');
+    expect(panel).toMatch(/if \(isMlsCommunity\(community\)\) \{[\s\S]*createChannelGroup\(xmtpClient, community, n, me\)/);
     expect(turnsFlagOn(panel)).toBe(false);
 
     const schema = readFileSync(join(process.cwd(), 'prisma/schema.prisma'), 'utf8');

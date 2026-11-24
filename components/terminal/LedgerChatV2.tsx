@@ -7320,6 +7320,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               <CommunityManage
                 communityId={activeCommunity}
                 myAddress={address || ''}
+                xmtpClient={client}
                 nameFor={(addr) => resolveContactName(address || '', addr) || undefined}
                 onBack={() => setCommunityManage(false)}
                 onGone={() => {
@@ -7331,6 +7332,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               <CommunityReader
                 communityId={activeCommunity}
                 myAddress={address || ''}
+                xmtpClient={client}
                 nameFor={(addr) => resolveContactName(address || '', addr) || undefined}
                 onBack={() => {
                   setActiveCommunity(null);
