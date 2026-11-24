@@ -24,6 +24,7 @@ import { parsePaymentRequest, requestCardState } from '@/lib/payments/payment-me
 import { onPaidRequestsChange, requestSettlement } from '@/lib/payments/paid-requests';
 import { PAY_REQUEST_EVENT, plainUnits, type PayPrefill } from '@/lib/payments/request-draft';
 import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
+import { loadLimits } from '@/lib/payments/personal-limits';
 import { CardAmount, PaymentCardFrame, SpecRow, type CardTone } from './paymentCardUi';
 
 const BTN = 'h-10 w-full rounded-[10px] text-[13.5px] font-semibold transition-colors bg-[#15171c] text-white hover:bg-[#2b2f38] disabled:opacity-50';
@@ -84,7 +85,9 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
         <SpecRow label="Open until">{expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</SpecRow>
       </dl>
       {!isMe && state.kind === 'open' && (
-        token
+        token && loadLimits().receiveOnly
+          ? <p className="mt-3 text-[12.5px] text-[#3d424b]">This device is set to receive only. Change it in Settings, Payments.</p>
+          : token
           ? <button type="button" className={`${BTN} mt-3`} onClick={pay}>Pay privately</button>
           : betaApplies() && BETA_TOKENS.some((t) => t.address.toLowerCase() === req.token.address)
             ? <p className="mt-3 text-[12.5px] text-[#3d424b]">cUSDC payments are in a closed beta. <Link href="/beta" className="font-semibold text-[#2754d6] hover:underline">Join with an invitation</Link></p>
