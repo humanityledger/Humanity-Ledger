@@ -24,7 +24,9 @@ export function IncomingPaymentNotifier({ muted = false, hideContent = false }: 
       for (const a of takeNewIncoming(s.aztecAddress, s.activity, store)) {
         const t = AZTEC_WALLET_CONFIG.tokens.find((x) => x.key === a.token);
         const amountText = t && a.amount ? `${formatUnits(BigInt(a.amount), t.decimals, t.decimals)} ${t.symbol}` : null;
-        const words = incomingWords(hideContent ? null : amountText);
+        // The in-app notice is inside the unlocked app and keeps the amount; the system notification
+        // (lock screen, notification centre) never carries it (incomingWords().system).
+        const words = incomingWords(amountText);
         toast.success(words.toast);
         if (!muted) void notificationEngine.notifyLocal('Ledger Chat', words.system, `payment-${a.id}`, hideContent).catch(() => undefined);
       }
