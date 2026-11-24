@@ -1,0 +1,75 @@
+# R8 between two real browsers on the Aztec TEST network (scripts/ui/r8-two-browser.mjs).
+# Two throwaway Ethereum accounts made for the run (neither is the operator), two Chromium
+# contexts, real XMTP (dev network) and a real Aztec node: each page opens its own private wallet
+# (PXE in the page), the two exchange G7 v2 proofs in a real DM, and one pays the other privately.
+# Test tokens only, no secrets: scripts/aztec/setup-testnet.mjs makes a fresh admin, faucet and
+# token set for each run, paid by Aztec's sponsored fee contract.
+#
+# This is evidence for the flow before the human R8 session on Aztec Alpha
+# (docs/alpha/R8_SESSION.md), which two people who are not the operator still have to run.
+
+name: R8 two browsers (testnet)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'components/chat/e2e/R8Harness.tsx'
+      - 'scripts/ui/r8-two-browser.mjs'
+      - 'lib/payments/direct-private.ts'
+      - 'lib/aztec/peer-binding.ts'
+      - '.github/workflows/r8-two-browser.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r8-two-browser
+  cancel-in-progress: false
+
+jobs:
+  r8:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      JWT_SECRET: test_secret_key_minimum_32_characters_long_for_ci
+      ENCLAVE_PIN_PEPPER: test_pepper_secret_minimum_32_chars
+      ENCLAVE_PIN_SECRET: test_pin_secret_minimum_32_chars
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --legacy-peer-deps
+      - name: Fresh test-network accounts, tokens and faucet (sponsored fees)
+        run: |
+          rm -f .aztec-testnet.local.json .env.local
+          node --import ./scripts/aztec/register.mjs scripts/aztec/setup-testnet.mjs
+          # Public values only (the faucet key is public by design on the test network).
+          grep '^NEXT_PUBLIC_' .env.local | sed 's/NEXT_PUBLIC_AZTEC_FAUCET=.*/NEXT_PUBLIC_AZTEC_FAUCET=(public test faucet)/'
+      - name: Build (test harness on, test network, XMTP dev)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_E2E_HARNESS: '1'
+          NEXT_PUBLIC_ZK_MODE: testnet
+          NEXT_PUBLIC_AZTEC_NETWORK: testnet
+          NEXT_PUBLIC_XMTP_ENV: dev
+      - name: Playwright (Chromium)
+        run: npm install --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Two browsers, two accounts, G7 over a real DM, one private payment
+        run: |
+          npx next start -p 3100 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
+          node scripts/ui/r8-two-browser.mjs http://localhost:3100 r8-e2e
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-two-browser
+          path: |
+            r8-e2e
+            next.log
+          if-no-files-found: ignore
