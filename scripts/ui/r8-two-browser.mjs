@@ -18,7 +18,9 @@
 //   6. Alice pays Bob 0.01 privately through sendDirectPrivatePayment (proved in her page) and says so
 //      in the DM with the transaction hash;
 //   7. Bob's wallet finds the note after a sync and his private balance is 0.01; the DM shows the hash;
-//   8. Alice's private balance went down by exactly 0.01.
+//   8. Alice's private balance went down by exactly 0.01;
+//   9. R-17 AC-03: Alice makes a community channel's MLS group with Bob, posts, Bob reads it; Alice
+//      removes Bob and posts again; Bob's client never gets the second post.
 // Writes <outDir>/r8-receipt.json (public data only: addresses, inbox ids, hashes, checks) and a
 // screenshot of each page, and appends a summary to $GITHUB_STEP_SUMMARY.
 import { chromium } from 'playwright';
@@ -144,6 +146,22 @@ try {
   // 8. Alice paid exactly that.
   const aliceEnd = await within(alice.call('balance', TOKEN, '0', 5 * 60_000), 6 * 60_000, 'alice balance');
   check(`alice's private balance went down by exactly ${PAY}`, BigInt(aliceStart.privateUnits) - BigInt(aliceEnd.privateUnits) === PAY_UNITS, `${aliceStart.privateUnits} -> ${aliceEnd.privateUnits}`);
+
+  // 9. AC-03: a removed member reads nothing new.
+  const tag = Math.random().toString(36).slice(2, 8);
+  const before = `r8 before removal ${tag}`;
+  const after = `r8 after removal ${tag}`;
+  const groupId = await within(alice.call('mlsCreate', bob.account.address), 5 * 60_000, 'mlsCreate');
+  await within(alice.call('mlsPost', groupId, before), 3 * 60_000, 'mlsPost before');
+  const seen = await within(bob.call('mlsRead', groupId, before, 180_000), 4 * 60_000, 'bob reads before');
+  check('AC-03: a member reads the group post', seen.inGroup && seen.posts.includes(before), `${seen.posts.length} posts`);
+  await within(alice.call('mlsRemove', groupId, bob.account.address), 3 * 60_000, 'mlsRemove');
+  await within(alice.call('mlsPost', groupId, after), 3 * 60_000, 'mlsPost after');
+  const own = await within(alice.call('mlsRead', groupId, after, 60_000), 2 * 60_000, 'alice reads after');
+  check('AC-03: the post after the removal exists', own.posts.includes(after));
+  const later = await within(bob.call('mlsRead', groupId, after, 90_000), 3 * 60_000, 'bob reads after');
+  check('AC-03: the removed member does not get the post made after the removal', !later.posts.includes(after), `${later.posts.length} posts`);
+  receipt.ac03 = { groupCreated: true, removedSeesNew: later.posts.includes(after) };
 
   await shot(alice, 'alice');
   await shot(bob, 'bob');

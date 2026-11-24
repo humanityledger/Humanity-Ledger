@@ -12,7 +12,9 @@
  *     receipt (as AgreementCard does) and verifiedPeerBinding before value moves;
  *   - the payment through sendDirectPrivatePayment (the composer's path: fresh G7 check, then
  *     PrivateWallet.send, proven in the page), and directPaymentMessage in the DM;
- *   - the receiver's sync (registerChatPeers, refresh) and its balance.
+ *   - the receiver's sync (registerChatPeers, refresh) and its balance;
+ *   - R-17 AC-03: a community channel's MLS group (createSecureGroup, postToGroup, readGroupPosts);
+ *     after removeGroupMember the removed person's client reads nothing posted afterwards.
  * The script only calls these steps in order and checks what each returns.
  */
 import React, { useEffect, useState } from 'react';
@@ -30,6 +32,8 @@ import {
   type AztecAddressAnnouncementV2,
 } from '@/lib/aztec/peer-binding';
 import { directPaymentMessage, sendDirectPrivatePayment } from '@/lib/payments/direct-private';
+import { createSecureGroup, removeGroupMember } from '@/lib/xmtp/groups';
+import { postToGroup, readGroupPosts } from '@/lib/communities/mls';
 
 type Person = 'alice' | 'bob';
 
@@ -50,6 +54,10 @@ export interface R8Api {
   payUnverified(token: TokenKey, amount: string, strangerInboxId: string): Promise<string>;
   pay(peerEvm: string, peerInboxId: string, token: TokenKey, amount: string): Promise<{ txHash: string; payee: string }>;
   balance(token: TokenKey, wantAtLeast?: string, timeoutMs?: number): Promise<{ privateUnits: string; activity: Array<{ kind: string; txHash?: string; status?: string }> }>;
+  mlsCreate(peerEvm: string): Promise<string>;
+  mlsPost(groupId: string, text: string): Promise<void>;
+  mlsRead(groupId: string, want?: string, timeoutMs?: number): Promise<{ inGroup: boolean; posts: string[] }>;
+  mlsRemove(groupId: string, peerEvm: string): Promise<void>;
 }
 
 const errText = (e: unknown) => String((e as any)?.message ?? e).slice(0, 300);
@@ -206,6 +214,37 @@ export default function R8Harness() {
           privateUnits: units().toString(),
           activity: wallet.state.activity.map((a: any) => ({ kind: a.kind, txHash: a.txHash, status: a.status })),
         };
+      },
+
+      async mlsCreate(peerEvm) {
+        const id = await createSecureGroup(xmtp, [peerEvm], 'R8 community');
+        say(`MLS group ${id.slice(0, 8)}…`);
+        return id;
+      },
+
+      async mlsPost(groupId, text) {
+        await postToGroup(xmtp, groupId, text);
+        say(`posted in the group`);
+      },
+
+      async mlsRead(groupId, want, timeoutMs = 120_000) {
+        let inGroup = false;
+        let posts: string[] = [];
+        await waitFor(async () => {
+          await xmtp.conversations.sync();
+          const g = await xmtp.conversations.getConversationById(groupId);
+          inGroup = !!g;
+          if (!g) return undefined;
+          posts = (await readGroupPosts(xmtp, groupId)).map((p) => p.content);
+          return !want || posts.includes(want) ? true : undefined;
+        }, timeoutMs, 5000);
+        say(`group read: ${posts.length} posts`);
+        return { inGroup, posts };
+      },
+
+      async mlsRemove(groupId, peerEvm) {
+        await removeGroupMember(xmtp, groupId, peerEvm);
+        say('removed the peer from the group');
       },
     };
     window.__r8 = api;
