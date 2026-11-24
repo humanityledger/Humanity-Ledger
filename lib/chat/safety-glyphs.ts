@@ -38,3 +38,33 @@ export async function safetyGlyphs(a: InboxDevices, b: InboxDevices): Promise<st
   }
   return out;
 }
+
+/**
+ * The same digest as 60 digits in 12 groups of 5, for people who prefer to read numbers aloud.
+ * Both people get the same digits while neither inbox has gained or lost a device.
+ */
+export async function safetyDigits(a: InboxDevices, b: InboxDevices): Promise<string> {
+  const data = new TextEncoder().encode('ledger-chat-safety-v1|' + canonicalSafetyText(a, b));
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+  const groups: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    // 5 digits from 20 bits; 12 × 20 = 240 of the digest's 256 bits.
+    const bit = i * 20;
+    const byte = bit >> 3;
+    const v = ((d[byte] << 16) | (d[byte + 1] << 8) | d[byte + 2]) >> (4 - (bit & 7)) & 0xfffff;
+    groups.push(String(v % 100000).padStart(5, '0'));
+  }
+  return groups.join(' ');
+}
+
+/** Looks up both inboxes and their devices through a signed-in XMTP client. Null if either is missing. */
+export async function inboxDevicesFor(client: any, peerAddress: string): Promise<[InboxDevices, InboxDevices] | null> {
+  const self: string | undefined = client?.inboxId;
+  if (!self || !peerAddress) return null;
+  const peer: string | undefined = (await client.findInboxIdByIdentifier({ identifier: peerAddress.toLowerCase(), identifierKind: 'Ethereum' })) || undefined;
+  if (!peer) return null;
+  const states: any[] = await client.preferences.inboxStateFromInboxIds([self, peer], true);
+  const devices: InboxDevices[] = states.map((s) => ({ inboxId: String(s.inboxId), installationIds: (s.installations || []).map((i: any) => String(i.id)) }));
+  if (devices.length !== 2 || devices.some((x) => !x.installationIds.length) || !devices.some((x) => x.inboxId === peer)) return null;
+  return [devices[0], devices[1]];
+}

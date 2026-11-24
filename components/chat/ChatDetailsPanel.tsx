@@ -174,6 +174,7 @@ export function ChatDetailsPanel({
         onToggleMute={onToggleMute}
         onBlock={onBlock}
         onClearChat={onClearChat}
+        client={client}
       />
 
       <div className="flex-1 min-h-6" />

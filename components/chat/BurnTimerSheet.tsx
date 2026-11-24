@@ -58,7 +58,7 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
                   <Flame size={20} className="text-red-500" />
                 </div>
                 <div>
-                  <p className="text-[16px] font-black text-[#1C1C1E]">Disappearing Messages</p>
+                  <p className="text-[16px] font-semibold text-[#15171c]">Disappearing messages</p>
                   <p className="text-[12px] text-black/40 font-medium">Messages auto-delete after being read</p>
                 </div>
               </div>
@@ -99,6 +99,9 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
                 );
               })}
             </div>
+            <p className="px-6 pb-6 text-[12.5px] leading-relaxed text-[#5b606b]">
+              Ledger Chat removes them from both devices when the timer ends. Before that, the other person can still copy them or photograph the screen, and a modified app could ignore the timer.
+            </p>
           </motion.div>
         </motion.div>
       )}
