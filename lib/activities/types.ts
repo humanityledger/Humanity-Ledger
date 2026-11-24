@@ -12,7 +12,10 @@
  *     at most 32 characters, control characters removed. Passing a message body by accident is a
  *     type error, and even a forced cast is cut to a short single line.
  *   - Amounts are `Amount`: a decimal string and a token symbol, both validated.
- *   - There is no free-text field anywhere. Labels come from the presentation registry.
+ *   - The one text field is a notice's `NoticeText`: the interface's own copy, taken from a
+ *     toast() call in Ledger Chat code (lib/activities/notices.ts). It is one line, at most 120
+ *     characters, made only by `toNoticeText()`. No toast in the app carries a message body; keep
+ *     it that way (a notice is "Forwarded to Ana", never what was forwarded).
  *
  * ActivityKit mapping (for the native app):
  *   kind             attributes          state                 compact L / R        minimal
@@ -22,6 +25,8 @@
  *   recording        peer                startedAt             red dot / timer      red dot
  *   message          from                count                 bubble / name        bubble
  *   session          -                   status                ring / label         ring
+ *   missedCall       peer, media         count, at             red phone / count    red phone
+ *   notice           source              tone, title, progress tone mark / action  tone mark
  */
 
 declare const displayNameBrand: unique symbol;
@@ -29,7 +34,7 @@ declare const displayNameBrand: unique symbol;
 export type DisplayName = string & { readonly [displayNameBrand]: true };
 
 declare const symbolBrand: unique symbol;
-/** A token symbol such as HLC: 1 to 8 upper-case letters or digits. */
+/** A token symbol such as cUSDC: 1 to 8 letters or digits, in the token's own casing (toTokenSymbol). */
 export type TokenSymbol = string & { readonly [symbolBrand]: true };
 
 /** An amount as the user reads it: decimal digits (at most 18 after the point) and a symbol. */
@@ -52,6 +57,13 @@ export type ProofStep = 'preparing' | 'proving' | 'sending' | 'settled' | 'faile
 
 export type SessionStatus = 'signing-in' | 'offline' | 'online' | 'syncing';
 
+/** How a notice reads: the toast type it came from, folded into six tones. */
+export type NoticeTone = 'success' | 'error' | 'warning' | 'info' | 'loading' | 'neutral';
+
+declare const noticeTextBrand: unique symbol;
+/** One line of interface copy made by toNoticeText(): at most 120 characters, no controls. */
+export type NoticeText = string & { readonly [noticeTextBrand]: true };
+
 export interface Attributes {
   call: { readonly peer: DisplayName; readonly media: MediaKind };
   paymentProof: { readonly to: DisplayName; readonly amount: Amount };
@@ -59,6 +71,9 @@ export interface Attributes {
   recording: { readonly peer: DisplayName };
   message: { readonly from: DisplayName };
   session: Record<string, never>;
+  missedCall: { readonly peer: DisplayName; readonly media: MediaKind };
+  /** Where the notice came from. Today only toast() calls (components/activities/ToastBridge.tsx). */
+  notice: { readonly source: 'toast' };
 }
 
 export interface ContentState {
@@ -78,6 +93,18 @@ export interface ContentState {
   recording: { readonly startedAt: number };
   message: { readonly count: number };
   session: { readonly status: SessionStatus };
+  /** count: missed calls from this person in a row; at: the last one (ms since epoch). */
+  missedCall: { readonly count: number; readonly at: number };
+  notice: {
+    readonly tone: NoticeTone;
+    readonly title: NoticeText;
+    readonly detail?: NoticeText;
+    /** The toast's action and cancel buttons, by label. Their callbacks live in actions.ts. */
+    readonly action?: NoticeText;
+    readonly cancel?: NoticeText;
+    /** 0..1 when the text says how far along it is ("Sending photo.jpg, 42%", "Importing 3/10"). */
+    readonly progress?: number;
+  };
 }
 
 export type ActivityKind = keyof Attributes;

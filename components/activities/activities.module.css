@@ -3,6 +3,11 @@
  * Every colour, radius, size and shadow is a token below; light is the default, dark is the same
  * names with other values (data-theme="dark" on .layer). The island itself is always dark, like the
  * hardware it comes from, so it reads the same in both themes.
+ *
+ * The island's material, from the back: a soft drop shadow; an aura in the activity's colour
+ * (--aura, set by the .aura* classes); the black body; a sheen that fades down from the top edge;
+ * a 0.5 px hairline that catches the light. Browsers without color-mix() keep everything but the
+ * aura.
  */
 .layer {
   --ink: #15171c;
@@ -29,6 +34,9 @@
   --t-small: 12px;
   --t-title: 15px;
   --font-num: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --island-edge: rgba(255, 255, 255, 0.09);
+  --island-track: rgba(255, 255, 255, 0.16);
+  --aura: transparent;
   position: fixed;
   inset: 0;
   z-index: 210000;
@@ -63,16 +71,22 @@
   left: 50%;
   top: max(10px, calc(env(safe-area-inset-top, 0px) + 6px));
   transform: translateX(-50%);
+  pointer-events: none;
+}
+.pop {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  pointer-events: none;
+  transform-origin: 50% 0;
 }
 .island {
+  position: relative;
+  isolation: isolate;
   pointer-events: auto;
   background: var(--island);
   color: var(--island-text);
-  box-shadow: var(--sh-island);
+  box-shadow: var(--sh-island), inset 0 0 0 0.5px var(--island-edge);
+  box-shadow: var(--sh-island), 0 12px 34px -12px color-mix(in srgb, var(--aura) 62%, transparent), inset 0 0 0 0.5px var(--island-edge);
   overflow: hidden;
   cursor: pointer;
   border: 0;
@@ -80,14 +94,54 @@
   text-align: left;
   font: inherit;
   max-width: calc(100vw - 24px);
+  transition: box-shadow 420ms cubic-bezier(0.2, 0.9, 0.3, 1), background-color 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.island:hover:not(.expanded) { background: #111216; }
+.island > :not(.sheen) { position: relative; z-index: 1; }
+.sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0) 46%);
+}
+.auraLive { --aura: var(--live); }
+.auraWarn { --aura: var(--warn); }
+.auraDanger { --aura: var(--danger); }
+.auraViolet { --aura: var(--violet); }
+.auraNeutral { --aura: transparent; }
+/* A live call or a recording breathes: the aura swells and settles every 2.6 s. */
+.breathe { animation: breathe 2.6s ease-in-out infinite; }
+@keyframes breathe {
+  0%, 100% { box-shadow: var(--sh-island), 0 10px 28px -14px color-mix(in srgb, var(--aura) 45%, transparent), inset 0 0 0 0.5px var(--island-edge); }
+  50% { box-shadow: var(--sh-island), 0 12px 40px -8px color-mix(in srgb, var(--aura) 85%, transparent), inset 0 0 0 0.5px var(--island-edge); }
 }
 .compact {
+  display: flex;
+  align-items: center;
+  border-radius: inherit;
+}
+.compactHit {
   display: flex;
   align-items: center;
   gap: 10px;
   height: 36px;
   padding: 0 12px 0 6px;
   min-width: 128px;
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.compactTall .compactHit {
+  height: auto;
+  min-height: 44px;
+  padding: 8px 14px 8px 9px;
 }
 .label {
   font-size: var(--t-ui);
@@ -96,6 +150,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 168px;
+}
+.labelNotice { max-width: min(300px, calc(100vw - 132px)); }
+.labelTall {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .trailing {
   margin-left: auto;
@@ -108,6 +171,31 @@
 .trailingStrong {
   color: var(--island-text);
 }
+.trailGroup {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.quick {
+  flex: none;
+  height: 26px;
+  margin-right: 5px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), background-color 120ms ease;
+}
+.quick:hover { background: #e9eaee; }
+.quick:active { transform: scale(0.95); }
+.quickDanger { background: var(--danger); color: #fff; }
+.quickDanger:hover { background: #e5352b; }
 .dot {
   width: 24px;
   height: 24px;
@@ -122,13 +210,69 @@
 .dotDanger { background: var(--danger); }
 .dotViolet { background: var(--violet); }
 .dotNeutral { background: var(--island-2); }
+/* An incoming call: the mark sends out rings. */
+.dotRinging { position: relative; }
+.dotRinging::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--live);
+  animation: ripple 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+@keyframes ripple { from { transform: scale(0.85); opacity: 0.9; } to { transform: scale(1.55); opacity: 0; } }
+
+/* Waveform: five bars, scaled by Wave.tsx (real level) or by the pulse loop (no stream). */
+.wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+  flex: none;
+}
+.waveBar {
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--wave, var(--live));
+  transform-origin: 50% 50%;
+  transition: transform 90ms linear;
+}
+.waveLive { --wave: var(--live); }
+.waveDanger { --wave: var(--danger); }
+.waveViolet { --wave: #8b5cff; }
+.wavePulse .waveBar { animation: wavePulse 1.15s ease-in-out infinite; }
+.wavePulse .waveBar:nth-child(2), .wavePulse .waveBar:nth-child(4) { animation-duration: 0.9s; }
+@keyframes wavePulse { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(0.95); } }
+
+/* Progress ring around a 24 px mark. */
+.ring {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.ring svg { position: absolute; inset: 0; }
+.ringArc { transition: stroke-dasharray 420ms cubic-bezier(0.2, 0.9, 0.3, 1); }
+.ringCore { position: relative; display: grid; place-items: center; }
+.ringPct { font-size: 8.5px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.inlineIcon { vertical-align: -1px; margin-right: 4px; }
+.minimalGroup {
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+}
 .minimal {
   pointer-events: auto;
   width: 36px;
   height: 36px;
   border-radius: 50%;
   background: var(--island);
-  box-shadow: var(--sh-island);
+  box-shadow: var(--sh-island), inset 0 0 0 0.5px var(--island-edge);
+  box-shadow: var(--sh-island), 0 8px 22px -10px color-mix(in srgb, var(--aura) 70%, transparent), inset 0 0 0 0.5px var(--island-edge);
   display: grid;
   place-items: center;
   border: 0;
@@ -136,28 +280,35 @@
   cursor: pointer;
   color: #fff;
   position: relative;
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+.minimal:active { transform: scale(0.94); }
 .overflow {
   position: absolute;
-  right: -4px;
-  top: -4px;
-  min-width: 18px;
-  height: 18px;
+  right: -6px;
+  top: -6px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 5px;
-  border-radius: 9px;
+  border-radius: 10px;
+  border: 0;
   background: #fff;
   color: var(--ink);
+  box-shadow: 0 0 0 2px var(--island);
+  font: inherit;
   font-size: 11px;
   font-weight: 700;
-  line-height: 18px;
+  line-height: 20px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 .expanded {
   width: min(380px, calc(100vw - 24px));
   padding: 14px 14px 14px 16px;
   cursor: default;
 }
+.stackOpen { width: min(400px, calc(100vw - 24px)); padding: 12px 10px 10px 12px; }
 .head {
   display: flex;
   align-items: center;
@@ -193,6 +344,68 @@
   color: var(--island-muted);
   font-variant-numeric: tabular-nums;
 }
+.titleWrap { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+.subtitleWrap { overflow-wrap: anywhere; line-height: 1.4; }
+.avatarRinging { animation: avatarRing 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite; }
+@keyframes avatarRing {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  100% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+}
+
+/* The stack: every live activity, one row each. */
+.stack { display: grid; gap: 8px; }
+.stackHead { display: flex; align-items: center; justify-content: space-between; padding-left: 4px; }
+.stackTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--island-muted);
+}
+.stackList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  max-height: min(60vh, 420px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.stackRow { display: flex; align-items: center; border-radius: 16px; background: rgba(255, 255, 255, 0.045); }
+.stackPick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 12px 0 10px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 16px;
+  transition: background-color 120ms ease;
+}
+.stackPick:hover { background: rgba(255, 255, 255, 0.06); }
+.stackX {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-right: 8px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--island-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.stackX:hover { background: var(--island-2); color: #fff; }
 .amount {
   font-size: 20px;
   font-weight: 600;
@@ -256,6 +469,7 @@
 .btn:hover { background: #2a2d35; }
 .btn:active { transform: scale(0.96); }
 .btnIcon { width: 40px; padding: 0; }
+.btnSmall { width: 30px; min-width: 30px; height: 30px; }
 .btnLive { background: var(--live); }
 .btnLive:hover { background: #0ea371; }
 .btnDanger { background: var(--danger); }
@@ -264,7 +478,10 @@
 .btnOn:hover { background: #e9eaee; }
 .spin { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .spin, .breathe, .wavePulse .waveBar, .dotRinging::after, .avatarRinging { animation: none; }
+  .ringArc, .waveBar, .island { transition: none; }
+}
 
 /* ── Call window ────────────────────────────────────── */
 .window {

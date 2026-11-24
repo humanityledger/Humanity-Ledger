@@ -121,7 +121,7 @@ import { LottieSendButton } from '@/components/chat/LottieSendButton';
 import { NewConversationLottie, SendConfirmationBurst, preloadSendConfirmation } from '@/components/chat/ChatLottie';
 import { useActivities } from '@/lib/activities/store';
 import { useCallMedia } from '@/lib/activities/call-media';
-import { notifyMessage, notifyPaymentReceived, useCallActivitySync, useRecordingActivitySync } from '@/lib/activities/hooks';
+import { notifyMessage, notifyMissedCall, notifyPaymentReceived, useCallActivitySync, useRecordingActivitySync } from '@/lib/activities/hooks';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
 import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
@@ -2365,6 +2365,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           });
         }
         performEndCallRef.current();
+        if (st === 'ringing' && announceMissedCallRef.current(peerAddr, callTypeRef.current || 'audio')) return;
         toast(st === 'ringing' ? 'Missed call' : kind === 'decline' ? 'Call declined' : 'Call ended');
       });
 
@@ -2473,7 +2474,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
              callTimeoutRef.current = setTimeout(() => {
                if (callStateRef.current === 'ringing') {
-                 toast.error('Missed call.');
+                 if (!announceMissedCallRef.current(callPeerAddrRef.current, inCallType)) toast.error('Missed call.');
                  performEndCallRef.current();
                }
              }, 45000);
@@ -3638,6 +3639,25 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const toggleCameraRef = useRef(toggleCamera); toggleCameraRef.current = toggleCamera;
   const surfaceVisibleRef = useRef(surfaceVisible); surfaceVisibleRef.current = surfaceVisible;
   const onRequestVisibleRef = useRef(onRequestVisible); onRequestVisibleRef.current = onRequestVisible;
+
+  // A missed call goes to the island with Call back and Message, from wherever it was detected
+  // (a timeout, or the caller hanging up while we rang). Through refs: those handlers are set up
+  // once and must always reach the current startCall and chat state. Returns false when the
+  // caller is not known yet, so the plain toast still says it.
+  const startCallLatestRef = useRef(startCall); startCallLatestRef.current = startCall;
+  const announceMissedCallRef = useRef<(peerAddr: string | null | undefined, media: 'audio' | 'video') => boolean>(() => false);
+  announceMissedCallRef.current = (peerAddr, media) => {
+    const peerAddrLc = String(peerAddr || '').toLowerCase();
+    if (!/^0x[0-9a-f]{40}$/.test(peerAddrLc)) return false;
+    notifyMissedCall(getDisplayName(peerAddrLc), media, {
+      callBack: () => { void startCallLatestRef.current(media, peerAddrLc); },
+      open: () => {
+        if (!surfaceVisibleRef.current) onRequestVisibleRef.current?.();
+        setActiveCommunity(null); setSidebarTab('chats'); setActivePeer(peerAddrLc); setShowList(false);
+      },
+    });
+    return true;
+  };
   useEffect(() => {
     if (callState === 'idle') { useCallMedia.getState().clear(); return; }
     useCallMedia.getState().register({
@@ -5082,7 +5102,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         durationSeconds: 0,
                       });
                     }
-                    toast.error('Missed call.');
+                    if (!announceMissedCallRef.current(msgConvPeer, offerCallType)) toast.error('Missed call.');
                     performEndCallRef.current();
                   }
                 }, 35000);
@@ -5113,7 +5133,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     });
                   }
                   performEndCallRef.current();
-                  toast(st === 'ringing' ? 'Missed call' : declined ? 'Call declined' : 'Call ended');
+                  if (!(st === 'ringing' && announceMissedCallRef.current(msgConvPeer, callTypeRef.current || 'audio'))) {
+                    toast(st === 'ringing' ? 'Missed call' : declined ? 'Call declined' : 'Call ended');
+                  }
                 }
               }
               continue;

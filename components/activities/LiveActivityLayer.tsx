@@ -8,8 +8,12 @@
  *   lib/activities/store.ts       ActivityManager (zustand): the activities and the call presentation
  *   lib/activities/priority.ts    pure rules: what the island and the window show
  *   lib/activities/call-media.ts  the call's streams and controls, registered by the call engine
+ *   lib/activities/notices.ts     toasts -> notices (pure); ToastBridge.tsx mirrors sonner into them
  *   presentations.tsx             how each kind is drawn (ActivityKit regions)
  *   Island.tsx / CallWindow.tsx   the two surfaces, sharing one layoutId for the call
+ * Every toast() in the app is drawn here too (ToastBridge), so there is one place at the top of
+ * the screen where Ledger Chat speaks: calls, money, recordings, messages, missed calls, the
+ * session and every confirmation or error.
  * The call itself is never duplicated: one 'call' activity, one presentation value
  * (stage, window or island), one set of streams.
  */
@@ -21,12 +25,13 @@ import { useActivities } from '@/lib/activities/store';
 import { windowCall } from '@/lib/activities/priority';
 import { useCallMedia } from '@/lib/activities/call-media';
 import { Island } from './Island';
+import { ToastBridge } from './ToastBridge';
 import { CallWindow } from './CallWindow';
 import { present } from './presentations';
 import { clearCallSession, setCallSession } from './mediaSession';
 import s from './activities.module.css';
 
-/** Routes where the island stays out of the way unless a call is live (landing, sign-in, docs). */
+/** Routes where the island shows only a call and the app's notices (landing, sign-in, docs). */
 const QUIET_ROUTES = [/^\/$/, /^\/connect/, /^\/docs/, /^\/privacy/, /^\/terms/, /^\/legal/];
 
 /**
@@ -70,7 +75,7 @@ export function LiveActivityLayer() {
   const { polite, assertive, say } = useAnnouncer();
 
   const call = activities.find((a) => a.kind === 'call');
-  const quiet = QUIET_ROUTES.some((r) => r.test(pathname)) && !call;
+  const quiet = QUIET_ROUTES.some((r) => r.test(pathname));
 
   // Announce each activity when it starts and whenever its phase or step changes.
   const spoken = useRef(new Map<string, string>());
@@ -101,9 +106,10 @@ export function LiveActivityLayer() {
   return createPortal(
     <div className={s.layer} data-theme={theme} data-live-activities="">
       <LayoutGroup id="live-activities">
-        {!quiet && <Island />}
+        <Island quiet={quiet} />
         <AnimatePresence>{inWindow && <CallWindow key="call-window" announce={say} />}</AnimatePresence>
       </LayoutGroup>
+      <ToastBridge />
       <div className={s.srOnly} aria-live="polite" aria-atomic="true">{polite}</div>
       <div className={s.srOnly} aria-live="assertive" aria-atomic="true">{assertive}</div>
     </div>,

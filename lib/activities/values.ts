@@ -3,7 +3,7 @@
  * reaches an activity goes through here, so the island can never show a message body, a long
  * string or a control character.
  */
-import type { Amount, DisplayName, TokenSymbol } from './types';
+import type { Amount, DisplayName, NoticeText, TokenSymbol } from './types';
 
 export const DISPLAY_NAME_MAX = 32;
 
@@ -13,21 +13,52 @@ export const DISPLAY_NAME_MAX = 32;
  * characters. Empty input becomes "Unknown".
  */
 export function toDisplayName(raw: string | null | undefined): DisplayName {
-  // C0/C1 controls, line and paragraph separators, bidi overrides and isolates become spaces.
+  return (oneLine(raw, DISPLAY_NAME_MAX) || 'Unknown') as DisplayName;
+}
+
+export const NOTICE_TEXT_MAX = 120;
+
+/**
+ * A notice's text (interface copy from a toast() call): one line, at most 120 characters, with the
+ * same cleaning as names. Empty input gives null, so a notice never shows a blank line.
+ */
+export function toNoticeText(raw: string | null | undefined): NoticeText | null {
+  return (oneLine(raw, NOTICE_TEXT_MAX) || null) as NoticeText | null;
+}
+
+/**
+ * C0/C1 controls, line and paragraph separators, bidi overrides and isolates become spaces; runs
+ * of space become one; the result is cut to `max` characters (code points) with an ellipsis.
+ */
+function oneLine(raw: string | null | undefined, max: number): string {
   const unsafe = (c: number) => c <= 0x1f || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029 || (c >= 0x202a && c <= 0x202e) || (c >= 0x2066 && c <= 0x2069);
   const clean = Array.from(String(raw ?? ''), (ch) => (unsafe(ch.codePointAt(0) ?? 0) ? ' ' : ch))
     .join('')
     .replace(/\s+/g, ' ')
     .trim();
-  const name = clean || 'Unknown';
-  const chars = Array.from(name);
-  return (chars.length > DISPLAY_NAME_MAX ? `${chars.slice(0, DISPLAY_NAME_MAX - 1).join('')}…` : name) as DisplayName;
+  const chars = Array.from(clean);
+  return chars.length > max ? `${chars.slice(0, max - 1).join('').trimEnd()}…` : clean;
 }
 
-/** A token symbol, or null when it is not 1 to 8 upper-case letters or digits. */
+/**
+ * Symbols whose casing is part of the name. cUSDC is the asset private payments use
+ * (lib/payments/private-asset.ts): it must read "cUSDC" on screen however it arrives
+ * ("cusdc", "CUSDC" from an older payment message, " cUSDC ").
+ */
+const CANONICAL_SYMBOLS: Record<string, string> = { CUSDC: 'cUSDC' };
+
+/**
+ * A token symbol, or null when it is not 1 to 8 letters or digits. Known symbols get their own
+ * casing (cUSDC); a lower-case prefix on an upper-case symbol is kept (wETH, stETH: the prefix
+ * means something); anything else is upper-cased (usdc -> USDC).
+ */
 export function toTokenSymbol(raw: string | null | undefined): TokenSymbol | null {
-  const s = String(raw ?? '').trim().toUpperCase();
-  return /^[A-Z0-9]{1,8}$/.test(s) ? (s as TokenSymbol) : null;
+  const s = String(raw ?? '').trim();
+  if (!/^[A-Za-z0-9]{1,8}$/.test(s)) return null;
+  const known = CANONICAL_SYMBOLS[s.toUpperCase()];
+  if (known) return known as TokenSymbol;
+  if (/^[a-z]{1,2}[A-Z0-9]{2,7}$/.test(s)) return s as TokenSymbol;
+  return s.toUpperCase() as TokenSymbol;
 }
 
 /**
@@ -45,7 +76,7 @@ export function toAmount(value: string | number | null | undefined, symbol: stri
   return { value: fracPart ? `${intPart}.${fracPart}` : intPart, symbol: sym };
 }
 
-/** "12.5 HLC", with thin grouping for the integer part (1,234.5 HLC). */
+/** "12.5 cUSDC", with thin grouping for the integer part (1,234.5 cUSDC). */
 export function formatAmount(a: Amount): string {
   const [int, frac] = a.value.split('.');
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');

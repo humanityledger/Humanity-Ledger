@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useActivities } from './store';
-import { setOpenAction } from './actions';
+import { setAction, setOpenAction } from './actions';
 import { toAmount, toDisplayName } from './values';
 import type { CallPhase, MediaKind, ProofStep, SessionStatus } from './types';
 
@@ -124,6 +124,24 @@ export function notifyPaymentReceived(fromName: string, amount: string | number,
 export function notifyMessage(fromName: string, open?: () => void) {
   const id = useActivities.getState().start('message', { from: toDisplayName(fromName) }, { count: 1 }, { dismissAfter: 4000 });
   setOpenAction(id, open);
+}
+
+/** How long a missed call stays in the island before it leaves (the call log keeps it). */
+export const MISSED_CALL_MS = 12_000;
+
+/**
+ * "Missed call" from one person, with Call back and Message. Several in a row from the same person
+ * add up ("3 missed"). `callBack` places the call again with the same media; `open` opens the chat.
+ */
+export function notifyMissedCall(peerName: string, media: MediaKind, actions: { callBack?: () => void; open?: () => void } = {}) {
+  const peer = toDisplayName(peerName);
+  const store = useActivities.getState();
+  const id = `missed:${peer}`;
+  const prev = store.activities.find((a) => a.id === id);
+  const count = prev && prev.kind === 'missedCall' ? prev.state.count + 1 : 1;
+  store.start('missedCall', { peer, media }, { count, at: Date.now() }, { id, dismissAfter: MISSED_CALL_MS });
+  setAction(id, 'callBack', actions.callBack);
+  setOpenAction(id, actions.open);
 }
 
 /** Sign-in, offline, back online, syncing. */

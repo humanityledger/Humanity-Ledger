@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { islandLayout, rank, staleIds, windowCall } from '@/lib/activities/priority';
-import { toAmount, toDisplayName } from '@/lib/activities/values';
-import type { AnyActivity, CallPhase, ProofStep } from '@/lib/activities/types';
+import { isDismissible, islandLayout, rank, staleIds, windowCall } from '@/lib/activities/priority';
+import { toAmount, toDisplayName, toNoticeText } from '@/lib/activities/values';
+import type { AnyActivity, CallPhase, NoticeText, NoticeTone, ProofStep } from '@/lib/activities/types';
 
 let t = 1_000;
 const call = (phase: CallPhase): AnyActivity => ({
@@ -11,7 +11,7 @@ const call = (phase: CallPhase): AnyActivity => ({
 });
 const proof = (step: ProofStep, id = 'proof:1'): AnyActivity => ({
   id, kind: 'paymentProof', startedAt: t++,
-  attributes: { to: toDisplayName('0x2a91…7c04'), amount: toAmount('25', 'HLC')! },
+  attributes: { to: toDisplayName('0x2a91…7c04'), amount: toAmount('25', 'cUSDC')! },
   state: { step, updatedAt: t },
 });
 const received = (): AnyActivity => ({
@@ -100,5 +100,62 @@ describe('island priority', () => {
     const a = { ...proof('proving'), staleAt: 5 } as AnyActivity;
     expect(staleIds([a], 4)).toEqual([]);
     expect(staleIds([a], 5)).toEqual(['proof:1']);
+  });
+});
+
+const notice = (tone: NoticeTone, id = `notice:${t}`): AnyActivity => ({
+  id, kind: 'notice', startedAt: t++, attributes: { source: 'toast' },
+  state: { tone, title: toNoticeText('Saved') as NoticeText },
+});
+const missed = (): AnyActivity => ({
+  id: 'missed:Ana Ruiz', kind: 'missedCall', startedAt: t++,
+  attributes: { peer: toDisplayName('Ana Ruiz'), media: 'audio' }, state: { count: 1, at: t },
+});
+
+describe('island priority: notices and missed calls', () => {
+  it('an error notice outranks a recording but never a call or a failed payment', () => {
+    const l = islandLayout([recording(), notice('error'), proof('failed'), call('incoming')], 'island');
+    expect(l.all.map((a) => a.kind)).toEqual(['call', 'paymentProof', 'notice', 'recording']);
+  });
+
+  it('a file being sent sits under a payment being proved; plain notices under money and missed calls', () => {
+    expect(rank(notice('loading'), 'stage')).toBeLessThan(rank(proof('proving'), 'stage')!);
+    expect(rank(notice('success'), 'stage')).toBeLessThan(rank(received(), 'stage')!);
+    expect(rank(notice('success'), 'stage')).toBeLessThan(rank(missed(), 'stage')!);
+    expect(rank(notice('success'), 'stage')).toBeGreaterThan(rank(message('A'), 'stage')!);
+    expect(rank(notice('warning'), 'stage')).toBeGreaterThan(rank(missed(), 'stage')!);
+  });
+
+  it('a missed call outranks a received payment and a message', () => {
+    expect(islandLayout([message('Leo'), received(), missed()], 'stage').primary?.kind).toBe('missedCall');
+  });
+
+  it('quiet routes show the call and notices, and nothing else', () => {
+    const a = [message('Leo'), received(), missed(), session('offline'), notice('info'), call('incoming')];
+    const l = islandLayout(a, 'island', { quiet: true });
+    expect(l.all.map((x) => x.kind)).toEqual(['call', 'notice']);
+    expect(islandLayout([message('Leo')], 'stage', { quiet: true }).primary).toBeNull();
+  });
+
+  it('the stack lists everything the island may draw, in order; nothing is dropped', () => {
+    const a = [session('online'), message('A'), message('B'), received(), recording(), notice('success')];
+    const l = islandLayout(a, 'stage');
+    expect(l.all).toHaveLength(a.length);
+    expect(l.overflow).toBe(a.length - 2);
+    expect(l.all[0]).toBe(l.primary);
+    expect(l.all[1]).toBe(l.secondary);
+  });
+
+  it('only what is finished or informative can be swiped away', () => {
+    expect(isDismissible(call('active'))).toBe(false);
+    expect(isDismissible(call('incoming'))).toBe(false);
+    expect(isDismissible(recording())).toBe(false);
+    expect(isDismissible(proof('proving'))).toBe(false);
+    expect(isDismissible(proof('failed'))).toBe(true);
+    expect(isDismissible(session('offline'))).toBe(false);
+    expect(isDismissible(session('online'))).toBe(true);
+    expect(isDismissible(notice('loading'))).toBe(true);
+    expect(isDismissible(missed())).toBe(true);
+    expect(isDismissible(message('A'))).toBe(true);
   });
 });

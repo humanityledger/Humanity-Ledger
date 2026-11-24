@@ -9,10 +9,13 @@
  *     with the other activities.
  *  2. An active call is in the island only when its presentation is 'island'. In 'window' it is
  *     drawn by the floating window and in 'stage' by the chat, so it is never on screen twice.
- *  3. Then: a failed payment, a recording, a payment being proved, a payment received, a message,
- *     the session. Ties go to the newest.
+ *  3. Then: a failed payment, an error notice, a recording, a payment being proved, a notice with
+ *     progress (a file being sent), a warning, a missed call, a payment received, a notice, a
+ *     message, the session. Ties go to the newest.
  *  4. The island draws one primary activity and at most one minimal one beside it; the rest are a
- *     count ("+2"). Nothing is dropped: it waits its turn.
+ *     count ("+2") that opens the stack, where every one of them is listed. Nothing is dropped.
+ *  5. On quiet routes (landing, sign-in, docs) only a call and notices show: the app's own toasts
+ *     must still reach the user there, and nothing else should.
  */
 import type { AnyActivity, CallPresentation } from './types';
 
@@ -35,6 +38,33 @@ export function rank(a: AnyActivity, presentation: CallPresentation): number | n
       return 400;
     case 'session':
       return a.state.status === 'offline' ? 350 : 100;
+    case 'missedCall':
+      return 520;
+    case 'notice':
+      switch (a.state.tone) {
+        case 'error': return 780;
+        case 'loading': return 690;
+        case 'warning': return 560;
+        default: return 450;
+      }
+  }
+}
+
+/** Kinds that still show on a quiet route. */
+const QUIET_KINDS: ReadonlySet<AnyActivity['kind']> = new Set(['call', 'notice']);
+
+/** Can the user swipe this away? Not a call, a recording, a proof in flight or "offline". */
+export function isDismissible(a: AnyActivity): boolean {
+  switch (a.kind) {
+    case 'call':
+    case 'recording':
+      return false;
+    case 'paymentProof':
+      return a.state.step === 'failed' || a.state.step === 'settled';
+    case 'session':
+      return a.state.status !== 'offline';
+    default:
+      return true;
   }
 }
 
@@ -45,17 +75,25 @@ export interface IslandLayout {
   overflow: number;
   /** The primary opens expanded on its own (an incoming call, a failed payment). */
   autoExpand: boolean;
+  /** Everything the island may draw, most important first (the stack lists these). */
+  all: AnyActivity[];
 }
 
-export function islandLayout(activities: readonly AnyActivity[], presentation: CallPresentation): IslandLayout {
+export interface LayoutOptions {
+  /** A quiet route: only a call and notices (rule 5). */
+  quiet?: boolean;
+}
+
+export function islandLayout(activities: readonly AnyActivity[], presentation: CallPresentation, options: LayoutOptions = {}): IslandLayout {
   const ranked = activities
+    .filter((a) => !options.quiet || QUIET_KINDS.has(a.kind))
     .map((a) => ({ a, r: rank(a, presentation) }))
     .filter((x): x is { a: AnyActivity; r: number } => x.r !== null)
     .sort((x, y) => y.r - x.r || y.a.startedAt - x.a.startedAt);
   const primary = ranked[0]?.a ?? null;
   const secondary = ranked[1]?.a ?? null;
   const autoExpand = !!primary && ((primary.kind === 'call' && primary.state.phase === 'incoming') || (primary.kind === 'paymentProof' && primary.state.step === 'failed'));
-  return { primary, secondary, overflow: Math.max(0, ranked.length - 2), autoExpand };
+  return { primary, secondary, overflow: Math.max(0, ranked.length - 2), autoExpand, all: ranked.map((x) => x.a) };
 }
 
 /** The call drawn by the floating window, or null. */

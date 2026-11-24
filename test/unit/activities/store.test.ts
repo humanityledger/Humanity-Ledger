@@ -34,7 +34,7 @@ describe('ActivityManager', () => {
   });
 
   it('end with linger keeps the final state on screen, then removes it', () => {
-    const id = store().start('paymentProof', { to: peer, amount: toAmount('25', 'HLC')! }, { step: 'sending', updatedAt: 0 }, { id: 'proof:1' });
+    const id = store().start('paymentProof', { to: peer, amount: toAmount('25', 'cUSDC')! }, { step: 'sending', updatedAt: 0 }, { id: 'proof:1' });
     store().end(id, { linger: 3000, finalState: { step: 'settled' } });
     expect(findActivity('paymentProof', id)?.state.step).toBe('settled');
     vi.advanceTimersByTime(3000);
@@ -71,7 +71,7 @@ describe('ActivityManager', () => {
   });
 
   it('a proof whose page was closed goes stale instead of spinning forever', () => {
-    store().start('paymentProof', { to: peer, amount: toAmount('1', 'HLC')! }, { step: 'proving', updatedAt: 0 }, { id: 'proof:2', staleAfter: 60_000 });
+    store().start('paymentProof', { to: peer, amount: toAmount('1', 'cUSDC')! }, { step: 'proving', updatedAt: 0 }, { id: 'proof:2', staleAfter: 60_000 });
     store().sweep(Date.now() + 59_999);
     expect(store().activities).toHaveLength(1);
     store().sweep(Date.now() + 60_000);

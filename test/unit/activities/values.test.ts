@@ -25,28 +25,37 @@ describe('activity values: nothing but a short name and an amount reaches the is
     expect(toDisplayName('A\u0000B C')).toBe('A B C');
   });
 
-  it('token symbols are 1 to 8 upper-case letters or digits', () => {
+  it('cUSDC, the private-payment asset, always reads cUSDC, however it arrives', () => {
+    for (const raw of ['cUSDC', 'cusdc', 'CUSDC', ' cUSDC ', 'CuSdC']) expect(toTokenSymbol(raw)).toBe('cUSDC');
+    expect(toAmount('25', 'CUSDC')).toEqual({ value: '25', symbol: 'cUSDC' });
+    expect(formatAmount(toAmount('1234.5', 'cusdc')!)).toBe('1,234.5 cUSDC');
+    // A meaningful lower-case prefix is kept; a plain symbol is upper-cased.
+    expect(toTokenSymbol('wETH')).toBe('wETH');
+    expect(toTokenSymbol('usdc')).toBe('USDC');
+  });
+
+  it('token symbols are 1 to 8 letters or digits', () => {
     expect(toTokenSymbol('hlc')).toBe('HLC');
     expect(toTokenSymbol('USDC')).toBe('USDC');
     expect(toTokenSymbol('')).toBeNull();
     expect(toTokenSymbol('TOOLONGSYM')).toBeNull();
-    expect(toTokenSymbol('H L C')).toBeNull();
+    expect(toTokenSymbol('c U S D C')).toBeNull();
   });
 
   it('amounts are plain positive decimals', () => {
-    expect(toAmount('12.50', 'HLC')).toEqual({ value: '12.5', symbol: 'HLC' });
-    expect(toAmount('0007', 'HLC')).toEqual({ value: '7', symbol: 'HLC' });
+    expect(toAmount('12.50', 'cUSDC')).toEqual({ value: '12.5', symbol: 'cUSDC' });
+    expect(toAmount('0007', 'cUSDC')).toEqual({ value: '7', symbol: 'cUSDC' });
     expect(toAmount(25, 'usdc')).toEqual({ value: '25', symbol: 'USDC' });
-    expect(toAmount('0', 'HLC')).toBeNull();
-    expect(toAmount('0.000', 'HLC')).toBeNull();
-    expect(toAmount('-3', 'HLC')).toBeNull();
-    expect(toAmount('1e9', 'HLC')).toBeNull();
+    expect(toAmount('0', 'cUSDC')).toBeNull();
+    expect(toAmount('0.000', 'cUSDC')).toBeNull();
+    expect(toAmount('-3', 'cUSDC')).toBeNull();
+    expect(toAmount('1e9', 'cUSDC')).toBeNull();
     expect(toAmount('12', 'not a symbol')).toBeNull();
-    expect(toAmount('1.' + '1'.repeat(19), 'HLC')).toBeNull();
+    expect(toAmount('1.' + '1'.repeat(19), 'cUSDC')).toBeNull();
   });
 
   it('formats amounts and durations', () => {
-    expect(formatAmount({ value: '1234567.25', symbol: 'HLC' } as never)).toBe('1,234,567.25 HLC');
+    expect(formatAmount({ value: '1234567.25', symbol: 'cUSDC' } as never)).toBe('1,234,567.25 cUSDC');
     expect(formatElapsed(42_000)).toBe('0:42');
     expect(formatElapsed(252_000)).toBe('4:12');
     expect(formatElapsed(3_729_000)).toBe('1:02:09');

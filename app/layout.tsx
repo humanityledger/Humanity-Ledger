@@ -20,7 +20,6 @@ import Providers from "@/components/Providers";
 
 import { ClientLayout } from "@/components/layout/ClientLayout";
 
-import { Toaster } from 'sonner'
 
 import { CookieProvider } from "@/components/privacy/CookieContext";
 
@@ -640,7 +639,7 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
                       {children}
 
-                      <Toaster richColors position="top-right" />
+                      {/* Toasts are drawn by the island (components/activities/ToastBridge.tsx). */}
 
                       {/* Cookie banner completely eradicated per user request */}
 
