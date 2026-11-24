@@ -3,6 +3,7 @@
 **Last updated: 16 November 2026.** The engineering plan and the component-by-component state table live in [`docs/zk/MASTER_PROMPT.md`](zk/MASTER_PROMPT.md); this file summarises them and must not claim more.
 
 **Delta 24 November 2026 (communities).** New communities start on MLS when the creator's XMTP client is ready: it makes the first channel's group (creator only) and the server stores only its id (`app/api/chat/communities/route.ts`, `COMMUNITY_MLS_NEW=off` switches it back). Any member's client adds people who joined while no admin was online; only an admin's client removes. Existing communities are not migrated and stay server-readable; the schema default stays false. AC-03 (removed member reads nothing new) is checked with two real XMTP clients in the R8 two-browser workflow.
+
 **Delta 24 November 2026 (private fees).** Written, off by default: payments on Alpha can pay their network fee through the shared PrivateFPC recommended by the Aztec documentation (npm `@alejoamiras/private-fee-juice`, no operator, never deployed), so the public fee payer is that contract and not the person's account. Gated on the node running Aztec 6.0.0 and on simulated gas limits with a client-side ceiling. Switch: `NEXT_PUBLIC_AZTEC_PRIVATE_FEES=on`. Not tried on Alpha yet; the procedure is `docs/PRIVATE_FEES.md`.
 
 **Delta 18 November 2026 (operator decisions, signed by Stefan Antonio Cirisanu; `docs/alpha/OPERATOR_DECISIONS.md`).**
