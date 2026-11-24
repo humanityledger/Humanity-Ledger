@@ -802,10 +802,38 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
         // "Sync failed to wait for intent": the publish intent is waiting for the group's state.
         // A sync processes the pending commits that intent waits on; then the next publish can
         // finish instead of waiting on the same intent again (production log, 20/11/2026).
-        if (isSyncWaitError(err)) await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
+        if (isSyncWaitError(err)) {
+          await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
+          if (attempt === 2) void reportPublishState(entry.dm);
+        }
         schedulePublishRetry(cacheKey, entry.dm, attempt + 1);
       });
   }, Math.min(1000 * 2 ** attempt, 30_000));
+}
+
+/**
+ * Why a publish keeps waiting on its intent (24 Nov 2026: Chrome on the desktop gave up every day
+ * since 18 Nov while Safari on phones published). The SDK's own debugInfo() says whether the
+ * conversation's MLS state may have forked from the other members; a forked conversation never
+ * resolves its intents. Reported once per stuck conversation, with no ids: the epoch and the
+ * fork flags only.
+ */
+export async function reportPublishState(dm: any): Promise<string | null> {
+  try {
+    const info = await withTimeout<any>(dm?.debugInfo?.(), 5000, 'debugInfo timeout');
+    if (!info) return null;
+    const line = publishStateLine(info);
+    reportDelivery('publish_debug', line);
+    return line;
+  } catch {
+    return null;
+  }
+}
+
+/** The debugInfo() fields that explain a stuck publish, as one short line. */
+export function publishStateLine(info: { epoch?: unknown; maybeForked?: unknown; isCommitLogForked?: unknown; forkDetails?: unknown }): string {
+  const forkDetails = typeof info.forkDetails === 'string' ? info.forkDetails.replace(/[0-9a-f]{16,}/gi, '…').slice(0, 60) : '';
+  return `epoch=${String(info.epoch ?? '?')} maybeForked=${info.maybeForked === true} commitLogForked=${info.isCommitLogForked === true}${forkDetails ? ` details=${forkDetails}` : ''}`;
 }
 
 /**
