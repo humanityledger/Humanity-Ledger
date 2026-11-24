@@ -185,10 +185,12 @@ export interface ContactInfoSectionsProps {
   onClearChat?: () => void;
   isMuted?: boolean;
   onToggleMute?: () => void;
+  /** The signed-in XMTP client, for the device-based safety number. */
+  client?: any;
 }
 
 export function ContactInfoSections({
-  peerAddress, displayName, myAddress, messages = [], variant, onBlock, onClearChat, isMuted: mutedProp, onToggleMute,
+  peerAddress, displayName, myAddress, messages = [], variant, onBlock, onClearChat, isMuted: mutedProp, onToggleMute, client,
 }: ContactInfoSectionsProps) {
   const key = (peerAddress || '').toLowerCase();
   const compact = variant === 'column';
@@ -428,6 +430,7 @@ export function ContactInfoSections({
         myAddress={myAddress}
         peerAddress={peerAddress}
         serverCount={messages.filter((m: any) => m.viaServer).length}
+        client={client}
       />
     </>
   );
@@ -450,10 +453,11 @@ interface ContactInfoPanelProps {
   groups?: Array<{ id: string; name: string }>;
   isMuted?: boolean;
   onToggleMute?: () => void;
+  client?: any;
 }
 
 export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
-  peerAddress, peerName, myAddress, messages = [], onClose, onVoiceCall, onVideoCall, onSearch, onBlock, onClearChat, isMuted, onToggleMute,
+  peerAddress, peerName, myAddress, messages = [], onClose, onVoiceCall, onVideoCall, onSearch, onBlock, onClearChat, isMuted, onToggleMute, client,
 }) => {
   const profile = usePeerProfile(peerAddress);
   const displayName = profile?.displayName || peerName || shortAddr(peerAddress);
@@ -510,6 +514,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               onClearChat={onClearChat}
               isMuted={isMuted}
               onToggleMute={onToggleMute}
+              client={client}
             />
           </div>
         </div>

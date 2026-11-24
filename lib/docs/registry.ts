@@ -15,7 +15,7 @@ import { messaging, routing, communities, calls, payments, devices } from "./pag
 import { architecture, cryptography, ecosystem, zeroKnowledge, whitepaper } from "./pages/protocol";
 import { zkHistory } from "./pages/zk-history";
 import { diagramsSystem, diagramsMessaging, diagramsPayments, diagramsSecurity } from "./pages/diagrams";
-import { securityModel, audits, bugBounty } from "./pages/security";
+import { securityModel, dataInventory, audits, bugBounty } from "./pages/security";
 import { developers } from "./pages/developers";
 import { about, blog, contact, status, BLOG_POSTS } from "./pages/company";
 import { brand } from "./pages/brand";
@@ -29,7 +29,7 @@ export const NAV: NavGroup[] = [
   { title: "Ledger Chat", pages: [guide, messaging, routing, communities, calls, payments, devices] },
   { title: "Protocol", pages: [architecture, ecosystem, cryptography, zeroKnowledge, zkHistory, whitepaper] },
   { title: "Diagrams", pages: [diagramsSystem, diagramsMessaging, diagramsPayments, diagramsSecurity] },
-  { title: "Security", pages: [securityModel, audits, bugBounty] },
+  { title: "Security", pages: [securityModel, dataInventory, audits, bugBounty] },
   { title: "Developers", pages: [developers] },
   { title: "Company", pages: [about, brand, blog, changelog, status, contact] },
   { title: "Legal", pages: [legalNotice, terms, privacy, communityGuidelines, cookies, contentPolicy, disclaimer] },

@@ -2,6 +2,8 @@
 // @ts-nocheck
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { FEE_PRIVACY } from '@/lib/landing/content';
+import { hidesNotificationContent } from '@/lib/privacy/defaults';
+import { HistoryBackupSheet } from '@/components/chat/settings/HistoryBackupSheet';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -733,6 +735,18 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
               <Group title="Data and backup">
                 <Row
+                  icon={<Eye size={18} />}
+                  label="Who sees what"
+                  sublabel="What our server, XMTP and the Aztec network can and cannot see."
+                  onTap={() => { window.open('/docs/data-inventory', '_blank', 'noopener'); }}
+                />
+                <Row
+                  icon={<Lock size={18} />}
+                  label="Chat history backup"
+                  sublabel="Export or restore this device's messages as a file sealed with your passphrase."
+                  onTap={() => setModal('history_backup')}
+                />
+                <Row
                   icon={<Download size={18} />}
                   label="Export settings"
                   sublabel="Your preferences as a JSON file. Keys and sessions are never included."
@@ -1035,8 +1049,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Eye size={18} />}
                   label="Show preview in notifications"
-                  sublabel="Display message content in alerts"
-                  toggle={settings.notifications_private !== false && !(settings as any).hide_notification_content}
+                  sublabel="Off by default: alerts say only “New message”, not the text or who sent it"
+                  toggle={settings.notifications_private !== false && !hidesNotificationContent(settings as any)}
                   onToggle={v => updateSetting('hide_notification_content' as any, !v)}
                 />
                 <Row
@@ -1611,6 +1625,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               )}
 
               {/* ── Clear Cache ── */}
+              {modal === 'history_backup' && <HistoryBackupSheet onClose={() => setModal(null)} />}
               {modal === 'clearCache' && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">Clear cache</h3>
