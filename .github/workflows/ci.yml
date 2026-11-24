@@ -71,6 +71,7 @@ jobs:
           test/auth/sign-error.test.ts
           test/unit/auth/linked-devices.test.ts
           test/unit/auth/connect-wallet-only.test.ts
+          test/unit/auth/metamask-scope.test.ts
           test/unit/auth/qr-link-e2e.test.ts
           test/unit/chat/value-handoff.test.ts
           test/unit/chat/stickers.test.ts
