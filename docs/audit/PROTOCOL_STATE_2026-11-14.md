@@ -1,5 +1,7 @@
 # Protocol state after #88, 14 November 2026
 
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](START_HERE.md) (24 November 2026).
+
 Source of truth: code and `deployments/*.json` on `main` at `926013e` (merge of #88). Where a document disagrees, the code and JSON win and the contradiction is listed. Vocabulary as in `docs/zk/MASTER_PROMPT.md`: real on testnet, real only in tests, pending first recorded run, refused by policy, experimental, unproven.
 
 ## 0. Baseline

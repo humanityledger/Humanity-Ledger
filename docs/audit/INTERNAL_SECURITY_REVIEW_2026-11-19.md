@@ -1,5 +1,7 @@
 # Internal security review 2: 19 November 2026 (package 7)
 
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](START_HERE.md) (24 November 2026).
+
 **What this is.** An internal review by the project's own engineering, done with an AI coding agent, by reading the code. Nobody outside the project checked it. It is not an audit, and `deployments/aztec-mainnet.json` keeps `"audit": null`.
 
 - **Base:** `main` at `30fecda` (#192), plus the stack #193–#198.

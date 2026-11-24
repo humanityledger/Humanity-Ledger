@@ -1,5 +1,7 @@
 # Humanity Ledger — Prospective Audit Preparation Dossier (January 2027)
 
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](START_HERE.md) (24 November 2026).
+
 **Document Reference:** HL-AUDIT-PREP-2027.1  
 **Status:** PROSPECTIVE PREPARATION DOCUMENT — Not a record of completed audit findings.  
 **Date of Preparation:** 2 November 2026  

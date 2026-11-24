@@ -1,5 +1,7 @@
 # Internal security review — 18 November 2026 (Phase 0)
 
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](START_HERE.md) (24 November 2026).
+
 **What this is.** This is an internal security review by the project's own engineering, with an AI coding agent. Nobody outside the project checked this work. It is not an audit. `deployments/aztec-mainnet.json` still has `"audit": null`, and the Alpha deploy gate (`lib/protocol/agreement-gate.ts`) still refuses agreement contracts on Alpha. That gate reads only `audit`. The new `internalReview` field just points to this report. §10 says what this review does not cover.
 
 - **Base:** `main` at `6251a73`, which is PR #139, the internal audit IA-01…IA-23 in `docs/audit/INTERNAL_AUDIT_2026-11-18.md`.

@@ -1,4 +1,7 @@
 # Humanity Ledger — Formal Audit Dossier & Residual Risk Register
+
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](audit/START_HERE.md) (24 November 2026).
+
 **Version 1.0 — Normative Baseline (Conformance Target A6)**
 
 > **Normative Authority Notice**: This dossier conforms to Section 5 of the Humanity Ledger Protocol Complete Normative Maturity and Implementation Specification (`docs/PROTOCOL_SPEC.md`). It documents every residual risk, its severity, current mitigation status, verification evidence, and the formal justification for risks accepted by design.
