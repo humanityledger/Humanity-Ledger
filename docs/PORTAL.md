@@ -1,6 +1,6 @@
 # Humanity Ledger portal (L1 <-> Aztec)
 
-Status: 17 November 2026. Module 2 of the zk.money / Nyx parity plan. **Not deployed on any network. No external audit.**
+Status: 24 November 2026 (unchanged since 17 November). Module 2 of the zk.money / Nyx parity plan. **Not deployed on any network. No external audit.** Wave 2 of the operator decisions (OD-1): deployment only after an external review, with a 2-of-3 Safe as admin and a separate guardian (OD-6). The plan to get there: `claude/prompt-portal-l1-l2-2026-11-24.md` in the project.
 
 Code:
 - Ethereum: `contracts/portal/HLPortal.sol`, `contracts/portal/AztecMessaging.sol`;
