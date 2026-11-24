@@ -5,12 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { useDisconnect } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * [LEGENDARY] OfflineScreen  branded fullscreen overlay shown when the browser loses network.
  * Auto-dismisses when the connection is restored.
  */
 export function OfflineScreen() {
+  const t = useT();
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -45,13 +47,13 @@ export function OfflineScreen() {
                 className="text-center space-y-3 px-6 max-w-md"
             >
                 <div className="text-xs font-black uppercase tracking-[0.3em] text-[#d4ff28] mb-4">
-                    Humanity Ledger
+                    {t("Humanity Ledger")}
                 </div>
                 <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
-                    Connection Lost
+                    {t("Connection Lost")}
                 </h1>
                 <p className="text-gray-400 text-lg leading-relaxed">
-                    Forensic link terminated. Please verify your network. Disconnecting wallet for security.
+                    {t("Forensic link terminated. Please verify your network. Disconnecting wallet for security.")}
                 </p>
             </motion.div>
 
@@ -63,7 +65,7 @@ export function OfflineScreen() {
                 transition={{ delay: 0.5 }}
             >
                 <RefreshCw className="text-[#d4ff28]/40 animate-spin" size={14} />
-                <span className="text-gray-600 text-sm font-mono tracking-widest uppercase">Pinging Nodes...</span>
+                <span className="text-gray-600 text-sm font-mono tracking-widest uppercase">{t("Pinging Nodes...")}</span>
             </motion.div>
 
             {/* Scan line effect */}

@@ -20,6 +20,7 @@ import { AlertTriangle, Check } from 'lucide-react';
 import s from './PaymentProgress.module.css';
 
 import { AT, creationSteps, stepStates, type CreationPhase, type StepKey } from './walletCreationSteps';
+import { useT } from '@/lib/i18n/client';
 
 const INK = '#15171c';
 
@@ -45,6 +46,7 @@ export interface WalletCreationProps {
 }
 
 export function WalletCreation(p: WalletCreationProps) {
+  const t = useT();
   const steps = creationSteps(p.alpha, p.networkName, p.linkedComputer);
   // Where an error stopped it: the last step that was running.
   const last = useRef<StepKey | undefined>(undefined);
@@ -72,20 +74,20 @@ export function WalletCreation(p: WalletCreationProps) {
       </p>
       {failed && p.errorDetail && (
         <button type="button" className="mt-1 text-[13px] font-medium underline" style={{ color: INK }} onClick={() => p.onCopyDetails?.(p.errorDetail!)}>
-          Copy details
+          {t("Copy details")}
         </button>
       )}
 
       {!p.blocked && (
-        <ol className={`${s.steps} mt-3`} aria-label="Steps">
+        <ol className={`${s.steps} mt-3`} aria-label={t("Steps")}>
           {steps.map((st, i) => {
             const state = states[i];
             return (
               <li key={st.key} className={`${s.step} ${s[state]}`} aria-current={state === 'active' || state === 'bad' ? 'step' : undefined}>
                 <span className={s.dot} aria-hidden="true">{state === 'done' && <Check size={12} strokeWidth={3} />}</span>
                 <span className={s.stepText}>
-                  <span className={s.stepLabel}>{st.label}</span>
-                  <span className={s.stepNote}>{state === 'bad' ? 'Stopped here' : st.note}</span>
+                  <span className={s.stepLabel}>{t(st.label)}</span>
+                  <span className={s.stepNote}>{state === 'bad' ? t("Stopped here") : t( st.note)}</span>
                 </span>
               </li>
             );
@@ -102,7 +104,7 @@ export function WalletCreation(p: WalletCreationProps) {
           className="mt-4 w-full h-12 rounded-xl text-white text-[14.5px] font-semibold flex items-center justify-center gap-2"
           style={{ background: INK }}
         >
-          {failed ? 'Try again' : 'Open private wallet'}
+          {failed ? t("Try again") : t("Open private wallet")}
         </button>
       )}
     </div>

@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { AlertCircle, Check, Copy, RotateCw } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export interface ErrorStateProps {
   title: string;
@@ -20,6 +21,7 @@ export interface ErrorStateProps {
 }
 
 export function ErrorState({ title, message, errorId, onRetry, retryLabel = 'Try again', compact }: ErrorStateProps) {
+  const t = useT();
   const [retrying, setRetrying] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -49,7 +51,7 @@ export function ErrorState({ title, message, errorId, onRetry, retryLabel = 'Try
             disabled={retrying}
             className="ml-2 font-medium text-[var(--hl-ink)] underline underline-offset-4 decoration-[var(--hl-border-strong)] hover:decoration-[var(--hl-ink)] disabled:opacity-50"
           >
-            {retrying ? 'Retrying' : retryLabel}
+            {retrying ? t("Retrying") : retryLabel}
           </button>
         )}
       </div>
@@ -72,7 +74,7 @@ export function ErrorState({ title, message, errorId, onRetry, retryLabel = 'Try
             className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] font-medium bg-[var(--hl-ink)] text-[var(--hl-ink-inverse)] hover:bg-[var(--hl-primary-hover)] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--hl-ink)]"
           >
             <RotateCw size={13} strokeWidth={2} className={retrying ? 'animate-spin motion-reduce:animate-none' : ''} aria-hidden="true" />
-            {retrying ? 'Retrying' : retryLabel}
+            {retrying ? t("Retrying") : retryLabel}
           </button>
         )}
         {errorId && (
@@ -80,10 +82,10 @@ export function ErrorState({ title, message, errorId, onRetry, retryLabel = 'Try
             type="button"
             onClick={copy}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12.5px] text-[var(--hl-ink-3)] hover:bg-[var(--hl-bg-hover)] hover:text-[var(--hl-ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--hl-ink)]"
-            aria-label={`Copy error ID ${errorId}`}
+            aria-label={t("Copy error ID {errorId}", { errorId })}
           >
             {copied ? <Check size={13} strokeWidth={2} aria-hidden="true" /> : <Copy size={13} strokeWidth={1.75} aria-hidden="true" />}
-            <span className="font-mono tabular-nums">{copied ? 'Copied' : `Error ID ${errorId}`}</span>
+            <span className="font-mono tabular-nums">{copied ? t("Copied") : t("Error ID {errorId}", { errorId })}</span>
           </button>
         )}
       </div>

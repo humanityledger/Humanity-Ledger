@@ -13,6 +13,7 @@ import type { AnyActivity, ProofStep } from '@/lib/activities/types';
 import type { CallControls } from '@/lib/activities/call-media';
 import { formatAmount, formatElapsed, spokenDuration } from '@/lib/activities/values';
 import s from './activities.module.css';
+import { t as tr, useT } from '@/lib/i18n/client';
 
 export interface PresentContext {
   now: number;
@@ -53,6 +54,7 @@ export const PROOF_STEPS: { key: Exclude<ProofStep, 'failed'>; label: string }[]
 const STEP_SHORT: Record<ProofStep, string> = { preparing: 'Preparing', proving: 'Proving', sending: 'Sending', settled: 'Sent', failed: 'Failed' };
 
 function Steps({ step }: { step: ProofStep }) {
+  const tr = useT();
   const at = step === 'failed' ? -1 : PROOF_STEPS.findIndex((x) => x.key === step);
   return (
     <ol className={s.steps}>
@@ -64,7 +66,7 @@ function Steps({ step }: { step: ProofStep }) {
             <span className={`${s.stepMark} ${done ? s.stepMarkDone : ''} ${now ? s.stepMarkNow : ''}`}>
               {done ? <Check size={11} strokeWidth={3} aria-hidden="true" /> : now ? <Loader2 size={11} strokeWidth={2.6} className={s.spin} aria-hidden="true" /> : null}
             </span>
-            {x.label}
+            {tr(x.label)}
           </li>
         );
       })}
@@ -83,7 +85,7 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
         return {
           leading: <span className={`${s.dot} ${s.dotLive}`}><PhoneIncoming {...I} /></span>,
           label: peer,
-          trailing: <span className={s.trailing}>Incoming</span>,
+          trailing: <span className={s.trailing}>{tr("Incoming")}</span>,
           minimal: <PhoneIncoming {...IL} />,
           spoken: `Incoming ${kind} from ${peer}`,
           announce: `Incoming ${kind} from ${peer}`,
@@ -94,16 +96,15 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
                 <span className={s.avatar} aria-hidden="true">{initials(peer)}</span>
                 <div className={s.titles}>
                   <p className={s.title}>{peer}</p>
-                  <p className={s.subtitle}>Incoming {kind} · Encrypted</p>
+                  <p className={s.subtitle}>{tr("Incoming {kind} · Encrypted", { kind })}</p>
                 </div>
               </div>
               <div className={`${s.actions} ${s.actionsSpread}`}>
                 <button type="button" className={`${s.btn} ${s.btnDanger}`} onClick={() => c.controls?.decline?.()} disabled={!c.controls?.decline}>
-                  <PhoneOff {...I} /> Decline
+                  <PhoneOff {...I} />{" "}{tr("Decline")}
                 </button>
                 <button type="button" className={`${s.btn} ${s.btnLive}`} onClick={() => c.controls?.answer?.()} disabled={!c.controls?.answer} data-autofocus>
-                  {a.attributes.media === 'video' ? <Video {...I} /> : <Phone {...I} />} Answer
-                </button>
+                  {tr("{value} Answer", { value: a.attributes.media === 'video' ? <Video {...I} /> : <Phone {...I} /> })}</button>
               </div>
             </>
           ),
@@ -136,21 +137,21 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
               <span className={s.avatar} aria-hidden="true">{initials(peer)}</span>
               <div className={s.titles}>
                 <p className={s.title}>{peer}</p>
-                <p className={s.subtitle}>{warn ? 'Reconnecting…' : timer ? `${timer} · Encrypted` : `${status}…`}</p>
+                <p className={s.subtitle}>{warn ? tr("Reconnecting…") : timer ? tr("{timer} · Encrypted", { timer }) : `${status}…`}</p>
               </div>
             </div>
             <div className={s.actions}>
-              <button type="button" className={`${s.btn} ${s.btnIcon} ${micMuted ? s.btnOn : ''}`} onClick={() => c.controls?.toggleMic()} aria-pressed={micMuted} aria-label={micMuted ? 'Unmute' : 'Mute'}>
+              <button type="button" className={`${s.btn} ${s.btnIcon} ${micMuted ? s.btnOn : ''}`} onClick={() => c.controls?.toggleMic()} aria-pressed={micMuted} aria-label={micMuted ? tr("Unmute") : tr("Mute")}>
                 {micMuted ? <MicOff {...I} /> : <Mic {...I} />}
               </button>
-              <button type="button" className={`${s.btn} ${s.btnIcon}`} onClick={c.toWindow} aria-label="Show in a floating window">
+              <button type="button" className={`${s.btn} ${s.btnIcon}`} onClick={c.toWindow} aria-label={tr("Show in a floating window")}>
                 <PictureInPicture2 {...I} />
               </button>
-              <button type="button" className={`${s.btn} ${s.btnIcon}`} onClick={() => c.controls?.openStage()} aria-label="Open the full call">
+              <button type="button" className={`${s.btn} ${s.btnIcon}`} onClick={() => c.controls?.openStage()} aria-label={tr("Open the full call")}>
                 <Maximize2 {...I} />
               </button>
-              <button type="button" className={`${s.btn} ${s.btnDanger}`} onClick={() => c.controls?.end()} aria-label="End call">
-                <PhoneOff {...I} /> End
+              <button type="button" className={`${s.btn} ${s.btnDanger}`} onClick={() => c.controls?.end()} aria-label={tr("End call")}>
+                <PhoneOff {...I} />{" "}{tr("End")}
               </button>
             </div>
           </>
@@ -171,7 +172,7 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
       return {
         leading,
         label: `${amount} to ${to}`,
-        trailing: <span className={`${s.trailing} ${done || failed ? s.trailingStrong : ''}`}>{STEP_SHORT[step]}</span>,
+        trailing: <span className={`${s.trailing} ${done || failed ? s.trailingStrong : ''}`}>{tr(STEP_SHORT[step])}</span>,
         minimal: leading,
         spoken: `Private payment of ${amount} to ${to}: ${STEP_SHORT[step].toLowerCase()}`,
         announce: failed ? `Payment of ${amount} to ${to} failed` : done ? `Payment of ${amount} to ${to} sent` : `Payment of ${amount} to ${to}: ${STEP_SHORT[step].toLowerCase()}`,
@@ -180,15 +181,15 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
             <div className={s.head}>
               {leading}
               <div className={s.titles}>
-                <p className={s.title}>Private payment to {to}</p>
-                <p className={s.subtitle}>{failed ? 'It did not go through. Nothing was sent.' : 'Amount and recipient stay private on Aztec'}</p>
+                <p className={s.title}>{tr("Private payment to {to}", { to })}</p>
+                <p className={s.subtitle}>{failed ? tr("It did not go through. Nothing was sent.") : tr("Amount and recipient stay private on Aztec")}</p>
               </div>
               <span className={s.amount}>{amount}</span>
             </div>
             <Steps step={step} />
             {failed && (
               <div className={s.actions}>
-                <button type="button" className={s.btn} onClick={c.dismiss}><X {...I} /> Close</button>
+                <button type="button" className={s.btn} onClick={c.dismiss}><X {...I} />{" "}{tr("Close")}</button>
               </div>
             )}
           </>
@@ -210,7 +211,7 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
             <span className={s.avatar} aria-hidden="true">{initials(from)}</span>
             <div className={s.titles}>
               <p className={s.title}>{from}</p>
-              <p className={s.subtitle}>Sent you a private payment</p>
+              <p className={s.subtitle}>{tr("Sent you a private payment")}</p>
             </div>
             <span className={s.amount}>+{amount}</span>
           </div>
@@ -235,7 +236,7 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
       return {
         leading: <span className={`${s.dot} ${s.dotNeutral}`}><MessageCircle {...I} /></span>,
         label: from,
-        trailing: <span className={s.trailing}>{n > 1 ? `${n} new` : 'New message'}</span>,
+        trailing: <span className={s.trailing}>{n > 1 ? tr("{n} new", { n }) : tr("New message")}</span>,
         minimal: <MessageCircle {...IL} />,
         spoken: `${n > 1 ? `${n} new messages` : 'New message'} from ${from}`,
         announce: `New message from ${from}`,

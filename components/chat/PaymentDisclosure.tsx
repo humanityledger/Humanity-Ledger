@@ -5,12 +5,14 @@
  */
 import React from 'react';
 import type { Disclosure } from '@/lib/payments/disclosure';
+import { useT } from '@/lib/i18n/client';
 
 export function PaymentDisclosure({ d }: { d: Disclosure }) {
+  const t = useT();
   return (
-    <section data-testid="payment-disclosure" aria-label="What this payment reveals" className="rounded-xl border border-[#e4e7ec] bg-white p-3 space-y-2 text-[12.5px] leading-snug text-[#4a505c]">
+    <section data-testid="payment-disclosure" aria-label={t("What this payment reveals")} className="rounded-xl border border-[#e4e7ec] bg-white p-3 space-y-2 text-[12.5px] leading-snug text-[#4a505c]">
       <div>
-        <p className="font-semibold text-[#15171c]">Stays between the two of you</p>
+        <p className="font-semibold text-[#15171c]">{t("Stays between the two of you")}</p>
         <ul className="mt-1 space-y-0.5">
           {d.private.map((s) => (
             <li key={s}>· {s}</li>
@@ -18,7 +20,7 @@ export function PaymentDisclosure({ d }: { d: Disclosure }) {
         </ul>
       </div>
       <div>
-        <p className="font-semibold text-[#15171c]">Anyone can see</p>
+        <p className="font-semibold text-[#15171c]">{t("Anyone can see")}</p>
         <ul className="mt-1 space-y-0.5">
           {d.public.map((s) => (
             <li key={s}>· {s}</li>

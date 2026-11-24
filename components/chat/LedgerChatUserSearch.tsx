@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, UserPlus, ShieldCheck, MapPin, Check, Clock, MessageCircle, AlertCircle, UserX } from 'lucide-react';
 import { getLocalContacts, saveLocalContact } from '@/lib/wallet/localAddressBook';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 interface LedgerChatUserSearchProps {
   myAddress: string;
@@ -38,6 +39,7 @@ const TIER_BADGE: Record<string, { label: string; color: string }> = {
 };
 
 export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: LedgerChatUserSearchProps) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -79,7 +81,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
       setResults(filtered);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
-      setError('Search unavailable — check your connection.');
+      setError(t("Search unavailable — check your connection."));
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -105,7 +107,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Could not send request');
+        toast.error(data.error || t("Could not send request"));
         setRequestStatuses(prev => ({ ...prev, [addr]: 'none' }));
         return;
       }
@@ -126,12 +128,12 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
       if (data.status === 'SENT' || data.status === 'ALREADY_PENDING') {
         setRequestStatuses(prev => ({ ...prev, [addr]: 'pending' }));
         toast.success(data.status === 'ALREADY_PENDING'
-          ? 'Request already sent — waiting for them to accept.'
-          : `Request sent to ${user.nickname || user.name}!`
+          ? t("Request already sent — waiting for them to accept.")
+          : t("Request sent to {value}!", { value: user.nickname || user.name })
         );
       }
     } catch {
-      toast.error('Network error — please try again.');
+      toast.error(t("Network error — please try again."));
       setRequestStatuses(prev => ({ ...prev, [addr]: 'none' }));
     }
   };
@@ -157,8 +159,8 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
         <div className="p-6 border-b border-black/5 bg-[#f9f9fb] flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-black">Find People</h2>
-              <p className="text-[12px] text-black/40 mt-0.5">Search by @username or 0x wallet address</p>
+              <h2 className="text-xl font-semibold text-black">{t("Find People")}</h2>
+              <p className="text-[12px] text-black/40 mt-0.5">{t("Search by @username or 0x wallet address")}</p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">
               <X size={20} className="text-black/50" />
@@ -172,7 +174,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="@username or 0x address..."
+              placeholder={t("@username or 0x address...")}
               className="w-full bg-white border-2 border-[#15171c] focus:border-[#15171c] rounded-2xl py-3.5 pl-11 pr-4 text-[16px] font-semibold text-black outline-none transition-all shadow-sm placeholder:font-normal placeholder:text-black/35"
             />
             {query.length > 0 && (
@@ -198,7 +200,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 className="h-full flex flex-col items-center justify-center gap-4 text-[#15171c] p-8"
               >
                 <div className="w-8 h-8 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
-                <p className="text-[13px] font-semibold text-black/40">Searching network...</p>
+                <p className="text-[13px] font-semibold text-black/40">{t("Searching network...")}</p>
               </motion.div>
             ) : error ? (
               <motion.div
@@ -220,8 +222,8 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 className="h-full flex flex-col items-center justify-center gap-3 text-black/30 p-8 text-center"
               >
                 <Search size={44} className="opacity-20" />
-                <p className="text-[14px] font-medium">Type a name or address to search the network.</p>
-                <p className="text-[12px] text-black/25">You can search with <strong className="font-semibold">@username</strong> or paste a wallet address.</p>
+                <p className="text-[14px] font-medium">{t("Type a name or address to search the network.")}</p>
+                <p className="text-[12px] text-black/25">{t("You can search with {0} or paste a wallet address.", { 0: <strong className="font-semibold">{t("@username")}</strong> })}</p>
               </motion.div>
             ) : results.length === 0 ? (
               <motion.div
@@ -232,8 +234,8 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                 className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center"
               >
                 <UserX size={28} strokeWidth={1.75} className="text-[#a3a9b4]" aria-hidden="true" />
-                <p className="text-[14px] font-medium text-black/50">No users found for "<strong>{query}</strong>"</p>
-                <p className="text-[12px] text-black/30">Try searching by wallet address (0x...) or exact username.</p>
+                <p className="text-[14px] font-medium text-black/50">{t("No users found for \"{0}\"", { 0: <strong>{query}</strong> })}</p>
+                <p className="text-[12px] text-black/30">{t("Try searching by wallet address (0x...) or exact username.")}</p>
               </motion.div>
             ) : (
               <motion.div
@@ -267,14 +269,14 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                           <div className="flex items-center gap-1.5">
                             <span className="text-[15px] font-semibold text-black truncate">{user.name}</span>
                             {user.isVerified && (
-                              <div title="ZK Verified">
+                              <div title={t("ZK Verified")}>
                                 <ShieldCheck size={13} className="text-[#30d158] shrink-0" />
                               </div>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
                             {user.username ? (
-                              <span className="text-[12.5px] text-[#5b606b] truncate">@{user.username}{user.exact ? ' · exact match' : ''}</span>
+                              <span className="text-[12.5px] text-[#5b606b] truncate">@{user.username}{user.exact ? t(" · exact match") : ''}</span>
                             ) : (
                               <span className="text-[12.5px] text-[#8a8f98] tabular-nums">{user.address.slice(0, 6)}…{user.address.slice(-4)}</span>
                             )}
@@ -285,7 +287,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                               </span>
                             )}
                             <span className={`text-[12px] font-semibold px-1.5 py-0.5 rounded border ${tier.color}`}>
-                              {tier.label}
+                              {t(tier.label)}
                             </span>
                           </div>
                         </div>
@@ -306,17 +308,17 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                           className="flex items-center gap-1.5 px-3.5 py-2 bg-[#30d158] text-white rounded-full font-semibold text-[12px] shadow-sm shrink-0 ml-2"
                         >
                           <MessageCircle size={14} />
-                          <span>Message</span>
+                          <span>{t("Message")}</span>
                         </button>
                       ) : reqStatus === 'pending' ? (
                         <div className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-100 text-zinc-500 rounded-full font-semibold text-[12px] shrink-0 ml-2">
                           <Clock size={14} />
-                          <span>Pending</span>
+                          <span>{t("Pending")}</span>
                         </div>
                       ) : reqStatus === 'sending' ? (
                         <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[#eff1f4] text-[#15171c] rounded-full font-semibold text-[12px] shrink-0 ml-2">
                           <div className="w-3 h-3 border-2 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
-                          <span>Sending...</span>
+                          <span>{t("Sending...")}</span>
                         </div>
                       ) : (
                         <button
@@ -324,7 +326,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                           className="flex items-center gap-1.5 px-3.5 py-2 bg-[#15171c] hover:bg-emerald-600 text-white rounded-full font-semibold text-[12px] transition-colors shadow-sm shrink-0 ml-2"
                         >
                           <UserPlus size={14} />
-                          <span>Connect</span>
+                          <span>{t("Connect")}</span>
                         </button>
                       )}
                     </div>

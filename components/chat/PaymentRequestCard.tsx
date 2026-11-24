@@ -26,6 +26,7 @@ import { PAY_REQUEST_EVENT, plainUnits, type PayPrefill } from '@/lib/payments/r
 import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
 import { loadLimits } from '@/lib/payments/personal-limits';
 import { CardAmount, PaymentCardFrame, SpecRow, type CardTone } from './paymentCardUi';
+import { useT } from '@/lib/i18n/client';
 
 const BTN = 'h-10 w-full rounded-[10px] text-[13.5px] font-semibold transition-colors bg-[#15171c] text-white hover:bg-[#2b2f38] disabled:opacity-50';
 
@@ -39,6 +40,7 @@ function useSettlementInputs(): { activity: WalletSnapshot['activity']; tick: nu
 }
 
 export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, isMe }: { raw: string; isMe: boolean }) {
+  const tr = useT();
   const req = useMemo(() => parsePaymentRequest(raw), [raw]);
   const { activity } = useSettlementInputs();
   const [now, setNow] = useState(() => Date.now());
@@ -62,12 +64,12 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
               : isMe ? 'Waiting for payment.' : 'You pay from your private balance. The amount is set by the request.';
 
   const pill: { tone: CardTone; label: string } =
-    state.kind === 'paid' ? { tone: 'ok', label: 'Paid' }
-      : state.kind === 'expired' ? { tone: 'bad', label: 'Expired' }
-        : state.kind === 'wrongNetwork' ? { tone: 'bad', label: 'Other network' }
-          : settlement === 'failed' ? { tone: 'bad', label: 'Failed' }
-            : settlement === 'announced' && isMe ? { tone: 'wait', label: 'Announced' }
-              : { tone: 'neutral', label: 'Open' };
+    state.kind === 'paid' ? { tone: 'ok', label: tr("Paid") }
+      : state.kind === 'expired' ? { tone: 'bad', label: tr("Expired") }
+        : state.kind === 'wrongNetwork' ? { tone: 'bad', label: tr("Other network") }
+          : settlement === 'failed' ? { tone: 'bad', label: tr("Failed") }
+            : settlement === 'announced' && isMe ? { tone: 'wait', label: tr("Announced") }
+              : { tone: 'neutral', label: tr("Open") };
 
   const pay = () => {
     if (!token) return;
@@ -81,17 +83,17 @@ export const PaymentRequestCard = React.memo(function PaymentRequestCard({ raw, 
       {req.memo && <p className="mt-2 break-words text-[13.5px] leading-snug text-[#15171c]">{req.memo}</p>}
       <p className={`mt-1.5 text-[12.5px] leading-snug ${state.kind === 'paid' ? 'text-[#0a7a55]' : state.kind === 'open' ? 'text-[#3d424b]' : 'text-[#b42318]'}`}>{status}</p>
       <dl className="mt-3 border-t border-[#eef0f3] pt-1.5">
-        <SpecRow label="Network">{networkLabel()}</SpecRow>
-        <SpecRow label="Open until">{expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</SpecRow>
+        <SpecRow label={tr("Network")}>{tr(networkLabel())}</SpecRow>
+        <SpecRow label={tr("Open until")}>{expires.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</SpecRow>
       </dl>
       {!isMe && state.kind === 'open' && (
         token && loadLimits().receiveOnly
-          ? <p className="mt-3 text-[12.5px] text-[#3d424b]">This device is set to receive only. Change it in Settings, Payments.</p>
+          ? <p className="mt-3 text-[12.5px] text-[#3d424b]">{tr("This device is set to receive only. Change it in Settings, Payments.")}</p>
           : token
-          ? <button type="button" className={`${BTN} mt-3`} onClick={pay}>Pay privately</button>
+          ? <button type="button" className={`${BTN} mt-3`} onClick={pay}>{tr("Pay privately")}</button>
           : betaApplies() && BETA_TOKENS.some((t) => t.address.toLowerCase() === req.token.address)
-            ? <p className="mt-3 text-[12.5px] text-[#3d424b]">cUSDC payments are in a closed beta. <Link href="/beta" className="font-semibold text-[#2754d6] hover:underline">Join with an invitation</Link></p>
-            : <p className="mt-3 text-[12.5px] text-[#3d424b]">This token is not available in your private wallet.</p>
+            ? <p className="mt-3 text-[12.5px] text-[#3d424b]">{tr("cUSDC payments are in a closed beta. {0}", { 0: <Link href="/beta" className="font-semibold text-[#2754d6] hover:underline">{tr("Join with an invitation")}</Link> })}</p>
+            : <p className="mt-3 text-[12.5px] text-[#3d424b]">{tr("This token is not available in your private wallet.")}</p>
       )}
       <DisclosurePanel action="request" compact />
     </PaymentCardFrame>

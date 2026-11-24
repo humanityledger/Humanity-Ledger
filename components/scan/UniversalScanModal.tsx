@@ -12,6 +12,7 @@ import { ATOM_PNGTREE } from '@/lib/constants/systemAssets';
 import { parseScanPayload } from '@/lib/scan/parseScanPayload';
 import { completeSessionHandshake, previewLink } from '@/lib/scan/sessionHandshake';
 import { useSignMessage, useAccount } from 'wagmi';
+import { useT } from '@/lib/i18n/client';
 
 const VIEWFINDER_SIZE = 240;
 
@@ -92,6 +93,7 @@ export default function UniversalScanModal({
   initialScanData,
   onScan,
 }: UniversalScanModalProps) {
+  const tr = useT();
   const router = useRouter();
   const { address } = useSystemAccount();
   const { open: openAppKit } = useAppKit();
@@ -165,25 +167,25 @@ export default function UniversalScanModal({
           // Nothing is linked until the person confirms which computer it is (WhatsApp/Signal model).
           const preview = await previewLink(decodedText);
           if (!preview.ok) {
-            setErrMsg(preview.message);
+            setErrMsg(tr(preview.message));
             if (preview.needsWallet) setNeedsWallet(true);
             setStatus('error');
             hasScannedRef.current = false;
             return;
           }
           setPinScanData(decodedText);
-          setLinkLabel(preview.label);
+          setLinkLabel(tr(preview.label));
           setStatus('pin_required');
           return;
         } else if (mode === 'session-only') {
           setErrMsg(
-            'This code is not a desktop session QR. On the mobile home screen use “Scan label” for product URLs, wallet codes, or GS1 links.'
+            tr("This code is not a desktop session QR. On the mobile home screen use “Scan label” for product URLs, wallet codes, or GS1 links.")
           );
           setStatus('error');
           hasScannedRef.current = false;
           return;
         } else if (route.type === 'wallet' && route.walletAddress) {
-          setSuccessLabel('Opening chat');
+          setSuccessLabel(tr("Opening chat"));
           sessionStorage.setItem('ledger_scan_peer', route.walletAddress.toLowerCase());
           onScanRef.current?.(decodedText);
           setStatus('success');
@@ -194,7 +196,7 @@ export default function UniversalScanModal({
           return;
         } else {
           setErrMsg(
-            'This code is not supported yet. Try a desktop session QR, wallet address, product label URL, or GS1 Digital Link.'
+            tr("This code is not supported yet. Try a desktop session QR, wallet address, product label URL, or GS1 Digital Link.")
           );
           setStatus('error');
           hasScannedRef.current = false;
@@ -205,7 +207,7 @@ export default function UniversalScanModal({
         onScanRef.current?.(decodedText);
         setTimeout(() => onCloseRef.current(), 1400);
       } catch {
-        setErrMsg('Something went wrong. Please try again.');
+        setErrMsg(tr("Something went wrong. Please try again."));
         setStatus('error');
         hasScannedRef.current = false;
       }
@@ -293,10 +295,10 @@ export default function UniversalScanModal({
     if (!pinScanData) return;
     setStatus('verifying_pin');
     try {
-      setSuccessLabel('Computer linked');
+      setSuccessLabel(tr("Computer linked"));
       const result = await completeSessionHandshake(pinScanData, getAddress, signMessageAsync, connector);
       if (!result.ok) {
-        setErrMsg(result.message);
+        setErrMsg(tr(result.message));
         if ('needsWallet' in result && result.needsWallet) {
           setNeedsWallet(true);
         }
@@ -309,7 +311,7 @@ export default function UniversalScanModal({
       onScanRef.current?.(pinScanData);
       setTimeout(() => onCloseRef.current(), 1400);
     } catch {
-      setErrMsg('The computer could not be linked. Refresh the code on the computer and scan it again.');
+      setErrMsg(tr("The computer could not be linked. Refresh the code on the computer and scan it again."));
       setStatus('error');
       hasScannedRef.current = false;
     }
@@ -328,7 +330,7 @@ export default function UniversalScanModal({
 
   useEffect(() => {
     if (camError && tab === 'camera') {
-      setErrMsg(camError);
+      setErrMsg(tr(camError));
       setStatus('error');
     }
   }, [camError, tab]);
@@ -340,7 +342,7 @@ export default function UniversalScanModal({
     // [SECURITY] Reject oversized images to prevent OOM
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     if (file.size > MAX_FILE_SIZE) {
-      setErrMsg('Image too large. Please use a file smaller than 10 MB.');
+      setErrMsg(tr("Image too large. Please use a file smaller than 10 MB."));
       setStatus('error');
       e.target.value = '';
       return;
@@ -351,7 +353,7 @@ export default function UniversalScanModal({
       const decoded = await scanFileForQR(file);
       await handleDecoded(decoded);
     } catch {
-      setErrMsg('No valid QR code detected in the image.');
+      setErrMsg(tr("No valid QR code detected in the image."));
       setStatus('error');
       hasScannedRef.current = false;
     } finally {
@@ -379,7 +381,7 @@ export default function UniversalScanModal({
             type="button"
             onClick={onClose}
             className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] right-6 p-3 rounded-full bg-black/5 text-black/60 z-50 border border-black/10"
-            aria-label="Close"
+            aria-label={tr("Close")}
           >
             <X size={22} />
           </button>
@@ -398,7 +400,7 @@ export default function UniversalScanModal({
                   tab === 'camera' ? 'bg-[#050505] text-white border-[#050505]' : 'bg-white text-black/40 border-black/10'
                 }`}
               >
-                <Camera size={13} /> Camera
+                <Camera size={13} />{" "}{tr("Camera")}
               </button>
               <button
                 type="button"
@@ -407,7 +409,7 @@ export default function UniversalScanModal({
                   tab === 'file' ? 'bg-[#050505] text-white border-[#050505]' : 'bg-white text-black/40 border-black/10'
                 }`}
               >
-                <Upload size={13} /> Gallery
+                <Upload size={13} />{" "}{tr("Gallery")}
               </button>
             </div>
 
@@ -418,22 +420,21 @@ export default function UniversalScanModal({
                   <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center mb-1 flex-shrink-0">
                     <Shield className="text-white" size={26} />
                   </div>
-                  <p className="text-[15px] font-semibold text-black text-center leading-tight">Link this computer?</p>
+                  <p className="text-[15px] font-semibold text-black text-center leading-tight">{tr("Link this computer?")}</p>
                   <p className="text-[13px] text-black/70 text-center max-w-[260px] leading-relaxed">
-                    <strong>{linkLabel ?? 'A computer'}</strong> wants to use your Ledger Chat account.
-                  </p>
+                    {tr("{0} wants to use your Ledger Chat account.", { 0: <strong>{linkLabel ?? tr("A computer")}</strong> })}</p>
                   <p role="note" className="text-[12px] text-[#9a2a1a] bg-[#fff1ee] border border-[#f6c9bf] rounded-xl px-3 py-2 text-center max-w-[280px] leading-relaxed">
-                    It will be able to read and send your messages. Only link it if you opened ledgerchat.org yourself on a computer in front of you. Never scan a code someone sent you.
+                    {tr("It will be able to read and send your messages. Only link it if you opened ledgerchat.org yourself on a computer in front of you. Never scan a code someone sent you.")}
                   </p>
                   <p className="text-[11px] text-black/50 text-center max-w-[260px] leading-relaxed">
-                    Your wallet stays on this phone. You can unlink the computer at any time in Settings → Linked devices.
+                    {tr("Your wallet stays on this phone. You can unlink the computer at any time in Settings → Linked devices.")}
                   </p>
                   <button
                     type="button"
                     onClick={handlePinConfirm}
                     className="mt-1 px-8 py-3 bg-black text-white text-[13px] font-semibold rounded-full"
                   >
-                    Link this computer
+                    {tr("Link this computer")}
                   </button>
                   <button
                     type="button"
@@ -446,7 +447,7 @@ export default function UniversalScanModal({
                     }}
                     className="text-[12px] text-black/50 underline"
                   >
-                    Cancel
+                    {tr("Cancel")}
                   </button>
                 </div>
               )}
@@ -454,7 +455,7 @@ export default function UniversalScanModal({
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/95 z-30 gap-3">
                   <Loader2 className="animate-spin text-black" size={28} />
                   <p className="text-[10px] font-black uppercase tracking-widest text-black/60">
-                    Linking…
+                    {tr("Linking…")}
                   </p>
                 </div>
               )}
@@ -493,14 +494,14 @@ export default function UniversalScanModal({
                         }}
                         className="text-[9px] font-black uppercase px-6 py-2.5 bg-black text-white rounded-full mt-1"
                       >
-                        Connect Wallet
+                        {tr("Connect Wallet")}
                       </button>
-                      <p className="text-[9px] text-black/40">Connect your wallet to link the session.</p>
+                      <p className="text-[9px] text-black/40">{tr("Connect your wallet to link the session.")}</p>
                     </>
                   ) : (
                     <>
                       <a href="/privacy#qr-sync" className="text-[10px] underline text-black/50">
-                        What codes are supported?
+                        {tr("What codes are supported?")}
                       </a>
                       <button
                         type="button"
@@ -513,7 +514,7 @@ export default function UniversalScanModal({
                         }}
                         className="text-[9px] font-black uppercase px-6 py-2 bg-black text-white rounded-full mt-2"
                       >
-                        Retry
+                        {tr("Retry")}
                       </button>
                     </>
                   )}
@@ -530,7 +531,7 @@ export default function UniversalScanModal({
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10">
                       <Loader2 className="animate-spin text-white mb-2" size={28} />
                       <span className="text-[10px] font-black uppercase tracking-widest text-white/90">
-                        Starting camera…
+                        {tr("Starting camera…")}
                       </span>
                     </div>
                   )}
@@ -540,7 +541,7 @@ export default function UniversalScanModal({
                 <div className="flex flex-col items-center justify-center flex-1 p-6 gap-4">
                   <label className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-[#050505] text-white text-[10px] font-black uppercase rounded-xl hover:bg-black/90 transition-colors">
                     {fileLoading ? <Loader2 className="animate-spin" size={13} /> : <Upload size={13} />}
-                    Select image
+                    {tr("Select image")}
                     <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} disabled={fileLoading} />
                   </label>
                 </div>

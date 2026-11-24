@@ -28,6 +28,7 @@ import { isAddress, encodeFunctionData, formatUnits, type Address } from 'viem';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { toast } from 'sonner';
 import { checkEvmSend, parseAmount } from '@/lib/payments/rails';
+import { useT } from '@/lib/i18n/client';
 
 const MAINNET = 1;
 
@@ -134,6 +135,7 @@ export function NativeCryptoSendModal({
   lockAmount = false,
   title = 'Send Crypto',
 }: NativeCryptoSendModalProps) {
+  const tr = useT();
   const [selectedToken, setSelectedToken] = useState(() => TOKENS.find(t => t.symbol === defaultToken) ?? TOKENS[0]);
   const [amount, setAmount] = useState(presetAmount ?? '');
   const [showTokenPicker, setShowTokenPicker] = useState(false);
@@ -181,15 +183,15 @@ export function NativeCryptoSendModal({
     if (submittingRef.current) return;
     setProblem(null);
     if (!recipientAddress || !isAddress(recipientAddress)) {
-      setProblem('Invalid recipient address');
+      setProblem(tr("Invalid recipient address"));
       return;
     }
     if (!units || units <= 0n) {
-      setProblem('Enter a valid amount');
+      setProblem(tr("Enter a valid amount"));
       return;
     }
     if (!publicClient || !myAddress) {
-      setProblem('Connect your wallet first');
+      setProblem(tr("Connect your wallet first"));
       return;
     }
     submittingRef.current = true;
@@ -217,7 +219,7 @@ export function NativeCryptoSendModal({
         sender: myAddress,
       });
       if (!check.ok) {
-        setProblem(check.reason);
+        setProblem(tr(check.reason));
         return;
       }
 
@@ -229,10 +231,10 @@ export function NativeCryptoSendModal({
       setPhase('confirming');
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== 'success') {
-        setProblem('The transfer reverted on Ethereum. No funds were moved.');
+        setProblem(tr("The transfer reverted on Ethereum. No funds were moved."));
         return;
       }
-      toast.success('Payment confirmed on Ethereum');
+      toast.success(tr("Payment confirmed on Ethereum"));
       refetchEth();
       refetchToken();
       onSent(hash, amount.trim(), selectedToken.symbol);
@@ -240,7 +242,7 @@ export function NativeCryptoSendModal({
     } catch (err: unknown) {
       const e = err as { shortMessage?: string; message?: string };
       const msg = String(e?.shortMessage || e?.message || '');
-      setProblem(/user (rejected|denied)|rejected the request/i.test(msg) ? 'You cancelled in your wallet. Nothing was sent.' : msg.slice(0, 160) || 'Failed to send');
+      setProblem(/user (rejected|denied)|rejected the request/i.test(msg) ? tr("You cancelled in your wallet. Nothing was sent.") : msg.slice(0, 160) || tr("Failed to send"));
     } finally {
       submittingRef.current = false;
       setPhase('idle');
@@ -272,14 +274,13 @@ export function NativeCryptoSendModal({
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div>
             <h2 id="send-title" className="text-[20px] font-semibold text-[#15171C] tracking-tight">{title}</h2>
-            <p className="text-[12px] text-[#475467] tabular-nums mt-0.5">
-              To: <span className="font-semibold text-[#15171C]">{shortAddr(recipientAddress)}</span>
+            <p className="text-[12px] text-[#475467] tabular-nums mt-0.5">{tr("To: {0}", { 0: <span className="font-semibold text-[#15171C]">{shortAddr(recipientAddress)}</span> })}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={tr("Close")}
             className="w-11 h-11 rounded-full bg-[#F7F8FA] flex items-center justify-center hover:bg-[#EFF1F4] transition-colors duration-150 ease-out"
           >
             <X size={16} strokeWidth={1.75} className="text-[#475467]" />
@@ -291,16 +292,16 @@ export function NativeCryptoSendModal({
           <div className="flex items-start gap-3 bg-[#F7F8FA] border border-[#E4E7EC] rounded-2xl p-4">
             <AlertTriangle size={18} strokeWidth={1.75} className="text-[#15171C] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-[#15171C] mb-1">Check the address</p>
+              <p className="text-[13px] font-semibold text-[#15171C] mb-1">{tr("Check the address")}</p>
               <p className="text-[12.5px] text-[#475467] leading-relaxed">
-                Ethereum transfers cannot be reversed. Funds sent to a wrong address cannot be recovered.
+                {tr("Ethereum transfers cannot be reversed. Funds sent to a wrong address cannot be recovered.")}
               </p>
               <div className="flex items-center gap-2 mt-2 bg-white rounded-xl pl-3 border border-[#E4E7EC]">
                 <span className="text-[12px] font-semibold tabular-nums text-[#15171C] break-all flex-1">{recipientAddress}</span>
                 <button
                   type="button"
                   onClick={copyAddress}
-                  aria-label="Copy address"
+                  aria-label={tr("Copy address")}
                   className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center hover:bg-[#F7F8FA] transition-colors duration-150 ease-out"
                 >
                   {copied ? <Check size={14} strokeWidth={1.75} className="text-[#166534]" /> : <Copy size={14} strokeWidth={1.75} className="text-[#475467]" />}
@@ -312,9 +313,9 @@ export function NativeCryptoSendModal({
           <div className="flex items-center gap-2 bg-[#F7F8FA] border border-[#E4E7EC] rounded-2xl px-4 py-3">
             <Lock size={16} strokeWidth={1.75} className="text-[#15171C] shrink-0" />
             <div>
-              <p className="text-[12px] font-semibold text-[#15171C]">Public payment on Ethereum mainnet</p>
+              <p className="text-[12px] font-semibold text-[#15171C]">{tr("Public payment on Ethereum mainnet")}</p>
               <p className="text-[12px] text-[#475467] leading-relaxed">
-                Signed in your own wallet. Anyone can see the amount, your address and the recipient on Ethereum.
+                {tr("Signed in your own wallet. Anyone can see the amount, your address and the recipient on Ethereum.")}
               </p>
             </div>
           </div>
@@ -346,10 +347,10 @@ export function NativeCryptoSendModal({
                     onClick={() => { setSelectedToken(t); setShowTokenPicker(false); setAmount(''); }}
                     className={`w-full min-h-[44px] flex items-center gap-3 px-4 py-3 hover:bg-[#F7F8FA] transition-colors duration-150 ease-out ${t.symbol === selectedToken.symbol ? 'bg-[#F7F8FA]' : ''}`}
                   >
-                    {t.icon}
+                    {tr(t.icon)}
                     <div className="text-left flex-1">
-                      <p className="text-[14px] font-semibold text-[#15171C]">{t.symbol}</p>
-                      <p className="text-[12.5px] text-[#475467]">{t.name}</p>
+                      <p className="text-[14px] font-semibold text-[#15171C]">{tr(t.symbol)}</p>
+                      <p className="text-[12.5px] text-[#475467]">{tr(t.name)}</p>
                     </div>
                     {t.symbol === selectedToken.symbol && <Check size={16} strokeWidth={1.75} className="text-[#15171C]" />}
                   </button>
@@ -365,7 +366,7 @@ export function NativeCryptoSendModal({
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder="0.00"
-                aria-label={`Amount in ${selectedToken.symbol}`}
+                aria-label={tr("Amount in {symbol}", { symbol: selectedToken.symbol })}
                 value={amount}
                 readOnly={lockAmount}
                 onChange={(e) => setAmount(e.target.value.replace(',', '.'))}
@@ -373,9 +374,7 @@ export function NativeCryptoSendModal({
               />
               <span className="text-[16px] font-semibold text-[#475467] shrink-0">{selectedToken.symbol}</span>
             </div>
-            <p className="text-[12px] text-[#475467] mt-1 tabular-nums">
-              You hold {heldText} {selectedToken.symbol} on Ethereum
-            </p>
+            <p className="text-[12px] text-[#475467] mt-1 tabular-nums">{tr("You hold {heldText} {symbol} on Ethereum", { heldText, symbol: selectedToken.symbol })}</p>
           </div>
 
           {!lockAmount && (
@@ -402,11 +401,11 @@ export function NativeCryptoSendModal({
           {wrongChain ? (
             <button
               type="button"
-              onClick={() => switchChainAsync({ chainId: MAINNET }).catch(() => setProblem('Your wallet did not switch networks.'))}
+              onClick={() => switchChainAsync({ chainId: MAINNET }).catch(() => setProblem(tr("Your wallet did not switch networks.")))}
               disabled={isSwitching}
               className="w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-[#15171C] text-white font-semibold text-[15px] disabled:opacity-40"
             >
-              {isSwitching ? 'Switching…' : 'Switch wallet to Ethereum mainnet'}
+              {isSwitching ? tr("Switching…") : tr("Switch wallet to Ethereum mainnet")}
             </button>
           ) : (
             <button
@@ -416,9 +415,9 @@ export function NativeCryptoSendModal({
               className="w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-[#15171C] text-white font-semibold text-[15px] transition-colors duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isPending ? (
-                phase === 'checking' ? 'Checking balance and gas…' : phase === 'signing' ? 'Confirm in your wallet…' : 'Waiting for Ethereum…'
+                phase === 'checking' ? tr("Checking balance and gas…") : phase === 'signing' ? tr("Confirm in your wallet…") : tr("Waiting for Ethereum…")
               ) : (
-                <><Send size={16} strokeWidth={1.75} /> Send {amount || '0'} {selectedToken.symbol}</>
+                <><Send size={16} strokeWidth={1.75} />{" "}{tr("Send")}{" "}{amount || '0'} {selectedToken.symbol}</>
               )}
             </button>
           )}
@@ -429,17 +428,15 @@ export function NativeCryptoSendModal({
             aria-expanded={showQR}
             className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl bg-[#F7F8FA] border border-[#E4E7EC] text-[#15171C] font-semibold text-[13px] hover:bg-[#EFF1F4] transition-colors duration-150 ease-out"
           >
-            <QrCode size={15} strokeWidth={1.75} /> {showQR ? 'Hide QR code' : 'Pay from another wallet (QR)'}
+            <QrCode size={15} strokeWidth={1.75} /> {showQR ? tr("Hide QR code") : tr("Pay from another wallet (QR)")}
           </button>
 
           {showQR && (
             <div className="flex flex-col items-center gap-3 bg-[#F7F8FA] border border-[#E4E7EC] rounded-2xl p-5">
               <div className="rounded-2xl bg-white border border-[#E4E7EC] overflow-hidden">
-                <BrandedQr value={qrUri} title="Payment QR code" style={{ width: 200 }} />
+                <BrandedQr value={qrUri} title={tr("Payment QR code")} style={{ width: 200 }} />
               </div>
-              <p className="text-[12.5px] text-[#475467] text-center leading-relaxed max-w-[260px]">
-                Scan with another Ethereum wallet to pay {amount || '?'} {selectedToken.symbol} on Ethereum mainnet to this address.
-              </p>
+              <p className="text-[12.5px] text-[#475467] text-center leading-relaxed max-w-[260px]">{tr("Scan with another Ethereum wallet to pay {value} {symbol} on Ethereum mainnet to this address.", { value: amount || '?', symbol: selectedToken.symbol })}</p>
             </div>
           )}
         </div>

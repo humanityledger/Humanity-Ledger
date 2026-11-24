@@ -24,6 +24,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Copy, Eye, EyeOff, X } from 'lucide-react';
 import { cleanAmount } from './walletLogic';
+import { useT } from '@/lib/i18n/client';
 
 export { cleanAmount };
 
@@ -81,9 +82,10 @@ export function splitAmount(text: string): [string, string] {
  * smaller, the symbol after it. With `hidden`, four dots of the same weight.
  */
 export function BigAmount({ text, symbol, hidden, muted }: { text: string; symbol: string; hidden?: boolean; muted?: boolean }) {
+  const tr = useT();
   const [whole, frac] = splitAmount(text);
   return (
-    <span className="inline-flex items-baseline gap-2 min-w-0 max-w-full" aria-label={hidden ? `Balance hidden, ${symbol}` : `${text} ${symbol}`}>
+    <span className="inline-flex items-baseline gap-2 min-w-0 max-w-full" aria-label={hidden ? tr("Balance hidden, {symbol}", { symbol }) : `${text} ${symbol}`}>
       <span
         className="font-semibold tracking-[-0.04em] tabular-nums leading-none truncate text-[44px] sm:text-[52px]"
         style={{ color: muted ? '#a3a9b4' : INK }}
@@ -143,8 +145,9 @@ export function IconButton({
 
 /** Eye toggle beside the balance. */
 export function HideAmountsButton({ hidden, onToggle }: { hidden: boolean; onToggle: () => void }) {
+  const tr = useT();
   return (
-    <IconButton label={hidden ? 'Show amounts' : 'Hide amounts'} onClick={onToggle} pressed={hidden} size={40}>
+    <IconButton label={hidden ? tr("Show amounts") : tr("Hide amounts")} onClick={onToggle} pressed={hidden} size={40}>
       {hidden ? <EyeOff size={18} strokeWidth={1.9} /> : <Eye size={18} strokeWidth={1.9} />}
     </IconButton>
   );
@@ -302,6 +305,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
   label: string;
 }) {
+  const tr = useT();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const move = (i: number) => {
     const n = (i + options.length) % options.length;
@@ -331,7 +335,7 @@ export function Segmented<T extends string>({
               on ? 'bg-white text-[#15171c] shadow-[0_1px_2px_rgba(16,24,40,0.08),0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-[#5b606b] hover:text-[#15171c]'
             }`}
           >
-            {o.label}
+            {tr(o.label)}
             {o.badge ? (
               <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-[12px] font-semibold tabular-nums flex items-center justify-center ${on ? 'bg-[#15171c] text-white' : 'bg-white text-[#15171c]'}`}>
                 {o.badge > 99 ? '99+' : o.badge}
@@ -354,9 +358,10 @@ export function TokenChips<T extends string>({
   value: T;
   onChange: (k: T) => void;
 }) {
+  const tr = useT();
   if (tokens.length <= 1) return null;
   return (
-    <div role="radiogroup" aria-label="Token" className="flex flex-wrap gap-2">
+    <div role="radiogroup" aria-label={tr("Token")} className="flex flex-wrap gap-2">
       {tokens.map((t) => {
         const on = t.key === value;
         return (
@@ -450,6 +455,7 @@ async function copyText(text: string): Promise<boolean> {
 
 /** A row that copies its value. Says "Copied" for a moment, or "Not copied" when the browser refuses. */
 export function CopyKV({ k, v, display }: { k: string; v: string; display?: string }) {
+  const tr = useT();
   const [state, setState] = useState<'' | 'yes' | 'no'>('');
   useEffect(() => {
     if (!state) return;
@@ -461,14 +467,14 @@ export function CopyKV({ k, v, display }: { k: string; v: string; display?: stri
       type="button"
       onClick={async () => setState((await copyText(v)) ? 'yes' : 'no')}
       className={`w-full flex items-center justify-between gap-4 min-h-[52px] py-2.5 border-t border-[#eef0f3] first:border-t-0 text-left rounded-lg ${FOCUS}`}
-      aria-label={`Copy ${k}`}
+      aria-label={tr("Copy {k}", { k })}
     >
       <span className="text-[15px] shrink-0" style={{ color: INK_2 }}>
         {k}
       </span>
       <span className="flex items-center gap-2 min-w-0">
         <span className="font-mono text-[13.5px] truncate" style={{ color: state === 'no' ? BAD : INK }} role={state ? 'status' : undefined}>
-          {state === 'yes' ? 'Copied' : state === 'no' ? 'Not copied' : display ?? shortHex(v)}
+          {state === 'yes' ? tr("Copied") : state === 'no' ? tr("Not copied") : display ?? shortHex(v)}
         </span>
         {state === 'yes' ? <Check size={15} strokeWidth={2.2} style={{ color: OK }} aria-hidden="true" /> : <Copy size={15} strokeWidth={1.9} style={{ color: INK_3 }} aria-hidden="true" />}
       </span>
@@ -478,6 +484,7 @@ export function CopyKV({ k, v, display }: { k: string; v: string; display?: stri
 
 /** A full address in a quiet box, grouped, with Copy. */
 export function AddressBox({ label, value }: { label: string; value: string }) {
+  const tr = useT();
   const [state, setState] = useState<'' | 'yes' | 'no'>('');
   useEffect(() => {
     if (!state) return;
@@ -490,10 +497,10 @@ export function AddressBox({ label, value }: { label: string; value: string }) {
         <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
           {label}
         </span>
-        <TextButton onClick={async () => setState((await copyText(value)) ? 'yes' : 'no')} label={`Copy ${label}`}>
+        <TextButton onClick={async () => setState((await copyText(value)) ? 'yes' : 'no')} label={tr("Copy {label}", { label })}>
           <span className="inline-flex items-center gap-1.5">
             {state === 'yes' ? <Check size={15} strokeWidth={2.2} aria-hidden="true" /> : <Copy size={15} strokeWidth={1.9} aria-hidden="true" />}
-            {state === 'yes' ? 'Copied' : state === 'no' ? 'Not copied' : 'Copy'}
+            {state === 'yes' ? tr("Copied") : state === 'no' ? tr("Not copied") : tr("Copy")}
           </span>
         </TextButton>
       </div>
@@ -546,6 +553,7 @@ export function AmountInput({
   invalid?: string | null;
   autoFocus?: boolean;
 }) {
+  const tr = useT();
   const id = useId();
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -555,7 +563,7 @@ export function AmountInput({
   return (
     <div className={`rounded-[20px] border-2 px-4 pt-4 pb-3 transition-colors ${invalid ? 'border-[#b42318]' : 'border-[#e4e7ec] focus-within:border-[#15171c]'}`}>
       <label htmlFor={id} className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-center" style={{ color: INK_3 }}>
-        Amount
+        {tr("Amount")}
       </label>
       <div className="flex items-baseline justify-center gap-2 mt-1 min-w-0">
         <input
@@ -586,7 +594,7 @@ export function AmountInput({
           className={`min-h-[36px] px-3 rounded-full text-[13px] font-semibold bg-[#f2f4f7] hover:bg-[#e9ecf0] shrink-0 ${FOCUS}`}
           style={{ color: INK }}
         >
-          Max
+          {tr("Max")}
         </button>
       </div>
     </div>
@@ -612,6 +620,7 @@ export function Sheet({
   onBack?: () => void;
   children: React.ReactNode;
 }) {
+  const tr = useT();
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -634,7 +643,7 @@ export function Sheet({
   }, []);
   return (
     <motion.div className="absolute inset-0 z-20 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button type="button" aria-label="Close" tabIndex={-1} className="absolute inset-0 bg-[#0b0c0e]/40 backdrop-blur-[2px]" onClick={onClose} />
+      <button type="button" aria-label={tr("Close")} tabIndex={-1} className="absolute inset-0 bg-[#0b0c0e]/40 backdrop-blur-[2px]" onClick={onClose} />
       <motion.div
         ref={panel}
         role="dialog"
@@ -651,7 +660,7 @@ export function Sheet({
           <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-[#d4d8de]" aria-hidden="true" />
           <div className="flex items-center gap-1 min-h-[48px]">
             {onBack && (
-              <IconButton label="Back" onClick={onBack}>
+              <IconButton label={tr("Back")} onClick={onBack}>
                 <span className="text-[22px] leading-none" aria-hidden="true">
                   ‹
                 </span>
@@ -667,7 +676,7 @@ export function Sheet({
                 </p>
               )}
             </div>
-            <IconButton label="Close" onClick={onClose}>
+            <IconButton label={tr("Close")} onClick={onClose}>
               <X size={19} strokeWidth={2} />
             </IconButton>
           </div>
@@ -682,8 +691,9 @@ export function Sheet({
 
 /** "1 Details — 2 Review" at the top of a two-step sheet. */
 export function StepDots({ steps, at }: { steps: string[]; at: number }) {
+  const tr = useT();
   return (
-    <ol className="flex items-center gap-2 mb-4" aria-label="Steps">
+    <ol className="flex items-center gap-2 mb-4" aria-label={tr("Steps")}>
       {steps.map((s, i) => (
         <li key={s} className="flex items-center gap-2 min-w-0" aria-current={i === at ? 'step' : undefined}>
           <span

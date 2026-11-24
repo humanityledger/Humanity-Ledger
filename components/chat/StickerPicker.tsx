@@ -2,6 +2,7 @@
 import React, { useId, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle, Lock, Wallet, Sparkles, ImageOff } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 /*
  * Ledger stickers.
@@ -470,12 +471,13 @@ function Burst({ color, size }: { color: string; size: number }) {
 
 /** A sticker inside a chat bubble. New ones pop in with a burst; old codes show a quiet placeholder. */
 export function RenderPremiumSticker({ code, size = '96px', fresh = false }: { code: string; size?: string; fresh?: boolean }) {
+  const t = useT();
   const sticker = STICKER_BY_CODE.get(code.trim());
   if (!sticker) {
     return (
       <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#f2f4f7] text-[13.5px] text-[#727a88]">
         <ImageOff size={15} strokeWidth={1.8} aria-hidden="true" />
-        Retired sticker
+        {t("Retired sticker")}
       </div>
     );
   }
@@ -496,6 +498,7 @@ export function RenderPremiumSticker({ code, size = '96px', fresh = false }: { c
 }
 
 function StickerTile({ sticker, onSend }: { sticker: PremiumSticker; onSend: (code: string) => void }) {
+  const t = useT();
   const [live, setLive] = useState(false);
   return (
     <button
@@ -505,7 +508,7 @@ function StickerTile({ sticker, onSend }: { sticker: PremiumSticker; onSend: (co
       onFocus={() => setLive(true)}
       onBlur={() => setLive(false)}
       onClick={() => onSend(sticker.code)}
-      aria-label={`Send ${sticker.label} sticker`}
+      aria-label={t("Send {label} sticker", { label: sticker.label })}
       className="flex items-center justify-center p-1.5 rounded-2xl hover:bg-[#f2f4f7] active:scale-95 transition-all duration-150 select-none"
     >
       <StickerArt sticker={sticker} size={84} live={live} />
@@ -524,6 +527,7 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
   onSend: (code: string) => void;
   onClose: () => void;
 }) => {
+  const t = useT();
   const [activeGroup, setActiveGroup] = useState<StickerGroup>('replies');
   const visible = PREMIUM_STICKERS.filter(s => s.group === activeGroup);
 
@@ -538,14 +542,14 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
         className="absolute bottom-full mb-3 left-0 right-0 bg-white rounded-t-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden z-[400] flex flex-col"
         onClick={e => e.stopPropagation()}
         role="dialog"
-        aria-label="Stickers"
+        aria-label={t("Stickers")}
       >
         <div className="px-4 py-3 flex items-center justify-between border-b border-[#eceef2]">
-          <span className="text-[15px] font-semibold text-[#15171c]">Stickers</span>
+          <span className="text-[15px] font-semibold text-[#15171c]">{t("Stickers")}</span>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close stickers"
+            aria-label={t("Close stickers")}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#4a505c] hover:text-[#15171c] transition-colors"
           >
             <X size={16} strokeWidth={1.9} />
@@ -567,7 +571,7 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
                 }`}
               >
                 <Icon size={17} strokeWidth={active ? 2.1 : 1.8} />
-                {label}
+                {t(label)}
                 {active && (
                   <motion.span layoutId="sticker-tab" className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#15171c]" />
                 )}

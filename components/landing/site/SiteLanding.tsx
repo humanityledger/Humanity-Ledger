@@ -20,6 +20,7 @@ import { Architecture } from './Architecture';
 import { PhoneScreen } from './Phones';
 import { GlyphIcon } from './Glyphs';
 import s from './site.module.css';
+import { getT } from '@/lib/i18n/server';
 
 const Info = () => (
   <svg width="17" height="17" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.3" /><path d="M8 7v4M8 5h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
@@ -44,13 +45,14 @@ function Section({ id, tone, children }: { id: string; tone?: 'wash' | 'ink'; ch
   );
 }
 
-export function SiteLanding() {
+export async function SiteLanding() {
+  const __t = await getT();
   const v = versions();
   const stack = K.stackRows(v);
 
   return (
     <div className={s.site}>
-      <a href="#main" className={s.skip}>Skip to content</a>
+      <a href="#main" className={s.skip}>{__t("Skip to content")}</a>
       <SiteHeader />
 
       <main id="main">
@@ -59,14 +61,14 @@ export function SiteLanding() {
           <div className={s.wrap}>
             <div className={s.heroGrid}>
               <div>
-                <h1 className={s.h1} id="hero-title">{K.HERO.title}</h1>
+                <h1 className={s.h1} id="hero-title">{__t(K.HERO.title)}</h1>
                 <p className={s.lede}>{K.HERO.line}</p>
                 <div className={s.actions}>
-                  <a className={`${s.btn} ${s.btnPrimary}`} href={K.HERO.primary.href}>{K.HERO.primary.label}<Arrow /></a>
-                  <a className={s.textLink} href={K.HERO.secondary.href}>{K.HERO.secondary.label}<Arrow /></a>
+                  <a className={`${s.btn} ${s.btnPrimary}`} href={K.HERO.primary.href}>{__t(K.HERO.primary.label)}<Arrow /></a>
+                  <a className={s.textLink} href={K.HERO.secondary.href}>{__t(K.HERO.secondary.label)}<Arrow /></a>
                 </div>
                 <ul className={s.points}>
-                  {K.HERO.points.map((p) => <li key={p}>{p}</li>)}
+                  {K.HERO.points.map((p) => <li key={p}>{__t(p)}</li>)}
                 </ul>
               </div>
               <div className={s.heroPhone}>
@@ -74,16 +76,16 @@ export function SiteLanding() {
               </div>
             </div>
             <p className={s.builtOn}>
-              <span>Built on open networks</span>
-              <b>XMTP</b>
-              <b>Aztec Network</b>
-              <b>Ethereum</b>
+              <span>{__t("Built on open networks")}</span>
+              <b>{__t("XMTP")}</b>
+              <b>{__t("Aztec Network")}</b>
+              <b>{__t("Ethereum")}</b>
             </p>
           </div>
         </section>
 
         {/* Features, one row each */}
-        <section id="features" className={s.section} aria-label="Features">
+        <section id="features" className={s.section} aria-label={__t("Features")}>
           <div className={`${s.wrap} ${s.rows}`}>
             {K.FEATURES_ROWS.map((r) => {
               const label = labelOf(r.claim);
@@ -108,13 +110,13 @@ export function SiteLanding() {
 
         {/* Why */}
         <Section id="why" tone="wash">
-          <Head id="why" title={K.WHY.title} body={K.WHY.body} center />
+          <Head id="why" title={__t(K.WHY.title)} body={__t(K.WHY.body)} center />
           <ul className={s.why} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {K.WHY.items.map((w) => (
               <li key={w.title} className={s.whyCard}>
                 <span className={s.whyIcon}><GlyphIcon name={w.glyph} /></span>
-                <h3>{w.title}</h3>
-                <p>{w.text}</p>
+                <h3>{__t(w.title)}</h3>
+                <p>{__t(w.text)}</p>
               </li>
             ))}
           </ul>
@@ -122,65 +124,65 @@ export function SiteLanding() {
 
         {/* How it protects you, and a private payment step by step */}
         <Section id="how">
-          <Head id="how" eyebrow="How it works" title={K.HOW.title} body={K.HOW.body} center />
+          <Head id="how" eyebrow={__t("How it works")} title={__t(K.HOW.title)} body={__t(K.HOW.body)} center />
           <ul className={s.pillars} style={{ listStyle: 'none', padding: 0 }}>
             {K.HOW.pillars.map((p, i) => (
               <li key={p.title} className={s.pillar}>
                 <GlyphIcon name={(['device', 'network', 'people'] as const)[i]} size={30} />
-                <h3>{p.title}</h3>
-                <p>{p.text}</p>
+                <h3>{__t(p.title)}</h3>
+                <p>{__t(p.text)}</p>
               </li>
             ))}
           </ul>
           <div className={s.subHead} id="payment">
             <div>
-              <h3 className={s.h3}>{K.PAYMENT.title}</h3>
-              <p>{K.PAYMENT.body}</p>
+              <h3 className={s.h3}>{__t(K.PAYMENT.title)}</h3>
+              <p>{__t(K.PAYMENT.body)}</p>
             </div>
           </div>
-          <ProofSequence steps={K.PAYMENT.steps} label={<StatusLabel label={K.PAYMENT.label} />} />
+          <ProofSequence steps={K.PAYMENT.steps} label={<StatusLabel label={__t(K.PAYMENT.label)} />} />
           <p className={s.honest}><Info />{K.PAYMENT.honest}</p>
         </Section>
 
         {/* Zero-knowledge, in plain words */}
         <Section id="zero-knowledge" tone="wash">
           <div className={s.zkGrid}>
-            <Head id="zero-knowledge" eyebrow="Zero-knowledge, in plain words" title={K.ZK.title} body={K.ZK.body} />
+            <Head id="zero-knowledge" eyebrow={__t("Zero-knowledge, in plain words")} title={__t(K.ZK.title)} body={__t(K.ZK.body)} />
             <ZkAnalogy steps={K.ZK.analogy} />
           </div>
-          <ol className={s.timeline} aria-label="Zero-knowledge proofs, from 1985 to today">
+          <ol className={s.timeline} aria-label={__t("Zero-knowledge proofs, from 1985 to today")}>
             {K.ZK.timeline.map((t) => (
               <li key={t.year} className={s.tlItem}>
                 <span className={s.tlYear}>{t.year}</span>
-                <span className={s.tlText}>{t.text}</span>
+                <span className={s.tlText}>{__t(t.text)}</span>
               </li>
             ))}
           </ol>
           <div className={s.bridge}>
             <p>{K.ZK.bridge}</p>
-            <a className={s.textLink} href={K.ZK.more.href}>{K.ZK.more.label}<Arrow /></a>
+            <a className={s.textLink} href={K.ZK.more.href}>{__t(K.ZK.more.label)}<Arrow /></a>
           </div>
         </Section>
 
         {/* What our server can see */}
         <Section id="visibility">
-          <Head id="visibility" eyebrow="Transparency" title={K.VISIBILITY.title} body={K.VISIBILITY.body} center />
+          <Head id="visibility" eyebrow={__t("Transparency")} title={__t(K.VISIBILITY.title)} body={__t(K.VISIBILITY.body)} center />
           <div className={`${s.tableWrap} ${s.tableCard}`}>
             <table className={`${s.table} ${s.vis}`}>
-              <caption className={s.srOnly}>Who can read each part of Ledger Chat today, and what our server sees</caption>
+              <caption className={s.srOnly}>{__t("Who can read each part of Ledger Chat today, and what our server sees")}</caption>
               <thead><tr>{K.VISIBILITY.head.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
               <tbody>
                 {K.VISIBILITY.rows.map((r) => (
                   <tr key={r.part}>
                     <th scope="row">
-                      {r.part}
+                      {__t(r.part)}
                       <span className={`${s.mark} ${r.e2e ? s.markOn : s.markOff}`} style={{ display: 'flex' }}>
-                        <i aria-hidden="true" />{r.e2e ? 'Encrypted from end to end' : 'Readable by our server today'}
+                        <i aria-hidden="true" />{r.e2e ? __t("Encrypted from end to end") : __t("Readable by our server today")}
                       </span>
                     </th>
-                    <td data-k={K.VISIBILITY.head[1]}>{r.who}</td>
-                    <td data-k={K.VISIBILITY.head[2]}>{r.server}</td>
-                    <td data-k={K.VISIBILITY.head[3]}>{r.next || 'No change needed'}</td>
+                    <td data-k={K.VISIBILITY.head[1]}>{__t(r.who)}</td>
+                    <td data-k={K.VISIBILITY.head[2]}>{__t(r.server)}</td>
+                    <td data-k={K.VISIBILITY.head[3]}>{__t(r.next) || __t("No change needed")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -190,12 +192,12 @@ export function SiteLanding() {
 
         {/* Under the hood */}
         <Section id="architecture" tone="wash">
-          <Head id="architecture" eyebrow="Architecture" title={K.ARCHITECTURE.title} body={K.ARCHITECTURE.body} />
+          <Head id="architecture" eyebrow={__t("Architecture")} title={__t(K.ARCHITECTURE.title)} body={__t(K.ARCHITECTURE.body)} />
           <Architecture nodes={K.ARCHITECTURE.nodes} states={K.ARCHITECTURE.states} goal={K.ARCHITECTURE.goal} />
           <div style={{ display: 'grid', gap: 20, marginTop: 56 }}>
             <div className={`${s.tableWrap} ${s.tableCard}`}>
               <table className={`${s.table} ${s.stack}`}>
-                <caption className={s.srOnly}>The stack, layer by layer</caption>
+                <caption className={s.srOnly}>{__t("The stack, layer by layer")}</caption>
                 <thead><tr>{K.ARCHITECTURE.stackHead.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
                 <tbody>
                   {stack.map((r) => (
@@ -210,7 +212,7 @@ export function SiteLanding() {
               </table>
             </div>
             <div className={s.tableCard}>
-              <h3 className={s.h3} style={{ fontSize: 22, margin: '18px 0 6px' }}>{K.MESSAGES.title}</h3>
+              <h3 className={s.h3} style={{ fontSize: 22, margin: '18px 0 6px' }}>{__t(K.MESSAGES.title)}</h3>
               <dl className={s.spec}>
                 {K.MESSAGES.spec.map((r) => (
                   <div key={r.k} className={s.specRow}><dt>{r.k}</dt><dd>{r.v}</dd></div>
@@ -226,12 +228,12 @@ export function SiteLanding() {
           <div className={s.relayGrid}>
             <div>
               <div className={s.relayHead}>
-                <p className={s.eyebrow}>For organisations</p>
-                <StatusLabel label={K.RELAY.label} />
+                <p className={s.eyebrow}>{__t("For organisations")}</p>
+                <StatusLabel label={__t(K.RELAY.label)} />
               </div>
-              <h2 className={s.h2} id="relay-title">{K.RELAY.title}</h2>
-              <p className={s.body}>{K.RELAY.body}</p>
-              <a className={s.inkLink} href={K.RELAY.source.href} target="_blank" rel="noopener noreferrer">{K.RELAY.source.label}<Arrow /></a>
+              <h2 className={s.h2} id="relay-title">{__t(K.RELAY.title)}</h2>
+              <p className={s.body}>{__t(K.RELAY.body)}</p>
+              <a className={s.inkLink} href={K.RELAY.source.href} target="_blank" rel="noopener noreferrer">{__t(K.RELAY.source.label)}<Arrow /></a>
             </div>
             <div className={s.relayPanel}>
               <dl className={s.spec}>
@@ -247,13 +249,13 @@ export function SiteLanding() {
 
         {/* Open and verifiable */}
         <Section id="open">
-          <Head id="open" eyebrow="Open and verifiable" title={K.OPEN.title} body={K.OPEN.body} center />
+          <Head id="open" eyebrow={__t("Open and verifiable")} title={__t(K.OPEN.title)} body={__t(K.OPEN.body)} center />
           <div className={s.cards}>
             {K.OPEN.cards.map((c) => (
               <a key={c.title} className={s.card} href={c.href} {...(c.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
-                <h3>{c.title}</h3>
-                <p>{c.text}</p>
-                <span>{c.cta}<Arrow /></span>
+                <h3>{__t(c.title)}</h3>
+                <p>{__t(c.text)}</p>
+                <span>{__t(c.cta)}<Arrow /></span>
               </a>
             ))}
           </div>
@@ -262,13 +264,13 @@ export function SiteLanding() {
 
         {/* What's next */}
         <Section id="next" tone="wash">
-          <Head id="next" eyebrow="Roadmap" title={K.NEXT.title} body={K.NEXT.body} center />
+          <Head id="next" eyebrow={__t("Roadmap")} title={__t(K.NEXT.title)} body={__t(K.NEXT.body)} center />
           <ul className={s.next} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {K.NEXT.items.map((n) => (
               <li key={n.title} className={s.nextItem}>
-                <StatusLabel label={labelOf(n.claim)} />
-                <h3>{n.title}</h3>
-                <p>{n.text}</p>
+                <StatusLabel label={__t(labelOf(n.claim))} />
+                <h3>{__t(n.title)}</h3>
+                <p>{__t(n.text)}</p>
               </li>
             ))}
           </ul>
@@ -276,7 +278,7 @@ export function SiteLanding() {
 
         {/* Questions */}
         <Section id="questions">
-          <Head id="questions" title="Questions" center />
+          <Head id="questions" title={__t("Questions")} center />
           <div className={s.faq}>
             {K.FAQ.map((f) => (
               <details key={f.q} className={s.faqItem}>
@@ -291,9 +293,9 @@ export function SiteLanding() {
         <section id="start" className={s.section} style={{ paddingTop: 0 }} aria-labelledby="start-title">
           <div className={s.wrap}>
             <div className={s.closing}>
-              <h2 className={s.h2} id="start-title">{K.CLOSING.title}</h2>
-              <p className={s.body}>{K.CLOSING.body}</p>
-              <a className={s.btn} href="/chat">Open Ledger Chat<Arrow /></a>
+              <h2 className={s.h2} id="start-title">{__t(K.CLOSING.title)}</h2>
+              <p className={s.body}>{__t(K.CLOSING.body)}</p>
+              <a className={s.btn} href="/chat">{__t("Open Ledger Chat")}<Arrow /></a>
               <div className={s.devices}>
                 {K.DEVICES.map((d) => (
                   <div key={d.name} className={s.device}><b>{d.name}</b><span>{d.how}</span></div>

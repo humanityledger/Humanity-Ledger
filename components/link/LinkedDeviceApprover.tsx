@@ -14,12 +14,14 @@ import { Laptop, Loader2, ShieldCheck, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPeers, getSelfLink, hasPeers, open as openSealed, removePeer, seal, SIGN_PURPOSE, type SignPayload } from '@/lib/link/channel';
 import { isMobileDevice, openMobileWalletApp } from '@/lib/wallet/mobileWallet';
+import { useT } from '@/lib/i18n/client';
 
 interface Pending { id: string; deviceId: string; deviceLabel: string; kind: 'xmtp' | 'aztec'; ciphertext: string; iv: string; createdAt: number }
 
 const POLL_MS = 4_000;
 
 export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
+  const tr = useT();
   const { address, isConnected, connector } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { signTypedDataAsync } = useSignTypedData();
@@ -81,12 +83,12 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
     if (!peer) { setCurrent(null); return; }
     if (!isConnected || !address) {
       // The wallet session on this phone has ended: reconnect it, then tap Approve again.
-      toast.message('Reconnect your wallet, then tap Approve again.');
+      toast.message(tr("Reconnect your wallet, then tap Approve again."));
       try { openAppKit(); } catch { /* no modal */ }
       return;
     }
     if (address.toLowerCase() !== me) {
-      toast.error('The wallet connected on this phone is not the one of this account. Switch accounts in your wallet.');
+      toast.error(tr("The wallet connected on this phone is not the one of this account. Switch accounts in your wallet."));
       return;
     }
     setBusy(true);
@@ -101,11 +103,11 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
       const sealed = await seal(peer.key, `ans|${req.id}|${req.kind}`, { signature });
       const r = await post({ action: 'answer', id: req.id, ...sealed });
       if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || 'The answer could not be sent.');
-      toast.success(`Approved on ${req.deviceLabel}.`);
+      toast.success(tr("Approved on {deviceLabel}.", { deviceLabel: req.deviceLabel }));
       setCurrent(null);
     } catch (e: any) {
       const m = String(e?.shortMessage || e?.message || '');
-      toast.error(/reject|denied|cancel/i.test(m) ? 'You declined in your wallet.' : m || 'Could not sign.');
+      toast.error(/reject|denied|cancel/i.test(m) ? tr("You declined in your wallet.") : m || tr("Could not sign."));
       if (/reject|denied|cancel/i.test(m)) await decline();
     } finally {
       setBusy(false);
@@ -119,17 +121,16 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
       <div className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <span className="w-10 h-10 rounded-xl bg-[#f2f4f7] flex items-center justify-center"><Laptop size={19} /></span>
-          <button type="button" aria-label="Decline" onClick={decline} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center"><X size={16} /></button>
+          <button type="button" aria-label={tr("Decline")} onClick={decline} className="w-8 h-8 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center"><X size={16} /></button>
         </div>
-        <h2 id="link-approve-title" className="mt-3 text-[17px] font-semibold text-[#15171c]">{purpose.title}</h2>
-        <p className="mt-1 text-[13px] text-[#4a505c]"><strong>{current.req.deviceLabel}</strong> · linked computer</p>
-        <p className="mt-3 text-[14px] leading-[1.55] text-[#4a505c]">{purpose.body}</p>
-        <p className="mt-3 text-[12px] text-[#727a88] flex items-center gap-1.5"><ShieldCheck size={13} /> Sent end-to-end encrypted. Not this computer? Decline and unlink it in Settings → Linked devices.</p>
+        <h2 id="link-approve-title" className="mt-3 text-[17px] font-semibold text-[#15171c]">{tr(purpose.title)}</h2>
+        <p className="mt-1 text-[13px] text-[#4a505c]">{tr("{0} · linked computer", { 0: <strong>{current.req.deviceLabel}</strong> })}</p>
+        <p className="mt-3 text-[14px] leading-[1.55] text-[#4a505c]">{tr(purpose.body)}</p>
+        <p className="mt-3 text-[12px] text-[#727a88] flex items-center gap-1.5"><ShieldCheck size={13} />{" "}{tr("Sent end-to-end encrypted. Not this computer? Decline and unlink it in Settings → Linked devices.")}</p>
         <div className="mt-5 flex gap-2">
-          <button type="button" onClick={decline} disabled={busy} className="flex-1 h-11 rounded-xl border border-[#e4e7ec] text-[14px] hover:bg-[#f2f4f7]">Decline</button>
+          <button type="button" onClick={decline} disabled={busy} className="flex-1 h-11 rounded-xl border border-[#e4e7ec] text-[14px] hover:bg-[#f2f4f7]">{tr("Decline")}</button>
           <button type="button" onClick={approve} disabled={busy} className="flex-1 h-11 rounded-xl bg-[#15171c] text-white text-[14px] font-medium flex items-center justify-center gap-2">
-            {busy && <Loader2 size={15} className="animate-spin" />} Approve
-          </button>
+            {tr("{value} Approve", { value: busy && <Loader2 size={15} className="animate-spin" /> })}</button>
         </div>
       </div>
     </div>

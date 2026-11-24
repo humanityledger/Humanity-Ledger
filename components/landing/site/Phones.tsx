@@ -9,6 +9,7 @@ import type { Screen } from '@/lib/landing/chapters';
 import type { MockupId } from '@/lib/landing/mockups';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { DeviceScreen, PhotoMockup } from './PhotoMockup';
+import { getT } from '@/lib/i18n/server';
 
 const Lock = ({ size = 11 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5.2a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>
@@ -29,22 +30,23 @@ function AppBar({ title, back }: { title: string; back?: boolean }) {
   );
 }
 
-function ProfileScreen() {
+async function ProfileScreen() {
+  const tr = await getT();
   return (
     <div className={s.scr}>
-      <AppBar title="Profile" />
+      <AppBar title={tr("Profile")} />
       <div className={s.profile}>
         <Avatar t="AM" tone={1} size={76} />
-        <b className={s.profName}>Amara</b>
-        <span className={s.handle}>@amara</span>
+        <b className={s.profName}>{tr("Amara")}</b>
+        <span className={s.handle}>{tr("@amara")}</span>
         <div className={s.qrCard}>
-          <div className={s.qrBox}><BrandedQr value="https://ledgerchat.org" title="QR code for ledgerchat.org" /></div>
-          <span>Scan to start a private chat</span>
+          <div className={s.qrBox}><BrandedQr value={tr("https://ledgerchat.org")} title={tr("QR code for ledgerchat.org")} /></div>
+          <span>{tr("Scan to start a private chat")}</span>
         </div>
-        <span className={s.pillBtn}>Share profile</span>
+        <span className={s.pillBtn}>{tr("Share profile")}</span>
         <div className={s.kvList}>
-          <div><span>Account</span><b>Your wallet</b></div>
-          <div><span>Phone number</span><b>Not needed</b></div>
+          <div><span>{tr("Account")}</span><b>{tr("Your wallet")}</b></div>
+          <div><span>{tr("Phone number")}</span><b>{tr("Not needed")}</b></div>
         </div>
       </div>
     </div>
@@ -60,41 +62,43 @@ const CHATS = [
   { n: 'Lena', p: 'Thank you for the call', t: 'Mon', tone: 6 },
 ];
 
-function ChatsScreen() {
+async function ChatsScreen() {
+  const tr = await getT();
   return (
     <div className={s.scr}>
       <div className={s.chatsHead}>
-        <b>Chats</b>
-        <span className={s.search}>Search or start a new chat</span>
+        <b>{tr("Chats")}</b>
+        <span className={s.search}>{tr("Search or start a new chat")}</span>
       </div>
       <ul className={s.chatList}>
         {CHATS.map((c) => (
           <li key={c.n}>
             <Avatar t={c.n.split(' ').map((w) => w[0]).join('').slice(0, 2)} tone={c.tone} size={42} />
             <span className={s.chatMain}>
-              <b>{c.n}</b>
-              <span>{c.p}</span>
+              <b>{tr(c.n)}</b>
+              <span>{tr(c.p)}</span>
             </span>
             <span className={s.chatMeta}>
-              <span>{c.t}</span>
-              {c.unread ? <i>{c.unread}</i> : null}
+              <span>{tr(c.t)}</span>
+              {c.unread ? <i>{tr(c.unread)}</i> : null}
             </span>
           </li>
         ))}
       </ul>
-      <div className={s.e2eFoot}><Lock /> Messages are end-to-end encrypted</div>
+      <div className={s.e2eFoot}><Lock />{" "}{tr("Messages are end-to-end encrypted")}</div>
     </div>
   );
 }
 
-function CallScreen() {
+async function CallScreen() {
+  const tr = await getT();
   return (
     <div className={`${s.scr} ${s.callScr}`}>
-      <div className={s.callTop}><Lock /> Encrypted in transit, device to device</div>
+      <div className={s.callTop}><Lock />{" "}{tr("Encrypted in transit, device to device")}</div>
       <div className={s.callWho}>
         <span className={s.callRing}><Avatar t="J" tone={2} size={104} /></span>
-        <b>Jonas</b>
-        <span>Video call, 04:12</span>
+        <b>{tr("Jonas")}</b>
+        <span>{tr("Video call, 04:12")}</span>
       </div>
       <div className={s.selfView} aria-hidden="true"><Avatar t="A" tone={1} size={40} /></div>
       <div className={s.callKeys} aria-hidden="true">
@@ -106,53 +110,55 @@ function CallScreen() {
   );
 }
 
-function PayScreen() {
+async function PayScreen() {
+  const tr = await getT();
   return (
     <div className={`${s.scr} ${s.sheetScr}`}>
-      <AppBar title="Jonas" back />
+      <AppBar title={tr("Jonas")} back />
       <div className={s.thread} aria-hidden="true">
-        <span className={`${s.mini} ${s.miniA}`}>The invoice is in your inbox.</span>
-        <span className={`${s.mini} ${s.miniB}`}>Paying now.</span>
+        <span className={`${s.mini} ${s.miniA}`}>{tr("The invoice is in your inbox.")}</span>
+        <span className={`${s.mini} ${s.miniB}`}>{tr("Paying now.")}</span>
       </div>
       <div className={s.sheet}>
         <i className={s.grab} />
-        <b className={s.sheetTitle}>Send privately</b>
-        <div className={s.amount}>25.00 <small>USDC</small></div>
+        <b className={s.sheetTitle}>{tr("Send privately")}</b>
+        <div className={s.amount}>25.00 <small>{tr("USDC")}</small></div>
         <div className={s.toRow}>
           <Avatar t="J" tone={2} size={30} />
-          <span><b>Jonas</b><span className={s.verified}><Check /> Address verified for this chat</span></span>
+          <span><b>{tr("Jonas")}</b><span className={s.verified}><Check />{" "}{tr("Address verified for this chat")}</span></span>
         </div>
         <div className={s.kvList}>
-          <div><span>Amount</span><b>Hidden on the network</b></div>
-          <div><span>Recipient</span><b>Hidden on the network</b></div>
-          <div><span>Network fee</span><b>Paid publicly</b></div>
+          <div><span>{tr("Amount")}</span><b>{tr("Hidden on the network")}</b></div>
+          <div><span>{tr("Recipient")}</span><b>{tr("Hidden on the network")}</b></div>
+          <div><span>{tr("Network fee")}</span><b>{tr("Paid publicly")}</b></div>
         </div>
-        <span className={s.sendBtn}>Send privately</span>
+        <span className={s.sendBtn}>{tr("Send privately")}</span>
       </div>
     </div>
   );
 }
 
-function FileScreen() {
+async function FileScreen() {
+  const tr = await getT();
   return (
     <div className={s.scr}>
-      <AppBar title="Studio" back />
+      <AppBar title={tr("Studio")} back />
       <div className={s.thread}>
-        <span className={`${s.mini} ${s.miniA}`}>Can you send the final cut?</span>
+        <span className={`${s.mini} ${s.miniA}`}>{tr("Can you send the final cut?")}</span>
         <div className={`${s.fileCard} ${s.fileMe}`}>
           <span className={s.fileIcon} aria-hidden="true" />
           <span className={s.fileMain}>
-            <b>final-cut.mov</b>
-            <span><Lock /> 14.2 GB, encrypting on this device</span>
+            <b>{tr("final-cut.mov")}</b>
+            <span><Lock />{" "}{tr("14.2 GB, encrypting on this device")}</span>
             <span className={s.bar}><i style={{ width: '62%' }} /></span>
           </span>
         </div>
-        <span className={`${s.mini} ${s.miniA}`}>And the dataset is here.</span>
+        <span className={`${s.mini} ${s.miniA}`}>{tr("And the dataset is here.")}</span>
         <div className={s.fileCard}>
           <span className={s.fileIcon} aria-hidden="true" />
           <span className={s.fileMain}>
-            <b>survey-2026.zip</b>
-            <span><Lock /> 3.8 GB, end-to-end encrypted</span>
+            <b>{tr("survey-2026.zip")}</b>
+            <span><Lock />{" "}{tr("3.8 GB, end-to-end encrypted")}</span>
           </span>
           <span className={s.dl} aria-hidden="true">↓</span>
         </div>
@@ -161,18 +167,19 @@ function FileScreen() {
   );
 }
 
-function TimerScreen() {
+async function TimerScreen() {
+  const tr = await getT();
   return (
     <div className={`${s.scr} ${s.sheetScr}`}>
-      <AppBar title="Rafael" back />
+      <AppBar title={tr("Rafael")} back />
       <div className={s.thread} aria-hidden="true">
-        <span className={s.sysNote}>Messages disappear 1 hour after they are read</span>
-        <span className={`${s.mini} ${s.miniA}`}>The door code is in the note.</span>
-        <span className={`${s.mini} ${s.miniB}`}>Got it. Deleting soon.</span>
+        <span className={s.sysNote}>{tr("Messages disappear 1 hour after they are read")}</span>
+        <span className={`${s.mini} ${s.miniA}`}>{tr("The door code is in the note.")}</span>
+        <span className={`${s.mini} ${s.miniB}`}>{tr("Got it. Deleting soon.")}</span>
       </div>
       <div className={s.sheet}>
         <i className={s.grab} />
-        <b className={s.sheetTitle}>Disappearing messages</b>
+        <b className={s.sheetTitle}>{tr("Disappearing messages")}</b>
         <ul className={s.options}>
           {['Off', '30 seconds', '5 minutes', '1 hour', '1 day'].map((o) => (
             <li key={o} data-on={o === '1 hour'}>{o}<i /></li>

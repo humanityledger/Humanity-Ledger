@@ -16,6 +16,7 @@ import type { Activity } from '@/lib/aztec/wallet/history';
 import { explorerTxUrl } from '@/lib/aztec/wallet/config';
 import { activityAmount, filterActivity, groupByDay, isInbound, isInFlight, type ActivityFilter } from './walletLogic';
 import { Card, FOCUS, INK, INK_2, INK_3, MASK, OK, BAD, Pill, shortHex, type PillTone } from './WalletUI';
+import { useT } from '@/lib/i18n/client';
 
 export { activityAmount, filterActivity, groupByDay, isInbound, isInFlight };
 export type { ActivityFilter };
@@ -53,6 +54,7 @@ const FILTERS: Array<{ value: ActivityFilter; label: string }> = [
 ];
 
 export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; hidden?: boolean; emptyHint: string }) {
+  const t = useT();
   const [filter, setFilter] = useState<ActivityFilter>('all');
   const [limit, setLimit] = useState(30);
   const shown = useMemo(() => filterActivity(items, filter), [items, filter]);
@@ -60,16 +62,16 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
   const inFlight = items.filter(isInFlight).length;
 
   return (
-    <Card label="Recent transactions" className="overflow-hidden">
+    <Card label={t("Recent transactions")} className="overflow-hidden">
       <div className="px-5 pt-4 pb-3 flex items-center justify-between gap-3">
         <h3 className="text-[17px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>
-          Recent transactions
+          {t("Recent transactions")}
         </h3>
-        {inFlight > 0 && <Pill tone="wait">{inFlight} in progress</Pill>}
+        {inFlight > 0 && <Pill tone="wait">{t("{inFlight} in progress", { inFlight })}</Pill>}
       </div>
 
       {items.length > 0 && (
-        <div className="px-5 pb-3 flex gap-2 overflow-x-auto scrollbar-none" role="radiogroup" aria-label="Show">
+        <div className="px-5 pb-3 flex gap-2 overflow-x-auto scrollbar-none" role="radiogroup" aria-label={t("Show")}>
           {FILTERS.map((f) => {
             const on = filter === f.value;
             return (
@@ -83,7 +85,7 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
                   on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f7f8fa]'
                 }`}
               >
-                {f.label}
+                {t(f.label)}
               </button>
             );
           })}
@@ -96,7 +98,7 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
             <Clock size={20} strokeWidth={1.8} style={{ color: INK_2 }} />
           </span>
           <span className="text-[15px] font-semibold" style={{ color: INK }}>
-            No transactions yet
+            {t("No transactions yet")}
           </span>
           <span className="text-[14px] max-w-[260px] leading-snug" style={{ color: INK_3 }}>
             {emptyHint}
@@ -104,7 +106,7 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
         </div>
       ) : shown.length === 0 ? (
         <p className="px-5 pb-6 text-[14px]" style={{ color: INK_3 }}>
-          Nothing here for this filter.
+          {t("Nothing here for this filter.")}
         </p>
       ) : (
         <div className="pb-2">
@@ -127,9 +129,7 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
                 onClick={() => setLimit((l) => l + 30)}
                 className={`w-full min-h-[44px] rounded-xl text-[14px] font-semibold bg-[#f7f8fa] hover:bg-[#eef0f3] ${FOCUS}`}
                 style={{ color: INK }}
-              >
-                Show {Math.min(30, shown.length - limit)} more
-              </button>
+              >{t("Show {min} more", { min: Math.min(30, shown.length - limit) })}</button>
             </div>
           )}
         </div>
@@ -139,9 +139,10 @@ export function ActivityList({ items, hidden, emptyHint }: { items: Activity[]; 
 }
 
 function KindIcon({ a }: { a: Activity }) {
+  const t = useT();
   const common = { size: 17, strokeWidth: 2 } as const;
-  if (isInFlight(a)) return <Clock {...common} aria-label="In progress" />;
-  if (a.status === 'failed') return <AlertTriangle {...common} style={{ color: BAD }} aria-label="Failed" />;
+  if (isInFlight(a)) return <Clock {...common} aria-label={t("In progress")} />;
+  if (a.status === 'failed') return <AlertTriangle {...common} style={{ color: BAD }} aria-label={t("Failed")} />;
   if (a.kind === 'shield') return <Lock {...common} aria-hidden="true" />;
   if (a.kind === 'unshield') return <LockOpen {...common} aria-hidden="true" />;
   if (isInbound(a)) return <ArrowDownLeft {...common} aria-hidden="true" />;
@@ -149,6 +150,7 @@ function KindIcon({ a }: { a: Activity }) {
 }
 
 function ActivityRow({ a, hidden }: { a: Activity; hidden?: boolean }) {
+  const t = useT();
   const amount = activityAmount(a);
   const plus = isInbound(a);
   const time = new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -163,17 +165,17 @@ function ActivityRow({ a, hidden }: { a: Activity; hidden?: boolean }) {
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-[15px] font-semibold truncate" style={{ color: INK }}>
-          {KIND_LABEL[a.kind]}
+          {t(KIND_LABEL[a.kind])}
         </span>
         {a.status !== 'settled' && (
           <span className="block mt-1">
-            <Pill tone={STATUS_TONE[a.status]}>{STATUS_LABEL[a.status]}</Pill>
+            <Pill tone={STATUS_TONE[a.status]}>{t(STATUS_LABEL[a.status])}</Pill>
           </span>
         )}
         <span className="block text-[13px] leading-snug mt-0.5 truncate" style={{ color: INK_3 }}>
           {a.counterparty && (a.kind === 'send' || a.kind === 'receive' || a.kind === 'unshield') ? `${a.kind === 'receive' ? 'From' : 'To'} ${shortHex(a.counterparty)} · ` : ''}
           {time}
-          {a.blockNumber ? ` · block ${a.blockNumber.toLocaleString()}` : ''}
+          {a.blockNumber ? t(" · block {blockNumber}", { blockNumber: a.blockNumber.toLocaleString() }) : ''}
         </span>
         {reason && (
           <span className="block text-[13px] leading-snug mt-1 break-words" style={{ color: a.status === 'failed' ? BAD : INK_2 }}>
@@ -194,9 +196,9 @@ function ActivityRow({ a, hidden }: { a: Activity; hidden?: boolean }) {
             rel="noopener noreferrer"
             className={`inline-flex items-center gap-1 min-h-[36px] text-[12.5px] font-medium underline-offset-2 hover:underline rounded ${FOCUS}`}
             style={{ color: INK_2 }}
-            aria-label={`Open ${KIND_LABEL[a.kind].toLowerCase()} transaction in the explorer`}
+            aria-label={t("Open {toLowerCase} transaction in the explorer", { toLowerCase: KIND_LABEL[a.kind].toLowerCase() })}
           >
-            Explorer <ExternalLink size={11} aria-hidden="true" />
+            {t("Explorer")}{" "}<ExternalLink size={11} aria-hidden="true" />
           </a>
         )}
       </span>
@@ -209,10 +211,11 @@ function ActivityRow({ a, hidden }: { a: Activity; hidden?: boolean }) {
  * the balance is the total, the notes are how it is made up.
  */
 export function NotesCard({ items, hidden }: { items: Activity[]; hidden?: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const notes = useMemo(() => items.filter((a) => (a.kind === 'receive' || a.kind === 'shield') && a.status === 'settled'), [items]);
   return (
-    <Card label="Shielded notes" className="overflow-hidden">
+    <Card label={t("Shielded notes")} className="overflow-hidden">
       <button
         type="button"
         aria-expanded={open}
@@ -223,11 +226,9 @@ export function NotesCard({ items, hidden }: { items: Activity[]; hidden?: boole
           <Layers size={17} strokeWidth={2} style={{ color: INK }} />
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block text-[15px] font-semibold" style={{ color: INK }}>
-            Shielded notes ({notes.length})
-          </span>
+          <span className="block text-[15px] font-semibold" style={{ color: INK }}>{t("Shielded notes ({length})", { length: notes.length })}</span>
           <span className="block text-[13px]" style={{ color: INK_3 }}>
-            Only this browser can read them
+            {t("Only this browser can read them")}
           </span>
         </span>
         <ChevronDown size={18} className={`transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: INK_3 }} aria-hidden="true" />
@@ -235,12 +236,11 @@ export function NotesCard({ items, hidden }: { items: Activity[]; hidden?: boole
       {open && (
         <div className="border-t border-[#eef0f3]">
           <p className="px-5 pt-3 text-[13px] leading-relaxed" style={{ color: INK_2 }}>
-            Private notes this wallet has received or created by shielding. Notes you have since spent still appear here; your balance is always
-            the current total.
+            {t("Private notes this wallet has received or created by shielding. Notes you have since spent still appear here; your balance is always the current total.")}
           </p>
           {notes.length === 0 ? (
             <p className="px-5 py-4 text-[14px]" style={{ color: INK_3 }}>
-              No notes yet.
+              {t("No notes yet.")}
             </p>
           ) : (
             <ul className="py-1">
@@ -250,11 +250,10 @@ export function NotesCard({ items, hidden }: { items: Activity[]; hidden?: boole
                     {hidden ? MASK : activityAmount(n)}
                   </span>
                   <span className="truncate" style={{ color: INK_3 }}>
-                    {n.kind === 'shield' ? 'from shielding' : `from ${shortHex(n.counterparty)}`}
+                    {n.kind === 'shield' ? t("from shielding") : t("from {shortHex}", { shortHex: shortHex(n.counterparty) })}
                   </span>
                   {n.blockNumber && (
-                    <span className="ml-auto shrink-0" style={{ color: INK_3 }}>
-                      block {n.blockNumber.toLocaleString()}
+                    <span className="ml-auto shrink-0" style={{ color: INK_3 }}>{t("block {blockNumber}", { blockNumber: n.blockNumber.toLocaleString() })}
                     </span>
                   )}
                 </li>

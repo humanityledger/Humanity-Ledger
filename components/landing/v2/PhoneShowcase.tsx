@@ -39,6 +39,7 @@ import { WALLPAPERS } from "@/lib/chat/wallpapers";
 import { BUBBLE_STYLES } from "@/lib/chat/bubbleStyles";
 import "@/app/ledger-chat-settings.css";
 import s from "./PhoneShowcase.module.css";
+import { useT } from '@/lib/i18n/client';
 
 interface Phone {
   id: string;
@@ -215,6 +216,7 @@ function PhoneTile({
 }
 
 export function PhoneShowcase() {
+  const tr = useT();
   const [mode, setMode] = useState<"scroll" | "stack">("stack");
   const [reduced, setReduced] = useState(false);
   const [progress, setProgress] = useState<number[]>(() => PHONES.map(() => 0));
@@ -380,11 +382,11 @@ export function PhoneShowcase() {
                 <button type="button" className={s.stepBtn} onClick={() => go(i)} aria-current={i === active ? "step" : undefined}>
                   <span className={s.stepHead}>
                     <span className={s.stepNum}>{String(i + 1).padStart(2, "0")}</span>
-                    <span className={s.stepTitle}>{ph.title}</span>
+                    <span className={s.stepTitle}>{tr(ph.title)}</span>
                   </span>
                   <span className={s.stepBody}>
                     <span>
-                      <span className={s.stepText}>{ph.text}</span>
+                      <span className={s.stepText}>{tr(ph.text)}</span>
                     </span>
                   </span>
                 </button>
@@ -407,10 +409,10 @@ export function PhoneShowcase() {
               <figcaption className={s.figcap}>
                 <span className={s.figNum}>
                   {String(i + 1).padStart(2, "0")}
-                  <span className={s.figLabel}>{ph.label}</span>
+                  <span className={s.figLabel}>{tr(ph.label)}</span>
                 </span>
-                <span className={s.figTitle}>{ph.title}</span>
-                <span className={s.figText}>{ph.text}</span>
+                <span className={s.figTitle}>{tr(ph.title)}</span>
+                <span className={s.figText}>{tr(ph.text)}</span>
               </figcaption>
             </figure>
           ))}

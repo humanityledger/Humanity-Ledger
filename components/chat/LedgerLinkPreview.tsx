@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Link2, FileText, Image as ImageIcon, ExternalLink, ChevronRight } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 // ─── Link Preview Types ──────────────────────────────────────────────────────
 export interface LinkPreviewData {
@@ -21,6 +22,7 @@ interface LinkPreviewCardProps {
 }
 
 export function LinkPreviewCard({ preview, compact = false, onDismiss }: LinkPreviewCardProps) {
+  const t = useT();
   const [imageError, setImageError] = useState(false);
 
   const domain = (() => {
@@ -45,7 +47,7 @@ export function LinkPreviewCard({ preview, compact = false, onDismiss }: LinkPre
           <div className="relative w-full h-32 bg-[#f2f4f7]">
             <img
               src={preview.image}
-              alt={preview.title || 'Link preview'}
+              alt={preview.title || t("Link preview")}
               className="w-full h-full object-cover"
               onError={() => setImageError(true)}
             />

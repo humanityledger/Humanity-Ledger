@@ -11,6 +11,7 @@
  * Neither message moves funds, approves a token or sends a transaction.
  */
 import React from 'react';
+import { useT } from '@/lib/i18n/client';
 
 type Row = { k: string; v: string; mono?: boolean; ok?: boolean; warn?: boolean };
 
@@ -73,20 +74,21 @@ export function SignaturePreview({
   host?: string;
   tone?: 'light';
 }) {
+  const tr = useT();
   const [open, setOpen] = React.useState(false);
   const rows = (kind === 'sign-in' ? readSiwe(text, host) : null) ?? readUnlock(text);
   const mismatch = rows.some((r) => r.warn);
   return (
     <section
-      aria-label="What your wallet will sign"
+      aria-label={tr("What your wallet will sign")}
       style={{ width: '100%', textAlign: 'left', border: '1px solid #e4e7ec', borderRadius: 12, background: '#fff', overflow: 'hidden' }}
       data-tone={tone}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', borderBottom: '1px solid #e4e7ec', background: '#f7f8fa' }}>
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: '#15171c' }}>What your wallet will sign</span>
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: '#15171c' }}>{tr("What your wallet will sign")}</span>
         <span style={{ fontSize: 12, color: '#0a7a55', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#10b981" /><path d="M4.8 8.2l2.1 2.1 4.3-4.6" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          Free, no transaction
+          {tr("Free, no transaction")}
         </span>
       </div>
       <dl style={{ margin: 0, padding: '4px 14px' }}>
@@ -95,19 +97,19 @@ export function SignaturePreview({
             <dt style={{ fontSize: 13, color: '#5b606b' }}>{r.k}</dt>
             <dd style={{ margin: 0, fontSize: r.mono ? 12.5 : 13.5, fontFamily: r.mono ? 'var(--font-aztec-mono), ui-monospace, monospace' : undefined, color: r.warn ? '#b42318' : '#15171c', overflowWrap: 'anywhere', display: 'flex', alignItems: 'center', gap: 6 }}>
               {r.v}
-              {r.ok ? <span style={{ fontSize: 12, color: '#0a7a55' }}>matches this page</span> : null}
+              {r.ok ? <span style={{ fontSize: 12, color: '#0a7a55' }}>{tr("matches this page")}</span> : null}
             </dd>
           </div>
         ))}
       </dl>
       {mismatch ? (
         <p role="alert" style={{ margin: 0, padding: '10px 14px', fontSize: 13, color: '#b42318', background: '#fff5f4', borderTop: '1px solid #fecdca' }}>
-          The website in this message is not the page you are on. Do not sign it.
+          {tr("The website in this message is not the page you are on. Do not sign it.")}
         </p>
       ) : null}
       <div style={{ padding: '10px 14px 12px', display: 'grid', gap: 8 }}>
         <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: '#5b606b' }}>
-          Signing proves this account is yours. It does not move funds, approve a token or send a transaction.
+          {tr("Signing proves this account is yours. It does not move funds, approve a token or send a transaction.")}
         </p>
         <button
           type="button"
@@ -115,7 +117,7 @@ export function SignaturePreview({
           aria-expanded={open}
           style={{ justifySelf: 'start', border: 0, background: 'none', padding: 0, font: 'inherit', fontSize: 13, fontWeight: 600, color: '#5200ff', cursor: 'pointer' }}
         >
-          {open ? 'Hide the exact text' : 'Show the exact text'}
+          {open ? tr("Hide the exact text") : tr("Show the exact text")}
         </button>
         {open ? (
           <pre style={{ margin: 0, padding: 12, maxHeight: 220, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, lineHeight: 1.55, fontFamily: 'var(--font-aztec-mono), ui-monospace, monospace', color: '#15171c', background: '#f7f8fa', border: '1px solid #e4e7ec', borderRadius: 8 }}>

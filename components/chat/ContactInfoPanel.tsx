@@ -11,6 +11,7 @@ import { setSynced, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/
 import { WALLPAPER_OPTIONS } from './WallpaperPickerSheet';
 import { isAgreementMessage } from '@/lib/aztec/agreement-message';
 import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Contact info for one chat, in two places that share one body (ContactInfoSections):
@@ -110,7 +111,8 @@ const Row = ({
   danger?: boolean;
   toggle?: boolean;
   compact?: boolean;
-}) => (
+}) => {
+  return ((
   <button
     type="button"
     onClick={onTap}
@@ -137,7 +139,8 @@ const Row = ({
       {toggle !== undefined ? <Toggle value={toggle} /> : onTap && !danger ? <ChevronRight size={16} strokeWidth={1.75} className="text-[#c9ced6]" aria-hidden="true" /> : null}
     </span>
   </button>
-);
+));
+};
 
 const Group = ({ title, footer, variant, children }: { title?: string; footer?: string; variant: 'drawer' | 'column'; children: React.ReactNode }) => (
   <section aria-label={title} className={variant === 'column' ? '' : 'mb-5'}>
@@ -151,7 +154,9 @@ const Group = ({ title, footer, variant, children }: { title?: string; footer?: 
   </section>
 );
 
-const Modal = ({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) => (
+const Modal = ({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) => {
+  const tr = useT();
+  return ((
   <div className="fixed inset-0 z-[250002] flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
     <motion.div
       role="dialog"
@@ -165,14 +170,15 @@ const Modal = ({ title, onClose, children }: { title: string; onClose: () => voi
     >
       <div className="flex items-center justify-between px-5 h-[60px] border-b border-[#eef0f3]">
         <h3 className="font-semibold text-[16px] text-[#15171c]">{title}</h3>
-        <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-[#15171c] hover:bg-[#f2f4f7] transition-colors">
+        <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-[#15171c] hover:bg-[#f2f4f7] transition-colors">
           <X size={18} strokeWidth={1.75} />
         </button>
       </div>
       <div className="p-5 overflow-y-auto bg-[#f7f8fa]">{children}</div>
     </motion.div>
   </div>
-);
+));
+};
 
 // ─── Sections ────────────────────────────────────────────────────────────────
 
@@ -193,6 +199,7 @@ export interface ContactInfoSectionsProps {
 export function ContactInfoSections({
   peerAddress, displayName, myAddress, messages = [], variant, onBlock, onClearChat, isMuted: mutedProp, onToggleMute, client,
 }: ContactInfoSectionsProps) {
+  const tr = useT();
   const key = (peerAddress || '').toLowerCase();
   const compact = variant === 'column';
   const profile = usePeerProfile(peerAddress);
@@ -247,14 +254,14 @@ export function ContactInfoSections({
   const toggleMute = () => {
     if (controlled) {
       onToggleMute!();
-      setToast(isMuted ? 'Notifications unmuted' : 'Notifications muted');
+      setToast(isMuted ? tr("Notifications unmuted") : tr("Notifications muted"));
       return;
     }
     const v = !mutedLocal;
     setMutedLocal(v);
     syncFlag('muted', v);
     try { if (v) localStorage.setItem('ledger_muted_' + key, '1'); else localStorage.removeItem('ledger_muted_' + key); } catch {}
-    setToast(v ? 'Notifications muted' : 'Notifications unmuted');
+    setToast(v ? tr("Notifications muted") : tr("Notifications unmuted"));
   };
 
   const toggleLock = () => {
@@ -262,7 +269,7 @@ export function ContactInfoSections({
     setLockChat(v);
     syncFlag('locked', v);
     try { if (v) localStorage.setItem('ledger_locked_' + key, '1'); else localStorage.removeItem('ledger_locked_' + key); } catch {}
-    setToast(v ? 'Chat locked. Opening it asks for your PIN' : 'Chat unlocked');
+    setToast(v ? tr("Chat locked. Opening it asks for your PIN") : tr("Chat unlocked"));
   };
 
   const toggleFav = () => {
@@ -274,7 +281,7 @@ export function ContactInfoSections({
       else localStorage.setItem('ledger_favourites', JSON.stringify(Array.from(new Set([...favs, key]))));
     } catch {}
     setIsFav(!isFav);
-    setToast(isFav ? 'Removed from favorites' : 'Added to favorites');
+    setToast(isFav ? tr("Removed from favorites") : tr("Added to favorites"));
   };
 
   const exportChat = () => {
@@ -285,7 +292,7 @@ export function ContactInfoSections({
         const mine = m.isMe || (m.senderAddress || '').toLowerCase() === (myAddress || '').toLowerCase();
         return `[${t}] ${mine ? 'Me' : displayName}: ${String(m.content).replace(/^__BURN_\d+__::/, '')}`;
       });
-    if (!lines.length) { setToast('Nothing to export yet'); return; }
+    if (!lines.length) { setToast(tr("Nothing to export yet")); return; }
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -293,11 +300,11 @@ export function ContactInfoSections({
     a.download = `chat-${key.slice(0, 8)}-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    setToast('Chat exported as a text file');
+    setToast(tr("Chat exported as a text file"));
   };
 
   const copyAddress = () => {
-    navigator.clipboard?.writeText(peerAddress).then(() => setToast('Wallet address copied'), () => setToast('Copy is not available here'));
+    navigator.clipboard?.writeText(peerAddress).then(() => setToast(tr("Wallet address copied")), () => setToast(tr("Copy is not available here")));
   };
 
   const chooseTimer = (opt: 'off' | '24h' | '7d' | '90d') => {
@@ -305,7 +312,7 @@ export function ContactInfoSections({
     try { localStorage.setItem('ledger_disappearing_' + key, opt); } catch {}
     if (myAddress) setSynced(myAddress, { [`disappearing:${key}`]: opt === 'off' ? null : opt });
     setModal(null);
-    setToast(opt === 'off' ? 'Timer is off' : 'Timer saved');
+    setToast(opt === 'off' ? tr("Timer is off") : tr("Timer saved"));
   };
 
   const g = { variant } as const;
@@ -313,33 +320,33 @@ export function ContactInfoSections({
   return (
     <>
       <div className={compact ? 'flex flex-col gap-5' : 'flex flex-col'}>
-        <Group title="About" {...g}>
+        <Group title={tr("About")} {...g}>
           {profile?.bio && <p className="py-3 text-[14px] leading-relaxed text-[#344054] border-b border-[#eef0f3]">{profile.bio}</p>}
-          <Row compact={compact} icon={<Copy {...ICON} />} label="Wallet address" sublabel="Tap to copy" value={shortAddr(peerAddress)} onTap={copyAddress} />
-          <Row compact={compact} icon={<Star {...ICON} />} label="Favorite contact" toggle={isFav} onTap={toggleFav} />
+          <Row compact={compact} icon={<Copy {...ICON} />} label={tr("Wallet address")} sublabel={tr("Tap to copy")} value={shortAddr(peerAddress)} onTap={copyAddress} />
+          <Row compact={compact} icon={<Star {...ICON} />} label={tr("Favorite contact")} toggle={isFav} onTap={toggleFav} />
         </Group>
 
-        <Group title="Media and files" {...g}>
-          <Row compact={compact} icon={<ImageIcon {...ICON} />} label="Photos and files" value={String(shared.files)} onTap={() => setModal('media')} />
-          <Row compact={compact} icon={<Wallet {...ICON} />} label="Payments" value={String(shared.payments)} />
-          <Row compact={compact} icon={<LinkIcon {...ICON} />} label="Links" value={String(shared.links)} />
+        <Group title={tr("Media and files")} {...g}>
+          <Row compact={compact} icon={<ImageIcon {...ICON} />} label={tr("Photos and files")} value={String(shared.files)} onTap={() => setModal('media')} />
+          <Row compact={compact} icon={<Wallet {...ICON} />} label={tr("Payments")} value={String(shared.payments)} />
+          <Row compact={compact} icon={<LinkIcon {...ICON} />} label={tr("Links")} value={String(shared.links)} />
         </Group>
 
-        <Group title="Personalization" {...g}>
-          <Row compact={compact} icon={<Palette {...ICON} />} label="Chat wallpaper" sublabel="A background for this chat only" onTap={() => setModal('wallpaper')} />
+        <Group title={tr("Personalization")} {...g}>
+          <Row compact={compact} icon={<Palette {...ICON} />} label={tr("Chat wallpaper")} sublabel={tr("A background for this chat only")} onTap={() => setModal('wallpaper')} />
         </Group>
 
-        <Group title="Privacy" footer="Mute, timer and lock apply on every device signed in to this account." {...g}>
-          <Row compact={compact} icon={<Bell {...ICON} />} label="Mute notifications" toggle={isMuted} onTap={toggleMute} />
-          <Row compact={compact} icon={<Clock {...ICON} />} label="Disappearing messages" value={TIMER_LABEL[disappearing]} onTap={() => setModal('disappearing')} />
-          <Row compact={compact} icon={<Lock {...ICON} />} label="Lock chat with PIN" toggle={lockChat} onTap={toggleLock} />
-          <Row compact={compact} icon={<KeyRound {...ICON} />} label="Verify encryption" sublabel={wasVerified(peerAddress) ? 'Verified on this device. Check the safety number again' : 'Compare your safety number with them'} onTap={() => setModal('encryption')} />
+        <Group title={tr("Privacy")} footer="Mute, timer and lock apply on every device signed in to this account." {...g}>
+          <Row compact={compact} icon={<Bell {...ICON} />} label={tr("Mute notifications")} toggle={isMuted} onTap={toggleMute} />
+          <Row compact={compact} icon={<Clock {...ICON} />} label={tr("Disappearing messages")} value={tr(TIMER_LABEL[disappearing])} onTap={() => setModal('disappearing')} />
+          <Row compact={compact} icon={<Lock {...ICON} />} label={tr("Lock chat with PIN")} toggle={lockChat} onTap={toggleLock} />
+          <Row compact={compact} icon={<KeyRound {...ICON} />} label={tr("Verify encryption")} sublabel={wasVerified(peerAddress) ? tr("Verified on this device. Check the safety number again") : tr("Compare your safety number with them")} onTap={() => setModal('encryption')} />
         </Group>
 
-        <Group title="Actions" {...g}>
-          <Row compact={compact} icon={<Download {...ICON} />} label="Export chat" sublabel="Save the messages on this device as text" onTap={exportChat} />
-          {onClearChat && <Row compact={compact} icon={<Trash2 {...ICON} />} label="Clear chat" danger onTap={onClearChat} />}
-          <Row compact={compact} icon={<Ban {...ICON} />} label="Block contact" danger onTap={onBlock} />
+        <Group title={tr("Actions")} {...g}>
+          <Row compact={compact} icon={<Download {...ICON} />} label={tr("Export chat")} sublabel={tr("Save the messages on this device as text")} onTap={exportChat} />
+          {onClearChat && <Row compact={compact} icon={<Trash2 {...ICON} />} label={tr("Clear chat")} danger onTap={onClearChat} />}
+          <Row compact={compact} icon={<Ban {...ICON} />} label={tr("Block contact")} danger onTap={onBlock} />
         </Group>
       </div>
 
@@ -359,10 +366,10 @@ export function ContactInfoSections({
         )}
 
         {modal === 'disappearing' && (
-          <Modal title="Disappearing messages" onClose={() => setModal(null)}>
+          <Modal title={tr("Disappearing messages")} onClose={() => setModal(null)}>
             <div className="flex flex-col gap-2.5">
               <p className="text-[13px] text-[#727a88] mb-1 leading-relaxed">
-                New messages in this chat disappear for both of you after the time you choose. Messages already sent are not affected.
+                {tr("New messages in this chat disappear for both of you after the time you choose. Messages already sent are not affected.")}
               </p>
               {(['off', '24h', '7d', '90d'] as const).map((opt) => (
                 <button
@@ -372,7 +379,7 @@ export function ContactInfoSections({
                   aria-pressed={disappearing === opt}
                   className="flex items-center justify-between min-h-[52px] px-4 rounded-xl bg-white border border-[#e4e7ec] hover:border-[#15171c] transition-colors"
                 >
-                  <span className="text-[15px] font-semibold text-[#15171c]">{TIMER_LABEL[opt]}</span>
+                  <span className="text-[15px] font-semibold text-[#15171c]">{tr(TIMER_LABEL[opt])}</span>
                   <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#15171c]' : 'border-[#d0d5dd]'}`}>
                     {disappearing === opt && <span className="w-2.5 h-2.5 bg-[#15171c] rounded-full" />}
                   </span>
@@ -383,20 +390,20 @@ export function ContactInfoSections({
         )}
 
         {modal === 'media' && (
-          <Modal title="Photos and files" onClose={() => setModal(null)}>
+          <Modal title={tr("Photos and files")} onClose={() => setModal(null)}>
             <div className="flex flex-col items-center text-center gap-3 py-6">
               <span className="w-14 h-14 bg-white border border-[#e4e7ec] text-[#475467] rounded-full flex items-center justify-center">
                 <ImageIcon size={26} strokeWidth={1.75} aria-hidden="true" />
               </span>
-              <p className="text-[14px] text-[#15171c] font-medium">{shared.files ? `${shared.files} shared in this chat` : 'Nothing shared yet'}</p>
-              <p className="text-[13px] text-[#727a88] leading-relaxed">Photos, files and GIFs in the messages loaded on this device.</p>
+              <p className="text-[14px] text-[#15171c] font-medium">{shared.files ? tr("{files} shared in this chat", { files: shared.files }) : tr("Nothing shared yet")}</p>
+              <p className="text-[13px] text-[#727a88] leading-relaxed">{tr("Photos, files and GIFs in the messages loaded on this device.")}</p>
             </div>
           </Modal>
         )}
 
         {modal === 'wallpaper' && (
-          <Modal title="Chat wallpaper" onClose={() => setModal(null)}>
-            <p className="text-[13px] text-[#727a88] mb-3 leading-relaxed">Choose a background for your chat with {displayName}.</p>
+          <Modal title={tr("Chat wallpaper")} onClose={() => setModal(null)}>
+            <p className="text-[13px] text-[#727a88] mb-3 leading-relaxed">{tr("Choose a background for your chat with {displayName}.", { displayName })}</p>
             <div className="grid grid-cols-3 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
               {WALLPAPER_OPTIONS.map((opt) => (
                 <button
@@ -410,13 +417,13 @@ export function ContactInfoSections({
                       window.dispatchEvent(new CustomEvent('ledger_wallpaper_changed', { detail: { peer: key, bg: opt.background } }));
                     } catch {}
                     setModal(null);
-                    setToast(`Wallpaper updated for ${displayName}`);
+                    setToast(tr("Wallpaper updated for {displayName}", { displayName }));
                   }}
                   className="rounded-xl overflow-hidden border border-[#e4e7ec] hover:border-[#15171c] transition-colors text-left"
                 >
                   <div className="w-full h-14" style={opt.preview} />
                   <div className="bg-white px-1.5 py-1 text-center">
-                    <span className="text-[11px] font-medium text-[#15171c] truncate block">{opt.label}</span>
+                    <span className="text-[11px] font-medium text-[#15171c] truncate block">{tr(opt.label)}</span>
                   </div>
                 </button>
               ))}
@@ -460,12 +467,13 @@ interface ContactInfoPanelProps {
 export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   peerAddress, peerName, myAddress, messages = [], onClose, onVoiceCall, onVideoCall, onSearch, onBlock, onClearChat, isMuted, onToggleMute, client,
 }) => {
+  const tr = useT();
   const profile = usePeerProfile(peerAddress);
   const displayName = profile?.displayName || peerName || shortAddr(peerAddress);
   const quick = [
-    { label: 'Audio', icon: <Phone size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onVoiceCall },
-    { label: 'Video', icon: <Video size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onVideoCall },
-    { label: 'Search', icon: <Search size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onSearch },
+    { label: tr("Audio"), icon: <Phone size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onVoiceCall },
+    { label: tr("Video"), icon: <Video size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onVideoCall },
+    { label: tr("Search"), icon: <Search size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onSearch },
   ];
 
   return (
@@ -473,7 +481,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       <motion.div key="contact-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className="fixed inset-0 z-[250000] bg-black/25" aria-hidden="true" />
       <motion.aside
         role="dialog"
-        aria-label="Contact info"
+        aria-label={tr("Contact info")}
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
@@ -481,10 +489,10 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         className="fixed inset-y-0 right-0 z-[250001] w-full sm:w-[400px] flex flex-col bg-[#f7f8fa] border-l border-[#e4e7ec] pb-[env(safe-area-inset-bottom)]"
       >
         <div className="h-[60px] pt-[env(safe-area-inset-top)] box-content flex items-center gap-2 px-2 shrink-0 border-b border-[#e4e7ec] bg-white">
-          <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 flex items-center justify-center rounded-full text-[#475467] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
+          <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-11 h-11 flex items-center justify-center rounded-full text-[#475467] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
             <X size={22} strokeWidth={1.75} />
           </button>
-          <h2 className="text-[16px] font-semibold text-[#15171c]">Contact info</h2>
+          <h2 className="text-[16px] font-semibold text-[#15171c]">{tr("Contact info")}</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -498,7 +506,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               {quick.map((q) => (
                 <button key={q.label} type="button" onClick={q.onClick} className="h-[68px] rounded-2xl border border-[#e4e7ec] bg-white text-[#15171c] flex flex-col items-center justify-center gap-1.5 hover:bg-[#f7f8fa] transition-colors">
                   {q.icon}
-                  <span className="text-[12.5px] font-semibold leading-none">{q.label}</span>
+                  <span className="text-[12.5px] font-semibold leading-none">{tr(q.label)}</span>
                 </button>
               ))}
             </div>

@@ -12,12 +12,14 @@ import React, { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { openArchive, passphraseProblem, sealArchive } from '@/lib/backup/encrypted-archive';
 import { restoreChatHistory, snapshotChatHistory, type ChatHistorySnapshot } from '@/lib/chat/indexeddb';
+import { useT } from '@/lib/i18n/client';
 
 const FIELD = 'w-full h-12 rounded-xl border border-[#d0d5dd] px-4 text-[15px] text-[#15171c] outline-none focus:border-[#15171c]';
 const PRIMARY = 'w-full h-12 rounded-xl bg-[#15171c] text-white font-semibold text-[15px] disabled:opacity-50';
 const SECONDARY = 'w-full h-12 rounded-xl border border-[#d0d5dd] bg-white text-[#15171c] font-semibold text-[15px] disabled:opacity-50';
 
 export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; account?: string }) {
+  const t = useT();
   const [mode, setMode] = useState<'export' | 'restore'>('export');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -40,10 +42,10 @@ export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; 
       a.download = `ledger-chat-history-${new Date().toISOString().slice(0, 10)}.lcarchive`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      toast.success(`Exported ${snap.messages.length} messages, encrypted`);
+      toast.success(t("Exported {length} messages, encrypted", { length: snap.messages.length }));
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Export failed.');
+      setError(e instanceof Error ? e.message : t("Export failed."));
     } finally {
       setBusy(false);
     }
@@ -51,17 +53,17 @@ export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; 
 
   const doRestore = async () => {
     const file = fileRef.current?.files?.[0];
-    if (!file) { setError('Choose the archive file first.'); return; }
+    if (!file) { setError(t("Choose the archive file first.")); return; }
     setBusy(true);
     setError(null);
     try {
       const sealed = JSON.parse(await file.text());
       const snap = await openArchive<ChatHistorySnapshot>(sealed, pass);
       const n = await restoreChatHistory(snap, undefined, account);
-      toast.success(`Restored ${n.messages} messages in ${n.conversations} conversations`);
+      toast.success(t("Restored {messages} messages in {conversations} conversations", { messages: n.messages, conversations: n.conversations }));
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Restore failed.');
+      setError(e instanceof Error ? e.message : t("Restore failed."));
     } finally {
       setBusy(false);
     }
@@ -69,38 +71,38 @@ export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; 
 
   return (
     <div className="px-6 pb-6" data-testid="history-backup">
-      <h3 className="text-[20px] font-semibold text-[#15171c] mb-1">Chat history backup</h3>
+      <h3 className="text-[20px] font-semibold text-[#15171c] mb-1">{t("Chat history backup")}</h3>
       <p className="text-[14px] text-[#5b606b] leading-relaxed mb-4">
-        A file sealed with a passphrase you choose. It never leaves your device unless you move it. We cannot open it, and we cannot recover a forgotten passphrase.
+        {t("A file sealed with a passphrase you choose. It never leaves your device unless you move it. We cannot open it, and we cannot recover a forgotten passphrase.")}
       </p>
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-[#f2f4f7] p-1 mb-4" role="tablist">
         {(['export', 'restore'] as const).map((m) => (
           <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setError(null); }} className={`h-9 rounded-lg text-[14px] font-semibold ${mode === m ? 'bg-white text-[#15171c] shadow-sm' : 'text-[#5b606b]'}`}>
-            {m === 'export' ? 'Export' : 'Restore'}
+            {m === 'export' ? t("Export") : t("Restore")}
           </button>
         ))}
       </div>
       {mode === 'restore' && (
-        <input ref={fileRef} type="file" accept=".lcarchive,application/json" className="mb-3 block w-full text-[14px] text-[#3d424b]" aria-label="Archive file" />
+        <input ref={fileRef} type="file" accept=".lcarchive,application/json" className="mb-3 block w-full text-[14px] text-[#3d424b]" aria-label={t("Archive file")} />
       )}
-      <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-[#5b606b] mb-1.5" htmlFor="hist-pass">Passphrase</label>
+      <label className="block text-[12px] font-semibold uppercase tracking-[0.1em] text-[#5b606b] mb-1.5" htmlFor="hist-pass">{t("Passphrase")}</label>
       <input id="hist-pass" type="password" autoComplete={mode === 'export' ? 'new-password' : 'current-password'} value={pass} onChange={(e) => setPass(e.target.value)} className={FIELD} />
       {mode === 'export' && (
         <>
-          <label className="block mt-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-[#5b606b] mb-1.5" htmlFor="hist-pass2">Repeat it</label>
+          <label className="block mt-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-[#5b606b] mb-1.5" htmlFor="hist-pass2">{t("Repeat it")}</label>
           <input id="hist-pass2" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={FIELD} />
         </>
       )}
       {(weak || mismatch || error) && <p role="alert" className="mt-2 text-[13px] text-[#b42318]">{error || weak || mismatch}</p>}
       <div className="mt-5 grid gap-2">
         {mode === 'export' ? (
-          <button type="button" className={PRIMARY} disabled={busy || !!weak || !pass || confirm !== pass} onClick={doExport}>{busy ? 'Encrypting…' : 'Export encrypted file'}</button>
+          <button type="button" className={PRIMARY} disabled={busy || !!weak || !pass || confirm !== pass} onClick={doExport}>{busy ? t("Encrypting…") : t("Export encrypted file")}</button>
         ) : (
-          <button type="button" className={PRIMARY} disabled={busy || !pass} onClick={doRestore}>{busy ? 'Opening…' : 'Restore into this device'}</button>
+          <button type="button" className={PRIMARY} disabled={busy || !pass} onClick={doRestore}>{busy ? t("Opening…") : t("Restore into this device")}</button>
         )}
-        <button type="button" className={SECONDARY} onClick={onClose}>Cancel</button>
+        <button type="button" className={SECONDARY} onClick={onClose}>{t("Cancel")}</button>
       </div>
-      <p className="mt-4 text-[12.5px] leading-relaxed text-[#5b606b]">Keys and sessions are never in the file. Restoring adds messages; it never deletes any.</p>
+      <p className="mt-4 text-[12.5px] leading-relaxed text-[#5b606b]">{t("Keys and sessions are never in the file. Restoring adds messages; it never deletes any.")}</p>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   meetingPhase,
   type MeetingInvite,
 } from '@/lib/chat/meeting';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * MeetingCard — a scheduled call inside the conversation.
@@ -20,6 +21,7 @@ import {
  * person in this conversation (MEETING_JOIN_EVENT).
  */
 export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite; isMe: boolean; peerName?: string }) {
+  const tr = useT();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -56,10 +58,10 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
       <div className="px-4 pt-3.5 pb-3 flex flex-col gap-2">
         <span className={`flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.06em] ${isMe ? 'text-[#b9bdc6]' : 'text-[#727a88]'}`}>
           <Icon size={14} strokeWidth={2} aria-hidden="true" />
-          {invite.kind === 'video' ? 'Video call' : 'Voice call'}
+          {invite.kind === 'video' ? tr("Video call") : tr("Voice call")}
         </span>
         <p className="text-[16.5px] font-semibold leading-snug tracking-[-0.01em] break-words">{invite.title}</p>
-        <p className={`text-[13.5px] ${isMe ? 'text-[#d9dce1]' : 'text-[#475061]'}`}>{describeMeetingTime(invite)}</p>
+        <p className={`text-[13.5px] ${isMe ? 'text-[#d9dce1]' : 'text-[#475061]'}`}>{tr(describeMeetingTime(invite))}</p>
         {invite.note && <p className={`text-[13.5px] leading-relaxed break-words ${isMe ? 'text-[#b9bdc6]' : 'text-[#727a88]'}`}>{invite.note}</p>}
       </div>
       <div className={`px-3 py-2.5 flex items-center gap-2 ${isMe ? 'bg-[#1f2128]' : 'bg-[#f7f8fa] border-t border-[#eceef2]'}`}>
@@ -69,14 +71,14 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
           }`}
           aria-live="polite"
         >
-          {describeCountdown(invite, now)}
+          {tr(describeCountdown(invite, now))}
         </span>
         {phase !== 'ended' && (
           <button
             type="button"
             onClick={addToCalendar}
-            aria-label="Add to calendar"
-            title="Add to calendar"
+            aria-label={tr("Add to calendar")}
+            title={tr("Add to calendar")}
             className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isMe ? 'hover:bg-white/10 text-white' : 'hover:bg-[#eceef2] text-[#15171c]'}`}
           >
             <CalendarPlus size={17} strokeWidth={1.8} aria-hidden="true" />
@@ -87,7 +89,7 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
             type="button"
             onClick={join}
             disabled={!canJoin}
-            title={canJoin ? 'Join the call' : 'Join opens ten minutes before the start'}
+            title={canJoin ? tr("Join the call") : tr("Join opens ten minutes before the start")}
             className={`h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors ${
               canJoin
                 ? 'bg-[#12a150] text-white hover:bg-[#0f8a44]'
@@ -96,7 +98,7 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
                   : 'bg-[#eceef2] text-[#a3a9b4] cursor-not-allowed'
             }`}
           >
-            Join
+            {tr("Join")}
           </button>
         )}
       </div>

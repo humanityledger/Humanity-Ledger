@@ -52,6 +52,7 @@ import {
 } from '@/components/zk/wallet/WalletUI';
 import { ActivityList, NotesCard, isInFlight } from '@/components/zk/wallet/WalletActivity';
 import { feeRunway } from '@/components/zk/wallet/walletLogic';
+import { useT } from '@/lib/i18n/client';
 
 export { feeRunway };
 import { ReceiveView, SendFlow, ShieldFlow, symbolOf } from '@/components/zk/wallet/WalletSheets';
@@ -116,6 +117,7 @@ function planLabel(plan: string): string {
 /* -------------------------------------------------------------------------- */
 
 export function ZkWalletPanel({ address, onClose, className, initialSheet = null, onPaymentSent }: ZkWalletPanelProps) {
+  const tr = useT();
   const { state, wallet, open, openWithPasskey, enrollPasskey, walletConnected, sameAccount, linkedComputer } = useAztecWallet(address);
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [sheetBack, setSheetBack] = useState<(() => void) | undefined>(undefined);
@@ -128,9 +130,9 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
   const handleOpen = async () => {
     try {
       await open();
-      toast.success('Private wallet open');
+      toast.success(tr("Private wallet open"));
     } catch (err) {
-      toast.error(humanError(err));
+      toast.error(tr(humanError(err)));
     }
   };
 
@@ -142,7 +144,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
       if (ALPHA) await wallet.refreshFeeJuice();
       setSyncedAt(Date.now());
     } catch (err) {
-      toast.error(humanError(err));
+      toast.error(tr(humanError(err)));
     } finally {
       setRefreshing(false);
     }
@@ -177,17 +179,17 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
       className={`relative flex flex-col h-full bg-white text-[#15171c] ${className ?? ''}`}
-      aria-label="Private wallet"
+      aria-label={tr("Private wallet")}
     >
       {/* 1. The network and Close */}
       <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 pt-[max(20px,env(safe-area-inset-top))] pb-3">
         <div className="min-w-0 flex flex-col gap-1.5">
           <h1 className="text-[20px] font-semibold tracking-[-0.02em] leading-none" style={{ color: INK }}>
-            Private wallet
+            {tr("Private wallet")}
           </h1>
-          <NetworkChip label={ALPHA ? 'Aztec Alpha · Ethereum mainnet' : networkLabel()} live={ready} />
+          <NetworkChip label={ALPHA ? tr("Aztec Alpha · Ethereum mainnet") : tr(networkLabel())} live={ready} />
         </div>
-        <IconButton label="Close" onClick={onClose}>
+        <IconButton label={tr("Close")} onClick={onClose}>
           <X size={20} strokeWidth={2} />
         </IconButton>
       </div>
@@ -209,12 +211,12 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
             {/* One row of actions under the card: Send first and solid, then the ways money moves. */}
             <ActionDock
               actions={[
-                ...(hasPrivateTokens() ? [{ id: 'send', label: 'Send', primary: true, icon: <ArrowUpRight size={20} strokeWidth={2.1} />, onClick: () => setSheet('send') }] : []),
-                { id: 'receive', label: 'Receive', primary: !hasPrivateTokens(), icon: <ArrowDownLeft size={20} strokeWidth={2.1} />, onClick: () => setSheet('receive') },
-                ...(ALPHA ? [{ id: 'fees', label: 'Add funds', icon: <Plus size={20} strokeWidth={2.1} />, onClick: () => setSheet('fees') }] : []),
+                ...(hasPrivateTokens() ? [{ id: 'send', label: tr("Send"), primary: true, icon: <ArrowUpRight size={20} strokeWidth={2.1} />, onClick: () => setSheet('send') }] : []),
+                { id: 'receive', label: tr("Receive"), primary: !hasPrivateTokens(), icon: <ArrowDownLeft size={20} strokeWidth={2.1} />, onClick: () => setSheet('receive') },
+                ...(ALPHA ? [{ id: 'fees', label: tr("Add funds"), icon: <Plus size={20} strokeWidth={2.1} />, onClick: () => setSheet('fees') }] : []),
                 ...(hasPrivateTokens() ? [
-                  { id: 'shield', label: 'Shield', icon: <Lock size={18} strokeWidth={2.1} />, onClick: () => setSheet('shield') },
-                  { id: 'unshield', label: 'Unshield', icon: <LockOpen size={18} strokeWidth={2.1} />, onClick: () => setSheet('unshield') },
+                  { id: 'shield', label: tr("Shield"), icon: <Lock size={18} strokeWidth={2.1} />, onClick: () => setSheet('shield') },
+                  { id: 'unshield', label: tr("Unshield"), icon: <LockOpen size={18} strokeWidth={2.1} />, onClick: () => setSheet('unshield') },
                 ] : []),
               ]}
             />
@@ -224,14 +226,14 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
         {/* 4. Views */}
         <div className="sticky top-0 z-[5] bg-white/95 backdrop-blur-sm px-5 py-2 border-b border-[#eef0f3]">
           <Segmented<View>
-            label="Private wallet sections"
+            label={tr("Private wallet sections")}
             value={view}
             onChange={setView}
             options={[
-              { value: 'overview', label: 'Overview' },
-              { value: 'activity', label: 'Activity', badge: inFlight || undefined },
-              { value: 'security', label: 'Security' },
-              { value: 'protocol', label: 'Protocol' },
+              { value: 'overview', label: tr("Overview") },
+              { value: 'activity', label: tr("Activity"), badge: inFlight || undefined },
+              { value: 'security', label: tr("Security") },
+              { value: 'protocol', label: tr("Protocol") },
             ]}
           />
         </div>
@@ -262,8 +264,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                         tone="bad"
                         action={
                           <>
-                            <TextButton onClick={() => navigator.clipboard?.writeText(state.error || '').catch(() => {})}>Copy details</TextButton>
-                            <TextButton onClick={() => open().catch(() => {})}>Try again</TextButton>
+                            <TextButton onClick={() => navigator.clipboard?.writeText(state.error || '').catch(() => {})}>{tr("Copy details")}</TextButton>
+                            <TextButton onClick={() => open().catch(() => {})}>{tr("Try again")}</TextButton>
                           </>
                         }
                       >
@@ -291,8 +293,8 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   onCopyDetails={(detail) => {
                     // The exact reason, for support: step and raw error, never keys.
                     navigator.clipboard?.writeText(detail).then(
-                      () => toast.success('Details copied. Paste them to support.'),
-                      () => toast.error('Could not copy. Select the text in the console instead.'),
+                      () => toast.success(tr("Details copied. Paste them to support.")),
+                      () => toast.error(tr("Could not copy. Select the text in the console instead.")),
                     );
                   }}
                 />
@@ -322,7 +324,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   {!hasPrivateTokens() && <Notice>{NO_PRIVATE_TOKENS_MESSAGE}</Notice>}
 
                   {ALPHA && (
-                    <Section title="Network fees" action={{ label: 'Add', onClick: () => setSheet('fees') }}>
+                    <Section title={tr("Network fees")} action={{ label: tr("Add"), onClick: () => setSheet('fees') }}>
                       <KV k="Fee Juice" v={state.feeJuice ? <Figure text={formatUnits(state.feeJuice.balance, 18, 4)} hidden={hidden} strong /> : '…'} />
                       {state.feeJuice && state.feeJuice.claims.length > 0 && (
                         <KV
@@ -338,18 +340,18 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   )}
 
                   {ALPHA && (
-                    <Section title="On Ethereum">
+                    <Section title={tr("On Ethereum")}>
                       <EthereumHoldings userAddress={address} />
                     </Section>
                   )}
 
-                  <Section title="Account">
+                  <Section title={tr("Account")}>
                     <CopyKV k="Aztec address" v={state.aztecAddress ?? ''} />
                     <CopyKV k="Ethereum address" v={address} />
                     <KV k="Network" v={ALPHA ? 'Aztec Alpha, settles on Ethereum' : networkLabel()} />
                     <KV k="Proofs" v="Made on this device" />
                     {linkedComputer && <KV k="Signing" v="Approved on your phone" />}
-                    <KV k="Security" hint="Passkeys, address checks, audit status" v={<TextButton onClick={() => setView('security')}>Review</TextButton>} />
+                    <KV k="Security" hint={tr("Passkeys, address checks, audit status")} v={<TextButton onClick={() => setView('security')}>{tr("Review")}</TextButton>} />
                   </Section>
 
                   <ReceiversCard address={address} ready={ready} />
@@ -359,12 +361,9 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#hlc-deploy' && <DeployHlcTestToken disabled={state.busy} />}
                   {ALPHA && state.phase === 'ready' && <IssueTokens disabled={state.busy} />}
 
-                  <p className="px-2 pb-2 text-center text-[13px] leading-relaxed" style={{ color: INK_3 }}>
-                    Proofs are made on this device and sent to {ALPHA ? networkLabel() : 'the Aztec test network'}. Our server never sees your keys, your
-                    balances or who you pay.{' '}
-                    <Link href="/docs/zero-knowledge" className="underline underline-offset-2 font-medium" style={{ color: INK }}>
-                      How it works
-                    </Link>
+                  <p className="px-2 pb-2 text-center text-[13px] leading-relaxed" style={{ color: INK_3 }}>{tr("Proofs are made on this device and sent to {value}. Our server never sees your keys, your balances or who you pay.{value2}{0}", { value: ALPHA ? tr(networkLabel()) : tr("the Aztec test network"), value2: ' ', 0: <Link href="/docs/zero-knowledge" className="underline underline-offset-2 font-medium" style={{ color: INK }}>
+                      {tr("How it works")}
+                    </Link> })}
                   </p>
                 </>
               )}
@@ -375,7 +374,7 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
 
       <AnimatePresence>
         {sheet && ready && sheetAvailable(sheet) && (
-          <SheetFrame key={sheet} title={SHEET_TITLE[sheet]} subtitle={SHEET_SUBTITLE[sheet]} onClose={closeSheet} onBack={sheetBack}>
+          <SheetFrame key={sheet} title={tr(SHEET_TITLE[sheet])} subtitle={tr(SHEET_SUBTITLE[sheet])} onClose={closeSheet} onBack={sheetBack}>
             {sheet === 'shield' && <ShieldFlow mode="shield" onDone={closeSheet} />}
             {sheet === 'unshield' && <ShieldFlow mode="unshield" onDone={closeSheet} />}
             {sheet === 'send' && (
@@ -400,8 +399,9 @@ export default ZkWalletPanel;
 
 /** The actions under the balance card: round keys with a word under each, like a bank app's. */
 function ActionDock({ actions }: { actions: { id: string; label: string; icon: React.ReactNode; onClick: () => void; primary?: boolean }[] }) {
+  const tr = useT();
   return (
-    <div className="mt-5 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(actions.length, 1)}, minmax(0, 1fr))` }} role="group" aria-label="Wallet actions">
+    <div className="mt-5 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(actions.length, 1)}, minmax(0, 1fr))` }} role="group" aria-label={tr("Wallet actions")}>
       {actions.map((a) => (
         <button
           key={a.id}
@@ -417,7 +417,7 @@ function ActionDock({ actions }: { actions: { id: string; label: string; icon: R
           >
             {a.icon}
           </span>
-          <span className="text-[13px] font-semibold tracking-[-0.005em]" style={{ color: INK }}>{a.label}</span>
+          <span className="text-[13px] font-semibold tracking-[-0.005em]" style={{ color: INK }}>{tr(a.label)}</span>
         </button>
       ))}
     </div>
@@ -443,9 +443,10 @@ function CardKey({ label, onClick, disabled, pressed, children }: { label: strin
 
 /** A titled card. The action, when there is one, sits on the right of the title. */
 function Section({ title, action, children }: { title: string; action?: { label: string; onClick: () => void }; children: React.ReactNode }) {
+  const tr = useT();
   return (
     <Card label={title}>
-      <CardHead title={title} action={action ? <TextButton onClick={action.onClick}>{action.label}</TextButton> : undefined} />
+      <CardHead title={title} action={action ? <TextButton onClick={action.onClick}>{tr(action.label)}</TextButton> : undefined} />
       <div className="px-5 pb-2">{children}</div>
     </Card>
   );
@@ -470,6 +471,7 @@ function BalanceHero({
   feeJuice?: { balance: bigint; minForTx: bigint };
   onShield?: () => void;
 }) {
+  const tr = useT();
   const main = balances[0];
   const runway = feeJuice ? feeRunway(feeJuice.balance, feeJuice.minForTx) : null;
   const [whole, frac] = main ? splitAmountText(formatUnits(main.privateUnits, main.decimals)) : ['0', ''];
@@ -486,19 +488,19 @@ function BalanceHero({
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: muted }}>
             <ShieldCheck size={15} strokeWidth={2} aria-hidden="true" />
-            Private balance
+            {tr("Private balance")}
           </span>
           <span className="flex items-center -mr-1.5">
-            <CardKey label={hidden ? 'Show amounts' : 'Hide amounts'} onClick={onToggleHidden} pressed={hidden}>
+            <CardKey label={hidden ? tr("Show amounts") : tr("Hide amounts")} onClick={onToggleHidden} pressed={hidden}>
               {hidden ? <EyeOff size={17} strokeWidth={1.9} /> : <Eye size={17} strokeWidth={1.9} />}
             </CardKey>
-            <CardKey label={refreshing ? 'Syncing' : 'Sync'} onClick={onRefresh} disabled={refreshing}>
+            <CardKey label={refreshing ? tr("Syncing") : tr("Sync")} onClick={onRefresh} disabled={refreshing}>
               {refreshing ? <Spinner size={15} /> : <RefreshCw size={16} strokeWidth={2} />}
             </CardKey>
           </span>
         </div>
 
-        <div className="mt-3 flex items-baseline gap-2 min-w-0" data-testid="wallet-balance" aria-label={hidden ? 'Balance hidden' : `${whole}${frac} ${main?.symbol ?? ''}`}>
+        <div className="mt-3 flex items-baseline gap-2 min-w-0" data-testid="wallet-balance" aria-label={hidden ? tr("Balance hidden") : `${whole}${frac} ${main?.symbol ?? ''}`}>
           <span className="font-semibold tracking-[-0.04em] tabular-nums leading-none text-[46px] sm:text-[54px] truncate" aria-hidden="true">
             {hidden ? '••••' : whole}
             {!hidden && frac ? <span className="text-[28px] sm:text-[32px] tracking-[-0.03em]" style={{ color: muted }}>{frac}</span> : null}
@@ -512,22 +514,21 @@ function BalanceHero({
         )}
 
         <p className="mt-2 text-[12.5px] tabular-nums" style={{ color: 'rgba(255,255,255,0.5)' }} role="status" aria-live="polite">
-          {refreshing ? 'Syncing with Aztec…' : syncedAt ? `Synced at ${new Date(syncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet'}
+          {refreshing ? tr("Syncing with Aztec…") : syncedAt ? tr("Synced at {toLocaleTimeString}", { toLocaleTimeString: new Date(syncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : tr("Not synced yet")}
         </p>
 
         {main && main.publicUnits > 0n && (
           <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-white/[0.07] border border-white/[0.09] pl-4 pr-2 py-2">
             <span className="min-w-0">
               <span className="block text-[14px] font-semibold tabular-nums">
-                {hidden ? '••••' : formatUnits(main.publicUnits, main.decimals)} {main.symbol} public
-              </span>
+                {tr("{value} {symbol} public", { value: hidden ? '••••' : formatUnits(main.publicUnits, main.decimals), symbol: main.symbol })}</span>
               <span className="block text-[12.5px]" style={{ color: muted }}>
-                Not yet shielded, visible on the network
+                {tr("Not yet shielded, visible on the network")}
               </span>
             </span>
             {onShield && (
               <button type="button" onClick={onShield} className="h-9 px-3.5 rounded-full bg-white text-[#15171c] text-[13px] font-semibold hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
-                Shield
+                {tr("Shield")}
               </button>
             )}
           </div>
@@ -547,8 +548,7 @@ function BalanceHero({
                   <span className="block text-[16px] font-semibold tabular-nums">{hidden ? '••••' : formatUnits(b.privateUnits, b.decimals)}</span>
                   {b.publicUnits > 0n && (
                     <span className="block text-[12.5px] tabular-nums" style={{ color: muted }}>
-                      {hidden ? '••••' : formatUnits(b.publicUnits, b.decimals)} public, not yet shielded
-                    </span>
+                      {tr("{value} public, not yet shielded", { value: hidden ? '••••' : formatUnits(b.publicUnits, b.decimals) })}</span>
                   )}
                 </span>
               </li>
@@ -563,17 +563,16 @@ function BalanceHero({
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-[14px] font-semibold tabular-nums">
-                {hidden ? '••••' : formatUnits(feeJuice.balance, 18, 4)} Fee Juice
-              </span>
+                {tr("{value} Fee Juice", { value: hidden ? '••••' : formatUnits(feeJuice.balance, 18, 4) })}</span>
               <span className="block text-[12.5px]" style={{ color: muted }}>
-                {runway === null ? 'Pays the network fee, publicly' : runway === 0 ? 'Not enough for the next transaction' : `Enough for at least ${runway} transaction${runway === 1 ? '' : 's'}`}
+                {runway === null ? tr("Pays the network fee, publicly") : runway === 0 ? tr("Not enough for the next transaction") : tr("Enough for at least {runway} transaction{value}", { runway, value: runway === 1 ? '' : 's' })}
               </span>
             </span>
           </div>
         )}
 
         <p className="mt-4 pt-3 border-t border-white/10 text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.55)' }}>
-          {FEE_PRIVACY.short}
+          {tr(FEE_PRIVACY.short)}
         </p>
       </div>
     </div>
@@ -588,26 +587,27 @@ function splitAmountText(text: string): [string, string] {
 
 /** What stays private and what the network can see, side by side. */
 function WhatIsSeen() {
+  const tr = useT();
   return (
-    <Card label="What the network sees">
-      <CardHead title="What the network sees" />
+    <Card label={tr("What the network sees")}>
+      <CardHead title={tr("What the network sees")} />
       <div className="px-5 pb-5 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] p-4">
           <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: INK }}>
-            <Lock size={15} strokeWidth={2} aria-hidden="true" /> Private
+            <Lock size={15} strokeWidth={2} aria-hidden="true" />{" "}{tr("Private")}
           </span>
           <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-            The amount, the sender and the recipient of a private payment, and your private balance.
+            {tr("The amount, the sender and the recipient of a private payment, and your private balance.")}
           </p>
         </div>
         <div className="rounded-2xl border border-[#e4e7ec] bg-white p-4">
           <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: INK }}>
-            <LockOpen size={15} strokeWidth={2} aria-hidden="true" /> Public
+            <LockOpen size={15} strokeWidth={2} aria-hidden="true" />{" "}{tr("Public")}
           </span>
           <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
             {ALPHA
-              ? 'That your account paid a network fee in Fee Juice, a Fee Juice deposit from Ethereum, and any amount you shield or unshield.'
-              : 'That a transaction happened, and any amount you shield or unshield.'}
+              ? tr("That your account paid a network fee in Fee Juice, a Fee Juice deposit from Ethereum, and any amount you shield or unshield.")
+              : tr("That a transaction happened, and any amount you shield or unshield.")}
           </p>
         </div>
       </div>
@@ -638,6 +638,7 @@ function ToolCard({ title, children }: { title: string; children: React.ReactNod
 }
 
 function IssueTokens({ disabled }: { disabled: boolean }) {
+  const tr = useT();
   const { wallet } = useAztecWallet('');
   const keys = wallet?.issuableTokens() ?? [];
   const [amount, setAmount] = useState('1');
@@ -651,28 +652,26 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
   const decimals = AZTEC_WALLET_CONFIG.tokens.find((t) => t.key === key)?.decimals ?? 18;
   const run = async () => {
     setBusy(true);
-    const id = toast.loading(`Issuing ${amount} ${sym} to your private balance. The proof is made on this device.`);
+    const id = toast.loading(tr("Issuing {amount} {sym} to your private balance. The proof is made on this device.", { amount, sym }));
     try {
       await wallet.issue(key, amount);
-      toast.success(`${amount} ${sym} issued to your private balance.`, { id });
+      toast.success(tr("{amount} {sym} issued to your private balance.", { amount, sym }), { id });
     } catch (err) {
-      toast.error(humanError(err), { id });
+      toast.error(tr(humanError(err)), { id });
     } finally {
       setBusy(false);
     }
   };
   return (
-    <ToolCard title={`Issue ${sym}`}>
-      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-        This account is the issuer of {sym} on Aztec Alpha. Issued tokens go to your private balance. At most 1,000 {sym} per issue; the fee is paid in Fee Juice.
-      </p>
+    <ToolCard title={tr("Issue {sym}", { sym })}>
+      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>{tr("This account is the issuer of {sym} on Aztec Alpha. Issued tokens go to your private balance. At most 1,000 {sym2} per issue; the fee is paid in Fee Juice.", { sym, sym2: sym })}</p>
       <div className="mt-3 flex gap-2">
         <input
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(cleanAmount(e.target.value, decimals))}
           className="min-h-[48px] flex-1 min-w-0 rounded-2xl border-2 border-[#e4e7ec] px-4 text-[16px] tabular-nums outline-none focus:border-[#15171c]"
-          aria-label={`Amount of ${sym} to issue`}
+          aria-label={tr("Amount of {sym} to issue", { sym })}
           style={{ color: INK }}
         />
         <button
@@ -681,7 +680,7 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
           onClick={run}
           className={`min-h-[48px] px-5 rounded-2xl bg-[#15171c] text-white text-[15px] font-semibold disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
         >
-          {busy ? 'Issuing…' : 'Issue'}
+          {busy ? tr("Issuing…") : tr("Issue")}
         </button>
       </div>
       {blocked && (
@@ -695,6 +694,7 @@ function IssueTokens({ disabled }: { disabled: boolean }) {
 
 /** Operator only (#hlc-deploy): deploys the HLC Test Token and nothing else. Runbook: docs/alpha/HLC_REDEPLOY_RUNBOOK.md. */
 function DeployHlcTestToken({ disabled }: { disabled: boolean }) {
+  const tr = useT();
   const { wallet } = useAztecWallet('');
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<{ token: string; txHash?: string; resumed?: boolean } | null>(null);
@@ -706,7 +706,7 @@ function DeployHlcTestToken({ disabled }: { disabled: boolean }) {
     try {
       const r = await wallet.deployHlcTestToken(HLC_TOKEN_META, (info) => setRes((x) => ({ ...x, ...info })));
       setRes({ token: r.token, txHash: r.deployTx, resumed: r.resumed });
-      toast.success(r.resumed ? 'Already deployed from this device: nothing was sent.' : 'HLC Test Token deployed. Give the hash to the preflight.');
+      toast.success(r.resumed ? tr("Already deployed from this device: nothing was sent.") : tr("HLC Test Token deployed. Give the hash to the preflight."));
     } catch (e) {
       setErr(humanError(e));
     } finally {
@@ -714,14 +714,11 @@ function DeployHlcTestToken({ disabled }: { disabled: boolean }) {
     }
   };
   return (
-    <ToolCard title="Deploy HLC Test Token (operator)">
-      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-        Deploys a standard Token named {HLC_TOKEN_META.name}, symbol {HLC_TOKEN_META.symbol}, {HLC_TOKEN_META.decimals} decimals, with this account as admin. One transaction,
-        paid in Fee Juice. It issues nothing. Then copy the hash for the read-only preflight.
-      </p>
+    <ToolCard title={tr("Deploy HLC Test Token (operator)")}>
+      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>{tr("Deploys a standard Token named {name}, symbol {symbol}, {decimals} decimals, with this account as admin. One transaction, paid in Fee Juice. It issues nothing. Then copy the hash for the read-only preflight.", { name: tr(HLC_TOKEN_META.name), symbol: tr(HLC_TOKEN_META.symbol), decimals: tr(HLC_TOKEN_META.decimals) })}</p>
       <div className="mt-2">
         <PrimaryButton disabled={disabled} busy={busy} onClick={run}>
-          {busy ? 'Deploying…' : `Deploy ${HLC_TOKEN_META.name}`}
+          {busy ? tr("Deploying…") : tr("Deploy {name}", { name: HLC_TOKEN_META.name })}
         </PrimaryButton>
       </div>
       {res?.token && <CopyKV k="Token" v={res.token} />}
@@ -736,6 +733,7 @@ function DeployHlcTestToken({ disabled }: { disabled: boolean }) {
 }
 
 function FirstPayment({ disabled }: { disabled: boolean }) {
+  const tr = useT();
   const { wallet } = useAztecWallet('');
   const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -751,7 +749,7 @@ function FirstPayment({ disabled }: { disabled: boolean }) {
         { ...HLC_TOKEN_META, mint: '1', pay: '0.10', to: to.trim() },
         (step, info) => setLog((l) => [...l, { step, ...info }]),
       );
-      toast.success('First private payment settled on Aztec Alpha.');
+      toast.success(tr("First private payment settled on Aztec Alpha."));
     } catch (e) {
       setErr(humanError(e));
     } finally {
@@ -761,22 +759,21 @@ function FirstPayment({ disabled }: { disabled: boolean }) {
   const done = log.filter((l) => l.txHash);
   const token = log.find((l) => l.token)?.token;
   return (
-    <ToolCard title="First private payment (operator)">
+    <ToolCard title={tr("First private payment (operator)")}>
       <p className="mt-1 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-        Creates HLC with this account as issuer, issues 1 HLC to your private balance and pays 0.10 HLC privately to the address below. Three transactions, each paid in Fee
-        Juice. Keep this tab open until all three settle.
+        {tr("Creates HLC with this account as issuer, issues 1 HLC to your private balance and pays 0.10 HLC privately to the address below. Three transactions, each paid in Fee Juice. Keep this tab open until all three settle.")}
       </p>
       <input
         value={to}
         onChange={(e) => setTo(e.target.value)}
-        placeholder="Recipient Aztec address (0x… 64 characters)"
+        placeholder={tr("Recipient Aztec address (0x… 64 characters)")}
         className="mt-3 min-h-[48px] w-full rounded-2xl border-2 border-[#e4e7ec] px-4 text-[13.5px] font-mono outline-none focus:border-[#15171c]"
-        aria-label="Recipient Aztec address"
+        aria-label={tr("Recipient Aztec address")}
         style={{ color: INK }}
       />
       <div className="mt-2">
         <PrimaryButton disabled={disabled || to.trim().length !== 66} busy={busy} onClick={run}>
-          {busy ? `Working: ${log[log.length - 1]?.step ?? 'starting'}…` : 'Create HLC and pay 0.10'}
+          {busy ? tr("Working: {value}…", { value: log[log.length - 1]?.step ?? 'starting' }) : tr("Create HLC and pay 0.10")}
         </PrimaryButton>
       </div>
       {token && <CopyKV k="Token" v={token} />}
@@ -793,26 +790,27 @@ function FirstPayment({ disabled }: { disabled: boolean }) {
 }
 
 function Faucet({ disabled }: { disabled: boolean }) {
+  const tr = useT();
   const { wallet } = useAztecWallet('');
   const [busy, setBusy] = useState<TokenKey | null>(null);
   const run = async (key: TokenKey) => {
     if (!wallet) return;
     setBusy(key);
-    const id = toast.loading(`Minting ${FAUCET_AMOUNT[key]} test ${key}. The proof is made on this device.`);
+    const id = toast.loading(tr("Minting {value} test {key}. The proof is made on this device.", { value: FAUCET_AMOUNT[key], key }));
     try {
       await wallet.faucet(key);
-      toast.success(`${FAUCET_AMOUNT[key]} test ${key} added to your public balance. Shield it to make it private.`, { id });
+      toast.success(tr("{value} test {key} added to your public balance. Shield it to make it private.", { value: FAUCET_AMOUNT[key], key }), { id });
     } catch (err) {
-      toast.error(humanError(err), { id });
+      toast.error(tr(humanError(err)), { id });
     } finally {
       setBusy(null);
     }
   };
   return (
-    <ToolCard title="Get test tokens">
+    <ToolCard title={tr("Get test tokens")}>
       <p className="mt-1 text-[14px] leading-relaxed flex gap-2" style={{ color: INK_2 }}>
         <Droplets size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-        Free test tokens for the Aztec test network. They have no value and cannot be exchanged.
+        {tr("Free test tokens for the Aztec test network. They have no value and cannot be exchanged.")}
       </p>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {AZTEC_WALLET_CONFIG.tokens.map((t) => (
@@ -824,7 +822,7 @@ function Faucet({ disabled }: { disabled: boolean }) {
             className={`min-h-[48px] rounded-2xl border border-[#d4d8de] text-[14px] font-semibold hover:bg-[#f7f8fa] disabled:opacity-40 ${FOCUS}`}
             style={{ color: INK }}
           >
-            {busy === t.key ? 'Adding…' : `+${FAUCET_AMOUNT[t.key]} ${t.symbol}`}
+            {busy === t.key ? tr("Adding…") : `+${FAUCET_AMOUNT[t.key]} ${t.symbol}`}
           </button>
         ))}
       </div>

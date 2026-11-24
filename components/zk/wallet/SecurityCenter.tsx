@@ -15,10 +15,12 @@ import { networkLabel } from '@/lib/aztec/wallet/config';
 import { currentValueMode, type ValueMode } from '@/lib/aztec/value-mode';
 import { Card, CardHead, INK, INK_2, INK_3, OK } from './WalletUI';
 import { usePasskeyRecords } from './PasskeyCard';
+import { useT } from '@/lib/i18n/client';
 
 type Tone = 'ok' | 'warn' | 'neutral';
 
 function Row({ tone, title, value, detail }: { tone: Tone; title: string; value: string; detail: string }) {
+  const t = useT();
   const Icon = tone === 'ok' ? CheckCircle2 : tone === 'warn' ? AlertTriangle : Circle;
   const color = tone === 'ok' ? OK : tone === 'warn' ? '#b54708' : '#98a2b3';
   return (
@@ -28,7 +30,7 @@ function Row({ tone, title, value, detail }: { tone: Tone; title: string; value:
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[15px] font-semibold" style={{ color: INK }}>{title}</span>
           <span className="text-[13px] font-semibold text-right shrink-0" style={{ color: tone === 'warn' ? '#b54708' : INK_2 }}>
-            <span className="sr-only">{tone === 'ok' ? 'In place: ' : tone === 'warn' ? 'Attention: ' : ''}</span>
+            <span className="sr-only">{tone === 'ok' ? t("In place: ") : tone === 'warn' ? t("Attention: ") : ''}</span>
             {value}
           </span>
         </div>
@@ -39,6 +41,7 @@ function Row({ tone, title, value, detail }: { tone: Tone; title: string; value:
 }
 
 export function SecurityCenter({ address, alpha, linkedComputer }: { address: string; alpha: boolean; linkedComputer?: boolean }) {
+  const t = useT();
   const { records } = usePasskeyRecords(address);
   const [mode, setMode] = useState<{ mode: ValueMode; unconfirmed?: boolean } | null>(null);
   useEffect(() => {
@@ -51,34 +54,34 @@ export function SecurityCenter({ address, alpha, linkedComputer }: { address: st
   const passkeys = records?.length ?? 0;
 
   return (
-    <Card label="Security">
-      <CardHead title="Security" sub="What protects this account right now, and what does not yet." />
-      <ul className="px-5 pb-3" aria-label="Security of this account">
+    <Card label={t("Security")}>
+      <CardHead title={t("Security")} sub={t("What protects this account right now, and what does not yet.")} />
+      <ul className="px-5 pb-3" aria-label={t("Security of this account")}>
         <Row
           tone="ok"
-          title="Keys"
-          value="Made on this device"
+          title={t("Keys")}
+          value={t("Made on this device")}
           detail="Derived from your wallet signature in this browser. They never reach our server, and proofs are made here."
         />
         <Row
           tone={passkeys > 0 ? 'ok' : 'neutral'}
-          title="Ways to open"
-          value={records === null ? '…' : passkeys > 0 ? `Wallet + ${passkeys} passkey${passkeys === 1 ? '' : 's'}` : 'Ethereum wallet only'}
+          title={t("Ways to open")}
+          value={records === null ? '…' : passkeys > 0 ? t("Wallet + {passkeys} passkey{value}", { passkeys, value: passkeys === 1 ? '' : 's' }) : t("Ethereum wallet only")}
           detail={passkeys > 0 ? 'Any of them opens the same account. Remove a passkey you no longer control.' : 'Add a passkey below so losing your Ethereum wallet does not lose the account.'}
         />
         {linkedComputer && (
-          <Row tone="ok" title="Signing" value="Approved on your phone" detail="This computer asks your phone for each signature; the phone shows what it signs." />
+          <Row tone="ok" title={t("Signing")} value={t("Approved on your phone")} detail="This computer asks your phone for each signature; the phone shows what it signs." />
         )}
         <Row
           tone="ok"
-          title="Address checks"
-          value={`Bound to ${alpha ? 'Aztec Alpha' : networkLabel()}`}
+          title={t("Address checks")}
+          value={t("Bound to {value}", { value: alpha ? 'Aztec Alpha' : networkLabel() })}
           detail="A payment address verified in a chat is valid only on this network. A test-network proof cannot direct a real payment."
         />
         <Row
           tone={mode === null ? 'neutral' : mode.mode === 'open' ? 'ok' : 'warn'}
-          title="New payments"
-          value={mode === null ? '…' : mode.mode === 'open' ? 'Allowed' : mode.unconfirmed ? 'Not confirmed' : 'Paused'}
+          title={t("New payments")}
+          value={mode === null ? '…' : mode.mode === 'open' ? t("Allowed") : mode.unconfirmed ? t("Not confirmed") : t("Paused")}
           detail={
             mode?.mode === 'exits-only'
               ? 'Nothing new can go in right now. Claims, refunds and withdrawals of your own money still work.'
@@ -87,14 +90,14 @@ export function SecurityCenter({ address, alpha, linkedComputer }: { address: st
         />
         <Row
           tone="warn"
-          title="Network fee"
-          value="Paid publicly"
+          title={t("Network fee")}
+          value={t("Paid publicly")}
           detail="Your account pays each fee in Fee Juice, which the network can see. Private fee payment comes next."
         />
         <Row
           tone="warn"
-          title="External audit"
-          value="Not yet"
+          title={t("External audit")}
+          value={t("Not yet")}
           detail="Ledger Chat's own contracts (agreements, escrow, portal) are open source and tested in CI on every change. No independent firm has audited them yet. Use amounts you can afford to lose."
         />
       </ul>

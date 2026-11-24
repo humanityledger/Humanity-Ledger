@@ -30,6 +30,7 @@ import { AZTEC_WALLET_CONFIG, networkLabel } from '@/lib/aztec/wallet/config';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
 import { ERC20_ABI, l1ClientsFromViem, pinnedFeeJuice, type BridgeStep, type FeeJuiceClaim } from '@/lib/aztec/fee-juice';
+import { useT } from '@/lib/i18n/client';
 
 interface ZkBridgePortalProps {
   userAddress: string;
@@ -51,6 +52,7 @@ const STEP_LABEL: Record<BridgeStep, string> = {
 const shortHash = (h?: string) => (h ? `${h.slice(0, 10)}…${h.slice(-6)}` : '');
 
 export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridgePortalProps) {
+  const t = useT();
   const alpha = AZTEC_WALLET_CONFIG.network === 'mainnet';
   return (
     <div className={`bg-white rounded-3xl border border-[#E4E7EC] shadow-sm overflow-hidden flex flex-col ${className}`}>
@@ -60,12 +62,12 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
             <Fuel size={18} strokeWidth={1.75} />
           </span>
           <div>
-            <h2 className="text-[15px] font-semibold text-[#15171C] leading-tight">Network fees</h2>
-            <p className="text-[12px] text-[#667085]">{networkLabel()}</p>
+            <h2 className="text-[15px] font-semibold text-[#15171C] leading-tight">{t("Network fees")}</h2>
+            <p className="text-[12px] text-[#667085]">{t(networkLabel())}</p>
           </div>
         </div>
         {onClose && (
-          <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-[#667085] hover:bg-black/5">
+          <button type="button" onClick={onClose} aria-label={t("Close")} className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-[#667085] hover:bg-black/5">
             <X size={18} />
           </button>
         )}
@@ -74,8 +76,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
         <FeeJuiceStation userAddress={userAddress} />
       ) : (
         <div className="p-5 text-[14px] leading-relaxed text-[#475467]">
-          On the Aztec test network every transaction is paid by the network&apos;s sponsor, so there is nothing to top up.
-          On Aztec Alpha you pay fees in Fee Juice, which you add here from your Ethereum wallet.
+          {t("On the Aztec test network every transaction is paid by the network's sponsor, so there is nothing to top up. On Aztec Alpha you pay fees in Fee Juice, which you add here from your Ethereum wallet.")}
         </div>
       )}
     </div>
@@ -84,6 +85,7 @@ export function ZkBridgePortal({ userAddress, onClose, className = '' }: ZkBridg
 
 /** Fee Juice for the private wallet on Aztec Alpha: balance, bridge from Ethereum, deposits on their way. Also shown inside the wallet panel. */
 export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
+  const t = useT();
   const { state, open, walletConnected, sameAccount, linkedComputer } = useAztecWallet(userAddress);
   const { address: evm, isConnected } = useAccount();
   const chainId = useChainId();
@@ -165,9 +167,9 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
       setAmount('');
       setAckPublic(false);
       refetchAztec();
-      toast.success('Deposited on Ethereum. Your Fee Juice arrives on Aztec in a few minutes.');
+      toast.success(t("Deposited on Ethereum. Your Fee Juice arrives on Aztec in a few minutes."));
     } catch (err) {
-      setError(humanError(err));
+      setError(t(humanError(err)));
       setStep(null);
     } finally {
       submitting.current = false;
@@ -179,9 +181,9 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
     setRecovering(true);
     try {
       const n = await getPrivateWallet().recoverFeeJuiceClaims({ getLogs: (a) => publicClient.getLogs(a), getBlockNumber: () => (publicClient as any).getBlockNumber() });
-      toast.success(n ? `Found ${n} deposit${n === 1 ? '' : 's'} on Ethereum.` : 'No deposits to this account were found on Ethereum.');
+      toast.success(n ? t("Found {n} deposit{value} on Ethereum.", { n, value: n === 1 ? '' : 's' }) : t("No deposits to this account were found on Ethereum."));
     } catch (err) {
-      toast.error(humanError(err));
+      toast.error(t(humanError(err)));
     } finally {
       setRecovering(false);
     }
@@ -190,18 +192,18 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
   if (!state.aztecAddress) {
     return (
       <div className="p-5 space-y-3">
-        <p className="text-[14px] text-[#475467] leading-relaxed">Open your private wallet first. Fee Juice is added to that account.</p>
+        <p className="text-[14px] text-[#475467] leading-relaxed">{t("Open your private wallet first. Fee Juice is added to that account.")}</p>
         <button
           type="button"
           disabled={!walletConnected || !sameAccount || state.phase === 'signing' || state.phase === 'starting'}
-          onClick={() => open().catch((e) => toast.error(humanError(e)))}
+          onClick={() => open().catch((e) => toast.error(t(humanError(e))))}
           className="w-full min-h-[44px] rounded-2xl bg-[#15171C] text-white text-[14px] font-semibold disabled:opacity-40"
         >
-          {state.phase === 'signing' || state.phase === 'starting' ? state.step ?? 'Opening…' : 'Open private wallet'}
+          {state.phase === 'signing' || state.phase === 'starting' ? state.step ?? t("Opening…") : t("Open private wallet")}
         </button>
         {linkedComputer && (
           <p className="text-[13px] text-[#475467] leading-relaxed">
-            This computer is linked to your phone. Opening the private wallet sends a request to your phone: open Ledger Chat there and tap Approve.
+            {t("This computer is linked to your phone. Opening the private wallet sends a request to your phone: open Ledger Chat there and tap Approve.")}
           </p>
         )}
         {state.error && <p className="text-[13px] text-[#FF3B30]">{state.error}</p>}
@@ -216,14 +218,14 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
       )}
 
       <dl className="grid grid-cols-2 gap-3">
-        <Stat label="Fee Juice on Aztec" value={fj ? `${formatUnits(fj.balance, 18)}` : '…'} />
-        <Stat label="AZTEC on Ethereum" value={decimals === undefined ? '…' : formatUnits(held, decimals)} />
-        <Stat label="ETH for Ethereum gas" value={eth ? Number(eth.formatted).toFixed(5) : '…'} />
-        <Stat label="Next fee paid by" value={fj ? planLabel(fj.plan) : '…'} />
+        <Stat label={t("Fee Juice on Aztec")} value={fj ? `${formatUnits(fj.balance, 18)}` : '…'} />
+        <Stat label={t("AZTEC on Ethereum")} value={decimals === undefined ? '…' : formatUnits(held, decimals)} />
+        <Stat label={t("ETH for Ethereum gas")} value={eth ? Number(eth.formatted).toFixed(5) : '…'} />
+        <Stat label={t("Next fee paid by")} value={fj ? t(planLabel(fj.plan)) : '…'} />
       </dl>
 
       <div>
-        <label htmlFor="fj-amount" className="block text-[12px] font-medium text-[#667085] mb-1.5">AZTEC to add as Fee Juice</label>
+        <label htmlFor="fj-amount" className="block text-[12px] font-medium text-[#667085] mb-1.5">{t("AZTEC to add as Fee Juice")}</label>
         <div className="flex gap-2">
           <input
             id="fj-amount"
@@ -236,37 +238,32 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
             className="flex-1 min-h-[44px] rounded-2xl bg-[#F7F8FA] border border-[#E4E7EC] px-4 text-[16px] font-mono tabular-nums text-[#15171C] outline-none focus:border-[#5200FF]"
           />
         </div>
-        {tooMuch && <p className="mt-1.5 text-[13px] text-[#FF3B30]">That is more AZTEC than your Ethereum wallet holds.</p>}
+        {tooMuch && <p className="mt-1.5 text-[13px] text-[#FF3B30]">{t("That is more AZTEC than your Ethereum wallet holds.")}</p>}
         {minWhole && state.phase === 'needs-fee-juice' && (
-          <p className={`mt-1.5 text-[14px] leading-snug ${tooSmall ? 'text-[#FF3B30]' : 'text-[#475467]'}`}>
-            Add at least <strong>{minWhole} AZTEC</strong> in one deposit: creating your account must be able to cover its maximum
-            network fee. Only the gas used is charged; the rest stays as Fee Juice for your next payments. The Ethereum fee for the
-            deposit is the same whatever the amount.
-          </p>
+          <p className={`mt-1.5 text-[14px] leading-snug ${tooSmall ? 'text-[#FF3B30]' : 'text-[#475467]'}`}>{t("Add at least {0} in one deposit: creating your account must be able to cover its maximum network fee. Only the gas used is charged; the rest stays as Fee Juice for your next payments. The Ethereum fee for the deposit is the same whatever the amount.", { 0: <strong>{t("{minWhole} AZTEC", { minWhole })}</strong> })}</p>
         )}
       </div>
 
       {!isConnected && linkedComputer ? (
         <p className="text-[13.5px] text-[#475467] leading-relaxed">
-          This computer is linked to your phone, so it can read your balances but cannot sign on Ethereum. To add Fee Juice, open
-          Ledger Chat on your phone and deposit from there; it appears here once it lands.
+          {t("This computer is linked to your phone, so it can read your balances but cannot sign on Ethereum. To add Fee Juice, open Ledger Chat on your phone and deposit from there; it appears here once it lands.")}
         </p>
       ) : !isConnected ? (
-        <p className="text-[13.5px] text-[#475467]">Connect the Ethereum wallet that holds your AZTEC.</p>
+        <p className="text-[13.5px] text-[#475467]">{t("Connect the Ethereum wallet that holds your AZTEC.")}</p>
       ) : wrongChain ? (
         <button
           type="button"
           disabled={switching}
-          onClick={() => switchChainAsync({ chainId: MAINNET_CHAIN_ID }).catch((e) => toast.error(humanError(e)))}
+          onClick={() => switchChainAsync({ chainId: MAINNET_CHAIN_ID }).catch((e) => toast.error(t(humanError(e))))}
           className="w-full min-h-[44px] rounded-2xl bg-[#15171C] text-white text-[14px] font-semibold disabled:opacity-40"
         >
-          {switching ? 'Switching…' : 'Switch your wallet to Ethereum mainnet'}
+          {switching ? t("Switching…") : t("Switch your wallet to Ethereum mainnet")}
         </button>
       ) : (
         <>
         <label className="flex items-start gap-2 text-[12.5px] leading-snug text-[#475467]">
           <input type="checkbox" className="mt-0.5" checked={ackPublic} disabled={busy} onChange={(e) => setAckPublic(e.target.checked)} />
-          <span>I understand this deposit is public on Ethereum, links my Ethereum and Aztec addresses, and that my Aztec account pays each fee publicly, so my transactions can be linked. Fee Juice cannot be sent back.</span>
+          <span>{t("I understand this deposit is public on Ethereum, links my Ethereum and Aztec addresses, and that my Aztec account pays each fee publicly, so my transactions can be linked. Fee Juice cannot be sent back.")}</span>
         </label>
         <button
           type="button"
@@ -275,7 +272,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           className="w-full min-h-[44px] rounded-2xl bg-[#15171C] text-white text-[14px] font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
         >
           {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-          {busy ? STEP_LABEL[step!] : 'Add Fee Juice'}
+          {busy ? t(STEP_LABEL[step!]) : t("Add Fee Juice")}
         </button>
         </>
       )}
@@ -283,7 +280,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
       {step && (
         <p className="text-[13px] text-[#475467] flex items-center gap-2" role="status">
           {step === 'deposited' ? <CheckCircle2 size={14} className="text-[#10B981]" /> : <Clock size={14} />}
-          {STEP_LABEL[step]}
+          {t(STEP_LABEL[step])}
           {l1Tx && (
             <a href={`https://etherscan.io/tx/${l1Tx}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[12px] underline inline-flex items-center gap-1">
               {shortHash(l1Tx)} <ExternalLink size={11} />
@@ -299,7 +296,7 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
 
       {fj && fj.claims.length > 0 && (
         <div>
-          <h3 className="text-[12px] font-medium text-[#667085] mb-2">Deposits on their way</h3>
+          <h3 className="text-[12px] font-medium text-[#667085] mb-2">{t("Deposits on their way")}</h3>
           <ul className="space-y-2">
             {fj.claims.map(({ claim, ready: isReady }) => (
               <ClaimRow key={claim.messageHash} claim={claim} ready={isReady} />
@@ -314,24 +311,22 @@ export function FeeJuiceStation({ userAddress }: { userAddress: string }) {
           onClick={() => getPrivateWallet().refreshFeeJuice().catch(() => {})}
           className="min-h-[44px] px-3 text-[13px] font-medium text-[#15171C] inline-flex items-center gap-1.5"
         >
-          <RefreshCw size={14} /> Refresh
+          <RefreshCw size={14} />{" "}{t("Refresh")}
         </button>
         {AZTEC_WALLET_CONFIG.l1FromBlock > 0n && (
           <button type="button" onClick={recover} disabled={recovering} className="min-h-[44px] px-3 text-[13px] font-medium text-[#15171C] disabled:opacity-40">
-            {recovering ? 'Searching Ethereum…' : 'Find deposits made on another device'}
+            {recovering ? t("Searching Ethereum…") : t("Find deposits made on another device")}
           </button>
         )}
       </div>
 
       <div className="rounded-xl border border-[#E4E7EC] bg-[#F7F8FA] px-4 py-3.5 text-[12.5px] leading-relaxed text-[#475467] space-y-2">
         <p>
-          <strong className="text-[#15171C] font-semibold">What stays private:</strong> the amounts, senders and recipients of your private payments, and your private balances.
-        </p>
+          {t("{0} the amounts, senders and recipients of your private payments, and your private balances.", { 0: <strong className="text-[#15171C] font-semibold">{t("What stays private:")}</strong> })}</p>
         <p>
-          <strong className="text-[#15171C]">What is public:</strong> the deposit on Ethereum (your Ethereum address, the amount and your Aztec address), and the fact that your Aztec account pays each network fee. Someone watching can link your Aztec transactions to each other and to this deposit.
-        </p>
+          {t("{0} the deposit on Ethereum (your Ethereum address, the amount and your Aztec address), and the fact that your Aztec account pays each network fee. Someone watching can link your Aztec transactions to each other and to this deposit.", { 0: <strong className="text-[#15171C]">{t("What is public:")}</strong> })}</p>
         <p>
-          The bridge is one way: Fee Juice can only pay Aztec fees and cannot be sent back to Ethereum. Add only what you expect to spend on fees.
+          {t("The bridge is one way: Fee Juice can only pay Aztec fees and cannot be sent back to Ethereum. Add only what you expect to spend on fees.")}
         </p>
       </div>
 
@@ -358,10 +353,11 @@ function planLabel(plan: string): string {
 }
 
 function ClaimRow({ claim, ready }: { claim: FeeJuiceClaim; ready: boolean }) {
+  const t = useT();
   return (
     <li className="rounded-2xl border border-[#E4E7EC] px-3.5 py-2.5 flex items-center justify-between gap-3">
       <span className="flex flex-col min-w-0">
-        <span className="text-[14px] font-semibold text-[#15171C] font-mono tabular-nums">{formatUnits(BigInt(claim.claimAmount), 18)} AZTEC</span>
+        <span className="text-[14px] font-semibold text-[#15171C] font-mono tabular-nums">{t("{formatUnits} AZTEC", { formatUnits: formatUnits(BigInt(claim.claimAmount), 18) })}</span>
         {claim.l1TxHash && (
           <a href={`https://etherscan.io/tx/${claim.l1TxHash}`} target="_blank" rel="noopener noreferrer" className="text-[12px] font-mono text-[#667085] underline truncate">
             {shortHash(claim.l1TxHash)}
@@ -369,7 +365,7 @@ function ClaimRow({ claim, ready }: { claim: FeeJuiceClaim; ready: boolean }) {
         )}
       </span>
       <span className={`shrink-0 text-[12px] font-semibold px-2.5 py-1 rounded-full ${ready ? 'bg-[#ECFDF3] text-[#027A48]' : 'bg-[#F2F4F7] text-[#475467]'}`}>
-        {ready ? 'Ready, used by your next transaction' : 'Arriving on Aztec'}
+        {ready ? t("Ready, used by your next transaction") : t("Arriving on Aztec")}
       </span>
     </li>
   );

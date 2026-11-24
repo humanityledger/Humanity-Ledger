@@ -27,6 +27,7 @@ import { findDeposits } from '@/lib/portal/l1';
 import { withdrawProblem } from '@/lib/portal/withdraw';
 import { parseUnits, formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AddressBox, Card, CardHead, FOCUS, INK, INK_2, INK_3, KV, Notice, OK, Pill, PrimaryButton, Segmented, TextButton, shortHex } from './WalletUI';
+import { useT } from '@/lib/i18n/client';
 
 const COUNT_KEY = (evm: string) => `hl.portal.receivers.${evm.toLowerCase()}`;
 const SEEN_KEY = (evm: string) => `hl.portal.seen.${evm.toLowerCase()}`;
@@ -87,16 +88,17 @@ export function ReceiversCard({ address, ready }: { address: string; ready: bool
 
 /** Where the portal stands, step by step, while no build has it deployed. */
 function PortalNotDeployed() {
+  const tr = useT();
   const steps: Array<{ done: boolean; label: string; detail: string }> = [
-    { done: true, label: 'Contracts written', detail: 'HLPortal and receiver addresses on Ethereum, PortalToken on Aztec.' },
-    { done: true, label: 'Tested on every change', detail: 'Hardhat on Ethereum and the Aztec test environment, in CI.' },
-    { done: false, label: 'External audit', detail: 'Required before the portal holds anyone’s funds.' },
-    { done: false, label: 'Deployed', detail: 'On Sepolia first, then Ethereum with low caps.' },
+    { done: true, label: tr("Contracts written"), detail: tr("HLPortal and receiver addresses on Ethereum, PortalToken on Aztec.") },
+    { done: true, label: tr("Tested on every change"), detail: tr("Hardhat on Ethereum and the Aztec test environment, in CI.") },
+    { done: false, label: tr("External audit"), detail: tr("Required before the portal holds anyone’s funds.") },
+    { done: false, label: tr("Deployed"), detail: tr("On Sepolia first, then Ethereum with low caps.") },
   ];
   return (
-    <Card label="Ethereum">
-      <CardHead title="Ethereum" sub="Receive from any Ethereum wallet into your private balance, and withdraw back." action={<Pill>Not live yet</Pill>} />
-      <ol className="px-5 pb-4 pt-1" aria-label="Portal status">
+    <Card label={tr("Ethereum")}>
+      <CardHead title={tr("Ethereum")} sub={tr("Receive from any Ethereum wallet into your private balance, and withdraw back.")} action={<Pill>{tr("Not live yet")}</Pill>} />
+      <ol className="px-5 pb-4 pt-1" aria-label={tr("Portal status")}>
         {steps.map((s) => (
           <li key={s.label} className="flex gap-3 py-2.5">
             {s.done ? (
@@ -106,7 +108,7 @@ function PortalNotDeployed() {
             )}
             <span className="min-w-0">
               <span className="block text-[14.5px] font-semibold" style={{ color: s.done ? INK : INK_2 }}>
-                <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
+                <span className="sr-only">{s.done ? tr("Done: ") : tr("Not yet: ")}</span>
                 {s.label}
               </span>
               <span className="block text-[13px] leading-snug" style={{ color: INK_3 }}>{s.detail}</span>
@@ -115,13 +117,14 @@ function PortalNotDeployed() {
         ))}
       </ol>
       <p className="px-5 pb-5 text-[13px] leading-relaxed" style={{ color: INK_3 }}>
-        Nothing here moves money until the portal is deployed for this network. Until then, Fee Juice from Ethereum is the way in.
+        {tr("Nothing here moves money until the portal is deployed for this network. Until then, Fee Juice from Ethereum is the way in.")}
       </p>
     </Card>
   );
 }
 
 function PortalCard({ address, ready }: { address: string; ready: boolean }) {
+  const tr = useT();
   const cfg = PORTAL_CONFIG!;
   const evm = address.toLowerCase();
   const l1Name = cfg.l1ChainId === 1 ? 'Ethereum' : 'Sepolia';
@@ -141,7 +144,7 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
     getPrivateWallet()
       .portalReceivers(count)
       .then((r) => live && setReceivers(r))
-      .catch((e) => toast.error(humanError(e)));
+      .catch((e) => toast.error(tr(humanError(e))));
     return () => {
       live = false;
     };
@@ -173,7 +176,7 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
       setCheckedAt(Date.now());
       setNow(t);
     } catch (e) {
-      toast.error(humanError(e));
+      toast.error(tr(humanError(e)));
     } finally {
       setBusy(null);
     }
@@ -192,16 +195,16 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
 
   const claim = async (d: PendingDeposit) => {
     const a = assetOf(d.token);
-    if (!a) return toast.error('This asset is not supported here.');
+    if (!a) return toast.error(tr("This asset is not supported here."));
     const key = `${d.token}:${d.index}`;
     setBusy(key);
     try {
       await getPrivateWallet().claimPortalDeposit({ l2Token: a.l2, amount: d.amount, index: d.index, secretHash: d.secretHash }, count);
       writeJson(CLAIMED_KEY(evm), [...readJson<string[]>(CLAIMED_KEY(evm), []), key]);
       setDeposits((ds) => ds.filter((x) => !(x.token === d.token && x.index === d.index)));
-      toast.success(`${formatUnits(d.amount, a.decimals, 6)} ${a.symbol} added to your private balance`);
+      toast.success(tr("{formatUnits} {symbol} added to your private balance", { formatUnits: formatUnits(d.amount, a.decimals, 6), symbol: a.symbol }));
     } catch (e) {
-      toast.error(humanError(e));
+      toast.error(tr(humanError(e)));
     } finally {
       setBusy(null);
     }
@@ -212,32 +215,32 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
   const ownAddresses = useMemo(() => new Set(receivers.map((r) => r.address?.toLowerCase()).filter(Boolean) as string[]), [receivers]);
 
   return (
-    <Card label="Ethereum">
+    <Card label={tr("Ethereum")}>
       <CardHead
-        title="Ethereum"
-        sub={`Receive ${cfg.assets.map((a) => a.symbol).join(', ')} from any ${l1Name} wallet into your private balance.`}
+        title={tr("Ethereum")}
+        sub={tr("Receive {join} from any {l1Name} wallet into your private balance.", { join: cfg.assets.map((a) => a.symbol).join(', '), l1Name })}
         action={<Pill tone="ok">{l1Name}</Pill>}
       />
       <div className="px-5 pt-2 pb-5">
         <Segmented<Tab>
-          label="Ethereum portal"
+          label={tr("Ethereum portal")}
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'receive', label: 'Receive' },
-            { value: 'deposits', label: 'Deposits', badge: pending || undefined },
-            { value: 'withdraw', label: 'Withdraw' },
+            { value: 'receive', label: tr("Receive") },
+            { value: 'deposits', label: tr("Deposits"), badge: pending || undefined },
+            { value: 'withdraw', label: tr("Withdraw") },
           ]}
         />
 
         {tab === 'receive' && (
-          <div className="mt-4 space-y-3" role="tabpanel" aria-label="Receive">
+          <div className="mt-4 space-y-3" role="tabpanel" aria-label={tr("Receive")}>
             {!ready || !current ? (
               <div className="h-[260px] rounded-2xl bg-[#f7f8fa] animate-pulse motion-reduce:animate-none" aria-busy="true" />
             ) : (
               <>
                 {receivers.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1" role="radiogroup" aria-label="Receiver address">
+                  <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1" role="radiogroup" aria-label={tr("Receiver address")}>
                     {receivers.map((r) => (
                       <button
                         key={r.index}
@@ -248,8 +251,7 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
                         className={`h-9 px-3.5 rounded-full text-[13.5px] font-semibold border whitespace-nowrap ${FOCUS} ${
                           r.index === current.index ? 'bg-[#15171c] text-white border-[#15171c]' : 'bg-white text-[#15171c] border-[#e4e7ec] hover:bg-[#f7f8fa]'
                         }`}
-                      >
-                        Address {r.index + 1}
+                      >{tr("Address {value}", { value: r.index + 1 })}
                       </button>
                     ))}
                   </div>
@@ -257,18 +259,18 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
                 {current.address && (
                   <>
                     <div className="rounded-2xl border border-[#e4e7ec] bg-white p-5 flex flex-col items-center">
-                      <BrandedQr value={`ethereum:${current.address}@${cfg.l1ChainId}`} title={`QR code for ${l1Name} address`} style={{ width: 196 }} />
+                      <BrandedQr value={tr("ethereum:{address}@{l1ChainId}", { address: current.address, l1ChainId: cfg.l1ChainId })} title={tr("QR code for {l1Name} address", { l1Name })} style={{ width: 196 }} />
                       <span className="mt-3 text-[12.5px] font-medium" style={{ color: INK_3 }}>
                         {l1Name} · {cfg.assets.map((a) => a.symbol).join(' · ')}
                       </span>
                     </div>
-                    <AddressBox label={`Address ${current.index + 1}`} value={current.address} />
+                    <AddressBox label={tr("Address {value}", { value: current.index + 1 })} value={current.address} />
                   </>
                 )}
                 <ul className="space-y-1.5 text-[13px] leading-snug" style={{ color: INK_2 }}>
-                  <li>Give a different address to each payer. Payments to one address are visibly grouped on {l1Name}.</li>
-                  <li>Nothing on {l1Name} names your Aztec account. The money becomes private when you claim it under Deposits.</li>
-                  <li>Send only {cfg.assets.map((a) => a.symbol).join(', ')} on {l1Name}. Anything else sent here is not credited.</li>
+                  <li>{tr("Give a different address to each payer. Payments to one address are visibly grouped on {l1Name}.", { l1Name })}</li>
+                  <li>{tr("Nothing on {l1Name} names your Aztec account. The money becomes private when you claim it under Deposits.", { l1Name })}</li>
+                  <li>{tr("Send only {join} on {l1Name}. Anything else sent here is not credited.", { join: cfg.assets.map((a) => a.symbol).join(', '), l1Name })}</li>
                 </ul>
                 <button
                   type="button"
@@ -283,7 +285,7 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
                   style={{ color: INK }}
                 >
                   <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
-                  {count >= MAX_RECEIVERS ? `At most ${MAX_RECEIVERS} addresses` : 'New receiver address'}
+                  {count >= MAX_RECEIVERS ? tr("At most {MAX_RECEIVERS} addresses", { MAX_RECEIVERS }) : tr("New receiver address")}
                 </button>
               </>
             )}
@@ -291,22 +293,21 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
         )}
 
         {tab === 'deposits' && (
-          <div className="mt-4" role="tabpanel" aria-label="Deposits">
+          <div className="mt-4" role="tabpanel" aria-label={tr("Deposits")}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[13px]" style={{ color: INK_3 }} role="status" aria-live="polite">
-                {busy === 'check' ? `Reading ${l1Name}…` : checkedAt ? `Checked at ${new Date(checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not checked yet'}
+                {busy === 'check' ? tr("Reading {l1Name}…", { l1Name }) : checkedAt ? tr("Checked at {toLocaleTimeString}", { toLocaleTimeString: new Date(checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : tr("Not checked yet")}
               </span>
-              <TextButton onClick={() => void check()} disabled={!!busy || !ready || !receivers.length}>
-                Check {l1Name}
+              <TextButton onClick={() => void check()} disabled={!!busy || !ready || !receivers.length}>{tr("Check {l1Name}", { l1Name })}
               </TextButton>
             </div>
             {pending === 0 ? (
               <div className="mt-3 rounded-2xl border border-dashed border-[#d0d5dd] px-4 py-6 text-center">
                 <ArrowDownLeft size={20} strokeWidth={2} className="mx-auto" style={{ color: INK_3 }} aria-hidden="true" />
-                <p className="mt-2 text-[14px]" style={{ color: INK_2 }}>{checkedAt ? 'No deposits to your receiver addresses yet.' : `Check ${l1Name} for deposits to your receiver addresses.`}</p>
+                <p className="mt-2 text-[14px]" style={{ color: INK_2 }}>{checkedAt ? tr("No deposits to your receiver addresses yet.") : tr("Check {l1Name} for deposits to your receiver addresses.", { l1Name })}</p>
               </div>
             ) : (
-              <ul className="mt-2" aria-label="Deposits to your receiver addresses">
+              <ul className="mt-2" aria-label={tr("Deposits to your receiver addresses")}>
                 {plan.ready.map((d) => {
                   const a = assetOf(d.token);
                   const key = `${d.token}:${d.index}`;
@@ -314,11 +315,11 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
                     <li key={key} className="flex items-center gap-3 py-3 border-t border-[#eef0f3] first:border-t-0">
                       <span className="flex-1 min-w-0">
                         <span className="block text-[15px] font-semibold tabular-nums" style={{ color: INK }}>
-                          {a ? `${formatUnits(d.amount, a.decimals, 6)} ${a.symbol}` : 'Unknown asset'}
+                          {a ? `${formatUnits(d.amount, a.decimals, 6)} ${a.symbol}` : tr("Unknown asset")}
                         </span>
-                        <span className="block text-[12.5px]" style={{ color: INK_3 }}>To address {d.receiverIndex + 1} · ready</span>
+                        <span className="block text-[12.5px]" style={{ color: INK_3 }}>{tr("To address {value} · ready", { value: d.receiverIndex + 1 })}</span>
                       </span>
-                      <PrimaryButtonSmall onClick={() => void claim(d)} disabled={!!busy} busy={busy === key}>Claim</PrimaryButtonSmall>
+                      <PrimaryButtonSmall onClick={() => void claim(d)} disabled={!!busy} busy={busy === key}>{tr("Claim")}</PrimaryButtonSmall>
                     </li>
                   );
                 })}
@@ -328,13 +329,13 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
                     <li key={`${d.token}:${d.index}`} className="flex items-center gap-3 py-3 border-t border-[#eef0f3] first:border-t-0">
                       <span className="flex-1 min-w-0">
                         <span className="block text-[15px] font-semibold tabular-nums" style={{ color: INK }}>
-                          {a ? `${formatUnits(d.amount, a.decimals, 6)} ${a.symbol}` : 'Unknown asset'}
+                          {a ? `${formatUnits(d.amount, a.decimals, 6)} ${a.symbol}` : tr("Unknown asset")}
                         </span>
-                        <span className="block text-[12.5px]" style={{ color: INK_3 }}>Waiting a random delay before it can be claimed</span>
+                        <span className="block text-[12.5px]" style={{ color: INK_3 }}>{tr("Waiting a random delay before it can be claimed")}</span>
                       </span>
                       <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums" style={{ color: INK_2 }}>
                         <Clock size={14} strokeWidth={2} aria-hidden="true" />
-                        {waitText(d.readyAt - now)}
+                        {tr(waitText(d.readyAt - now))}
                       </span>
                     </li>
                   );
@@ -342,20 +343,18 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
               </ul>
             )}
             <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: INK_3 }}>
-              Each claim waits 10 minutes to 6 hours after the deposit is seen, chosen at random, so the moment you claim does not reveal which deposit was yours.
+              {tr("Each claim waits 10 minutes to 6 hours after the deposit is seen, chosen at random, so the moment you claim does not reveal which deposit was yours.")}
             </p>
           </div>
         )}
 
         {tab === 'withdraw' && !WITHDRAW_COMPLETES_IN_WALLET && (
-          <div className="mt-4 space-y-3" role="tabpanel" aria-label="Withdraw">
-            <Notice>
-              Withdrawals open once the wallet also sends the final step on {l1Name} for you. Until then nothing is burned here that the wallet cannot finish.
-            </Notice>
+          <div className="mt-4 space-y-3" role="tabpanel" aria-label={tr("Withdraw")}>
+            <Notice>{tr("Withdrawals open once the wallet also sends the final step on {l1Name} for you. Until then nothing is burned here that the wallet cannot finish.", { l1Name })}</Notice>
             <ol className="space-y-2 text-[13.5px] leading-snug" style={{ color: INK_2 }}>
-              <li className="flex gap-2"><span className="font-semibold tabular-nums" style={{ color: INK }}>1</span>On Aztec, your private balance is burned and a withdrawal message is sent.</li>
-              <li className="flex gap-2"><span className="font-semibold tabular-nums" style={{ color: INK }}>2</span>Aztec proves the epoch that holds it on {l1Name}.</li>
-              <li className="flex gap-2"><span className="font-semibold tabular-nums" style={{ color: INK }}>3</span>One {l1Name} transaction pays the address you chose.</li>
+              <li className="flex gap-2">{tr("{0}On Aztec, your private balance is burned and a withdrawal message is sent.", { 0: <span className="font-semibold tabular-nums" style={{ color: INK }}>1</span> })}</li>
+              <li className="flex gap-2">{tr("{0}Aztec proves the epoch that holds it on {l1Name}.", { 0: <span className="font-semibold tabular-nums" style={{ color: INK }}>2</span>, l1Name })}</li>
+              <li className="flex gap-2">{tr("{0}One {l1Name} transaction pays the address you chose.", { 0: <span className="font-semibold tabular-nums" style={{ color: INK }}>3</span>, l1Name })}</li>
             </ol>
           </div>
         )}
@@ -366,6 +365,7 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
 }
 
 function PrimaryButtonSmall({ children, onClick, disabled, busy }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; busy?: boolean }) {
+  const tr = useT();
   return (
     <button
       type="button"
@@ -374,12 +374,13 @@ function PrimaryButtonSmall({ children, onClick, disabled, busy }: { children: R
       aria-busy={busy || undefined}
       className={`min-h-[40px] px-4 rounded-full text-[14px] font-semibold bg-[#15171c] text-white hover:bg-[#262932] disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
     >
-      {busy ? 'Proving…' : children}
+      {busy ? tr("Proving…") : children}
     </button>
   );
 }
 
 function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalAsset[]; ready: boolean; l1Name: string; ownAddresses: Set<string> }) {
+  const tr = useT();
   const [asset, setAsset] = useState<PortalAsset>(assets[0]);
   const [amount, setAmount] = useState('');
   const [to, setTo] = useState('');
@@ -393,13 +394,13 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
     setBusy(true);
     try {
       const { txHash } = await getPrivateWallet().portalWithdraw(asset.l2, to, parseUnits(amount, asset.decimals));
-      toast.success(`Withdrawal started (${txHash.slice(0, 10)}…). It can be paid on ${l1Name} once Aztec proves its epoch.`);
+      toast.success(tr("Withdrawal started ({slice}…). It can be paid on {l1Name} once Aztec proves its epoch.", { slice: txHash.slice(0, 10), l1Name }));
       setAmount('');
       setTo('');
       setUnderstood(false);
       setStep('form');
     } catch (e) {
-      toast.error(humanError(e));
+      toast.error(tr(humanError(e)));
     } finally {
       setBusy(false);
     }
@@ -407,20 +408,17 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
 
   if (step === 'review') {
     return (
-      <div className="mt-4 space-y-3" role="tabpanel" aria-label="Review withdrawal">
+      <div className="mt-4 space-y-3" role="tabpanel" aria-label={tr("Review withdrawal")}>
         <div className="rounded-2xl border border-[#e4e7ec] px-4">
           <KV k="You withdraw" v={`${amount} ${asset.symbol}`} />
           <KV k="To" v={<span className="font-mono text-[13.5px]">{shortHex(to)}</span>} />
-          <KV k="Arrives on" v={l1Name} hint="After Aztec proves the epoch, then one Ethereum transaction" />
+          <KV k="Arrives on" v={l1Name} hint={tr("After Aztec proves the epoch, then one Ethereum transaction")} />
           <KV k="Visible on Aztec" v="Address and amount" />
         </div>
-        <Notice tone="warn">
-          A withdrawal is public: the {l1Name} address and the amount are attached to this transaction, together with the network fee your account pays. Anyone can see that this
-          account withdrew to that address.
-        </Notice>
+        <Notice tone="warn">{tr("A withdrawal is public: the {l1Name} address and the amount are attached to this transaction, together with the network fee your account pays. Anyone can see that this account withdrew to that address.", { l1Name })}</Notice>
         <label className="flex items-start gap-3 rounded-2xl border border-[#e4e7ec] px-4 py-3 cursor-pointer">
           <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} className="mt-0.5 w-5 h-5 accent-[#15171c]" />
-          <span className="text-[14px] leading-snug" style={{ color: INK }}>I understand this withdrawal publicly links my account to this {l1Name} address.</span>
+          <span className="text-[14px] leading-snug" style={{ color: INK }}>{tr("I understand this withdrawal publicly links my account to this {l1Name} address.", { l1Name })}</span>
         </label>
         <div className="grid grid-cols-[auto_1fr] gap-2">
           <button
@@ -430,10 +428,10 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
             className={`min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold border border-[#e4e7ec] bg-white hover:bg-[#f2f4f7] disabled:opacity-40 ${FOCUS}`}
             style={{ color: INK }}
           >
-            Back
+            {tr("Back")}
           </button>
           <PrimaryButton onClick={() => void submit()} disabled={!ready || !understood || !!problem} busy={busy}>
-            {busy ? 'Proving on this device' : `Withdraw ${amount} ${asset.symbol}`}
+            {busy ? tr("Proving on this device") : tr("Withdraw {amount} {symbol}", { amount, symbol: asset.symbol })}
           </PrimaryButton>
         </div>
       </div>
@@ -441,8 +439,8 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
   }
 
   return (
-    <div className="mt-4 space-y-3" role="tabpanel" aria-label="Withdraw">
-      <div className="flex gap-2" role="radiogroup" aria-label="Asset">
+    <div className="mt-4 space-y-3" role="tabpanel" aria-label={tr("Withdraw")}>
+      <div className="flex gap-2" role="radiogroup" aria-label={tr("Asset")}>
         {assets.map((a) => (
           <button
             key={a.symbol}
@@ -459,7 +457,7 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
         ))}
       </div>
       <label className="block">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>Amount</span>
+        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>{tr("Amount")}</span>
         <span className="mt-1.5 flex items-center h-14 px-4 rounded-2xl border-2 border-[#e4e7ec] focus-within:border-[#15171c]">
           <input
             value={amount}
@@ -474,7 +472,7 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
         </span>
       </label>
       <label className="block">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>{l1Name} address</span>
+        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>{tr("{l1Name} address", { l1Name })}</span>
         <input
           value={to}
           onChange={(e) => setTo(e.target.value.trim())}
@@ -491,10 +489,10 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
       )}
       <PrimaryButton onClick={() => (problem ? setTouched(true) : setStep('review'))} disabled={!ready}>
         <ArrowUpRight size={18} strokeWidth={2.2} aria-hidden="true" />
-        Review withdrawal
+        {tr("Review withdrawal")}
       </PrimaryButton>
       <p className="text-[12.5px] leading-relaxed" style={{ color: INK_3 }}>
-        Withdrawals stay available while new payments are paused. The portal itself can pause withdrawals for at most 3 days, and then not again for 4 days.
+        {tr("Withdrawals stay available while new payments are paused. The portal itself can pause withdrawals for at most 3 days, and then not again for 4 days.")}
       </p>
     </div>
   );

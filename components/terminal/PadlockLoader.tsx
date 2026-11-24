@@ -6,6 +6,7 @@ import { SignaturePreview } from '@/components/auth/SignaturePreview';
 import { detectConnectedMobileWallet, openMobileWalletApp, isMobileDevice } from '@/lib/wallet/mobileWallet';
 import { safeNativeWalletLink } from '@/lib/auth/wallet-links';
 import type { WalletOpenLink } from '@/lib/auth/wc-sign-request';
+import { useT } from '@/lib/i18n/client';
 
 /** Opens the wallet on this exact request, from the tap. An app scheme or https only. */
 function openSignLink(link: WalletOpenLink | null | undefined): boolean {
@@ -74,12 +75,13 @@ type Step = 'done' | 'active' | 'todo';
 
 /** The lockup: the company mark, small, beside the product name. */
 function Lockup() {
+  const tr = useT();
   return (
     <div className={s.lockup}>
       <span className={s.mark} aria-hidden="true">
         <img src="/boot-mark.webp" alt="" width={28} height={28} draggable={false} />
       </span>
-      <span className={s.product}>Ledger Chat</span>
+      <span className={s.product}>{tr("Ledger Chat")}</span>
     </div>
   );
 }
@@ -130,6 +132,7 @@ export function PadlockLoader({
   signLink,
   signText,
 }: PadlockLoaderProps) {
+  const tr = useT();
   const walletInfo = detectConnectedMobileWallet(connectorName);
 
   // No automatic open: switching to the wallet before the request reaches the relay leaves the wallet
@@ -178,14 +181,14 @@ export function PadlockLoader({
 
         {state === 'error' && (
           <div key="error" className={s.fade} role="alert">
-            <p className={s.kicker}>Session not opened</p>
-            <h1 id="hl-session-title" className={s.title}>We could not open your channel</h1>
+            <p className={s.kicker}>{tr("Session not opened")}</p>
+            <h1 id="hl-session-title" className={s.title}>{tr("We could not open your channel")}</h1>
             <p className={s.errorText}>{initError}</p>
             <div className={s.actions}>
               {isLimitError ? (
                 <>
                   <button type="button" className={s.primary} onClick={onClearAndRetry}>
-                    Clear this device and retry
+                    {tr("Clear this device and retry")}
                   </button>
                   <button
                     type="button"
@@ -195,20 +198,20 @@ export function PadlockLoader({
                       onActivate();
                     }}
                   >
-                    Retry without clearing
+                    {tr("Retry without clearing")}
                   </button>
                 </>
               ) : isWalletError ? (
                 <>
                   <button type="button" className={s.primary} onClick={onReconnect}>
-                    Reconnect wallet
+                    {tr("Reconnect wallet")}
                   </button>
                   <button type="button" className={s.secondary} onClick={onRefreshSession}>
-                    Refresh session
+                    {tr("Refresh session")}
                   </button>
                   {/* Was "Sign in with new wallet", which wiped this device's message database instead. */}
                   <button type="button" className={s.quiet} onClick={onSignOut}>
-                    Sign out and connect again
+                    {tr("Sign out and connect again")}
                   </button>
                 </>
               ) : (
@@ -220,7 +223,7 @@ export function PadlockLoader({
                     onActivate();
                   }}
                 >
-                  Try again
+                  {tr("Try again")}
                 </button>
               )}
             </div>
@@ -229,15 +232,15 @@ export function PadlockLoader({
 
         {state === 'working' && (
           <div key="work" className={s.fade} aria-live="polite" aria-busy="true">
-            <p className={s.kicker}>{isWaitingForSignature ? 'Unlock this device' : 'Opening your channel'}</p>
+            <p className={s.kicker}>{isWaitingForSignature ? tr("Unlock this device") : tr("Opening your channel")}</p>
             <h1 id="hl-session-title" className={s.title}>
-              {isWaitingForSignature ? 'Approve the signature in your wallet' : 'Decrypting your inbox on this device'}
+              {isWaitingForSignature ? tr("Approve the signature in your wallet") : tr("Decrypting your inbox on this device")}
             </h1>
             <Ledger
               rows={[
-                { label: 'Wallet', value: walletInfo.name && !/^wallet( app)?$/i.test(walletInfo.name) ? `${walletInfo.name}, connected` : 'Connected', state: 'done' },
-                { label: 'Device key', value: isWaitingForSignature ? 'Signature requested' : 'Unlocked', state: isWaitingForSignature ? 'active' : 'done' },
-                { label: 'Encrypted inbox', value: isWaitingForSignature ? 'Waiting' : 'Opening on this device', state: isWaitingForSignature ? 'todo' : 'active' },
+                { label: tr("Wallet"), value: walletInfo.name && !/^wallet( app)?$/i.test(walletInfo.name) ? `${walletInfo.name}, connected` : 'Connected', state: 'done' },
+                { label: tr("Device key"), value: isWaitingForSignature ? 'Signature requested' : 'Unlocked', state: isWaitingForSignature ? 'active' : 'done' },
+                { label: tr("Encrypted inbox"), value: isWaitingForSignature ? 'Waiting' : 'Opening on this device', state: isWaitingForSignature ? 'todo' : 'active' },
               ]}
             />
             {isWaitingForSignature && isMobileDevice() && (
@@ -248,35 +251,33 @@ export function PadlockLoader({
                 aria-busy={preparing}
                 onClick={() => { if (!openSignLink(signLink)) openMobileWalletApp(connectorName); }}
               >
-                {preparing ? 'Sending the request to your wallet…' : `Open ${walletName} to approve`}
+                {preparing ? tr("Sending the request to your wallet…") : tr("Open {walletName} to approve", { walletName })}
               </button>
             )}
             {isWaitingForSignature && signText ? <SignaturePreview text={signText} kind="unlock" /> : null}
             {isWaitingForSignature && (
-              <p className={s.guard}>
-                The request is free and sends no transaction. Your wallet should name <strong>ledgerchat.org</strong>; never sign this message on any other site.
-              </p>
+              <p className={s.guard}>{tr("The request is free and sends no transaction. Your wallet should name {0}; never sign this message on any other site.", { 0: <strong>{tr("ledgerchat.org")}</strong> })}</p>
             )}
-            <span className={s.srOnly} role="progressbar" aria-label={isWaitingForSignature ? 'Waiting for your wallet' : 'Opening your encrypted inbox'} />
+            <span className={s.srOnly} role="progressbar" aria-label={isWaitingForSignature ? tr("Waiting for your wallet") : tr("Opening your encrypted inbox")} />
           </div>
         )}
 
         {state === 'idle' && (
           <div key="idle" className={s.fade}>
-            <p className={s.kicker}>Secure session</p>
-            <h1 id="hl-session-title" className={s.title}>Your messages are decrypted only on this device</h1>
-            <p className={s.lede}>Unlocking this device takes one signature from your wallet. Nothing is sent to the chain.</p>
+            <p className={s.kicker}>{tr("Secure session")}</p>
+            <h1 id="hl-session-title" className={s.title}>{tr("Your messages are decrypted only on this device")}</h1>
+            <p className={s.lede}>{tr("Unlocking this device takes one signature from your wallet. Nothing is sent to the chain.")}</p>
             <div className={s.actions}>
               <button type="button" className={`${s.primary} ${s.cta}`} onClick={activate}>
-                Enter Ledger Chat
+                {tr("Enter Ledger Chat")}
                 <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 10h11M11 5.5 15.5 10 11 14.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             </div>
             <dl className={s.spec}>
               {SPEC.map((p) => (
                 <div key={p.label}>
-                  <dt>{p.label}</dt>
-                  <dd>{p.value}</dd>
+                  <dt>{tr(p.label)}</dt>
+                  <dd>{tr(p.value)}</dd>
                 </div>
               ))}
             </dl>
@@ -285,7 +286,7 @@ export function PadlockLoader({
       </section>
       <p className={s.domain}>
         <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4.5 7V5.2a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
-        Check that the address bar reads ledgerchat.org
+        {tr("Check that the address bar reads ledgerchat.org")}
       </p>
     </div>
   );

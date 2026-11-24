@@ -4,6 +4,7 @@ import React from 'react';
 import { X, Bookmark, Trash2, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 interface SavedMessage {
   id: string;
@@ -26,6 +27,7 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
   onRemove,
   onJumpToMessage,
 }) => {
+  const t = useT();
   if (!isOpen) return null;
 
   return (
@@ -44,8 +46,8 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
               <Bookmark size={16} strokeWidth={2} />
             </div>
             <div>
-              <h3 className="text-[17px] font-semibold text-[#15171c]">Saved Messages</h3>
-              <p className="text-[12px] text-[#727a88]">{savedMessages.length} bookmarked message{savedMessages.length !== 1 ? 's' : ''}</p>
+              <h3 className="text-[17px] font-semibold text-[#15171c]">{t("Saved Messages")}</h3>
+              <p className="text-[12px] text-[#727a88]">{t("{length} bookmarked message{value}", { length: savedMessages.length, value: savedMessages.length !== 1 ? 's' : '' })}</p>
             </div>
           </div>
           <button
@@ -64,9 +66,9 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] flex items-center justify-center mb-3 text-[#15171c]/40">
                 <Bookmark size={24} />
               </div>
-              <p className="text-[15px] font-medium text-[#15171c]">No saved messages</p>
+              <p className="text-[15px] font-medium text-[#15171c]">{t("No saved messages")}</p>
               <p className="text-[13px] text-[#727a88] mt-1 max-w-xs">
-                Right-click or hold any message and tap &quot;Save message&quot; to bookmark it locally on this device.
+                {t("Right-click or hold any message and tap \"Save message\" to bookmark it locally on this device.")}
               </p>
             </div>
           ) : (
@@ -85,7 +87,7 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
                         type="button"
                         onClick={() => { onJumpToMessage(msg.id); onClose(); }}
                         className="p-1.5 rounded-lg hover:bg-white text-black/60 transition-colors"
-                        title="Jump to message"
+                        title={t("Jump to message")}
                       >
                         <ArrowUpRight size={15} />
                       </button>
@@ -94,7 +96,7 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
                       type="button"
                       onClick={() => onRemove(msg.id)}
                       className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors"
-                      title="Remove bookmark"
+                      title={t("Remove bookmark")}
                     >
                       <Trash2 size={15} />
                     </button>

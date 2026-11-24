@@ -5,6 +5,7 @@ import { EXTERNAL_LINKS } from "@/lib/constants/links";
 import { LEGAL_ENTITY } from "@/lib/constants/legalEntity";
 import { AZTEC_WALLET_CONFIG } from "@/lib/aztec/wallet/config";
 import s from "./SiteFooter.module.css";
+import { useT } from '@/lib/i18n/client';
 
 /**
  * SiteFooter — the footer for every public page.
@@ -110,30 +111,28 @@ const ALPHA_LIVE = AZTEC_WALLET_CONFIG.network === "mainnet" && AZTEC_WALLET_CON
 
 /** `lead`: the closing line and its two buttons. Off where the page above already ends with them. */
 export function SiteFooter({ lead = true }: { lead?: boolean }) {
+  const t = useT();
   return (
     <footer className={s.footer}>
       <div className={s.wrap}>
         <div className={`${s.top} ${lead ? "" : s.topSolo}`}>
           {lead && <div className={s.lead}>
-            <p className={`${s.display} hl-display`}>
-              Talk freely.
-              <br />
-              <em>Pay privately.</em>
+            <p className={`${s.display} hl-display`}>{t("Talk freely.{0}{1}", { 0: <br />, 1: <em>{t("Pay privately.")}</em> })}
             </p>
             <div className={s.ctas}>
               <Link href="/chat" className={`${s.btn} ${s.btnPrimary}`}>
-                Open Ledger Chat
+                {t("Open Ledger Chat")}
               </Link>
               <Link href="/docs/overview" className={`${s.btn} ${s.btnGhost}`}>
-                Read the documentation
+                {t("Read the documentation")}
               </Link>
             </div>
           </div>}
 
           <div className={s.cols}>
             {COLUMNS.map((col) => (
-              <nav key={col.title} className={s.col} aria-label={col.title}>
-                <h2>{col.title}</h2>
+              <nav key={col.title} className={s.col} aria-label={t(col.title)}>
+                <h2>{t(col.title)}</h2>
                 <ul>
                   {col.links.map((l) => (
                     <li key={l.label}>
@@ -150,42 +149,31 @@ export function SiteFooter({ lead = true }: { lead?: boolean }) {
       {/* The wordmark, set across the full width over the living field. */}
       <div className={s.mark} aria-hidden="true">
         <div className={s.markGlow} />
-        <span className={`${s.markWord} hl-display`}>
-          Ledger <em>Chat</em>
+        <span className={`${s.markWord} hl-display`}>{t("Ledger {0}", { 0: <em>{t("Chat")}</em> })}
         </span>
       </div>
 
       <div className={s.wrap}>
         <div className={s.bottom}>
           <p className={s.credit}>
-            <span>Ledger Chat</span>, made by {MAKER}. Built on{" "}
-            <a href={EXTERNAL_LINKS.aztec} target="_blank" rel="noopener noreferrer">
-              Aztec Network
-            </a>
-            .
-          </p>
+            {t("{0}, made by {MAKER}. Built on{value}{1}.", { 0: <span>{t("Ledger Chat")}</span>, MAKER, value: " ", 1: <a href={EXTERNAL_LINKS.aztec} target="_blank" rel="noopener noreferrer">
+              {t("Aztec Network")}
+            </a> })}</p>
           <div className={s.bottomRow}>
             <span className={s.copy}>
-              <HLLogo size={20} variant="mark" />© 2026 {LEGAL_ENTITY.tradingName}
+              <HLLogo size={20} variant="mark" />© 2026 {t(LEGAL_ENTITY.tradingName)}
             </span>
-            <nav className={s.legal} aria-label="Legal">
+            <nav className={s.legal} aria-label={t("Legal")}>
               {LEGAL.map((l) => (
                 <FooterLinkItem key={l.label} link={l} />
               ))}
             </nav>
           </div>
+          <p className={s.fine}>{t("Ledger Chat is in early access. Our contracts have had an internal security review, not an external audit, and private payments run{value}Please do not rely on the service to protect information or funds you cannot afford to lose.", { value: ALPHA_LIVE
+              ? t(" on Aztec Alpha with real funds and a cap per payment. ")
+              : t(" only on the Aztec test network with tokens that have no value. ") })}</p>
           <p className={s.fine}>
-            Ledger Chat is in early access. Our contracts have had an internal security review, not an external audit, and private payments run
-            {ALPHA_LIVE
-              ? " on Aztec Alpha with real funds and a cap per payment. "
-              : " only on the Aztec test network with tokens that have no value. "}
-            Please do not rely on the service to protect information or funds you cannot afford to lose.
-          </p>
-          <p className={s.fine}>
-            {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Not a bank, broker, exchange or financial
-            institution, and nothing on this site is financial advice. Not affiliated with Humanity Protocol, Ledger SAS
-            or the Aztec Foundation.
-          </p>
+            {t("{name}, trading as {tradingName}. Not a bank, broker, exchange or financial institution, and nothing on this site is financial advice. Not affiliated with Humanity Protocol, Ledger SAS or the Aztec Foundation.", { name: t(LEGAL_ENTITY.name), tradingName: t(LEGAL_ENTITY.tradingName) })}</p>
         </div>
       </div>
     </footer>

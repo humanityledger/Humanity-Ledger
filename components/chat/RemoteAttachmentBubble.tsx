@@ -15,6 +15,7 @@ import { Download, FileText, Lock, AlertTriangle } from 'lucide-react';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { decryptAttachment, type AttachmentMessage, GCM_TAG_BYTES } from '@/lib/chat/remote-attachment';
 import { renderableAs, sniffType, type SniffedType } from '@/lib/chat/file-sniff';
+import { useT } from '@/lib/i18n/client';
 
 const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
 /** Above this, video and files load only when tapped. */
@@ -74,6 +75,7 @@ export function RemoteAttachmentBubble({
   isMe: boolean;
   onOpenLightbox: (url: string) => void;
 }) {
+  const t = useT();
   const auto = att.kind === 'audio' || att.kind === 'image' || (att.kind === 'video' && att.contentLength <= AUTO_LOAD_BYTES);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'error'>(auto ? 'loading' : 'idle');
   const [data, setData] = useState<Decrypted | null>(() => cache.get(att.contentDigest) ?? null);
@@ -89,7 +91,7 @@ export function RemoteAttachmentBubble({
       setState('ready');
       return d;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not open the attachment');
+      setError(e instanceof Error ? e.message : t("Could not open the attachment"));
       setState('error');
       return null;
     }
@@ -118,10 +120,10 @@ export function RemoteAttachmentBubble({
       <div className={`${CARD} ${corner} flex items-center gap-2.5 px-3.5 py-3 min-w-[220px] max-w-[300px]`} role="status">
         <AlertTriangle size={16} strokeWidth={1.9} className="text-[#b54708] shrink-0" aria-hidden="true" />
         <span className="flex flex-col min-w-0">
-          <span className="text-[14px] font-medium text-[#15171c] truncate">{att.kind === 'audio' ? 'Voice message' : att.filename}</span>
+          <span className="text-[14px] font-medium text-[#15171c] truncate">{att.kind === 'audio' ? t("Voice message") : att.filename}</span>
           <span className="text-[12.5px] text-[#727a88]">{error}</span>
         </span>
-        <button type="button" onClick={() => void start()} className="ml-auto min-h-[44px] px-3 text-[13px] font-medium text-[#15171c]">Retry</button>
+        <button type="button" onClick={() => void start()} className="ml-auto min-h-[44px] px-3 text-[13px] font-medium text-[#15171c]">{t("Retry")}</button>
       </div>
     );
   }
@@ -137,7 +139,7 @@ export function RemoteAttachmentBubble({
           <span className="flex flex-col min-w-0 flex-1">
             <span className="text-[14.5px] font-medium text-[#15171c] truncate">{att.filename}</span>
             <span className="text-[13px] text-[#727a88] flex items-center gap-1">
-              <Lock size={11} strokeWidth={2} aria-hidden="true" /> {state === 'loading' ? 'Decrypting…' : formatSize(att.contentLength)}
+              <Lock size={11} strokeWidth={2} aria-hidden="true" /> {state === 'loading' ? t("Decrypting…") : formatSize(att.contentLength)}
             </span>
           </span>
           <Download size={16} strokeWidth={1.9} className="text-[#4a505c] shrink-0" aria-hidden="true" />
@@ -146,7 +148,7 @@ export function RemoteAttachmentBubble({
     }
     return (
       <div className={`${CARD} ${corner} ${att.kind === 'audio' ? 'px-3 py-3 w-[240px]' : 'w-[220px] h-[160px]'} flex items-center justify-center gap-1.5 text-[13px] text-[#727a88]`} role="status">
-        <Lock size={12} strokeWidth={2} aria-hidden="true" /> Decrypting {att.kind === 'audio' ? 'voice message' : att.kind}
+        <Lock size={12} strokeWidth={2} aria-hidden="true" />{" "}{t("Decrypting")}{" "}{att.kind === 'audio' ? t("voice message") : att.kind}
       </div>
     );
   }
@@ -160,7 +162,7 @@ export function RemoteAttachmentBubble({
   }
   if (data.inline && att.kind === 'image') {
     return (
-      <button type="button" onClick={() => onOpenLightbox(data.url)} aria-label="Open photo" className={`block rounded-2xl ${corner} overflow-hidden border border-[#e6e8ec]`}>
+      <button type="button" onClick={() => onOpenLightbox(data.url)} aria-label={t("Open photo")} className={`block rounded-2xl ${corner} overflow-hidden border border-[#e6e8ec]`}>
         <img src={data.url} alt="" className="max-w-[260px] max-h-[300px] object-cover block" />
       </button>
     );
@@ -179,7 +181,7 @@ export function RemoteAttachmentBubble({
       <span className="flex flex-col min-w-0 flex-1">
         <span className="text-[14.5px] font-medium text-[#15171c] truncate">{att.filename}</span>
         <span className="text-[13px] text-[#727a88]">
-          {att.kind !== 'file' ? 'Not a playable file, download only' : formatSize(att.contentLength)}
+          {att.kind !== 'file' ? t("Not a playable file, download only") : formatSize(att.contentLength)}
         </span>
       </span>
       <Download size={16} strokeWidth={1.9} className="text-[#4a505c] shrink-0" aria-hidden="true" />

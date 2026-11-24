@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import s from './CallScreens.module.css';
 import { formatCallDuration } from '@/lib/calls/format';
+import { useT } from '@/lib/i18n/client';
 
 export { formatCallDuration };
 
@@ -75,13 +76,12 @@ function Elapsed() {
 }
 
 function Top({ label, isVideo, dark }: { label: string; isVideo: boolean; dark?: boolean }) {
+  const tr = useT();
   const Icon = isVideo ? Video : Phone;
   return (
     <div className={`${s.top} ${dark ? s.topDark : ''}`}>
       <span className={s.brand}>
-        <span className={s.brandMark} aria-hidden="true" />
-        Ledger Chat
-      </span>
+        {tr("{0}Ledger Chat", { 0: <span className={s.brandMark} aria-hidden="true" /> })}</span>
       <span className={s.kind}>
         <Icon size={14} strokeWidth={2.1} aria-hidden="true" />
         {label}
@@ -91,10 +91,11 @@ function Top({ label, isVideo, dark }: { label: string; isVideo: boolean; dark?:
 }
 
 function Secure({ dark }: { dark?: boolean }) {
+  const tr = useT();
   return (
     <p className={`${s.secure} ${dark ? s.secureDark : ''}`}>
       <Lock size={12} strokeWidth={2.25} aria-hidden="true" />
-      Encrypted in transit, device to device (DTLS-SRTP)
+      {tr("Encrypted in transit, device to device (DTLS-SRTP)")}
     </p>
   );
 }
@@ -155,6 +156,7 @@ export function IncomingCallScreen({
   onAnswer: () => void;
   onMessage?: () => void;
 }) {
+  const tr = useT();
   // One tap per call: a second tap on Answer (or Decline right after it) does nothing.
   const [busy, setBusy] = React.useState(false);
   const once = (fn: () => void) => () => {
@@ -173,35 +175,35 @@ export function IncomingCallScreen({
       className={s.backdrop}
       role="dialog"
       aria-modal="true"
-      aria-label={`Incoming ${isVideo ? 'video' : 'voice'} call from ${peerName}`}
+      aria-label={tr("Incoming {value} call from {peerName}", { value: isVideo ? 'video' : 'voice', peerName })}
       onKeyDown={(e) => {
         if (e.key === 'Escape') { e.preventDefault(); once(onDecline)(); }
       }}
     >
       <div className={s.screen} data-kind="incoming">
-        <Top label={isVideo ? 'Video call' : 'Voice call'} isVideo={isVideo} />
+        <Top label={isVideo ? tr("Video call") : tr("Voice call")} isVideo={isVideo} />
 
         <Who
           peerName={peerName}
           peerAddress={peerAddress}
           photo={photo}
-          status={<>{isVideo ? 'Incoming video call' : 'Incoming voice call'}<span className={s.ellipsis} aria-hidden="true" /></>}
+          status={<>{isVideo ? tr("Incoming video call") : tr("Incoming voice call")}<span className={s.ellipsis} aria-hidden="true" /></>}
         />
 
         <div className={s.bottom}>
           <div className={s.actions}>
             <div className={s.action}>
-              <button type="button" className={`${s.round} ${s.decline}`} onClick={once(onDecline)} disabled={busy} aria-label="Decline">
+              <button type="button" className={`${s.round} ${s.decline}`} onClick={once(onDecline)} disabled={busy} aria-label={tr("Decline")}>
                 <PhoneOff size={27} strokeWidth={2} aria-hidden="true" />
               </button>
-              <span>Decline</span>
+              <span>{tr("Decline")}</span>
             </div>
             {onMessage && (
               <div className={s.action}>
-                <button type="button" className={`${s.round} ${s.secondary}`} onClick={once(onMessage)} disabled={busy} aria-label="Decline and reply with a message">
+                <button type="button" className={`${s.round} ${s.secondary}`} onClick={once(onMessage)} disabled={busy} aria-label={tr("Decline and reply with a message")}>
                   <MessageSquare size={21} strokeWidth={1.9} aria-hidden="true" />
                 </button>
-                <span>Message</span>
+                <span>{tr("Message")}</span>
               </div>
             )}
             <div className={s.action}>
@@ -211,12 +213,12 @@ export function IncomingCallScreen({
                 className={`${s.round} ${s.accept}`}
                 onClick={once(onAnswer)}
                 disabled={busy}
-                aria-label={isVideo ? 'Answer with video' : 'Answer'}
+                aria-label={isVideo ? tr("Answer with video") : tr("Answer")}
               >
                 <span className={s.acceptPulse} aria-hidden="true" />
                 {isVideo ? <Video size={27} strokeWidth={2} aria-hidden="true" /> : <Phone size={27} strokeWidth={2} aria-hidden="true" />}
               </button>
-              <span>{busy ? 'Connecting' : 'Answer'}</span>
+              <span>{busy ? tr("Connecting") : tr("Answer")}</span>
             </div>
           </div>
           <Secure />
@@ -242,6 +244,7 @@ export function OutgoingCallScreen({
   preview?: MediaStream | null;
   onCancel: () => void;
 }) {
+  const tr = useT();
   // A video call shows our own camera full screen while it rings, under a dark veil; a voice call
   // keeps the light screen.
   const camera = isVideo && !!preview && preview.getVideoTracks().some((t) => t.readyState === 'live');
@@ -251,7 +254,7 @@ export function OutgoingCallScreen({
       className={`${s.backdrop} ${camera ? s.backdropDark : ''}`}
       role="dialog"
       aria-modal="true"
-      aria-label={`Calling ${peerName}`}
+      aria-label={tr("Calling {peerName}", { peerName })}
       onKeyDown={(e) => { if (e.key === 'Escape' && !cancelled) { e.preventDefault(); setCancelled(true); onCancel(); } }}
     >
       <div className={`${s.screen} ${camera ? s.screenCamera : ''}`} data-kind="outgoing">
@@ -263,19 +266,19 @@ export function OutgoingCallScreen({
               autoPlay
               playsInline
               muted
-              aria-label="Your camera"
+              aria-label={tr("Your camera")}
             />
             <span className={s.veil} aria-hidden="true" />
           </>
         )}
-        <Top label={isVideo ? 'Video call' : 'Voice call'} isVideo={isVideo} dark={camera} />
+        <Top label={isVideo ? tr("Video call") : tr("Voice call")} isVideo={isVideo} dark={camera} />
 
         <Who
           peerName={peerName}
           peerAddress={peerAddress}
           photo={photo}
           dark={camera}
-          status={<>Calling<span className={s.ellipsis} aria-hidden="true" /><span className={s.sep} aria-hidden="true">·</span><span className={s.mono}><Elapsed /></span></>}
+          status={<>{tr("Calling{0}{1}{2}", { 0: <span className={s.ellipsis} aria-hidden="true" />, 1: <span className={s.sep} aria-hidden="true">·</span>, 2: <span className={s.mono}><Elapsed /></span> })}</>}
         />
 
         <div className={s.bottom}>
@@ -286,11 +289,11 @@ export function OutgoingCallScreen({
                 className={`${s.round} ${s.decline}`}
                 onClick={() => { if (cancelled) return; setCancelled(true); onCancel(); }}
                 disabled={cancelled}
-                aria-label="Cancel call"
+                aria-label={tr("Cancel call")}
               >
                 <PhoneOff size={27} strokeWidth={2} aria-hidden="true" />
               </button>
-              <span>Cancel</span>
+              <span>{tr("Cancel")}</span>
             </div>
           </div>
           <Secure dark={camera} />
@@ -382,6 +385,7 @@ export function AudioCallStage({
   /** The other person's stream, for the voice pulse. */
   levelStream?: MediaStream | null;
 }) {
+  const tr = useT();
   const pulse = React.useRef<HTMLDivElement>(null);
   useVoicePulse(levelStream, connected, pulse);
   return (
@@ -401,11 +405,11 @@ export function AudioCallStage({
         <p className={`${s.status} ${poorConnection || reconnecting ? s.statusWarn : ''}`} role="status" aria-live="polite">
           <span className={`${s.dot} ${connected ? (poorConnection || reconnecting ? s.dotWarn : s.dotLive) : s.dotWait}`} aria-hidden="true" />
           <span>{!connected
-            ? <>Connecting<span className={s.ellipsis} aria-hidden="true" /></>
+            ? <>{tr("Connecting{0}", { 0: <span className={s.ellipsis} aria-hidden="true" /> })}</>
             : reconnecting
-              ? <>Reconnecting<span className={s.ellipsis} aria-hidden="true" /></>
+              ? <>{tr("Reconnecting{0}", { 0: <span className={s.ellipsis} aria-hidden="true" /> })}</>
               : poorConnection
-                ? 'Weak connection'
+                ? tr("Weak connection")
                 : <span className={s.mono}>{durationLabel ?? <CallClock startedAt={startedAt} />}</span>}</span>
         </p>
       </div>
@@ -436,10 +440,11 @@ export function CallControls({
   onToggleMic: () => void;
   onEnd: () => void;
 }) {
+  const tr = useT();
   return (
-    <div className={`${s.controls} ${tone === 'light' ? s.controlsLight : s.controlsDark}`} role="toolbar" aria-label="Call controls">
+    <div className={`${s.controls} ${tone === 'light' ? s.controlsLight : s.controlsDark}`} role="toolbar" aria-label={tr("Call controls")}>
       {isVideo && onSwitchCamera && !cameraOff && (
-        <button type="button" className={s.control} onClick={onSwitchCamera} aria-label="Switch camera" title="Switch camera">
+        <button type="button" className={s.control} onClick={onSwitchCamera} aria-label={tr("Switch camera")} title={tr("Switch camera")}>
           <SwitchCamera size={21} strokeWidth={1.9} />
         </button>
       )}
@@ -449,8 +454,8 @@ export function CallControls({
           className={`${s.control} ${screenSharing ? s.controlOn : ''}`}
           onClick={onScreenShare}
           aria-pressed={!!screenSharing}
-          aria-label={screenSharing ? 'Stop sharing your screen' : 'Share your screen'}
-          title={screenSharing ? 'Stop sharing' : 'Share screen'}
+          aria-label={screenSharing ? tr("Stop sharing your screen") : tr("Share your screen")}
+          title={screenSharing ? tr("Stop sharing") : tr("Share screen")}
         >
           <MonitorUp size={21} strokeWidth={1.9} />
         </button>
@@ -461,8 +466,8 @@ export function CallControls({
           className={`${s.control} ${cameraOff ? s.controlOn : ''}`}
           onClick={onToggleCamera}
           aria-pressed={!!cameraOff}
-          aria-label={cameraOff ? 'Turn camera on' : 'Turn camera off'}
-          title={cameraOff ? 'Turn camera on' : 'Turn camera off'}
+          aria-label={cameraOff ? tr("Turn camera on") : tr("Turn camera off")}
+          title={cameraOff ? tr("Turn camera on") : tr("Turn camera off")}
         >
           {cameraOff ? <VideoOff size={21} strokeWidth={1.9} /> : <Video size={21} strokeWidth={1.9} />}
         </button>
@@ -472,12 +477,12 @@ export function CallControls({
         className={`${s.control} ${micMuted ? s.controlOn : ''}`}
         onClick={onToggleMic}
         aria-pressed={micMuted}
-        aria-label={micMuted ? 'Unmute' : 'Mute'}
-        title={micMuted ? 'Unmute' : 'Mute'}
+        aria-label={micMuted ? tr("Unmute") : tr("Mute")}
+        title={micMuted ? tr("Unmute") : tr("Mute")}
       >
         {micMuted ? <MicOff size={21} strokeWidth={1.9} /> : <Mic size={21} strokeWidth={1.9} />}
       </button>
-      <button type="button" className={s.controlEnd} onClick={onEnd} aria-label="End call" title="End call">
+      <button type="button" className={s.controlEnd} onClick={onEnd} aria-label={tr("End call")} title={tr("End call")}>
         <PhoneOff size={22} strokeWidth={2} />
       </button>
     </div>

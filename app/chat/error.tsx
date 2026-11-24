@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import Link from "next/link";
 import { isChunkLoadError, reloadForFreshChunks } from "@/lib/errors/chunk-recovery";
+import { useT } from '@/lib/i18n/client';
 
 export default function ChatError({
   error,
@@ -12,6 +13,7 @@ export default function ChatError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useT();
   useEffect(() => {
     console.error("[LedgerChat] Rendering fault:", error);
 
@@ -53,10 +55,10 @@ export default function ChatError({
           <AlertTriangle size={24} className="text-red-500" />
         </div>
         <h1 className="text-[18px] font-black text-black tracking-tight mb-2">
-          Chat Unavailable
+          {t("Chat Unavailable")}
         </h1>
         <p className="text-[14px] text-black/50 leading-relaxed mb-6">
-          The chat stopped because of an unexpected error. Your wallet, keys and messages are not affected.
+          {t("The chat stopped because of an unexpected error. Your wallet, keys and messages are not affected.")}
         </p>
         {process.env.NODE_ENV !== "production" && (
           <p className="text-[12px] text-red-500 leading-relaxed mb-6 font-mono text-left break-words overflow-hidden whitespace-pre-wrap">
@@ -66,7 +68,7 @@ export default function ChatError({
         {error.digest && (
           <div className="w-full bg-black/[0.03] rounded-xl border border-black/5 p-3 mb-6 text-left">
             <span className="text-[9px] font-mono uppercase tracking-widest text-black/30 block mb-1">
-              Fault ID
+              {t("Fault ID")}
             </span>
             <span className="text-[10px] font-mono text-black/50">{error.digest}</span>
           </div>
@@ -76,19 +78,19 @@ export default function ChatError({
             onClick={() => reset()}
             className="w-full flex items-center justify-center gap-2 py-3 bg-black text-white font-bold text-[11px] uppercase tracking-widest rounded-2xl hover:bg-black/80 transition-colors"
           >
-            <RefreshCw size={12} /> Reload Chat
+            <RefreshCw size={12} />{" "}{t("Reload Chat")}
           </button>
           <Link
             href="/"
             className="w-full flex items-center justify-center gap-2 py-3 border border-black/10 text-black/60 font-bold text-[11px] uppercase tracking-widest rounded-2xl hover:border-black hover:text-black transition-colors"
           >
-            <Home size={12} /> Back to home
+            <Home size={12} />{" "}{t("Back to home")}
           </Link>
           <Link
             href="/connect"
             className="text-[9px] font-mono text-black/25 hover:text-black transition-colors mt-1 uppercase tracking-widest"
           >
-            Reconnect wallet
+            {t("Reconnect wallet")}
           </Link>
         </div>
       </div>

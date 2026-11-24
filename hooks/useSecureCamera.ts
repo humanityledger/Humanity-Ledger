@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { t as tr } from '@/lib/i18n/runtime';
 
 interface UseSecureCameraOptions {
   facingMode?: 'user' | 'environment';
@@ -110,13 +111,13 @@ export function useSecureCamera({ facingMode = 'user', onFrame }: UseSecureCamer
         setHasPermission(false);
         // Provide friendly messages for common iOS/Android permission errors
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setError('Camera permission denied. Please allow camera access in your browser settings and try again.');
+          setError(tr("Camera permission denied. Please allow camera access in your browser settings and try again."));
         } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          setError('No camera found on this device.');
+          setError(tr("No camera found on this device."));
         } else if (err.name === 'NotReadableError') {
-          setError('Camera is in use by another app. Close it and try again.');
+          setError(tr("Camera is in use by another app. Close it and try again."));
         } else {
-          setError(err.message || 'Camera access denied or unavailable.');
+          setError(err.message || tr("Camera access denied or unavailable."));
         }
       }
     } finally {

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { PeerAvatar, SectionLabel, EmptyState, PrimaryButton, IconButton, SearchField, Sheet, shortAddr } from './ui/kit';
 import { describeCountdown, describeMeetingTime, meetingPhase, type StoredMeeting } from '@/lib/chat/meeting';
+import { useT } from '@/lib/i18n/client';
 
 interface CallRecord {
   id: string;
@@ -64,6 +65,7 @@ const saveFavorites = (favs: string[]) => {
 };
 
 export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, contacts, onStartCall, onOpenChat, upcoming = [], onJoinMeeting, onScheduleCall }) => {
+  const t = useT();
   const [showNewCall, setShowNewCall] = useState(false);
   // The contact sheet serves both "New call" and "Schedule a call".
   const [pickFor, setPickFor] = useState<'call' | 'schedule'>('call');
@@ -95,7 +97,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
           <span className="w-11 h-11 rounded-full bg-[#15171c] text-white flex items-center justify-center shrink-0" aria-hidden="true">
             <Plus size={20} strokeWidth={2} />
           </span>
-          <span className="text-[15.5px] font-medium text-[#15171c]">New call</span>
+          <span className="text-[15.5px] font-medium text-[#15171c]">{t("New call")}</span>
         </button>
         {onScheduleCall && (
           <button
@@ -106,14 +108,14 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
             <span className="w-11 h-11 rounded-full bg-[#f2f4f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
               <CalendarPlus size={19} strokeWidth={1.9} />
             </span>
-            <span className="text-[15.5px] font-medium text-[#15171c]">Schedule a call</span>
+            <span className="text-[15.5px] font-medium text-[#15171c]">{t("Schedule a call")}</span>
           </button>
         )}
       </div>
 
       {upcoming.length > 0 && (
         <>
-          <SectionLabel>Upcoming</SectionLabel>
+          <SectionLabel>{t("Upcoming")}</SectionLabel>
           <ul className="px-2">
             {upcoming.map((m) => {
               const phase = meetingPhase(m.invite);
@@ -128,16 +130,16 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                       <span className="flex-1 min-w-0">
                         <span className="block text-[15.5px] font-medium text-[#15171c] truncate">{m.invite.title}</span>
                         <span className="block mt-0.5 text-[13.5px] text-[#727a88] truncate">
-                          {nameOf(m.peer)}, {describeMeetingTime(m.invite)}
+                          {nameOf(m.peer)}, {t(describeMeetingTime(m.invite))}
                         </span>
                       </span>
                     </button>
                     {canJoin && onJoinMeeting ? (
                       <button type="button" onClick={() => onJoinMeeting(m)} className="h-9 px-4 rounded-full bg-[#12a150] hover:bg-[#0f8a44] text-white text-[13.5px] font-semibold shrink-0">
-                        Join
+                        {t("Join")}
                       </button>
                     ) : (
-                      <span className="text-[13px] text-[#a3a9b4] shrink-0">{describeCountdown(m.invite)}</span>
+                      <span className="text-[13px] text-[#a3a9b4] shrink-0">{t(describeCountdown(m.invite))}</span>
                     )}
                   </div>
                 </li>
@@ -149,7 +151,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
 
       {favoriteContacts.length > 0 && (
         <>
-          <SectionLabel>Favourites</SectionLabel>
+          <SectionLabel>{t("Favourites")}</SectionLabel>
           <div className="flex gap-4 px-4 pb-2 overflow-x-auto">
             {favoriteContacts.map(c => (
               <button
@@ -157,7 +159,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                 key={c.peerAddress}
                 onClick={() => onStartCall(c.peerAddress, 'voice')}
                 className="flex flex-col items-center gap-1.5 shrink-0 w-16"
-                aria-label={`Call ${c.name || shortAddr(c.peerAddress)}`}
+                aria-label={t("Call {value}", { value: c.name || shortAddr(c.peerAddress) })}
               >
                 <PeerAvatar address={c.peerAddress} name={c.name} size={52} />
                 <span className="text-[12.5px] text-[#15171c] max-w-full truncate">{c.name || shortAddr(c.peerAddress)}</span>
@@ -167,13 +169,13 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
         </>
       )}
 
-      <SectionLabel>Recent</SectionLabel>
+      <SectionLabel>{t("Recent")}</SectionLabel>
       {callHistory.length === 0 ? (
         <EmptyState
           icon={<Phone size={20} strokeWidth={1.8} />}
-          title="No calls yet"
-          text="Calls you make and receive will show up here."
-          action={<PrimaryButton onClick={() => { setPickFor('call'); setShowNewCall(true); }}>Start a call</PrimaryButton>}
+          title={t("No calls yet")}
+          text={t("Calls you make and receive will show up here.")}
+          action={<PrimaryButton onClick={() => { setPickFor('call'); setShowNewCall(true); }}>{t("Start a call")}</PrimaryButton>}
         />
       ) : (
         <ul className="px-2">
@@ -192,7 +194,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                       <span className="flex items-center gap-1.5 mt-0.5 text-[13.5px] text-[#727a88] min-w-0">
                         <DirIcon size={13} strokeWidth={2} className={call.missed ? 'text-[#d93036]' : 'text-[#727a88]'} aria-hidden="true" />
                         <span className="truncate">
-                          {label} {call.type === 'video' ? 'video call' : 'call'}
+                          {label} {call.type === 'video' ? t("video call") : 'call'}
                           {call.duration ? <span className="tabular-nums">, {formatDuration(call.duration)}</span> : null}
                         </span>
                       </span>
@@ -200,7 +202,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                   </button>
                   <span className="text-[13px] text-[#a3a9b4] tabular-nums shrink-0">{formatTime(call.timestamp)}</span>
                   <IconButton
-                    label={call.type === 'video' ? 'Video call' : 'Voice call'}
+                    label={call.type === 'video' ? t("Video call") : t("Voice call")}
                     onClick={() => onStartCall(call.peerAddress, call.type)}
                   >
                     {call.type === 'video' ? <Video size={18} strokeWidth={1.8} /> : <Phone size={18} strokeWidth={1.8} />}
@@ -213,18 +215,18 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
       )}
 
       <p className="mt-auto px-4 py-6 flex items-center justify-center gap-1.5 text-[13px] text-[#a3a9b4]">
-        <Lock size={12} strokeWidth={2} aria-hidden="true" /> Calls are encrypted end to end
+        <Lock size={12} strokeWidth={2} aria-hidden="true" />{" "}{t("Calls are encrypted end to end")}
       </p>
 
-      <Sheet open={showNewCall} onClose={() => setShowNewCall(false)} title={pickFor === 'schedule' ? 'Schedule a call' : 'New call'} subtitle={pickFor === 'schedule' ? 'Choose who to invite' : undefined}>
+      <Sheet open={showNewCall} onClose={() => setShowNewCall(false)} title={pickFor === 'schedule' ? t("Schedule a call") : t("New call")} subtitle={pickFor === 'schedule' ? t("Choose who to invite") : undefined}>
         <div className="px-4 pb-2">
-          <SearchField value={contactSearch} onChange={setContactSearch} placeholder="Search contacts" autoFocus />
+          <SearchField value={contactSearch} onChange={setContactSearch} placeholder={t("Search contacts")} autoFocus />
         </div>
         {filteredContacts.length === 0 ? (
           <EmptyState
             icon={<MessageCircle size={20} strokeWidth={1.8} />}
-            title={contacts.length === 0 ? 'No contacts yet' : 'No matches'}
-            text={contacts.length === 0 ? 'Send someone a message first, then you can call them from here.' : 'Try another name or address.'}
+            title={contacts.length === 0 ? t("No contacts yet") : t("No matches")}
+            text={contacts.length === 0 ? t("Send someone a message first, then you can call them from here.") : t("Try another name or address.")}
           />
         ) : (
           <ul className="px-2 pb-3">
@@ -239,19 +241,19 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                   </span>
                   {pickFor === 'schedule' && onScheduleCall ? (
                     <PrimaryButton onClick={() => { onScheduleCall(c.peerAddress); setShowNewCall(false); }} className="h-9 px-4 text-[13.5px]">
-                      Choose
+                      {t("Choose")}
                     </PrimaryButton>
                   ) : (<>
-                  <IconButton label="Message" onClick={() => { onOpenChat(c.peerAddress); setShowNewCall(false); }}>
+                  <IconButton label={t("Message")} onClick={() => { onOpenChat(c.peerAddress); setShowNewCall(false); }}>
                     <MessageCircle size={18} strokeWidth={1.8} />
                   </IconButton>
-                  <IconButton label="Voice call" onClick={() => { onStartCall(c.peerAddress, 'voice'); setShowNewCall(false); }}>
+                  <IconButton label={t("Voice call")} onClick={() => { onStartCall(c.peerAddress, 'voice'); setShowNewCall(false); }}>
                     <Phone size={18} strokeWidth={1.8} />
                   </IconButton>
-                  <IconButton label="Video call" onClick={() => { onStartCall(c.peerAddress, 'video'); setShowNewCall(false); }}>
+                  <IconButton label={t("Video call")} onClick={() => { onStartCall(c.peerAddress, 'video'); setShowNewCall(false); }}>
                     <Video size={18} strokeWidth={1.8} />
                   </IconButton>
-                  <IconButton label={fav ? 'Remove from favourites' : 'Add to favourites'} onClick={() => toggleFavorite(c.peerAddress)} aria-pressed={fav}>
+                  <IconButton label={fav ? t("Remove from favourites") : t("Add to favourites")} onClick={() => toggleFavorite(c.peerAddress)} aria-pressed={fav}>
                     <Star size={18} strokeWidth={1.8} className={fav ? 'fill-[#15171c]' : 'text-[#a3a9b4]'} />
                   </IconButton>
                   </>)}

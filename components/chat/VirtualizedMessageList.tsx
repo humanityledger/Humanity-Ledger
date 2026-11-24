@@ -3,6 +3,7 @@ import React, { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useSta
 import { REVEAL_MESSAGE_EVENT } from '@/lib/chat/reveal-message';
 import { renderKey } from '@/lib/chat/optimistic-send';
 import { PeerTypingLottie } from '@/components/chat/ChatLottie';
+import { useT } from '@/lib/i18n/client';
 
 interface VirtualizedMessageListProps {
   messages: any[];
@@ -56,6 +57,7 @@ const MemoizedMessageRow = React.memo(({
   renderMessage: (msg: any, isMe: boolean, enter: boolean) => React.ReactNode;
   enter: boolean;
 }) => {
+  const tr = useT();
   const senderLower = (msg.senderInboxId ?? '').toLowerCase();
   const isMe =
     (typeof msg.isMe === 'boolean' ? msg.isMe : false) ||
@@ -66,7 +68,7 @@ const MemoizedMessageRow = React.memo(({
 
   return (
     <div className="w-full pb-1">
-      {renderMessage(msg, isMe, enter)}
+      {tr(renderMessage(msg, isMe, enter))}
     </div>
   );
 }, (prev, next) =>
@@ -91,6 +93,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   isSending,
   header,
 }) => {
+  const tr = useT();
   const scrollRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -233,7 +236,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
             onClick={showOlder}
             className="min-h-[44px] px-4 text-[12px] font-medium text-[#727A88] hover:text-[#15171C] transition-colors duration-150 ease-out"
           >
-            {hiddenCount} earlier {hiddenCount === 1 ? 'message' : 'messages'}
+            {tr("{hiddenCount} earlier {value}", { hiddenCount, value: hiddenCount === 1 ? 'message' : 'messages' })}
           </button>
         </div>
       )}
@@ -241,7 +244,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
       {header && hiddenCount === 0 ? <div className="shrink-0 -mt-2 mb-1">{header}</div> : null}
       {isLoadingMore && (
         <div className="h-10 w-full flex items-center justify-center shrink-0" role="status">
-          <div className="text-xs text-black/40 font-medium">Loading previous messages…</div>
+          <div className="text-xs text-black/40 font-medium">{tr("Loading previous messages…")}</div>
         </div>
       )}
       {visible.map((msg: any) => (
@@ -258,7 +261,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
       {/* Typing indicator inside the scroll flow to avoid compressing list height */}
       {isTyping && (
-        <div className="hl-fade-in flex self-start items-start mt-2 ml-1" role="status" aria-label={typingLabel || "Typing"} data-testid="peer-typing">
+        <div className="hl-fade-in flex self-start items-start mt-2 ml-1" role="status" aria-label={typingLabel || tr("Typing")} data-testid="peer-typing">
           {/* The animation draws its own grey bubble with the three dots. */}
           <PeerTypingLottie />
         </div>
@@ -268,7 +271,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
       {isSending && (
         <div className="flex self-end items-center gap-1.5 mt-1 mr-2 text-[12px] text-[#727a88]" role="status">
           <span className="w-1.5 h-1.5 rounded-full bg-[#727a88]" aria-hidden="true" />
-          <span>Sending</span>
+          <span>{tr("Sending")}</span>
         </div>
       )}
 
