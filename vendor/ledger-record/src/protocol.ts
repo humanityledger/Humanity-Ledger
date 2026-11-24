@@ -210,6 +210,12 @@ export function setRecordCipher(impl: { encrypt?: ChunkFn; decrypt?: ChunkFn } |
   decryptImpl = impl?.decrypt ?? ((key, nonce, data, aad) => aesOpen(key, nonce, data, aad));
 }
 
+/** A body needs either a reader or the bytes; sealing nothing is a caller bug, said plainly. */
+function requirePlain(plain: Uint8Array | undefined): Uint8Array {
+  if (!plain) throw new Error('record: nothing to seal (neither plain bytes nor a reader)');
+  return plain;
+}
+
 async function encryptChunks(key: Uint8Array, baseNonce: Uint8Array, plain: Uint8Array, aadFor: (index: number, count: number) => Uint8Array): Promise<{ cipher: Uint8Array; chunks: number; digest: string }> {
   const count = Math.ceil(plain.byteLength / CHUNK_PLAINTEXT);
   const hash = new Sha256();
@@ -379,7 +385,7 @@ export async function seal(input: SealInput): Promise<SealedRecord> {
 
   const sealed = input.reader
     ? await encryptReader(contentKey, baseNonce, input.reader, aadOf)
-    : await encryptChunks(contentKey, baseNonce, input.plain, aadOf);
+    : await encryptChunks(contentKey, baseNonce, requirePlain(input.plain), aadOf);
   const aad = aadHashHex(wrapAad);
   const head = await versionHeadV2(recordHeadLines({
     id, generation, conversationId: input.epoch.conversationId, mlsEpoch: input.epoch.mlsEpoch,
@@ -524,8 +530,9 @@ export function parseRecordMessage(content: unknown): RecordPointer | null {
     prev: row.prev as string,
     scheme: RECORD_SCHEME,
     wrap: row.wrap,
-    wrapNonce: row.wrapNonce,
-    nonce: row.nonce,
+    // Checked against HEX24 above.
+    wrapNonce: row.wrapNonce as string,
+    nonce: row.nonce as string,
     digest: row.digest as string,
     bytes: row.bytes,
     chunks: row.chunks,

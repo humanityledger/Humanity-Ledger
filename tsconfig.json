@@ -43,6 +43,7 @@
     "subgraph",
     "test",
     "tests",
+    "vendor/ledger-record/test",
     "docs",
     "e2e",
     "load",

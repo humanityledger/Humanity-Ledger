@@ -79,6 +79,16 @@ jobs:
           test/unit/chat/calls.test.ts
           test/unit/studio
           test/unit/studio-store-sanitize.test.ts
+          test/unit/privacy
+          test/unit/backup
+          test/unit/chat/safety-digits.test.ts
+          test/unit/chat/message-authority.test.ts
+          test/unit/chat/community-mls.test.ts
+          test/unit/aztec/node-choice.test.ts
+          test/unit/aztec/wallet-ui-logic.test.ts
+          test/unit/landing/fee-privacy.test.ts
+          test/unit/communities
+          test/communities/r17-acceptance.test.ts
       - name: Unit Tests (security)
         run: npx vitest run test/unit/security
         env:
