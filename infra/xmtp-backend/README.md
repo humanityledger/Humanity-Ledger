@@ -2,7 +2,16 @@
 
 The configuration for the backend Ledger Chat will run when the network hosted by XMTP Labs shuts down (announced 22 Oct 2026 for early 2027). The plan, the order of the steps and the gates are in [`docs/xmtp/SELF_HOSTED_MIGRATION.md`](../../docs/xmtp/SELF_HOSTED_MIGRATION.md).
 
-**Not deployed.** The image and the SDK it pairs with are release candidates (`8.0.0-rc4`).
+**Staging since 24 Nov 2026** (phase M1), on Railway, for tests only. No user is on it. The image and the SDK it pairs with are release candidates (`8.0.0-rc4`).
+
+| Staging | Value |
+|---|---|
+| Services | `xmtp-backend-staging` (image `ghcr.io/xmtp/backend:8.0.0-rc4`, config in `XMTP_CONFIG`), `xmtp-postgres` (PostgreSQL 18, its own 5 GB volume, private network only) |
+| Identifier | `org.ledgerchat.xmtp.staging`. It differs from production on purpose, so no client database is ever bound to both |
+| Domain | `xmtp.ledgerchat.org` → CNAME `57rur5sk.up.railway.app`, plus the `_railway-verify` TXT record shown in Railway |
+| Auth | JWKS from `https://ledgerchat.org/api/xmtp/jwks`. The backend fetches it at startup and refuses to start without it |
+| Database TLS | `sslmode=require` on Railway's private network (the image's certificate is self-signed). Production uses `verify-full` |
+| Differences from `config.toml` | No `[chains]`, so smart-contract wallets are not verified in staging. No `[rate_limits]`, which rc4 refuses |
 
 ## What runs
 
