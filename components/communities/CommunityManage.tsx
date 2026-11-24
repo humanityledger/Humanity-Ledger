@@ -22,13 +22,16 @@
  *   Leave               DELETE /api/chat/communities/:id/members (yourself)
  *   Delete              DELETE /api/chat/communities/:id (owner only)
  * Rows for admins are hidden from everyone else. There is no switch for
- * communityMls: it stays false and posts stay readable by the server. The first
+ * communityMls here: only the operator flips it. While it is false, posts stay readable by the
+ * server. When it is true, a new channel is created as an XMTP group first (lib/communities/mls.ts)
+ * and the server stores only its id. The first
  * screen shows no hash and no contract address.
  */
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { communityInviteUrl } from '@/lib/ui/format';
 import { authorLabel, postText, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
+import { createChannelGroup, isMlsCommunity } from '@/lib/communities/mls';
 
 const CommunityApps = React.lazy(() => import('@/components/chat/community-apps/CommunityApps').then((m) => ({ default: m.CommunityApps })));
 const CommunityAnalytics = React.lazy(() => import('@/components/chat/CommunityAnalytics'));
@@ -102,6 +105,8 @@ export interface CommunityManageProps {
   /** After leaving or deleting: back to the list of communities. */
   onGone: () => void;
   fetchImpl?: typeof fetch;
+  /** The signed-in XMTP client: a channel of an MLS community is created as an XMTP group first. */
+  xmtpClient?: any;
 }
 
 type Note = { kind: 'ok' | 'error'; text: string } | null;
@@ -114,7 +119,7 @@ const card = 'rounded-2xl border border-[#d4d8de] bg-white';
 const input = 'w-full min-h-[52px] rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] bg-white placeholder:text-[#4a505c]';
 const short = (a: string) => (a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 
-export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGone, fetchImpl }: CommunityManageProps) {
+export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGone, fetchImpl, xmtpClient }: CommunityManageProps) {
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
   const me = myAddress.toLowerCase();
   const headers = useMemo(() => ({ 'Content-Type': 'application/json', 'x-web3-address': me, 'x-verified-session-address': me }), [me]);
@@ -268,7 +273,14 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
             <Channels
               channels={community.channels || []}
               onAdd={async (n) => {
-                const r = await patch('/api/chat/communities', { action: 'CREATE_CHANNEL', communityId, name: n });
+                // An MLS community: the channel is an XMTP group, created here; the server stores only its id.
+                let xmtpGroupId: string | undefined;
+                if (isMlsCommunity(community)) {
+                  if (!xmtpClient) { setNote({ kind: 'error', text: 'Encrypted messaging is not connected on this device yet. Try again in a moment.' }); return false; }
+                  try { xmtpGroupId = await createChannelGroup(xmtpClient, community, n, me); }
+                  catch (e) { setNote({ kind: 'error', text: e instanceof Error && !e.message.startsWith('[') ? e.message : 'The encrypted channel could not be created. Try again.' }); return false; }
+                }
+                const r = await patch('/api/chat/communities', { action: 'CREATE_CHANNEL', communityId, name: n, ...(xmtpGroupId ? { xmtpGroupId } : {}) });
                 if (!r.ok) { fail(r.data, 'The channel was not added. Try again.'); return false; }
                 setNote({ kind: 'ok', text: `Channel ${n} added.` });
                 await fetchCommunity();

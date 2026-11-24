@@ -9,10 +9,12 @@
  * leaving) is behind one control, "Manage" (components/communities/CommunityManage.tsx),
  * a list of rows in this same style. A post sent here is stored unpinned.
  *
- * Server behaviour is unchanged: posts are read from and written to
- * /api/chat/communities/:id/posts. `communityMls` is false, so the server can
- * read every post. The screen says so in one plain sentence and never calls
- * these posts end-to-end encrypted.
+ * Two sources. By default posts are read from and written to
+ * /api/chat/communities/:id/posts and the server can read every post; the screen says so in one
+ * plain sentence and never calls these posts end-to-end encrypted. A community the operator has
+ * flagged `communityMls` keeps its posts in an XMTP MLS group (lib/communities/mls.ts): they are
+ * read and sent through the person's XMTP client, the server never receives them, and an admin's
+ * client keeps the group's members equal to the server's list.
  *
  * Built for people who do not want a guide: text at least 18px, labels in
  * ordinary words, text contrast at least 7:1 on its background, tap targets at
@@ -30,8 +32,12 @@ import { toast } from 'sonner';
 import { Copy, MessageCircle, Pin, Wallet } from 'lucide-react';
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
+import { mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
+import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
 
 export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';
+/** For a community whose posts live in an XMTP MLS group (lib/communities/mls.ts). */
+export const MLS_VISIBILITY_SENTENCE = 'Only members can read what you write here. Posts are end-to-end encrypted and our server does not store them. Who is a member is still known to our server.';
 
 /** Text colours on white used here, with their contrast ratio. All are at least 7:1. */
 const INK = '#15171c'; // 17.9:1
@@ -62,6 +68,8 @@ export interface CommunityReaderProps {
   onMessage?: (address: string) => void;
   /** Injected in tests; the browser's fetch otherwise. */
   fetchImpl?: typeof fetch;
+  /** The signed-in XMTP client; needed only for a community whose posts live in an MLS group. */
+  xmtpClient?: any;
 }
 
 const DEFAULT_TITLE = /^community post$/i;
@@ -118,7 +126,7 @@ export function authorLabel(p: ReaderPost, me: string, nameFor?: (address: strin
   return { name, wallet: name === wallet ? '' : wallet, mine: false };
 }
 
-export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, fetchImpl }: CommunityReaderProps) {
+export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, fetchImpl, xmtpClient }: CommunityReaderProps) {
   // Stable across renders: the loaders below depend on it, and a new function each render would refetch in a loop.
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
   const me = myAddress.toLowerCase();
@@ -131,6 +139,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [posts, setPosts] = useState<Shown[]>([]);
   const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
   const [draft, setDraft] = useState('');
+  // Set from the community: the XMTP group that carries the posts, when the community is on MLS.
+  const [mlsGroup, setMlsGroup] = useState<string | null>(null);
+  const [mlsAdmin, setMlsAdmin] = useState<CommunityLike | null>(null);
+  const senders = useRef(new Map<string, string>());
   const listEnd = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
 
@@ -147,13 +159,43 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       const mine = (Array.isArray(c?.members) ? c.members : []).find((m: any) => String(m?.walletAddress || '').toLowerCase() === me);
       const owner = String(c?.ownerAddress || '').toLowerCase() === me;
       setMayPin(owner || mine?.role === 'ADMIN' || (!!mine && c?.permissions?.pinMessages === true));
+      const group = mlsGroupOf(c);
+      setMlsGroup(group);
+      setMlsAdmin(group && (owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
     } catch { /* the header falls back to "Community" */ }
   }, [communityId, f, headers, me]);
 
   const fetchPosts = useCallback(async () => {
+    if (mlsGroup) {
+      // Posts live in the XMTP group: read them there, never from the server.
+      if (!xmtpClient) { setLoad('error'); return; }
+      try {
+        const list = await readGroupPosts(xmtpClient, mlsGroup);
+        const incoming: ReaderPost[] = [];
+        for (const m of list) {
+          let addr = senders.current.get(m.senderInboxId);
+          if (addr === undefined) {
+            addr = (await resolveInboxIdToAddress(m.senderInboxId, xmtpClient).catch(() => null)) ?? '';
+            senders.current.set(m.senderInboxId, addr);
+          }
+          incoming.push({ id: m.id, authorAddress: addr || undefined, content: m.content, createdAt: m.createdAt });
+        }
+        setPosts((prev) => {
+          const local = prev.filter((p) => p.state);
+          const ids = new Set(incoming.map((p) => p.id));
+          return [...incoming, ...local.filter((p) => !ids.has(p.id))].sort((a, b) => time(a) - time(b));
+        });
+        setLoad('ready');
+      } catch {
+        setLoad((st) => (st === 'ready' ? 'ready' : 'error'));
+      }
+      return;
+    }
     try {
       const res = await f(`/api/chat/communities/${encodeURIComponent(communityId)}/posts`, { headers, credentials: 'include', cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
+      // 410 COMMUNITY_MLS: the posts live in an XMTP group; the community's details are still loading.
+      if (res.status === 410 && d?.code === 'COMMUNITY_MLS') return;
       if (!res.ok) {
         setLoad('error');
         return;
@@ -169,7 +211,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     } catch {
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
-  }, [communityId, f, headers]);
+  }, [communityId, f, headers, mlsGroup, xmtpClient]);
+
+  // An admin's client keeps the MLS group's members equal to the server's list (MLS_MIGRATION.md, step 2).
+  useEffect(() => {
+    if (!mlsGroup || !mlsAdmin || !xmtpClient) return;
+    syncGroupMembers(xmtpClient, mlsGroup, mlsAdmin, me).catch(() => { /* retried next time the community opens */ });
+  }, [mlsGroup, mlsAdmin, xmtpClient, me]);
 
   useEffect(() => {
     setLoad('loading');
@@ -194,6 +242,18 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     if (!retryId) setDraft('');
     let status: number | null = null;
     let serverError: string | undefined;
+    if (mlsGroup) {
+      try {
+        if (!xmtpClient) throw new Error('Not sent. Encrypted messaging is not connected on this device yet. Try again in a moment.');
+        await postToGroup(xmtpClient, mlsGroup, body);
+        setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: undefined } : p)));
+        fetchPosts();
+      } catch (e) {
+        const text = e instanceof Error && e.message.startsWith('Not sent.') ? e.message : 'Not sent. The encrypted group did not accept it. Check your connection and try again.';
+        setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: text } : p)));
+      }
+      return;
+    }
     try {
       const res = await f(`/api/chat/communities/${encodeURIComponent(communityId)}/posts`, {
         method: 'POST',
@@ -248,7 +308,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       items.push({ label: mine ? 'Copy your wallet' : 'Copy wallet address', icon: <Wallet size={16} strokeWidth={1.9} />, onSelect: () => copy(addr, 'Wallet address copied.') });
       if (!mine && onMessage) items.push({ label: 'Message privately', icon: <MessageCircle size={16} strokeWidth={1.9} />, onSelect: () => onMessage(addr) });
     }
-    if (mayPin && !p.state && !p.id.startsWith('local-')) items.push({ label: 'Pin', icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
+    if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: 'Pin', icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
     return items;
   };
 
@@ -274,7 +334,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       </header>
 
       <p className="shrink-0 px-4 sm:px-6 py-3 text-[18px] leading-snug bg-[#f2f4f7] border-b border-[#d4d8de]" style={{ color: INK }} role="note">
-        {VISIBILITY_SENTENCE}
+        {mlsGroup ? MLS_VISIBILITY_SENTENCE : VISIBILITY_SENTENCE}
       </p>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4" aria-live="polite">
