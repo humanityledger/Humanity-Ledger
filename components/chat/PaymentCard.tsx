@@ -18,6 +18,8 @@ import { parsePaymentMessage, paymentCardState, type PaymentCardState } from '@/
 import { rememberPaidRequest } from '@/lib/payments/paid-requests';
 import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
 import { CardAmount, PaymentCardFrame, SpecRow } from './paymentCardUi';
+import { paymentReceipt } from '@/lib/payments/activity-report';
+import { toast } from 'sonner';
 
 const BTN = 'h-9 px-3.5 rounded-[10px] text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[#15171c] text-white hover:bg-[#2b2f38]';
 const shortTx = (h: string) => (h.length > 18 ? `${h.slice(0, 8)}…${h.slice(-6)}` : h);
@@ -64,6 +66,8 @@ export const PaymentCard = React.memo(function PaymentCard({ raw, isMe }: { raw:
   const decimals = decimalsOf(msg.token.address);
   const shownValue = amount && decimals !== undefined ? formatUnits(BigInt(amount), decimals) : undefined;
   const link = explorerTxUrl(msg.txHash);
+  // A receipt only for a payment this wallet itself recorded as settled (R10).
+  const receiptEntry = (state.kind === 'confirmed' || state.kind === 'received') ? (wallet?.activity ?? []).find((a) => a.txHash === msg.txHash && a.status === 'settled') : undefined;
 
   const check = async () => {
     setChecking(true);
@@ -95,6 +99,18 @@ export const PaymentCard = React.memo(function PaymentCard({ raw, isMe }: { raw:
           </SpecRow>
         )}
       </dl>
+      {receiptEntry && (
+        <button
+          type="button"
+          className="mt-3 text-[12.5px] font-semibold text-[#2754d6] hover:underline"
+          onClick={() => {
+            const meta = AZTEC_WALLET_CONFIG.tokens.find((t) => t.address.toLowerCase() === msg.token.address.toLowerCase());
+            void navigator.clipboard?.writeText(paymentReceipt(receiptEntry, meta, networkLabel(), link || undefined)).then(() => toast.success('Receipt copied'), () => toast.error('Could not copy'));
+          }}
+        >
+          Copy receipt
+        </button>
+      )}
       {!isMe && state.kind === 'awaiting' && state.walletOpen && (
         <button type="button" className={`${BTN} mt-3`} disabled={checking} onClick={check}>
           {checking ? 'Checking…' : 'Check now'}
