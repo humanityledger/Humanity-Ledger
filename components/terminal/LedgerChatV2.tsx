@@ -432,7 +432,7 @@ function scheduleBurnOnRead(msgId: string, seconds: number, onBurn: (id: string)
 
 export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onRequestVisible }: LedgerChatProps) {
   const tr = useT();
-  const { address, isConnected, isSystemHandshake, isChecking, connector, isZkVerified, isLocalSystemWallet } = useSystemAccount();
+  const { address, isConnected, isSystemHandshake, isChecking, connector, isZkVerified, isLocalSystemWallet, chainId: walletChainId } = useSystemAccount();
   // Email-authenticated users have address like 'email_user@gmail.com' — they have no wallet signer
   // so XMTP is not available. We detect this and route them to server-relay messaging.
   const isEmailUser = typeof address === 'string' && (address as string).startsWith('email_');
@@ -4161,6 +4161,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     // can access it when triggering automatic installation revocation.
     const wagmiSigner = {
       getAddress: async () => address as string,
+      // Where a smart contract wallet is looked for first (lib/xmtp/wallet-kind.ts).
+      getChainId: () => (connector ? (walletChainId as number | undefined) : undefined),
       signMessage: async (msg: string | Uint8Array) => {
         // A computer linked by QR has no wallet: its phone signs, after the person approves there
         // (lib/link/channel.ts). XMTP asks this once, to register this computer's installation.
@@ -5902,7 +5904,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 if (canMsg) canReceiveCache.current.set(peer.toLowerCase(), true);
             }
             if (!canMsg) {
-                toast.info(tr("This person has not set up Ledger Chat yet. Messages will wait until they do."));
+                toast.info(tr("This person has not turned on Ledger Chat yet, so messages cannot reach them. Ask them to open ledgerchat.org and sign in once."));
             }
         }
 
@@ -6238,6 +6240,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       optimisticContentMap.current.delete(finalContent);
       const errString = err?.message || String(err);
       setMessages(prev => failOptimistic(prev, optimisticId, errString));
+      if (errString.startsWith('PEER_NOT_ON_XMTP')) {
+        toast.error(tr("Not sent: {name} has not turned on Ledger Chat yet. Ask them to sign in once, then send again.", { name: getDisplayName(activePeer) }));
+      }
       console.error('[Chat] executeSend failed:', err);
       return false;
     }
