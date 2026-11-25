@@ -461,6 +461,8 @@ Findings, fixes and open limits are in [`docs/zk/AZTEC_CONTRACTS_REVIEW.md`](zk/
 
 ## 4. Known soundness issues in the standalone circuits
 
+**Retired on 25 November 2026:** these circuits, their prover, verifier and VK registry moved to `archive/standalone-circuits` (its README maps each issue to the aztec-nr contracts of §2.1). Nothing in the product, build or CI reaches them; `/api/security/integrity` publishes the aztec-nr artifact pins instead.
+
 | ID | Severity | Issue |
 |---|---|---|
 | ZK-01 | Critical | Streams: `withdrawn_amount` is a free private input and the nullifier is `H(commitment, withdrawn + claim)`, so the same accrual can be claimed many times with `withdrawn = 0` |

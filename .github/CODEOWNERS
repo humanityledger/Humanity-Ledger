@@ -6,7 +6,9 @@
 
 # Protocol Core: Aztec Noir Circuits & Verification Keys (Normative Spec §3 T13, T14)
 # Requires review from Aztec/Noir protocol specialists before VK alteration
-circuits/** @humanityledger
+archive/** @humanityledger
+contracts/aztec/** @humanityledger
+lib/aztec/artifact-pins.ts @humanityledger
 lib/aztec/** @humanityledger
 lib/zk/** @humanityledger
 aztec-contracts/** @humanityledger
@@ -33,10 +35,7 @@ app/api/siwe/** @humanityledger
 test/key_custody.test.ts @humanityledger
 test/mls_post_compromise.test.ts @humanityledger
 test/pxe_boundary_security.test.ts @humanityledger
-test/vk_hash_mismatch.test.ts @humanityledger
-test/circuits/streams_rate_bound.test.ts @humanityledger
 test/property_fuzz.test.ts @humanityledger
-circuits/CONSTRAINT_COMPLETENESS.md @humanityledger
 # Advanced adversarial hardening suite (added Nov 2026)
 test/key_exfiltration.adversarial.test.ts @humanityledger
 test/circuit_invariants.adversarial.test.ts @humanityledger

@@ -31,11 +31,11 @@ export default defineConfig({
       'node_modules',
       '.next',
       'test/e2e/**',
+      'archive/**',
       'test/LedgerDeadmanSwitch.test.ts',
       'test/HumanTimeLock.test.ts',
       'test/contracts_invariants.test.ts',
       'test/ZKIdentityRegistry.test.ts',
-      'test/ZKVerificationKeyRegistry.test.ts',
       // Hardhat (mocha + chai) suites: they run in `npm run test:contracts`, against compiled artifacts.
       'test/portal/**',
       'test/unit/contracts/HumanityTimeLockVault.adversarial.test.ts',

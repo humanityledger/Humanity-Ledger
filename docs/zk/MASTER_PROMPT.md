@@ -64,10 +64,8 @@ Esta tabla es la única fuente para describir el proyecto hacia fuera; usa el vo
 | Monedero privado (`lib/aztec/wallet/`): shield, envío privado, unshield con `Token` y `SponsoredFPC` | Real en testnet; comprueba la curva Grumpkin antes del SDK (`lib/aztec/grumpkin.ts`) | Unificar paquetes en `@aztec-labs/*` 6.0.0; publicar la configuración de testnet (R-15) |
 | DM 1 a 1 por XMTP v3 (MLS de OpenMLS) | Real, de un tercero | Decir "XMTP (MLS)", no "MLS propio" |
 | Publicaciones de comunidad | Texto legible en la base de datos (F2-02) | Grupos MLS de XMTP (R-17, `docs/communities/MLS_MIGRATION.md`) |
-| Circuitos v1 (escrow, identity, streams) | Real solo en tests; VK fijadas; fallos ZK-01 a ZK-06 | Sustituir por v2 o por contratos aztec-nr |
-| Circuitos v2 (`circuits/*_v2`) | Experimental: compilan y pasan tests en CI; corrigen ZK-01 a ZK-05 y G2, G3, G5 | Pruebas UltraHonk en TypeScript, fijar VK, verificador que guarde estado (R-18) |
-| Probador `lib/zk/prover.ts` y `lib/zk/browser-prover.ts` (Web Worker) | Real solo en tests; VK fijada; la versión de navegador no usa módulos de Node (`test/zk/browser-prover.test.ts`) | Probarlo en Safari iOS; no está conectado a ninguna pantalla |
-| VK binarias y `*.vk.json` | Reales y fijadas en código | Ninguno |
+| Circuitos v1 y v2, probador, verificador y registro de VK | **Retirados el 25 nov 2026** a `archive/standalone-circuits` (README con ZK-01 a ZK-07 y dónde vive cada problema en los contratos aztec-nr). Nada del producto, la build ni la CI los alcanza (`test/unit/aztec/artifact-pins.test.ts`) | — | — |
+| VK binarias y `*.vk.json` | Retiradas con los circuitos (archivo); los artefactos aztec-nr se fijan por SHA-256 en `lib/aztec/artifact-pins.ts` | Ninguno |
 | `zkMoney.ts` | Demo local | Sustituir por el monedero real o retirar |
 | `zkCompliance.ts`, `zkMpc.ts`, Gold Registry, prueba de edad, streams en `localStorage` | Retirados de la UI (R-14); `createShieldedStream` solo funciona en modo demo | — |
 | `realTx.ts`, `aztec-zk-engine.ts` | Retirados | — |

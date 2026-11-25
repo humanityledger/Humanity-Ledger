@@ -54,7 +54,7 @@ These are small and each has its own unit tests:
 
 ### Out of scope
 
-The repository has a long history, and most of its directories are not Ledger Chat. Out of scope are the standalone circuits in `circuits/` (they have known soundness issues, section 4), the Solidity contracts outside `contracts/portal/`, and modules under `lib/` that the app does not import (Studio, BSV, the academic tooling and other experiments). If a file is not named in this section or reached from it, it is not part of the product.
+The repository has a long history, and most of its directories are not Ledger Chat. Out of scope are the standalone circuits, retired on 25 November 2026 to `archive/standalone-circuits` (they have known soundness issues, section 4; nothing in the product, build or CI reaches them), the Solidity contracts outside `contracts/portal/`, and modules under `lib/` that the app does not import (Studio, BSV, the academic tooling and other experiments). If a file is not named in this section or reached from it, it is not part of the product.
 
 ## 3. How to reproduce
 
@@ -73,7 +73,7 @@ The read-only checks against Alpha are `aztec-mainnet-preflight.yml` and `aztec-
 
 | ID | Severity | Issue | Effect today |
 |---|---|---|---|
-| ZK-01 to ZK-07 | Up to critical | Standalone Noir circuits (for example, a stream accrual that can be claimed many times, or proofs not bound to the payout address) | Not deployed and not used by the app. Listed in `README.md` §9 |
+| ZK-01 to ZK-07 | Up to critical | Standalone Noir circuits (for example, a stream accrual that can be claimed many times, or proofs not bound to the payout address) | Retired on 25 November 2026 to `archive/standalone-circuits`, whose README maps each issue to the aztec-nr contracts. Never deployed. Listed in `README.md` §9 |
 | FEE-PAYER | Privacy | On Alpha there is no sponsored FPC, so each account pays its own Fee Juice and is the public fee payer. Its transactions can be linked | Stated in the app before every payment (`lib/privacy/disclosure.ts`) |
 | CUSDC-RECV | Function | A cUSDC receive is not yet listed by the wallet, so cUSDC requests stay "announced" | `README.md` §3 |
 | PORTAL-ADMIN | Design | The portal has an admin and a guardian. They can pause deposits, lower caps, disable an asset and pause withdrawals for at most 3 days. **No key can take funds out (I2)**. Relaxations wait 2 days and are public (I4) | Not deployed |

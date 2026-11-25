@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProvingIntegrityManifest } from '@/lib/security/integrity';
+import { getIntegrityManifest } from '@/lib/security/integrity';
 
 export const dynamic = 'force-static';
 export const revalidate = 3600;
@@ -7,11 +7,11 @@ export const revalidate = 3600;
 /**
  * GET /api/security/integrity
  *
- * Public endpoint exposing cryptographic integrity checksums and verification
- * key hashes for client-side proving bundles and circuits.
+ * Public: the aztec-nr contracts the product proves with, each with the SHA-256 of its
+ * committed artifact, and what was retired (lib/security/integrity.ts).
  */
 export async function GET() {
-  const manifest = getProvingIntegrityManifest();
+  const manifest = getIntegrityManifest();
   return NextResponse.json(manifest, {
     status: 200,
     headers: {
