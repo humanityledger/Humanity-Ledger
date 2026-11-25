@@ -1,7 +1,8 @@
 import { vi } from 'vitest';
 
 vi.mock('@xmtp/browser-sdk', () => ({
-  Client: { canMessage: async () => new Map() },
+  // Every recipient has an inbox here; a recipient without one is PeerNotOnXmtpError (wallet-kind.test.ts).
+  Client: { canMessage: async (ids: { identifier: string }[]) => new Map(ids.map((i) => [i.identifier, true])) },
 }));
 
 const PEER = '0x' + 'a'.repeat(40);
