@@ -17,6 +17,7 @@ import { AZTEC_NETWORKS } from '@/lib/aztec/sequencer/networks';
 import { identifyNode } from '@/lib/aztec/fees';
 import { authorizedMainnetRecord } from '@/lib/aztec/agreement-policy';
 import { relayUpstreams } from '@/lib/aztec/node-relay';
+import { recordedCusdc } from '@/lib/beta/cusdc-beta';
 import {
   buildMetrics,
   canonicalJson,
@@ -102,6 +103,35 @@ function readRecord(): Snapshot['record'] {
     contracts: (authorized.contracts as ReadonlyArray<{ name: string }>).map((c) => c.name),
     tokens: recordedTokens(raw),
     audit: authorized.audit !== null,
+    cusdc: recordedCusdcFacts(raw),
+    beta: recordedBeta(raw),
+  };
+}
+
+/** The payment token on Alpha (cUSDC, issued by human.tech) as the record states it. Facts only, nothing read. */
+function recordedCusdcFacts(raw: unknown): NonNullable<Snapshot['record']>['cusdc'] {
+  const t: any = recordedCusdc(raw);
+  if (!t || !HEX32.test(String(t.address)) || !Number.isInteger(t.decimals)) return undefined;
+  return {
+    name: typeof t.name === 'string' ? t.name : 'cUSDC',
+    address: String(t.address).toLowerCase(),
+    decimals: t.decimals,
+    issuer: typeof t.issuer === 'string' ? t.issuer : undefined,
+    verifiedOnChain: t.verifiedOnChain === true,
+    readOn: typeof t.readOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.readOn) ? t.readOn : undefined,
+    source: typeof t.source === 'string' && /^https:\/\//.test(t.source) ? t.source : undefined,
+  };
+}
+
+/** The closed cUSDC beta as recorded: on or off, until when, how many members at most. */
+function recordedBeta(raw: unknown): NonNullable<Snapshot['record']>['beta'] {
+  const b: any = (raw as any)?.cusdcBeta;
+  if (!b || typeof b !== 'object') return undefined;
+  const until = typeof b.until === 'string' && Number.isFinite(Date.parse(b.until)) ? b.until : undefined;
+  return {
+    enabled: b.enabled === true,
+    until,
+    maxTesters: Number.isInteger(b.maxTesters) && b.maxTesters > 0 ? b.maxTesters : undefined,
   };
 }
 

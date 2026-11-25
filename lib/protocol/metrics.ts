@@ -111,6 +111,10 @@ export interface Snapshot {
     contracts: string[];
     tokens: RecordedToken[];
     audit: boolean;
+    /** The payment token on Alpha, as recorded (plannedTokens). */
+    cusdc?: { name: string; address: string; decimals: number; issuer?: string; verifiedOnChain: boolean; readOn?: string; source?: string };
+    /** The closed cUSDC beta, as recorded. */
+    beta?: { enabled: boolean; until?: string; maxTesters?: number };
   };
   /** Public storage reads of the recorded token, at node.blockNumber. */
   token?: {
@@ -122,7 +126,7 @@ export interface Snapshot {
 
 const RECORD = 'deployments/aztec-mainnet.json';
 
-export function buildMetrics(s: Snapshot): Metric[] {
+export function buildMetrics(s: Snapshot, now: Date = new Date()): Metric[] {
   const out: Metric[] = [];
   const nodeSource = `Aztec node ${s.nodeHost} (JSON-RPC)`;
 
@@ -296,6 +300,40 @@ export function buildMetrics(s: Snapshot): Metric[] {
         source: `${nodeSource}, public storage`,
       });
     }
+  }
+
+  // ── cUSDC, the payment token on Alpha ──
+  const c = s.record?.cusdc;
+  if (c) {
+    out.push({
+      id: 'cusdc',
+      group: 'token',
+      label: 'Payment token',
+      status: c.verifiedOnChain ? 'live' : 'not-deployed',
+      value: 'cUSDC',
+      raw: c.address,
+      detail: `${c.name} (cUSDC), ${c.decimals} decimals${c.issuer ? `, issued by ${c.issuer}` : ''}, at ${short(c.address)}.${
+        c.verifiedOnChain ? ` Its contract was checked on Aztec Alpha${c.readOn ? ` on ${c.readOn}` : ''}.` : ' Not checked on chain yet.'
+      } Ledger Chat neither issues nor holds it.`,
+      source: `${RECORD} (plannedTokens)${c.source ? `, ${c.source}` : ''}`,
+    });
+  }
+  const beta = s.record?.beta;
+  if (beta) {
+    const until = beta.until ? Date.parse(beta.until) : NaN;
+    const open = beta.enabled && Number.isFinite(until) && now.getTime() < until && !!c?.verifiedOnChain;
+    out.push({
+      id: 'cusdc-beta',
+      group: 'onboarding',
+      label: 'Closed beta',
+      status: open ? 'live' : 'not-deployed',
+      value: open ? 'Open, by invitation' : 'Closed',
+      raw: beta.until,
+      detail: open
+        ? `Private payments in cUSDC for members invited by the operator, until ${beta.until}${beta.maxTesters ? `, at most ${beta.maxTesters} members` : ''}. Every payment has a cap.`
+        : 'Nobody can send cUSDC from Ledger Chat: the closed beta is not open.',
+      source: `${RECORD} (cusdcBeta)`,
+    });
   }
 
   // ── Network fees ──
