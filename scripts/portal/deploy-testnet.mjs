@@ -30,6 +30,7 @@ import { EthAddress } from '@aztec-labs/aztec.js/addresses';
 import { Contract, getContractInstanceFromInstantiationParams } from '@aztec-labs/aztec.js/contracts';
 import { loadContractArtifact } from '@aztec-labs/aztec.js/abi';
 import { SponsoredFeePaymentMethod } from '@aztec-labs/aztec.js/fee';
+import { NO_FROM } from '@aztec-labs/aztec.js/account';
 import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC';
 import { openTmpStore } from '@aztec-labs/kv-store/deprecated/indexeddb';
 
@@ -101,8 +102,14 @@ if (MODE === 'deploy') {
   }
 
   if (!state.l2Token) {
-    const az = JSON.parse(fs.readFileSync(AZTEC_STATE, 'utf8'));
-    if (!az.admin) throw new Error('Run scripts/aztec/setup-testnet.mjs first: its admin account deploys PortalToken.');
+    // PortalToken has no admin: any account can deploy it. The setup-testnet admin is reused when
+    // present; otherwise a throwaway account is made and deployed (sponsored fees).
+    const az = fs.existsSync(AZTEC_STATE) ? JSON.parse(fs.readFileSync(AZTEC_STATE, 'utf8')) : {};
+    if (!az.admin) {
+      az.admin = { secret: Fr.random().toString(), salt: Fr.random().toString(), signingKey: Fq.random().toString(), fresh: true };
+      state.aztecDeployer = az.admin;
+      save();
+    }
     const fpc = await getContractInstanceFromInstantiationParams(SponsoredFPCContract.artifact, { salt: new Fr(0) });
     const fee = { paymentMethod: new SponsoredFeePaymentMethod(fpc.address) };
     const { EmbeddedWallet } = await import('@aztec-labs/wallets/embedded');
@@ -115,6 +122,11 @@ if (MODE === 'deploy') {
     await wallet.registerContract(fpc, SponsoredFPCContract.artifact);
     const k = az.admin;
     const manager = await wallet.createSchnorrAccount(Fr.fromString(k.secret), Fr.fromString(k.salt), Fq.fromString(k.signingKey), 'admin');
+    const meta = await wallet.getContractMetadata(manager.address);
+    if (String(meta?.initializationStatus) !== 'INITIALIZED') {
+      log('deploying the Aztec deployer account ...');
+      await (await manager.getDeployMethod()).send({ from: NO_FROM, fee, wait: { timeout: 900 } });
+    }
     const tokenArtifact = loadContractArtifact(JSON.parse(fs.readFileSync(path.join(ROOT, 'contracts/aztec/portal_token/target/portal_token-PortalToken.json'), 'utf8')));
     log('deploying PortalToken (zkETH) on Aztec ...');
     const res = await Contract.deploy(wallet, tokenArtifact, [EthAddress.fromString(state.portal), 18]).send({ from: manager.address, fee, wait: { timeout: 900 } });
@@ -132,7 +144,9 @@ if (MODE === 'deploy') {
     log('WETH asset queued. Run "bind" after the 2-day timelock.');
   }
 } else if (MODE === 'bind') {
-  if (!state.queuedAt) throw new Error('Run "deploy" first.');
+  // A fresh checkout (the workflow) has no state file: the portal address comes from PORTAL_ADDRESS.
+  if (!state.portal && /^0x[0-9a-fA-F]{40}$/.test(process.env.PORTAL_ADDRESS || '')) state.portal = getAddress(process.env.PORTAL_ADDRESS);
+  if (!state.portal) throw new Error('Run "deploy" first, or set PORTAL_ADDRESS.');
   await writeL1(state.portal, portalAbi, 'executeAsset', [WETH_SEPOLIA]);
   state.boundAt = Date.now();
   save();
@@ -141,19 +155,17 @@ if (MODE === 'deploy') {
   throw new Error(`Unknown mode "${MODE}": use deploy or bind.`);
 }
 
-// The wallet loads the PortalToken description from the app (lib/aztec/wallet/client.ts portalArtifact).
-fs.mkdirSync(path.join(ROOT, 'public/aztec'), { recursive: true });
-fs.copyFileSync(path.join(ROOT, 'contracts/aztec/portal_token/target/portal_token-PortalToken.json'), path.join(ROOT, 'public/aztec/portal_token-PortalToken.json'));
-
+// The wallet loads the PortalToken description from app/api/portal/artifact (built with the app).
 const env = {
   NEXT_PUBLIC_HL_PORTAL: state.portal,
   NEXT_PUBLIC_HL_RECEIVER_FACTORY: state.factory,
   NEXT_PUBLIC_HL_RECEIVER_IMPLEMENTATION: state.implementation,
   NEXT_PUBLIC_HL_PORTAL_L1_CHAIN_ID: '11155111',
   NEXT_PUBLIC_HL_PORTAL_ASSETS: JSON.stringify([{ symbol: 'ETH', l1: WETH_SEPOLIA.toLowerCase(), l2: state.l2Token?.toLowerCase(), decimals: 18, native: true }]),
-  NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT: '/aztec/portal_token-PortalToken.json',
+  NEXT_PUBLIC_HL_PORTAL_TOKEN_ARTIFACT: '/api/portal/artifact',
   NEXT_PUBLIC_HL_PORTAL_DEPLOY_BLOCK: state.deployBlock,
 };
-console.log('\n# Portal on the test networks (lib/portal/config.ts). Not for Aztec Alpha or Ethereum.');
-for (const [k, v] of Object.entries(env)) console.log(`${k}='${v}'`);
+const out = ['# Portal on the test networks (lib/portal/config.ts). Not for Aztec Alpha or Ethereum.', ...Object.entries(env).filter(([, v]) => v).map(([k, v]) => `${k}='${v}'`)];
+console.log('\n' + out.join('\n'));
+if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '```\n' + out.join('\n') + '\n```\n');
 process.exit(0);
