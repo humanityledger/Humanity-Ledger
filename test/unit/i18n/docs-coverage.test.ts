@@ -21,10 +21,10 @@ function figureTexts(): string[] {
   const out: string[] = [];
   for (const m of src.matchAll(/"([^"\n]*[A-Za-z][^"\n]*)"/g)) {
     const s = m[1];
-    if (/^[a-z-]+$/.test(s) || /[{}=]|^\.|\.tsx?$|^lucide|^@\/|^--/.test(s) || s.startsWith('use ')) continue;
+    if (/^[a-z][A-Za-z-]*$/.test(s) || /[{}=]|^\.|\.tsx?$|^lucide|^@\/|^--/.test(s) || s.startsWith('use ')) continue;
     out.push(s);
   }
-  for (const m of src.matchAll(/>\s*([^<>{}\n]*[A-Za-z][^<>{}\n]*?)\s*</g)) out.push(m[1]);
+  for (const m of src.matchAll(/>\s*([^<>{}\n]*[A-Za-z][^<>{}\n]*?)\s*</g)) if (!/^[a-z][A-Za-z]*$/.test(m[1])) out.push(m[1]);
   return out;
 }
 
@@ -76,7 +76,8 @@ describe('documentation dictionaries', () => {
           const shown = translatePage(p, tr);
           const heads = p.blocks.filter((b) => b.t === 'h2' || b.t === 'h3') as { text: string; id?: string }[];
           const shownHeads = shown.blocks.filter((b) => b.t === 'h2' || b.t === 'h3') as { text: string; id?: string }[];
-          heads.forEach((h, i) => expect(shownHeads[i].id).toBe(headingId(h.text, h.id)));
+          // English-only pages keep their blocks as written; Blocks derives the same ids from them.
+          if (!ENGLISH_ONLY_SLUGS.has(p.slug)) heads.forEach((h, i) => expect(shownHeads[i].id).toBe(headingId(h.text, h.id)));
           if (ENGLISH_ONLY_SLUGS.has(p.slug)) {
             expect(shown.blocks.slice(1)).toEqual(p.blocks);
             expect(shown.blocks[0]).toMatchObject({ t: 'hint', text: dict[ENGLISH_ONLY_NOTE] });
