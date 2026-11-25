@@ -19,6 +19,8 @@ const PAGES = [
   ['chat', '/chat'],
   ['changelog', '/docs/changelog'],
   ['hub-redirect', '/hub'],
+  ['dashboard', '/dashboard'],
+  ['dashboard-example', '/dashboard?example=1'],
 ];
 const VIEWPORTS = [
   ['desktop', { width: 1440, height: 900 }],

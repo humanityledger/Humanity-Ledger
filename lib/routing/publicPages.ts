@@ -24,6 +24,7 @@ export const PUBLIC_CONTENT_PAGES = [
   '/brief',
   '/security',
   '/trust',
+  '/dashboard', // the page is public; every number on it is computed on the visitor's own device
 ] as const;
 
 /** True for a public content page or anything beneath it. */

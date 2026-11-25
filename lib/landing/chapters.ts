@@ -20,6 +20,7 @@ export const NAV = [
   { href: '/security', label: 'Security' },
   { href: '/trust', label: 'Trust' },
   { href: '/docs/overview', label: 'Docs' },
+  { href: '/dashboard', label: 'Dashboard' },
 ] as const;
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
