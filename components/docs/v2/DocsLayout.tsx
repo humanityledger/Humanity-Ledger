@@ -80,12 +80,12 @@ export interface DocsLayoutProps {
   meta?: React.ReactNode;
 }
 
-export async function DocsLayout({ current, page: source, group, before, after, extraToc, meta }: DocsLayoutProps) {
+export async function DocsLayout({ current, page: original, group, before, after, extraToc, meta }: DocsLayoutProps) {
   const t = await getT();
   const locale = await getServerLocale();
   // The page in the reader's language (lib/docs/i18n.ts); interface texts fall back to t().
   const tr = await docsTranslator();
-  const page = translatePage(source, tr);
+  const page = translatePage(original, tr);
   const label = (text: string) => (tr && tr(text) !== text ? tr(text) : t(text));
   const entry = findByHref(current);
   const groupName = group ?? entry?.group ?? "Documentation";
@@ -106,8 +106,8 @@ export async function DocsLayout({ current, page: source, group, before, after, 
         <main className={s.main} id="docs-content">
           <article className={s.content}>
             <p className={s.crumbs}>{label(groupName)}</p>
-            <h1 className={s.title}>{label(source.title ?? source.label)}</h1>
-            <p className={s.summary}>{label(source.summary)}</p>
+            <h1 className={s.title}>{label(original.title ?? original.label)}</h1>
+            <p className={s.summary}>{label(original.summary)}</p>
             {meta}
 
             <div className={s.prose}>
