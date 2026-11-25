@@ -8,7 +8,10 @@
  * from the repository (lib/landing/facts.ts). Nothing here is typed by hand.
  */
 import React from 'react';
-import * as K from '@/lib/landing/chapters';
+import * as KRaw from '@/lib/landing/chapters';
+import { translateDeep } from '@/lib/i18n/deep';
+
+const CLAIM_WORDS = new Set(['Live', 'Closed alpha', 'Not enabled yet', 'In design']);
 import { versions } from '@/lib/landing/facts';
 import { labelOf } from '@/lib/landing/claims';
 import { Arrow, SiteFooter, SiteHeader } from './Chrome';
@@ -47,8 +50,14 @@ function Section({ id, tone, children }: { id: string; tone?: 'wash' | 'ink'; ch
 
 export async function SiteLanding() {
   const __t = await getT();
+  // Every text of the page in the reader's language, including what is printed without t() and
+  // what the client islands receive as props (lib/i18n/deep.ts).
+  // The four claim words stay English here: StatusLabel picks its colour from them and translates
+  // them itself.
+  const tx = (x: string) => (CLAIM_WORDS.has(x) ? x : __t(x));
+  const K = translateDeep({ ...KRaw }, tx) as typeof KRaw;
   const v = versions();
-  const stack = K.stackRows(v);
+  const stack = translateDeep(KRaw.stackRows(v), tx);
 
   return (
     <div className={s.site} data-site="public">
