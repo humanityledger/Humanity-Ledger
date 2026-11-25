@@ -1584,6 +1584,15 @@ class PrivateWallet {
 
   private tokenTxInFlight = false;
 
+  /**
+   * The Ethereum account this wallet was opened for (lower case), or null. The dashboard shows a
+   * wallet's data only when this is the signed-in Ledger Chat account, so a wallet opened earlier in
+   * the tab for another account is never shown under this one.
+   */
+  get openedFor(): string | null {
+    return this.evmAddress;
+  }
+
   /** True while anything is being proven or sent; local data must not be removed then. */
   get transacting(): boolean {
     return this.tokenTxInFlight || this.state.busy || valueActionsRunning() > 0 || this.state.phase === 'signing' || this.state.phase === 'starting' || this.state.phase === 'deploying';

@@ -21,11 +21,13 @@ export function exampleActivity(now: number, count = 1400): Activity[] {
     const kind = KINDS[Math.floor(r() * KINDS.length)];
     const at = now - Math.floor(Math.pow(r(), 1.6) * 120 * 86_400_000);
     const st = r();
+    const token = r() < 0.75 ? 'CUSDC' : 'ETH';
+    const units = Math.floor((r() * 240 + 1) * 1e6); // 1 to 241 cUSDC (6 decimals)
     out.push({
       id: `example-${i}`,
       kind,
-      token: r() < 0.75 ? 'CUSDC' : 'ETH',
-      amount: String(Math.floor((r() * 240 + 1) * 1e6)), // 6 decimals for cUSDC; read as 18 for ETH, so ETH stays small
+      token,
+      amount: token === 'CUSDC' ? String(units) : String(BigInt(units) * 1_000_000_000n), // 0.001 to 0.241 ETH
       counterparty: kind === 'send' || kind === 'receive' ? PEOPLE[Math.floor(Math.pow(r(), 2) * PEOPLE.length)] : undefined,
       txHash: '0x' + Math.floor(r() * 2 ** 52).toString(16).padStart(14, '0').repeat(5).slice(0, 64),
       blockNumber: 29_000 + Math.floor(r() * 9000),
@@ -43,3 +45,32 @@ export const EXAMPLE_TOKENS = [
 ];
 
 export const EXAMPLE_PEOPLE = PEOPLE;
+
+/* Everything the example shows that is not activity, kept here so the normal path holds no made-up value
+ * (test/unit/dashboard/real-data.test.ts). Reached only through lib/dashboard/sources.ts when the URL
+ * says ?example=1. */
+
+/** The made-up Ledger Chat account of the example. */
+export const EXAMPLE_ACCOUNT = '0x0000000000000000000000000000000000e4a3c1';
+
+const EXAMPLE_NAMES = ['Amara', 'Jonas', 'Lucía', 'Mei', 'Oskar', 'Priya', 'Tomás', 'Yuki', 'Nadia', 'Felix', 'Inés', 'Ravi'];
+
+/** The wallet state the example draws: ready, with the balances and activity above. */
+export function exampleWalletState(now: number) {
+  return {
+    phase: 'ready' as const,
+    busy: false,
+    aztecAddress: '0x' + 'e4a3c1'.repeat(10) + '0000',
+    balances: EXAMPLE_TOKENS,
+    activity: exampleActivity(now),
+    feeJuice: { balance: 4_200_000_000_000_000_000n, minForTx: 1_000_000_000_000_000_000n, claims: [], plan: 'balance' as const },
+  };
+}
+
+export function exampleBindings() {
+  return PEOPLE.slice(0, 11).map((a, i) => ({ inboxId: `example-${i}`, aztecAddress: a }));
+}
+
+export function exampleContacts() {
+  return PEOPLE.map((a, i) => ({ address: a, name: EXAMPLE_NAMES[i % EXAMPLE_NAMES.length] }));
+}
