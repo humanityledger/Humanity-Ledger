@@ -1,6 +1,6 @@
 # README images still to capture
 
-These need a signed-in session with test data, which the session that wrote the README did not have. Capture each one, save it here under the given name (JPEG or PNG, under 400 KB), and add it to [`README.md`](../../README.md) section 11.
+These need a signed-in session with test data, which the session that wrote the README did not have. Capture each one, save it here under the given name (JPEG or PNG, under 400 KB), and add it to [`docs/EVALUATION_DOSSIER.md`](../EVALUATION_DOSSIER.md) section 11, or to the README gallery (see [`assets/launch/README.md`](../../assets/launch/README.md)).
 
 | File name | Page | Viewport | What it should show |
 |---|---|---|---|

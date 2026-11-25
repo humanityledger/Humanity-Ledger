@@ -1,6 +1,6 @@
 # Audits: inventory
 
-**State on 13 November 2026: no external audit of any Humanity Ledger contract or circuit has concluded.**
+**State on 26 November 2026: an external audit began on 25 November 2026. No external audit of any Humanity Ledger contract or circuit has concluded, and no report exists.**
 `deployments/aztec-mainnet.json` records `"audit": null`, and the client keeps the "unaudited" acknowledgement and
 per-payment caps on Aztec Alpha until a report is recorded there (`lib/aztec/agreement-policy.ts`).
 

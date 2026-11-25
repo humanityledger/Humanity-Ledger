@@ -3645,7 +3645,7 @@
  "The sign-in was not completed in your wallet. Tap 'Try again'.": "钱包中的登录未完成。请点击“重试”。",
  "The signalling server only helps the two devices find each other. It never receives the sound or video.": "信令服务器只帮助两台设备找到彼此，从不接收声音或视频。",
  "The signature was declined or timed out. Nothing was charged and nothing was sent.": "签名被拒绝或超时。未扣费，也未发送任何内容。",
- "The sovereign path you requested does not exist.": "你请求的自主路径不存在。",
+ "This page does not exist.": "此页面不存在。",
  "The stack, layer by layer": "技术栈，逐层解析",
  "The standard each part uses, where its keys live, what every party can see, and the limits, each next to the part it limits.": "每个部分使用的标准、其密钥存放位置、各方能看到什么，以及各项限制，均列在所限制的部分旁边。",
  "The status could not be read.": "无法读取状态。",

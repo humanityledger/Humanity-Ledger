@@ -17,7 +17,7 @@ This is the entry point for anyone reviewing Ledger Chat. It is current as of `m
 | Attachments | Client, Cloudflare R2 | Encrypted in the browser (AES-256-GCM); R2 holds ciphertext only (`lib/chat/remote-attachment.ts`) |
 | Languages | Website and chat | English, Spanish, Russian, German, Chinese (`lib/i18n`); legal pages in English |
 
-Each claim comes with its evidence in `README.md` §1.
+Each claim comes with its evidence in `docs/EVALUATION_DOSSIER.md` §1.
 
 ## 2. Scope by priority
 
@@ -58,7 +58,7 @@ The repository has a long history, and most of its directories are not Ledger Ch
 
 ## 3. How to reproduce
 
-The commands are in `README.md` §14. In brief:
+The commands are in `docs/EVALUATION_DOSSIER.md` §14. In brief:
 - `npm ci`, then `npm run test:run` and `npm run test:contracts`;
 - `aztec compile` and `aztec test` in each `contracts/aztec/*` directory (Aztec 6.0.0).
 
@@ -73,9 +73,9 @@ The read-only checks against Alpha are `aztec-mainnet-preflight.yml` and `aztec-
 
 | ID | Severity | Issue | Effect today |
 |---|---|---|---|
-| ZK-01 to ZK-07 | Up to critical | Standalone Noir circuits (for example, a stream accrual that can be claimed many times, or proofs not bound to the payout address) | Retired on 25 November 2026 to `archive/standalone-circuits`, whose README maps each issue to the aztec-nr contracts. Never deployed. Listed in `README.md` §9 |
+| ZK-01 to ZK-07 | Up to critical | Standalone Noir circuits (for example, a stream accrual that can be claimed many times, or proofs not bound to the payout address) | Retired on 25 November 2026 to `archive/standalone-circuits`, whose README maps each issue to the aztec-nr contracts. Never deployed. Listed in `docs/EVALUATION_DOSSIER.md` §9 |
 | FEE-PAYER | Privacy | On Alpha there is no sponsored FPC, so each account pays its own Fee Juice and is the public fee payer. Its transactions can be linked | Stated in the app before every payment (`lib/privacy/disclosure.ts`) |
-| CUSDC-RECV | Function | A cUSDC receive is not yet listed by the wallet, so cUSDC requests stay "announced" | `README.md` §3 |
+| CUSDC-RECV | Function | A cUSDC receive is not yet listed by the wallet, so cUSDC requests stay "announced" | `docs/EVALUATION_DOSSIER.md` §3 |
 | PORTAL-ADMIN | Design | The portal has an admin and a guardian. They can pause deposits, lower caps, disable an asset and pause withdrawals for at most 3 days. **No key can take funds out (I2)**. Relaxations wait 2 days and are public (I4) | Not deployed |
 | PORTAL-L1-PUBLIC | Privacy | In L2 there is no public supply, but `totalLocked` and the portal's balances on L1 are public | Not deployed |
 | RECEIVER-LINK | Privacy | Until private fees exist, the account that claims from a receiver pays its own Fee Juice and is public. Receivers are therefore not presented as unlinkable on Alpha | Not deployed |
@@ -100,7 +100,7 @@ The decisions are recorded in `docs/alpha/OPERATOR_DECISIONS.md`:
 
 ## 6. Questions for Aztec Labs
 
-These are in `README.md` §15. Feedback on the G7 binding (`docs/aztec/G7_BINDING_SPEC.md`) and on the portal's use of the Inbox and Outbox would help most.
+These are in `docs/EVALUATION_DOSSIER.md` §15. Feedback on the G7 binding (`docs/aztec/G7_BINDING_SPEC.md`) and on the portal's use of the Inbox and Outbox would help most.
 
 ## 7. Older documents (history)
 
