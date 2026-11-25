@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { HLLogo } from '@/components/shared/HLLogo';
 import { EXTERNAL_LINKS } from '@/lib/constants/links';

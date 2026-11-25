@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useMediaUrl } from '@/lib/chat/media-url';
 import { Play, Pause, Download } from 'lucide-react';
