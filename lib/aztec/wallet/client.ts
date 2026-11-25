@@ -1074,6 +1074,25 @@ class PrivateWallet {
   }
 
   /**
+   * Public facts about the network this wallet talks to, for the dashboard: what any visitor of
+   * the node could read. Every field is optional; a failed read leaves it out.
+   */
+  async networkStatus(): Promise<{ nodeVersion?: string; l1ChainId?: number; rollupVersion?: number; blockNumber?: number; provenBlockNumber?: number; readAt: number }> {
+    const out: { nodeVersion?: string; l1ChainId?: number; rollupVersion?: number; blockNumber?: number; provenBlockNumber?: number; readAt: number } = { readAt: Date.now() };
+    const node: any = this.node;
+    if (!node) return out;
+    const [info, block, proven] = await Promise.allSettled([node.getNodeInfo(), node.getBlockNumber(), node.getProvenBlockNumber?.()]);
+    if (info.status === 'fulfilled' && info.value) {
+      out.nodeVersion = String(info.value.nodeVersion ?? '');
+      out.l1ChainId = Number(info.value.l1ChainId);
+      out.rollupVersion = Number(info.value.rollupVersion);
+    }
+    if (block.status === 'fulfilled' && block.value !== undefined) out.blockNumber = Number(block.value);
+    if (proven.status === 'fulfilled' && proven.value !== undefined) out.provenBlockNumber = Number(proven.value);
+    return out;
+  }
+
+  /**
    * The network context for a G7 check before value moves (peer-binding.ts valueBindingContext):
    * this wallet's network tag, and, on Alpha, proofs that name it.
    */

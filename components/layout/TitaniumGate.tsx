@@ -18,7 +18,7 @@ type GateState = 'INTRO' | 'AUTH' | 'APP';
 // visitors since #242) and the informational pages were missing (23/11/2026).
 const PUBLIC_PAGES = [
     '/', '/connect', '/terms', '/privacy', '/chat', '/studio', '/docs',
-    '/beta', '/alpha', '/u', '/status', '/protocol', '/record', '/brief', '/security', '/trust', '/legal',
+    '/beta', '/alpha', '/u', '/status', '/protocol', '/record', '/brief', '/security', '/trust', '/legal', '/dashboard',
 ];
 
 /** Exact path or one of its sub-paths: '/u' must not make '/unknown' public. */

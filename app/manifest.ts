@@ -54,6 +54,12 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: 'Communities',
         description: 'Open your communities',
         url: '/communities',
+      },
+      {
+        name: 'Dashboard',
+        short_name: 'Dashboard',
+        description: 'Your account, computed on this device',
+        url: '/dashboard',
       }
     ]
   };
