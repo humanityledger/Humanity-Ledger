@@ -5,8 +5,10 @@ Todo corre en tu máquina. Postgres y Redis salen de `docker-compose.yml`, que y
 ## 1. Base de datos y caché
 
 ```bash
-docker compose up -d postgres redis
+POSTGRES_PASSWORD=postgres docker compose up -d postgres redis
 ```
+
+`docker-compose.yml` exige `POSTGRES_PASSWORD` (no tiene valor por defecto); sin ella, `docker compose` se detiene antes de arrancar.
 
 Solo esos dos servicios. El servicio `app` del compose construye el `Dockerfile` entero, que no necesitas para desarrollar, y `aztec-sandbox` descarga una imagen grande que solo hace falta si vas a tocar contratos.
 

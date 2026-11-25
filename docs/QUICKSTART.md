@@ -1,90 +1,46 @@
-# Humanity Ledger — Local Development & Quickstart Guide
+# Quick start
 
-**Document Reference:** HL-DEV-QUICKSTART-2026.1  
-**Target Environment:** Local Node.js Development Environment  
-**Version:** 1.1  
-**Date:** 2 November 2026
+Two ways in. Each fits on one screen.
 
----
+## Use Ledger Chat
 
-## 1. System Requirements
+1. Open **[ledgerchat.org/beta](https://ledgerchat.org/beta)** and request an invitation, or enter the single-use code you were given.
+2. Connect an Ethereum wallet and sign in with one signature (SIWE). No phone number, email or password.
+3. Read the beta notice and unlock. Messages work at once; private payments need cUSDC (bridged with human.tech's Shield) and Fee Juice on your Aztec account ([`beta/TESTER_GUIDE.md`](beta/TESTER_GUIDE.md)).
 
-- **Operating System:** Linux, macOS, or Windows (WSL2 or PowerShell)
-- **Node.js:** v20.x or higher LTS
-- **Package Manager:** npm v10.x+
-- **Database:** PostgreSQL v15+ (local or containerized)
-- **Cache:** Redis v7+ (local or containerized)
-- **Hardware Minimum:** 8 GB RAM, 4 CPU cores (required for local WebAssembly proof synthesis and Hardhat EVM Cancun test execution)
+The beta is closed (at most 100 members, until 23 Feb 2027), capped per payment and not externally audited yet: [`TRUST.md`](TRUST.md).
 
----
+## Run it locally
 
-## 2. Installation & Setup
+Requirements: **Node 22 or newer** (enforced by `engines` and `engine-strict`), npm 10, Docker.
 
-### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/humanityledger/Humanity-Ledger.git
-cd Humanity-Ledger
-```
-
-### Step 2: Install Pinned Dependencies
-```bash
+git clone https://github.com/humanityledger/humanity-ledger.git && cd humanity-ledger
 npm ci
-```
-
-### Step 3: Configure Environment Variables
-Copy the development environment template:
-```bash
-cp .env.example .env.local
-```
-
-Ensure cryptographic secrets meet the 16-character minimum to prevent fail-closed startup aborts:
-```bash
-JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-ENCLAVE_PIN_PEPPER=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-CRON_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-INTERNAL_INGEST_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-```
-
-### Step 4: Database Schema Initialization
-Generate the Prisma client and synchronize the local schema:
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-### Step 5: Start Local Development Server
-```bash
+POSTGRES_PASSWORD=postgres docker compose up -d postgres redis   # compose requires POSTGRES_PASSWORD
+cat > .env.local <<EOF
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/humanity_ledger"
+REDIS_URL="redis://localhost:6379"
+JWT_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+EOF
+npx prisma generate && npx prisma db push
 npm run dev
 ```
 
-The application interface is accessible at:
-```
-http://localhost:3000
-```
+Open http://localhost:3000/chat. `JWT_SECRET` is the only variable `middleware.ts` refuses to start without; third-party keys (WalletConnect, Moralis, Stripe) are optional and only the screens that use them fail without them. On a port other than 3000, add `APP_ALLOWED_ORIGINS="http://localhost:PORT"` or mutations answer 403 (CSRF fails closed). Details and pitfalls: [`RUN-LOCAL.md`](RUN-LOCAL.md) (Spanish).
 
----
-
-## 3. Verification Suite Execution
-
-Before making any code modifications, verify that the local environment reproduces the baseline test passes:
+## Verify
 
 ```bash
-# Execute unit and integration test suite (1,338 tests in CI on 4 Nov 2026)
-npm run test:run
-
-# Execute L1 smart contract invariant suite (43 Hardhat tests)
-npm run test:contracts
-
-# Execute traceability and security pattern scans
-npm run check:traceability
-node scripts/forbidden-patterns.mjs
+npm run test:run                        # unit and integration tests (Vitest)
+npm run test:contracts                  # Solidity, including the portal (Hardhat)
+node scripts/check-forbidden-copy.mjs   # docs and UI make no claim the code does not support
+node scripts/forbidden-patterns.mjs     # security patterns
 ```
 
----
+The aztec-nr contracts compile and run their TXE tests in CI with the Aztec 6.0.0 toolchain. To run them yourself, install that toolchain (`VERSION=6.0.0` with the official installer) and follow [`.github/workflows/aztec-contracts.yml`](../.github/workflows/aztec-contracts.yml).
 
-## 4. Documentation References
+## Next
 
-- Protocol Invariants & Normative Specification: [`docs/PROTOCOL_SPEC.md`](PROTOCOL_SPEC.md)
-- Testing Architecture & Verification Battery: [`docs/TESTING.md`](TESTING.md)
-- Aztec Foundation Review Dossier: [`docs/AZTEC_FOUNDATION_DOSSIER.md`](AZTEC_FOUNDATION_DOSSIER.md)
-- Coordinated Vulnerability Disclosure Policy: [`docs/BUG_BOUNTY.md`](BUG_BOUNTY.md)
+[`AZTEC.md`](AZTEC.md) for the Aztec integration · [`audit/START_HERE.md`](audit/START_HERE.md) for reviewers · [`../CONTRIBUTING.md`](../CONTRIBUTING.md) to contribute.

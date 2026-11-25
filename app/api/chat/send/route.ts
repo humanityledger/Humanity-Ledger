@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkMessageEnvelope } from '@/lib/security/messageEnvelope';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
-import { chatStreamHub } from '@/lib/sse/chatStreamHub';
+import { chatStreamHub, type ChatChannelMessage } from '@/lib/sse/chatStreamHub';
 import { safeRedisDel } from '@/lib/redis/client';
 
 //  Lazy Upstash client  only created when env vars are present 
@@ -35,7 +35,9 @@ function getUpstashRedis(): any | null {
 
 //  Shared in-memory fallback store (global so it's shared with the SSE stream route) 
 declare global {
-  var __LedgerChatMemStore: Map<string, Array<{ id: string; sender: string; content: string; sentAt: string; _score: number }>>;
+  // Same type as the declaration in lib/sse/chatStreamHub.ts: TypeScript requires every
+  // declaration of a global to agree (TS2403).
+  var __LedgerChatMemStore: Map<string, ChatChannelMessage[]>;
 }
 if (!global.__LedgerChatMemStore) {
   global.__LedgerChatMemStore = new Map();

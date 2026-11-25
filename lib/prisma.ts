@@ -281,7 +281,7 @@ export const prismaRead = (
 // Always store singletons globally, even in production, to prevent connection explosions
 (globalForPrisma as unknown as { prisma: SystemPrismaClient }).prisma = prisma;
 if (hasDedicatedReadReplica) {
-  (globalForPrisma as unknown as { prismaRead: SystemPrismaClient }).prismaRead = prismaRead as unknown as PrismaClient;
+  (globalForPrisma as unknown as { prismaRead: SystemPrismaClient }).prismaRead = prismaRead;
 }
 
 /** Named accessor — preferred import for new code (avoids default import ambiguity). */
