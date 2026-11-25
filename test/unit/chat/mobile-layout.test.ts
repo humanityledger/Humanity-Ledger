@@ -9,14 +9,32 @@ import { untranslated } from '../../helpers/untranslated';
 const read = (p: string) => untranslated(fs.readFileSync(p, 'utf8'));
 
 describe('chat on a phone', () => {
-  it('the page is never laid out wider than the screen, and iOS keeps it so after Next.js rewrites the tag', () => {
+  it('the page is never laid out wider than the screen, and the tag is kept after Next.js rewrites it', () => {
     const layout = read('app/layout.tsx');
     expect(layout).toMatch(/minimumScale: 1,/);
-    expect(layout).toMatch(/initial-scale=1, minimum-scale=1, viewport-fit=cover/);
-    // Pinch zoom stays available (WCAG 1.4.4): the iOS tag never caps or disables it.
-    const iosTag = layout.match(/var ci='([^']+)'/)?.[1] ?? '';
-    expect(iosTag).not.toMatch(/maximum-scale|user-scalable=(no|0)/);
+    expect(layout).toContain("var base='width=device-width, initial-scale='+scale+', minimum-scale='+scale+', viewport-fit=cover'");
+    // Safari with a wallet extension (window.ethereum) is not a wallet's own browser: normal size there.
+    expect(layout).toContain('var wallet=!!(named||(window.ethereum&&!ios));');
     expect(layout).toMatch(/new MutationObserver\(si\)\.observe\(document\.head/);
+    // The tag Next.js renders never caps zoom: Lighthouse and desktop browsers see pinch zoom on.
+    const start = layout.indexOf('export const viewport');
+    const exported = layout.slice(start, layout.indexOf('\n}', start)).replace(/\/\/[^\n]*/g, '');
+    expect(exported).not.toMatch(/maximumScale|userScalable/);
+  });
+
+  it('typing never zooms: iOS caps the focus zoom (pinch still works there), Android only while a field is in use', () => {
+    const layout = read('app/layout.tsx');
+    // iOS: maximum-scale equal to the initial scale, always. Safari ignores it for pinch zoom since iOS 10.
+    expect(layout).toContain('var locked=ios;');
+    expect(layout).toContain("var tag=function(){return base+(locked?', maximum-scale='+scale:'')};");
+    // Android: locked from the touch that focuses a text field until focus leaves it.
+    expect(layout).toContain("document.addEventListener('touchstart',on,{capture:true,passive:true});");
+    expect(layout).toContain("document.addEventListener('focusout',off,true);");
+    expect(layout).not.toMatch(/user-scalable=(no|0)/);
+  });
+
+  it('what you type is sent as typed, never passed through the translator', () => {
+    expect(read('components/terminal/LedgerChatV2.tsx')).toContain('setInputText(val);');
   });
 
   it('text fields are at least 16 px, so focusing one never zooms', () => {

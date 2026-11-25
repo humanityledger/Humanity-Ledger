@@ -8054,7 +8054,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                             value={inputText}
                             onChange={e => {
                               const val = e.target.value;
-                              setInputText(tr(val));
+                              setInputText(val);
                               setShowBotSuggestions(val.startsWith('/') && val.length < 10);
                               if (!val) {
                                 e.target.style.height = '44px';
