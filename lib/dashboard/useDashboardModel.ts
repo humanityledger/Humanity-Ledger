@@ -22,6 +22,11 @@ export function useDashboardModel(input: DashInputs | null): { model: DashModel 
       w.onmessage = (e: MessageEvent<{ id: number; model?: DashModel; error?: string }>) => {
         if (e.data.id !== seq.current) return;
         if (e.data.model) setModel(e.data.model);
+        else {
+          // The worker answered with an error: compute here instead (the effect below runs again).
+          failed.current = true;
+          setWorker(false);
+        }
       };
       w.onerror = () => {
         failed.current = true;
