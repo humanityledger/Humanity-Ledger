@@ -1,0 +1,54 @@
+# The portal on the TEST networks: HLPortal and the receiver factory on Sepolia, PortalToken (zkETH)
+# on the Aztec test network (scripts/portal/deploy-testnet.mjs, docs/PORTAL.md §7.2).
+#
+# Run by hand from Actions → "Portal on the test networks" → Run workflow:
+#   1. mode = deploy. The job summary prints the NEXT_PUBLIC_HL_PORTAL_* lines for a testnet build.
+#   2. Two days later (HLPortal.TIMELOCK), mode = bind with the portal address from step 1.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   SEPOLIA_RPC_URL       a Sepolia JSON-RPC URL
+#   PORTAL_DEPLOYER_KEY   private key of a Sepolia account holding test ETH only (about 0.05).
+#                         It becomes the admin and guardian of this TEST deployment.
+# The script refuses any chain other than Sepolia and any Aztec node not settling on Sepolia.
+# Ethereum mainnet and Aztec Alpha are wave 2, after the external review.
+
+name: Portal on the test networks
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'deploy, or bind (after 2 days)'
+        required: true
+        default: deploy
+        type: choice
+        options: [deploy, bind]
+      portal:
+        description: 'HLPortal address (bind only)'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-testnet
+  cancel-in-progress: false
+
+jobs:
+  portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev --legacy-peer-deps
+      - run: npx hardhat compile
+      - name: ${{ inputs.mode }}
+        run: node --import ./scripts/aztec/register.mjs scripts/portal/deploy-testnet.mjs ${{ inputs.mode }}
+        env:
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+          PORTAL_DEPLOYER_KEY: ${{ secrets.PORTAL_DEPLOYER_KEY }}
+          PORTAL_ADDRESS: ${{ inputs.portal }}
