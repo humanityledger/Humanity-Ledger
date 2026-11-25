@@ -223,68 +223,26 @@ jobs:
 
   # --- Job 4: Circuit constraint coverage check ----------------------------
   circuit-coverage:
-    name: Circuit Constraint Coverage
+    name: aztec-nr artifacts and circuit invariants
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Verify CONSTRAINT_COMPLETENESS.md is up to date
-        run: |
-          echo "=== Constraint Completeness Check ==="
-          if [ ! -f "circuits/CONSTRAINT_COMPLETENESS.md" ]; then
-            echo "CRITICAL: CONSTRAINT_COMPLETENESS.md is missing"
-            exit 1
-          fi
-
-          # Verify it contains Gap G4 as CLOSED
-          if ! grep -q "G4.*CLOSED\|CLOSED.*G4" circuits/CONSTRAINT_COMPLETENESS.md; then
-            echo "CRITICAL: Gap G4 is not marked CLOSED in CONSTRAINT_COMPLETENESS.md"
-            exit 1
-          fi
-
-          # Verify it documents all 3 circuits
-          for circuit in escrow streams identity; do
-            if ! grep -qi "$circuit" circuits/CONSTRAINT_COMPLETENESS.md; then
-              echo "CRITICAL: Circuit '$circuit' not documented in CONSTRAINT_COMPLETENESS.md"
-              exit 1
-            fi
-          done
-
-          echo "[PASS] CONSTRAINT_COMPLETENESS.md is present and complete"
-
-      - name: Verify rate bound constraint exists in streams circuit
-        run: |
-          STREAMS_MAIN="circuits/streams/src/main.nr"
-          if [ ! -f "$STREAMS_MAIN" ]; then
-            echo "CRITICAL: streams/src/main.nr not found"
-            exit 1
-          fi
-
-          # Verify MAX_RATE is defined
-          if ! grep -q "MAX_RATE" "$STREAMS_MAIN"; then
-            echo "CRITICAL: MAX_RATE constant missing from streams circuit (Gap G4 regression)"
-            exit 1
-          fi
-
-          # Verify assert constraint is present
-          if ! grep -q "assert.*rate_per_second.*MAX_RATE\|assert.*MAX_RATE.*rate_per_second" "$STREAMS_MAIN"; then
-            echo "CRITICAL: rate_per_second constraint missing (Gap G4 regression)"
-            exit 1
-          fi
-
-          echo "[PASS] Gap G4 constraint verified in streams circuit"
+      # The standalone Noir circuits (ZK-01 to ZK-07) were retired to the archive on 25 Nov 2026.
+      # Value moves only through the aztec-nr contracts, whose artifacts are pinned.
+      - name: Every committed aztec-nr artifact matches its pin
+        run: node scripts/aztec/pin-artifacts.mjs --check
 
       - name: Run circuit-specific adversarial tests
         run: |
           npm ci --prefer-offline
-          npx vitest run test/circuit_invariants.adversarial.test.ts --reporter=verbose 2>&1
-          npx vitest run test/circuits/streams_rate_bound.test.ts --reporter=verbose 2>&1
+          npx vitest run test/circuit_invariants.adversarial.test.ts test/unit/aztec/artifact-pins.test.ts --reporter=verbose 2>&1
 
   # --- Job 5: PXE boundary and key material security -----------------------
   pxe-key-security:
@@ -309,10 +267,6 @@ jobs:
       - name: Run PXE boundary security tests
         run: |
           npx vitest run test/pxe_boundary_security.test.ts --reporter=verbose 2>&1
-
-      - name: Run VK hash mismatch tests
-        run: |
-          npx vitest run test/vk_hash_mismatch.test.ts --reporter=verbose 2>&1
 
       - name: Run crypto integrity adversarial tests
         run: |

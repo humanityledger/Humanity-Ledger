@@ -17,9 +17,9 @@
 
 import React, { useRef } from 'react';
 import { AlertTriangle, Check } from 'lucide-react';
-import s from './PaymentProgress.module.css';
 
 import { AT, creationSteps, stepStates, type CreationPhase, type StepKey } from './walletCreationSteps';
+import { useT } from '@/lib/i18n/client';
 
 const INK = '#15171c';
 
@@ -45,6 +45,7 @@ export interface WalletCreationProps {
 }
 
 export function WalletCreation(p: WalletCreationProps) {
+  const t = useT();
   const steps = creationSteps(p.alpha, p.networkName, p.linkedComputer);
   // Where an error stopped it: the last step that was running.
   const last = useRef<StepKey | undefined>(undefined);
@@ -63,29 +64,56 @@ export function WalletCreation(p: WalletCreationProps) {
   else if (p.linkedComputer) sentence = 'Your phone receives a request. Open Ledger Chat on your phone and tap Approve.';
   else sentence = 'Your wallet asks you to sign a message. It is free and sends no transaction. Some wallets label it “simulation failed”; that is expected for a signature.';
 
+  const doneCount = states.filter((x) => x === 'done').length;
+  const progress = steps.length ? Math.round((doneCount / steps.length) * 100) : 0;
+  const idle = !failed && !working;
+
   return (
-    <div className="bg-white rounded-2xl border border-[#E4E7EC] px-5 pt-5 pb-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]" aria-live="polite">
-      <div className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>{title}</div>
-      <p className={`mt-1.5 text-[13.5px] leading-relaxed break-words ${failed ? 'text-[#b42318]' : 'text-[#475061]'}`} role={failed ? 'alert' : undefined}>
-        {failed && <AlertTriangle size={14} className="inline -mt-0.5 mr-1.5" aria-hidden />}
-        {sentence}
+    <div className="rounded-[24px] border border-[#eef0f3] bg-white px-5 pt-6 pb-5" aria-live="polite">
+      <h2 className="text-[22px] font-semibold tracking-[-0.025em] leading-tight" style={{ color: INK }}>{t(title)}</h2>
+      <p className={`mt-2 text-[14.5px] leading-relaxed break-words ${failed ? 'text-[#b42318]' : 'text-[#5b606b]'}`} role={failed ? 'alert' : undefined}>
+        {failed && <AlertTriangle size={15} className="inline -mt-0.5 mr-1.5" aria-hidden />}
+        {t(sentence)}
       </p>
       {failed && p.errorDetail && (
-        <button type="button" className="mt-1 text-[13px] font-medium underline" style={{ color: INK }} onClick={() => p.onCopyDetails?.(p.errorDetail!)}>
-          Copy details
+        <button type="button" className="mt-1.5 text-[13.5px] font-medium underline underline-offset-2" style={{ color: INK }} onClick={() => p.onCopyDetails?.(p.errorDetail!)}>
+          {t("Copy details")}
         </button>
       )}
 
+      {idle && !p.blocked && (
+        <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium" style={{ color: INK }} aria-label={t("Before you start")}>
+          <span>{t("Free to sign")}</span>
+          <span className="text-[#c3c8d0]" aria-hidden="true">·</span>
+          <span>{t("Keys stay on this device")}</span>
+          <span className="text-[#c3c8d0]" aria-hidden="true">·</span>
+          <span>{t("About a minute")}</span>
+        </p>
+      )}
+
+      {!idle && !p.blocked && (
+        <div className="mt-5 h-[3px] rounded-full bg-[#eef0f3] overflow-hidden" role="progressbar" aria-label={t("Opening progress")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+          <div
+            className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${failed ? 'bg-[#d92d20]' : 'bg-[#0d0f14]'}`}
+            style={{ width: `${Math.max(progress, 4)}%` }}
+          />
+        </div>
+      )}
+
       {!p.blocked && (
-        <ol className={`${s.steps} mt-3`} aria-label="Steps">
+        <ol className="mt-5" aria-label={t("Steps")}>
           {steps.map((st, i) => {
             const state = states[i];
             return (
-              <li key={st.key} className={`${s.step} ${s[state]}`} aria-current={state === 'active' || state === 'bad' ? 'step' : undefined}>
-                <span className={s.dot} aria-hidden="true">{state === 'done' && <Check size={12} strokeWidth={3} />}</span>
-                <span className={s.stepText}>
-                  <span className={s.stepLabel}>{st.label}</span>
-                  <span className={s.stepNote}>{state === 'bad' ? 'Stopped here' : st.note}</span>
+              <li
+                key={st.key}
+                className="grid grid-cols-[28px_1fr] gap-3.5 py-3.5 border-t border-[#f0f1f4] first:border-t-0 first:pt-1"
+                aria-current={state === 'active' || state === 'bad' ? 'step' : undefined}
+              >
+                <StepMark state={state} n={i + 1} />
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold tracking-[-0.01em]" style={{ color: state === 'todo' ? '#8a909c' : INK }}>{t(st.label)}</span>
+                  <span className={`block mt-0.5 text-[13px] leading-snug ${state === 'bad' ? 'text-[#b42318]' : 'text-[#8a909c]'}`}>{state === 'bad' ? t("Stopped here") : t(st.note)}</span>
                 </span>
               </li>
             );
@@ -99,12 +127,35 @@ export function WalletCreation(p: WalletCreationProps) {
         <button
           type="button"
           onClick={p.onOpen}
-          className="mt-4 w-full h-12 rounded-xl text-white text-[14.5px] font-semibold flex items-center justify-center gap-2"
-          style={{ background: INK }}
+          className="mt-4 w-full h-14 rounded-[18px] bg-[#0d0f14] hover:bg-[#2a2d34] text-white text-[16px] font-semibold tracking-[-0.01em] active:scale-[0.99] transition-[background-color,transform] focus:outline-none focus-visible:ring-[3px] focus-visible:ring-[#0d0f14]/25 focus-visible:ring-offset-1"
         >
-          {failed ? 'Try again' : 'Open private wallet'}
+          {failed ? t("Try again") : t("Open private wallet")}
         </button>
       )}
     </div>
+  );
+}
+
+/** A step's mark: its number while waiting, a turning ring while running, a check when done, red when it stopped. */
+function StepMark({ state, n }: { state: 'done' | 'active' | 'bad' | 'todo'; n: number }) {
+  if (state === 'done') {
+    return (
+      <span className="w-7 h-7 rounded-full bg-[#0d0f14] text-white flex items-center justify-center" aria-hidden="true">
+        <Check size={14} strokeWidth={2.6} />
+      </span>
+    );
+  }
+  if (state === 'active') {
+    return <span className="w-7 h-7 rounded-full border-2 border-[#e6e8ec] border-t-[#0d0f14] animate-spin motion-reduce:animate-none" aria-hidden="true" />;
+  }
+  if (state === 'bad') {
+    return (
+      <span className="w-7 h-7 rounded-full bg-[#d92d20] text-white flex items-center justify-center text-[14px] font-bold" aria-hidden="true">!</span>
+    );
+  }
+  return (
+    <span className="w-7 h-7 rounded-full border border-[#e6e8ec] flex items-center justify-center text-[12.5px] font-semibold tabular-nums text-[#8a909c]" aria-hidden="true">
+      {n}
+    </span>
   );
 }

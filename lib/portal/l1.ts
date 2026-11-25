@@ -240,6 +240,51 @@ export async function findDeposits(l1: L1Clients, c: PortalConfig, secretHashes:
   return out;
 }
 
+const PORTAL_MESSAGING_ABI = [
+  { type: 'function', name: 'outbox', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'address' }] },
+  { type: 'function', name: 'rollupVersion', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] },
+] as const;
+
+/** Aztec's Outbox (l1-contracts v6, IOutbox). */
+export const OUTBOX_ABI = [
+  {
+    type: 'function',
+    name: 'getRoots',
+    stateMutability: 'view',
+    inputs: [{ name: '_epoch', type: 'uint256' }],
+    outputs: [{ name: '', type: 'bytes32[32]' }], // MAX_CHECKPOINTS_PER_EPOCH (IOutbox v6)
+  },
+  {
+    type: 'function',
+    name: 'hasMessageBeenConsumedAtEpoch',
+    stateMutability: 'view',
+    inputs: [
+      { name: '_epoch', type: 'uint256' },
+      { name: '_leafId', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+] as const;
+
+/** The Outbox and rollup version the portal itself consumes from (immutables of HLPortal). */
+export async function portalMessaging(l1: Pick<L1Clients, 'readContract'>, c: PortalConfig): Promise<{ outbox: string; rollupVersion: bigint }> {
+  const [outbox, rollupVersion] = await Promise.all([
+    l1.readContract({ address: hex(c.portal), abi: PORTAL_MESSAGING_ABI, functionName: 'outbox' }),
+    l1.readContract({ address: hex(c.portal), abi: PORTAL_MESSAGING_ABI, functionName: 'rollupVersion' }),
+  ]);
+  return { outbox: String(outbox), rollupVersion: BigInt(rollupVersion) };
+}
+
+/** The epoch's partial-proof roots on the Outbox (slot i: root over the first i+1 checkpoints). */
+export async function outboxRoots(l1: Pick<L1Clients, 'readContract'>, outbox: string, epoch: bigint): Promise<string[]> {
+  const roots = await l1.readContract({ address: hex(outbox), abi: OUTBOX_ABI, functionName: 'getRoots', args: [epoch] });
+  return (roots as string[]).map(String);
+}
+
+export async function outboxConsumed(l1: Pick<L1Clients, 'readContract'>, outbox: string, epoch: bigint, leafId: bigint): Promise<boolean> {
+  return Boolean(await l1.readContract({ address: hex(outbox), abi: OUTBOX_ABI, functionName: 'hasMessageBeenConsumedAtEpoch', args: [epoch, leafId] }));
+}
+
 export interface OutboxProof {
   epoch: bigint;
   numCheckpointsInEpoch: bigint;

@@ -7,7 +7,7 @@ export const messaging: DocPage = {
   title: "Messaging in Ledger Chat",
   summary: "How direct messages are encrypted, where your history is kept, and how to recognise a message that was not.",
   keywords: ["chat", "messages", "dm", "direct message", "encryption", "e2ee", "end to end", "xmtp", "mls", "history", "fallback", "readable"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -60,7 +60,16 @@ export const messaging: DocPage = {
     { t: "h2", text: "Attachments" },
     {
       t: "p",
-      text: "Images, files and voice notes are uploaded to our storage provider, and the conversation carries a link to them. **The file itself is not encrypted yet**, and anyone who obtains the link can open it. Until attachments are encrypted on your device before upload, avoid sending files you would not want a stranger to see.",
+      text: "Images, videos, files and voice notes are **encrypted in your browser before they are uploaded**. Each file gets its own fresh key (AES-256-GCM, derived with HKDF-SHA256). Only the encrypted file reaches our storage; the key travels inside the encrypted XMTP message, so our server and the storage provider hold only data they cannot read. The recipient checks the file's SHA-256 digest before decrypting, so a swapped or truncated file is rejected, never shown.",
+    },
+    {
+      t: "p",
+      text: "If our file storage is unavailable, a small file (up to 700 KB) can travel inside the XMTP message itself, still end to end encrypted and never through our server. A larger file fails with a message that says so; it is never dropped silently.",
+    },
+    {
+      t: "hint",
+      tone: "info",
+      text: "The encrypted format follows XMTP's RemoteAttachment scheme, but Ledger Chat sends it as its own text message, so other XMTP apps show it as text rather than as a file.",
     },
     { t: "h2", text: "What else our server knows" },
     {
@@ -86,6 +95,8 @@ export const messaging: DocPage = {
         "Clear chat empties a conversation on this device. The chat list shows nothing from before the clear.",
         "Saved messages for anything you want to keep.",
         "Message search across the history stored on your device.",
+        "A message that could not be sent is marked **Not sent** with a **Retry** button, which sends the same text again.",
+        "Ledger Chat is available in English, Spanish, Russian, German and Chinese. The language you choose applies to the chat and to the website.",
       ],
     },
   ],
@@ -97,7 +108,7 @@ export const routing: DocPage = {
   label: "How messages travel",
   summary: "The path a message takes from your device to someone else's, and what each part of the path can see.",
   keywords: ["routing", "relay", "delivery", "offline", "fallback", "network", "path", "server", "metadata", "p2p"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -136,7 +147,7 @@ export const communities: DocPage = {
   label: "Communities",
   summary: "Groups with channels, roles and invite links, and how their privacy differs from direct messages.",
   keywords: ["community", "group", "channel", "server", "roles", "admin", "moderator", "invite", "posts", "members", "paid channel"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -155,18 +166,27 @@ export const communities: DocPage = {
     },
     { t: "h2", text: "Privacy in communities" },
     {
+      t: "table",
+      head: ["Community", "Where posts live"],
+      strongFirst: true,
+      rows: [
+        ["Created from 24 November 2026", "When the creator's secure messaging is ready, the first channel is an XMTP MLS group, encrypted end to end like a direct message. Our server stores only the group's identifier and refuses to store posts for it."],
+        ["Created before 24 November 2026", "Posts and channel messages are stored on our server and can be read by us. Since 25 November 2026 these communities are read-only: the old posts stay, nothing new is stored, and an administrator can re-create the community end to end encrypted. Each member chooses whether to join it."],
+      ],
+    },
+    {
       t: "hint",
       tone: "warning",
-      title: "Community posts are not encrypted end to end yet",
-      text: "Posts and channel messages in communities are stored on our server and can be read by us. Do not share anything in a community that you would not want a server operator to see. Use a direct message instead.",
+      title: "Older communities are readable by our server",
+      text: "The old posts of a community created before 24 November 2026 can be read by a server operator. To keep talking, join its encrypted re-creation or use a direct message.",
     },
     {
       t: "p",
-      text: "Our server also stores the list of members, their roles and the channels they belong to. This is what lets a community work the same way on every device.",
+      text: "In an encrypted community, any member's device adds people who joined while no administrator was online; only an administrator's device removes someone. Whether a removed member stops receiving new posts is checked with two real XMTP clients in our two browser test.",
     },
     {
       t: "p",
-      text: "When community posts become encrypted end to end, this page will say so and the change will be listed in the [changelog](/changelog).",
+      text: "For every community our server also stores the list of members, their roles and the channels they belong to. This is what lets a community work the same way on every device.",
     },
   ],
 };
@@ -177,7 +197,7 @@ export const calls: DocPage = {
   label: "Voice and video calls",
   summary: "How calls connect, how they are encrypted, and what they reveal about your network.",
   keywords: ["call", "voice", "video", "webrtc", "ip address", "turn", "stun", "relay", "group call", "microphone", "camera", "picture in picture", "pip"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -195,7 +215,7 @@ export const calls: DocPage = {
         { title: "Ringing", text: "The ring, the answer, a decline and a hang up travel as encrypted XMTP messages, so a call reaches the other person wherever they are in the app, without the conversation open." },
         { title: "Signalling", text: "The two browsers exchange connection details through a PeerJS signalling server. It sees an identifier for each side and when the call is set up, not the audio or video." },
         { title: "Finding a route", text: "Each browser asks a STUN server, operated by Google, for its public network address so the two can try to connect directly." },
-        { title: "Direct or relayed", text: "If a direct connection is not possible, for example on a mobile network or behind a strict company network, the call needs a relay (a TURN server). Ledger Chat uses its own relay service when it is switched on; the public relay it used before no longer works and was removed. The relay passes encrypted packets and cannot decode them. Until the relay is switched on, calls between two networks that both block direct connections may not connect." },
+        { title: "Direct or relayed", text: "If a direct connection is not possible, for example on a mobile network or behind a strict company network, the call goes through a relay (a TURN server). Ledger Chat uses Cloudflare's TURN service, over UDP, TCP and TLS on port 443, with short lived credentials issued by our server for each call. The relay passes encrypted packets and cannot decode them." },
       ],
     },
     { t: "h2", text: "During a call" },
@@ -208,6 +228,8 @@ export const calls: DocPage = {
         "Screen sharing is offered where the browser can capture a screen. Phone browsers that cannot say so and point to a computer.",
         "Picture in picture keeps both faces: the other person fills the floating window and your own camera is a small mirrored inset in its corner. On Chrome and Edge on a computer the floating window also has Mute, Camera and End. On Safari and Chrome on Android the two videos are combined into one before they leave the page. Where a browser offers neither, the button is not shown. Audio stays with the call and never moves into the floating window.",
         "Call settings let you choose the audio output where the browser allows it.",
+        "Video is sent in HD, 720p at 30 frames a second, using up to 2.5 Mbps. On a weak connection the browser lowers the quality so the call keeps going. **Data saver** limits video to 360p at 15 frames a second and 0.5 Mbps.",
+        "When your network changes, for example from WiFi to 4G or 5G, the call moves to the new connection before it lets go of the old one.",
       ],
     },
     { t: "h2", text: "Your IP address" },
@@ -234,7 +256,7 @@ export const payments: DocPage = {
   label: "Payments in chat",
   summary: "Send tokens to the person you are talking to, from your own wallet, without leaving the conversation.",
   keywords: ["pay", "payment", "send money", "transfer", "usdc", "usdt", "eth", "tokens", "wallet", "fees", "receipt", "qr"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -262,7 +284,7 @@ export const payments: DocPage = {
     { t: "h2", text: "Private payments" },
     {
       t: "p",
-      text: "The private wallet sends payments on Aztec that hide the amount, the sender and the recipient. It runs on Aztec Alpha with a cap per payment and has no external audit. See [Private payments on Aztec](/docs/zero-knowledge) for how it works.",
+      text: "The private wallet sends payments on Aztec that hide the amount, the sender and the recipient. It runs on Aztec Alpha with a cap per payment, in cUSDC, a dollar token issued by human.tech, for members of the closed beta. The account that pays the network fee is public. It has no external audit yet. See [Private payments on Aztec](/docs/zero-knowledge) for how it works.",
     },
     {
       t: "table",
@@ -305,7 +327,7 @@ export const devices: DocPage = {
   label: "Linked devices",
   summary: "Use Ledger Chat on more than one device, and what to expect from the desktop and mobile apps.",
   keywords: ["device", "link", "qr", "second device", "phone", "desktop", "windows", "mac", "linux", "ios", "android", "app", "download", "install"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",

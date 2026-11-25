@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Delete, LoaderCircle, Lock } from 'lucide-react';
 import s from './PinPrompt.module.css';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * PinPrompt — asks for the six digit PIN and checks it with the server.
@@ -41,6 +42,7 @@ export function PinPrompt({
   onNeedsSetup,
   onCreatePin,
 }: PinPromptProps) {
+  const t = useT();
   const [digits, setDigits] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState('');
@@ -60,7 +62,7 @@ export function PinPrompt({
   const verify = useCallback(
     async (pin: string) => {
       setPhase('checking');
-      setMessage('Checking');
+      setMessage(t("Checking"));
       try {
         const res = await fetch('/api/auth/enclave-pin', {
           method: 'POST',
@@ -80,30 +82,30 @@ export function PinPrompt({
         setShakeKey((k) => k + 1);
         if (res.status === 401) {
           setPhase('nosession');
-          setMessage('Your session has ended. Sign in again to continue.');
+          setMessage(t("Your session has ended. Sign in again to continue."));
         } else if (res.status === 404 || data?.needsPinSetup) {
           setPhase('nopin');
-          setMessage(NO_PIN_MESSAGE);
+          setMessage(t(NO_PIN_MESSAGE));
           onNeedsSetup?.();
         } else if (res.status === 429 || data?.blocked) {
           setPhase('blocked');
-          setMessage(data?.error || 'Too many attempts. Try again in a few minutes.');
+          setMessage(data?.error || t("Too many attempts. Try again in a few minutes."));
         } else if (typeof data?.attemptsRemaining === 'number') {
           setPhase('wrong');
           setMessage(
             data.attemptsRemaining === 1
-              ? 'Incorrect PIN. 1 attempt left before a short lockout.'
-              : `Incorrect PIN. ${data.attemptsRemaining} attempts left.`,
+              ? t("Incorrect PIN. 1 attempt left before a short lockout.")
+              : t("Incorrect PIN. {attemptsRemaining} attempts left.", { attemptsRemaining: data.attemptsRemaining }),
           );
         } else {
           setPhase('wrong');
-          setMessage(data?.error || 'Incorrect PIN.');
+          setMessage(data?.error || t("Incorrect PIN."));
         }
       } catch {
         digitsRef.current = '';
         setDigits('');
         setPhase('error');
-        setMessage('Could not reach the server. Check your connection and try again.');
+        setMessage(t("Could not reach the server. Check your connection and try again."));
       }
     },
     [onUnlock, onNeedsSetup],
@@ -171,7 +173,7 @@ export function PinPrompt({
 
       <p className={`${s.message} ${isError ? s.error : ''}`} role="status" aria-live="polite">
         {busy ? (
-          <LoaderCircle size={16} strokeWidth={2} className={s.spin} aria-label="Checking" />
+          <LoaderCircle size={16} strokeWidth={2} className={s.spin} aria-label={t("Checking")} />
         ) : (
           message
         )}
@@ -184,7 +186,7 @@ export function PinPrompt({
         type="password"
         inputMode="numeric"
         autoComplete="one-time-code"
-        aria-label="PIN"
+        aria-label={t("PIN")}
         value={digits}
         onChange={(e) => {
           const only = e.target.value.replace(/\D/g, '').slice(0, LENGTH);
@@ -211,7 +213,7 @@ export function PinPrompt({
           className={`${s.key} ${s.keyGhost}`}
           onClick={back}
           disabled={busy || digits.length === 0}
-          aria-label="Delete last digit"
+          aria-label={t("Delete last digit")}
         >
           <Delete size={22} strokeWidth={1.8} />
         </button>
@@ -220,17 +222,17 @@ export function PinPrompt({
       <div className={s.footer}>
         {phase === 'nosession' && (
           <a className={s.textButton} href="/connect?redirect=%2Fchat">
-            Sign in again
+            {t("Sign in again")}
           </a>
         )}
         {phase === 'nopin' && !onNeedsSetup && onCreatePin && (
           <button type="button" className={s.textButton} onClick={onCreatePin}>
-            Create PIN
+            {t("Create PIN")}
           </button>
         )}
         {onCancel && (
           <button type="button" className={s.textButton} onClick={onCancel}>
-            Cancel
+            {t("Cancel")}
           </button>
         )}
       </div>

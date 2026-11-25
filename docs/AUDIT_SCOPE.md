@@ -1,4 +1,7 @@
 # Humanity Ledger — External Audit Scope
+
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](audit/START_HERE.md) (24 November 2026).
+
 **Version 1.0 — 2026-10-31**  
 **Branch**: `claude/sync-and-hardening`  
 **Authority**: `docs/PROTOCOL_SPEC.md` §6 (Threat Model), §8 (Circuit Versioning)
@@ -25,6 +28,8 @@ This document defines the formal scope for an external security audit of the Hum
 ## 3. In-Scope Components
 
 ### 3.1 Zero-Knowledge Circuits (Noir / UltraHonk)
+
+> Retired on 25 November 2026 to [`archive/standalone-circuits`](../archive/standalone-circuits/README.md); the paths below are their former locations.
 
 | Circuit | Location | Verification Key |
 |---|---|---|

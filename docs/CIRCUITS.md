@@ -1,4 +1,7 @@
 # Humanity Ledger — Noir Circuits & L1 Verification Key Anchoring
+
+> **Retired on 25 November 2026.** The circuits described here moved to [`archive/standalone-circuits`](../archive/standalone-circuits/README.md) and nothing in the product, build or CI uses them. Ledger Chat moves value only through the aztec-nr contracts in `contracts/aztec/`. This page is kept as a record.
+
 **Protocol Invariant Enforcement & Cryptographic Specification**
 
 This document specifies the Noir circuits used in the Humanity Ledger protocol (`circuits/escrow`, `circuits/streams`, and `circuits/identity`), the invariants they enforce, their derived UltraHonk verification keys, and the normative procedure for anchoring verification keys on Ethereum L1.

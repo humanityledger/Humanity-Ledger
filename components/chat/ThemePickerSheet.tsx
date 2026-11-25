@@ -17,6 +17,7 @@ import { Check, CheckCheck, X } from "lucide-react";
 import { CHAT_THEMES, CHAT_THEME_GROUPS, chatThemeVars, findChatTheme, type ChatTheme } from "@/lib/chat/themes";
 import { BUBBLE_STYLES, bubbleClasses } from "@/lib/chat/bubbleStyles";
 import { WALLPAPERS, WALLPAPER_GROUPS, canvasCss, resolveWallpaper, type Wallpaper } from "@/lib/chat/wallpapers";
+import { useT } from '@/lib/i18n/client';
 
 export type AppearanceTab = "theme" | "wallpaper" | "bubbles";
 
@@ -70,6 +71,7 @@ function useRadioKeys<T extends { id: string }>(items: readonly T[], current: st
 /* ── Preview ────────────────────────────────────────────────────────────── */
 
 function Preview({ theme, bubbleStyle, wallpaper }: { theme: ChatTheme; bubbleStyle: string; wallpaper: Wallpaper | null }) {
+  const tr = useT();
   const sent = bubbleClasses(bubbleStyle, true);
   const recv = bubbleClasses(bubbleStyle, false);
   const pad = "px-3.5 py-2";
@@ -83,11 +85,11 @@ function Preview({ theme, bubbleStyle, wallpaper }: { theme: ChatTheme; bubbleSt
       aria-hidden="true"
     >
       <div className="flex justify-center mb-3">
-        <span className={`px-3 py-1 rounded-full text-[12px] font-medium ${tone === "dark" ? "bg-black/35 text-white/85 backdrop-blur-sm" : "bg-white/85 border border-[#e6e8ec] text-[#727a88] backdrop-blur-sm"}`}>Today</span>
+        <span className={`px-3 py-1 rounded-full text-[12px] font-medium ${tone === "dark" ? "bg-black/35 text-white/85 backdrop-blur-sm" : "bg-white/85 border border-[#e6e8ec] text-[#727a88] backdrop-blur-sm"}`}>{tr("Today")}</span>
       </div>
       <div className="flex flex-col items-start max-w-[78%]">
         <div className={`${recv} ${pad}`}>
-          <p className="text-[14.5px] leading-[1.45]">Did the transfer land?</p>
+          <p className="text-[14.5px] leading-[1.45]">{tr("Did the transfer land?")}</p>
         </div>
         <div className="msg-meta flex items-center gap-1.5 mt-1 px-1">
           <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">09:41</span>
@@ -95,7 +97,7 @@ function Preview({ theme, bubbleStyle, wallpaper }: { theme: ChatTheme; bubbleSt
       </div>
       <div className="flex flex-col items-end self-end max-w-[78%] mt-1">
         <div className={`${sent} ${pad}`}>
-          <p className="text-[14.5px] leading-[1.45]">Yes, a minute ago. Thank you!</p>
+          <p className="text-[14.5px] leading-[1.45]">{tr("Yes, a minute ago. Thank you!")}</p>
         </div>
         <div className="msg-meta flex items-center gap-1.5 mt-1 px-1">
           <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">09:42</span>
@@ -104,7 +106,7 @@ function Preview({ theme, bubbleStyle, wallpaper }: { theme: ChatTheme; bubbleSt
       </div>
       <div className="hidden md:flex flex-col items-start max-w-[78%] mt-1">
         <div className={`${recv} ${pad}`}>
-          <p className="text-[14.5px] leading-[1.45]">Perfect, see you tonight 🎉</p>
+          <p className="text-[14.5px] leading-[1.45]">{tr("Perfect, see you tonight 🎉")}</p>
         </div>
         <div className="msg-meta flex items-center gap-1.5 mt-1 px-1">
           <span className="msg-time text-[12px] tabular-nums text-[#a3a9b4]">09:43</span>
@@ -129,12 +131,13 @@ function SelectedDot() {
 }
 
 function ThemeTile({ theme, selected, onSelect }: { theme: ChatTheme; selected: boolean; onSelect: () => void }) {
+  const tr = useT();
   return (
     <button
       type="button"
       role="radio"
       aria-checked={selected}
-      aria-label={theme.label}
+      aria-label={tr(theme.label)}
       tabIndex={selected ? 0 : -1}
       onClick={onSelect}
       className={`group relative rounded-[14px] p-1.5 text-left bg-white transition-shadow ${selected ? RING_ON : RING_OFF} ${FOCUS}`}
@@ -149,19 +152,20 @@ function ThemeTile({ theme, selected, onSelect }: { theme: ChatTheme; selected: 
         <span className="absolute right-[9%] bottom-[14%] h-[20%] w-[48%] rounded-full transition-transform duration-200 group-hover:-translate-y-0.5" style={{ backgroundColor: theme.accent }} />
         {selected && <SelectedDot />}
       </span>
-      <span className="block mt-1.5 px-0.5 text-[12.5px] font-medium text-[#15171c] truncate">{theme.label}</span>
+      <span className="block mt-1.5 px-0.5 text-[12.5px] font-medium text-[#15171c] truncate">{tr(theme.label)}</span>
     </button>
   );
 }
 
 function WallpaperTile({ wallpaper, theme, selected, onSelect }: { wallpaper: Wallpaper; theme: ChatTheme; selected: boolean; onSelect: () => void }) {
+  const tr = useT();
   const isTheme = wallpaper.id === "default";
   return (
     <button
       type="button"
       role="radio"
       aria-checked={selected}
-      aria-label={isTheme ? `Theme background (${theme.label})` : wallpaper.label}
+      aria-label={isTheme ? tr("Theme background ({label})", { label: theme.label }) : tr( wallpaper.label)}
       tabIndex={selected ? 0 : -1}
       onClick={onSelect}
       className={`group relative rounded-[14px] p-1.5 text-left bg-white transition-shadow ${selected ? RING_ON : RING_OFF} ${FOCUS}`}
@@ -172,7 +176,7 @@ function WallpaperTile({ wallpaper, theme, selected, onSelect }: { wallpaper: Wa
         <span className="absolute left-[10%] top-[54%] h-[9%] w-[38%] rounded-full shadow-sm" style={{ backgroundColor: theme.received }} />
         {selected && <SelectedDot />}
       </span>
-      <span className="block mt-1.5 px-0.5 text-[12.5px] font-medium text-[#15171c] truncate">{isTheme ? "Theme" : wallpaper.label}</span>
+      <span className="block mt-1.5 px-0.5 text-[12.5px] font-medium text-[#15171c] truncate">{isTheme ? tr("Theme") : tr( wallpaper.label)}</span>
     </button>
   );
 }
@@ -180,6 +184,7 @@ function WallpaperTile({ wallpaper, theme, selected, onSelect }: { wallpaper: Wa
 function BubbleTile({ id, label, description, theme, wallpaper, selected, onSelect }: {
   id: string; label: string; description: string; theme: ChatTheme; wallpaper: Wallpaper | null; selected: boolean; onSelect: () => void;
 }) {
+  const tr = useT();
   return (
     <button
       type="button"
@@ -196,8 +201,8 @@ function BubbleTile({ id, label, description, theme, wallpaper, selected, onSele
         style={{ ...chatThemeStyle(theme), ...canvasStyle(theme, wallpaper) }}
         aria-hidden="true"
       >
-        <span className={`${bubbleClasses(id, false)} self-start px-2.5 py-1 text-[11.5px] leading-tight`}>Hey there</span>
-        <span className={`${bubbleClasses(id, true)} self-end px-2.5 py-1 text-[11.5px] leading-tight`}>Hi! 👋</span>
+        <span className={`${bubbleClasses(id, false)} self-start px-2.5 py-1 text-[11.5px] leading-tight`}>{tr("Hey there")}</span>
+        <span className={`${bubbleClasses(id, true)} self-end px-2.5 py-1 text-[11.5px] leading-tight`}>{tr("Hi! 👋")}</span>
         {selected && <SelectedDot />}
       </span>
       <span className="block mt-1.5 px-0.5 text-[12.5px] font-semibold text-[#15171c] truncate">{label}</span>
@@ -229,6 +234,7 @@ export function ThemePickerSheet({
   wallpaperScope,
   onClose,
 }: ThemePickerSheetProps) {
+  const tr = useT();
   const theme = findChatTheme(currentThemeId);
   const style = BUBBLE_STYLES.some(s => s.id === currentBubbleStyle) ? currentBubbleStyle : "default";
   const wallpaper = resolveWallpaper(currentWallpaper ?? "default") ?? WALLPAPERS[0];
@@ -275,9 +281,9 @@ export function ThemePickerSheet({
   }, [open]);
 
   const tabs: { id: AppearanceTab; label: string; count: number }[] = [
-    { id: "theme", label: "Theme", count: CHAT_THEMES.length },
-    ...(showWallpaper ? [{ id: "wallpaper" as const, label: "Wallpaper", count: WALLPAPERS.length - 1 }] : []),
-    { id: "bubbles", label: "Bubbles", count: BUBBLE_STYLES.length },
+    { id: "theme", label: tr("Theme"), count: CHAT_THEMES.length },
+    ...(showWallpaper ? [{ id: "wallpaper" as const, label: tr("Wallpaper"), count: WALLPAPERS.length - 1 }] : []),
+    { id: "bubbles", label: tr("Bubbles"), count: BUBBLE_STYLES.length },
   ];
 
   return (
@@ -314,16 +320,16 @@ export function ThemePickerSheet({
               <div className="flex-1 min-h-0 flex flex-col">
                 <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
                   <div className="min-w-0">
-                    <h2 id={titleId} className="text-[18px] font-semibold text-[#15171c] leading-tight">Appearance</h2>
+                    <h2 id={titleId} className="text-[18px] font-semibold text-[#15171c] leading-tight">{tr("Appearance")}</h2>
                     <p className="text-[12.5px] text-[#727a88] mt-0.5 truncate">
-                      {tab === "wallpaper" && wallpaperScope ? `Wallpaper for: ${wallpaperScope}` : "Changes apply right away."}
+                      {tab === "wallpaper" && wallpaperScope ? tr("Wallpaper for: {wallpaperScope}", { wallpaperScope }) : tr("Changes apply right away.")}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={onClose}
                     className={`w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors ${FOCUS}`}
-                    aria-label="Close"
+                    aria-label={tr("Close")}
                   >
                     <X size={17} strokeWidth={2} />
                   </button>
@@ -332,7 +338,7 @@ export function ThemePickerSheet({
                 <div className="px-5 pb-3">
                   {/* Layout by inline style: when the utility classes were missing the three tabs ran
                       together ("Theme 40Wallpaper 59Bubbles 14", 18 November 2026). */}
-                  <div role="tablist" aria-label="Appearance" className="rounded-full bg-[#f2f4f7]" style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`, gap: 6, padding: 4, borderRadius: 999 }}>
+                  <div role="tablist" aria-label={tr("Appearance")} className="rounded-full bg-[#f2f4f7]" style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`, gap: 6, padding: 4, borderRadius: 999 }}>
                     {tabs.map(t => (
                       <button
                         key={t.id}
@@ -345,8 +351,8 @@ export function ThemePickerSheet({
                       >
                         {tab === t.id && <motion.span layoutId="appearance-tab" className="absolute inset-0 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.14)]" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
                         <span className="relative" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-                          <span>{t.label}</span>
-                          <span aria-label={`${t.count} options`} style={{ fontSize: 11.5, fontWeight: 600, lineHeight: '18px', minWidth: 22, padding: '0 6px', borderRadius: 999, background: tab === t.id ? '#eef0f3' : 'rgba(255,255,255,0.7)', color: '#727a88', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>{t.count}</span>
+                          <span>{tr(t.label)}</span>
+                          <span aria-label={tr("{count} options", { count: t.count })} style={{ fontSize: 11.5, fontWeight: 600, lineHeight: '18px', minWidth: 22, padding: '0 6px', borderRadius: 999, background: tab === t.id ? '#eef0f3' : 'rgba(255,255,255,0.7)', color: '#727a88', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>{t.count}</span>
                         </span>
                       </button>
                     ))}
@@ -355,7 +361,7 @@ export function ThemePickerSheet({
 
                 <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-6 overscroll-contain">
                   {tab === "theme" && (
-                    <div role="radiogroup" aria-label="Colour theme" onKeyDown={onThemeKeys} className="flex flex-col gap-6">
+                    <div role="radiogroup" aria-label={tr("Colour theme")} onKeyDown={onThemeKeys} className="flex flex-col gap-6">
                       {themesByGroup.map(([group, items]) => (
                         <section key={group} aria-labelledby={`${titleId}-t-${group}`}>
                           <SectionTitle id={`${titleId}-t-${group}`} count={items.length}>{group}</SectionTitle>
@@ -368,7 +374,7 @@ export function ThemePickerSheet({
                   )}
 
                   {tab === "wallpaper" && showWallpaper && (
-                    <div role="radiogroup" aria-label="Wallpaper" onKeyDown={onWallKeys} className="flex flex-col gap-6">
+                    <div role="radiogroup" aria-label={tr("Wallpaper")} onKeyDown={onWallKeys} className="flex flex-col gap-6">
                       {wallsByGroup.map(([group, items]) => (
                         <section key={group} aria-labelledby={`${titleId}-w-${group}`}>
                           <SectionTitle id={`${titleId}-w-${group}`} count={items.length}>{group}</SectionTitle>
@@ -378,15 +384,15 @@ export function ThemePickerSheet({
                         </section>
                       ))}
                       <p className="text-[12px] text-[#727a88] leading-relaxed">
-                        Drawn on your device; nothing is downloaded. On dark wallpapers the time under each message turns light so it stays readable.
+                        {tr("Drawn on your device; nothing is downloaded. On dark wallpapers the time under each message turns light so it stays readable.")}
                       </p>
                     </div>
                   )}
 
                   {tab === "bubbles" && (
-                    <div role="radiogroup" aria-label="Bubble style" onKeyDown={onStyleKeys} className="grid grid-cols-2 gap-2.5">
+                    <div role="radiogroup" aria-label={tr("Bubble style")} onKeyDown={onStyleKeys} className="grid grid-cols-2 gap-2.5">
                       {BUBBLE_STYLES.map(b => (
-                        <BubbleTile key={b.id} id={b.id} label={b.label} description={b.description} theme={theme} wallpaper={wallpaper} selected={b.id === style} onSelect={() => onSelectBubbleStyle(b.id)} />
+                        <BubbleTile key={b.id} id={b.id} label={tr(b.label)} description={tr(b.description)} theme={theme} wallpaper={wallpaper} selected={b.id === style} onSelect={() => onSelectBubbleStyle(b.id)} />
                       ))}
                     </div>
                   )}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { legacyPostsClosed } from '@/lib/communities/legacy';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 import { memberNames } from '@/lib/communities/member-names';
@@ -77,7 +78,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     try {
       const row = await (prisma as any).community.findUnique({ where: { id: communityId }, select: { communityMls: true } });
-      if (row?.communityMls !== true) {
+      // MLS: the text never lives here. Legacy: read-only (lib/communities/legacy.ts).
+      if (row?.communityMls !== true && !legacyPostsClosed(row)) {
         await (prisma as any).communityPost.create({
           data: { communityId, authorAddress: 'system', content: `__SYSTEM__${target} was added to the group` },
         });

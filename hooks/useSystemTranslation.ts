@@ -1,4 +1,10 @@
-import { useSettingsStore } from '@/lib/store/useSettingsStore';
+import { useT, useLocale } from '@/lib/i18n/client';
+
+/**
+ * Labels for the terminal settings panel. The English text below is the source; it goes through
+ * the global translator (lib/i18n), so these labels follow the language picker like the rest of
+ * Ledger Chat. The old per-settings Spanish table is gone: one language setting, one source.
+ */
 
 const dictionaries = {
     en: {
@@ -64,82 +70,16 @@ const dictionaries = {
         'COMPACT': 'Compact',
         'DENSE': 'Dense',
         'MIN': 'MIN'
-    },
-    'es-ES': {
-        // General
-        'GENERAL_SETTINGS': 'AJUSTES GENERALES',
-        'APPEARANCE': 'APARIENCIA',
-        'PRIVACY_SECURITY': 'PRIVACIDAD Y SEGURIDAD',
-        'SETTINGS': 'AJUSTES',
-        'PREFERENCES': 'PREFERENCIAS',
-        'MANAGE_CONFIG': 'GESTIONA LA CONFIGURACIÓN DE TU TERMINAL Y PREFERENCIAS PERSONALES.',
-        'TOTAL_DISCONNECT': 'DESCONEXIÓN TOTAL',
-        'ALL_SESSIONS_TERMINATED': 'TODAS LAS SESIONES TERMINADAS.',
-
-        // Settings Toggles
-        'LANGUAGE': 'Idioma',
-        'INTERFACE_LANGUAGE': 'Idioma de la interfaz.',
-        'BASE_CURRENCY': 'Moneda Base',
-        'DEFAULT_CURRENCY': 'Moneda por defecto para balances.',
-        'TIME_FORMAT': 'Formato de Tiempo',
-        'TIME_LAYOUT': 'Distribución visual del reloj.',
-        'DATE_FORMAT': 'Formato de Fecha',
-        'DATE_ORDERING': 'Orden de día, mes y año.',
-        'ADDRESS_FORMAT': 'Formato de Billetera',
-        'CRYPTO_RENDER': 'Renderizado de direcciones criptográficas.',
-        'DENSITY': 'Densidad',
-        'SPACING_DENSITY': 'Espaciado general de la interfaz.',
-        'SHOW_BALANCES': 'Mostrar Saldos',
-        'DISPLAY_PORTFOLIO': 'Muestra saldos del portafolio en pantalla.',
-        'HW_ACCELERATION': 'Aceleración por Hardware',
-        'ENABLE_GPU': 'Habilita renderizado de alto rendimiento por GPU.',
-        'INACTIVITY_TIMEOUT': 'Bloqueo por Inactividad',
-        'MINUTES_LOCK': 'Minutos de inactividad antes del auto-bloqueo.',
-        'STEALTH_MODE': 'Modo Sigilo (Stealth)',
-        'OBFUSCATE_VIS': 'Ofusca visualmente carteras y contratos.',
-        'EXPORT_AUTH': 'Autorización de Exportación',
-        'REQ_CRYPTO_SIGN': 'Requiere firma criptográfica antes de exportar datos.',
-        
-        // Navigation
-        'NAV_DASHBOARD': 'Panel Principal',
-        'NAV_LEDGER_CHAT': 'Chat Cuántico',
-        'NAV_PORTFOLIO': 'Portafolio',
-        'NAV_COMMUNITY': 'Comunidad',
-        'NAV_NEWS': 'Noticias',
-        'NAV_ACADEMY': 'Academia',
-        'NAV_FORUM': 'Foro',
-        'NAV_CAREERS': 'Carreras',
-        'NAV_PRICING': 'Precios',
-        'NAV_STATUS': 'Estado de Red',
-        'NAV_PRIVACY': 'Privacidad',
-
-        // Enum Labels
-        'ENGLISH': 'Inglés',
-        'SPANISH': 'Español (ES)',
-        'USD_DOLLAR': 'USD - Dólar',
-        'EUR_EURO': 'EUR - Euro',
-        'GBP_POUND': 'GBP - Libra',
-        'JPY_YEN': 'JPY - Yen',
-        '12_HOURS': '12 Horas (AM/PM)',
-        '24_HOURS': '24 Horas',
-        'ABBREVIATED': 'Abreviado (0x1...ABCD)',
-        'FULL_ADDRESS': 'Dirección Completa',
-        'RELAXED': 'Relajado',
-        'COMPACT': 'Compacto',
-        'DENSE': 'Denso',
-        'MIN': 'MIN'
     }
 };
 
 export type TranslationKey = keyof typeof dictionaries['en'];
 
 export function useSystemTranslation() {
-    const { settings } = useSettingsStore();
-    const lang = settings?.language === 'es-ES' ? 'es-ES' : 'en';
+    const tr = useT();
+    const lang = useLocale();
 
-    const t = (key: TranslationKey): string => {
-        return dictionaries[lang][key] || dictionaries['en'][key] || key;
-    };
+    const t = (key: TranslationKey): string => tr(dictionaries.en[key] ?? key);
 
     return { t, lang };
 }

@@ -63,8 +63,8 @@ jobs:
       - name: A6 — Traceability consistency lock
         run: npx tsx scripts/check-traceability.ts
 
-      - name: A7 — Noir circuit constraint tests
-        run: npx vitest run test/circuits/
+      - name: A7 — aztec-nr artifact pins; standalone circuits retired (ZK-01 to ZK-07)
+        run: npx vitest run test/unit/aztec/artifact-pins.test.ts
         env:
           NODE_ENV: test
 
@@ -73,20 +73,6 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: VK HASH_MISMATCH — Unconditional proof block verification (5 tests)
-        run: npx vitest run test/vk_hash_mismatch.test.ts
-        env:
-          NODE_ENV: test
-
-      - name: Streams rate bound — Gap G4 closure (4 tests)
-        run: npx vitest run test/circuits/streams_rate_bound.test.ts
-        env:
-          NODE_ENV: test
-
-      - name: VK Integrity and Lifecycle Assertion
-        run: npx vitest run test/aztec_vk_integrity.test.ts
-        env:
-          NODE_ENV: test
 
   # ─── Job 2: Fortification & Fuzz ─────────────────────────────────────────
   fortification:
@@ -203,13 +189,13 @@ jobs:
           fi
           echo "[PASS] Zero simulation strings in production code."
 
-  # ─── Job 5: VK Integrity Check ───────────────────────────────────────────
+  # ─── Job 5: aztec-nr artifact integrity ─────────────────────────────────
   vk-integrity:
-    name: VK Artifacts Present and Valid JSON
+    name: aztec-nr artifacts match their pins
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify VK artifacts match the pinned hashes
-        run: node scripts/zk/check-artifacts.mjs --fast
+      - name: Every committed aztec-nr artifact matches lib/aztec/artifact-pins.ts
+        run: node scripts/aztec/pin-artifacts.mjs --check

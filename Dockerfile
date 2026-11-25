@@ -119,6 +119,8 @@ ARG NEXT_PUBLIC_AZTEC_AGREEMENT_CAPS
 ARG NEXT_PUBLIC_AZTEC_VALUE_MODE
 ARG NEXT_PUBLIC_AZTEC_RPC_MAX_BATCH
 ARG NEXT_PUBLIC_AZTEC_SPONSORED_FPC
+# Private fees through the shared PrivateFPC (lib/aztec/private-fees.ts): off unless "on".
+ARG NEXT_PUBLIC_AZTEC_PRIVATE_FEES
 ARG NEXT_PUBLIC_AZTEC_FAUCET
 # Portal and receiver addresses (docs/PORTAL.md). Empty: the wallet says the portal is not deployed.
 ARG NEXT_PUBLIC_HL_PORTAL
@@ -164,6 +166,8 @@ ARG NEXT_PUBLIC_TURN_DOMAIN
 ARG NEXT_PUBLIC_TURN_URLS
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ARG NEXT_PUBLIC_XMTP_ENV
+ARG NEXT_PUBLIC_XMTP_BACKEND_URL
+ARG NEXT_PUBLIC_XMTP_SELF_HOSTED
 ARG NEXT_PUBLIC_ZK_MODE
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.

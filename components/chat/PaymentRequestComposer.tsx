@@ -12,10 +12,12 @@ import { parseUnits } from '@/lib/aztec/wallet/amounts';
 import { AZTEC_WALLET_CONFIG, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
 import { MAX_MEMO, buildPaymentRequest } from '@/lib/payments/payment-message';
 import { REQUEST_VALIDITY, requestDraftProblem } from '@/lib/payments/request-draft';
+import { useT } from '@/lib/i18n/client';
 
 const field = 'w-full h-11 rounded-xl border border-[#e4e7ec] px-3 text-[16px] text-[#15171c] bg-white';
 
 export function PaymentRequestComposer({ peerName, onClose, onSend }: { peerName?: string; onClose: () => void; onSend: (message: string) => void }) {
+  const tr = useT();
   const tokens = AZTEC_WALLET_CONFIG.tokens;
   const alpha = AZTEC_WALLET_CONFIG.network === 'mainnet';
   // The choice holds while listed; cUSDC is listed for beta members once their membership is known.
@@ -48,38 +50,37 @@ export function PaymentRequestComposer({ peerName, onClose, onSend }: { peerName
       <div
         className="h-full w-full max-w-[420px] overflow-y-auto bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4"
         role="dialog"
-        aria-label="Request a payment"
+        aria-label={tr("Request a payment")}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[17px] font-semibold text-[#15171c]">Request a payment</h2>
+        <h2 className="text-[17px] font-semibold text-[#15171c]">{tr("Request a payment")}</h2>
         <p className="text-[13px] text-[#727a88] leading-snug">
-          {peerName || 'This person'} can pay it privately on {networkLabel()}. The payment goes to the address verified in this chat.
-        </p>
+          {tr("{value} can pay it privately on {networkLabel}. The payment goes to the address verified in this chat.", { value: peerName || tr("This person"), networkLabel: tr(networkLabel()) })}</p>
         <label className="block text-[13px] text-[#4a505c]">
-          Token
+          {tr("Token")}
           <select className={`${field} mt-1`} value={key} onChange={(e) => setKey(e.target.value as TokenKey)} disabled={!tokens.length}>
-            {tokens.map((t) => <option key={t.key} value={t.key}>{alpha ? t.symbol : `${t.symbol} (test)`}</option>)}
+            {tokens.map((t) => <option key={t.key} value={t.key}>{alpha ? t.symbol : tr("{symbol} (test)", { symbol: t.symbol })}</option>)}
           </select>
         </label>
         <label className="block text-[13px] text-[#4a505c]">
-          Amount
+          {tr("Amount")}
           <input className={`${field} mt-1`} inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} />
         </label>
         <label className="block text-[13px] text-[#4a505c]">
-          Note (optional)
+          {tr("Note (optional)")}
           <input className={`${field} mt-1`} maxLength={MAX_MEMO} autoComplete="off" value={memo} onChange={(e) => setMemo(e.target.value)} />
         </label>
         <label className="block text-[13px] text-[#4a505c]">
-          Valid for
+          {tr("Valid for")}
           <select className={`${field} mt-1`} value={validity} onChange={(e) => setValidity(Number(e.target.value))}>
-            {REQUEST_VALIDITY.map((v) => <option key={v.ms} value={v.ms}>{v.label}</option>)}
+            {REQUEST_VALIDITY.map((v) => <option key={v.ms} value={v.ms}>{tr(v.label)}</option>)}
           </select>
         </label>
         {amount.trim() && problem && <p role="status" className="text-[13px] text-[#7a2d24]">{problem}</p>}
         <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!problem} onClick={send}>
-          Send request
+          {tr("Send request")}
         </button>
-        <button type="button" className="w-full min-h-[44px] text-[13.5px] text-[#4a505c]" onClick={onClose}>Cancel</button>
+        <button type="button" className="w-full min-h-[44px] text-[13.5px] text-[#4a505c]" onClick={onClose}>{tr("Cancel")}</button>
       </div>
     </div>
   );

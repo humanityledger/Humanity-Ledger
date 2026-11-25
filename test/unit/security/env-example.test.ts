@@ -19,6 +19,8 @@ describe('.env.example', () => {
 
   it('no public (browser) variable is named as a secret or private key', () => {
     const src = readFileSync('.env.example', 'utf8');
-    expect(src).not.toMatch(/^NEXT_PUBLIC_[A-Z0-9_]*(SECRET|PRIVATE)[A-Z0-9_]*=/m);
+    // NEXT_PUBLIC_AZTEC_PRIVATE_FEES is an on/off switch for private fee payment, not a key.
+    const names = [...src.matchAll(/^(NEXT_PUBLIC_[A-Z0-9_]*(SECRET|PRIVATE)[A-Z0-9_]*)=/gm)].map((m) => m[1]);
+    expect(names.filter((n) => n !== 'NEXT_PUBLIC_AZTEC_PRIVATE_FEES')).toEqual([]);
   });
 });

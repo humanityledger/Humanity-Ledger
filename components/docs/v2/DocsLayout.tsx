@@ -11,6 +11,10 @@ import { Toc } from "./Toc";
 import { Blocks } from "./Blocks";
 import { ImmersiveField } from "@/components/immersive/ImmersiveField";
 import { SiteFooter } from "@/components/landing/v2/SiteFooter";
+import { getServerLocale, getT } from "@/lib/i18n/server";
+import { translatePage } from "@/lib/docs/i18n";
+import { docsTranslator } from "@/lib/docs/i18n-server";
+import { HTML_LANG, type Locale } from "@/lib/i18n/locales";
 import s from "./Docs.module.css";
 
 /**
@@ -36,9 +40,16 @@ const MONTHS = [
   "December",
 ];
 
-export function formatDate(iso: string) {
+export function formatDate(iso: string, locale: Locale = "en") {
   const [y, m, d] = iso.split("-").map(Number);
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+  if (locale === "en") return `${d} ${MONTHS[m - 1]} ${y}`;
+  try {
+    return new Intl.DateTimeFormat(HTML_LANG[locale], { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(Date.UTC(y, m - 1, d)),
+    );
+  } catch {
+    return `${d} ${MONTHS[m - 1]} ${y}`;
+  }
 }
 
 /** Which source file holds a page, for the "Suggest an edit" link. */
@@ -69,7 +80,13 @@ export interface DocsLayoutProps {
   meta?: React.ReactNode;
 }
 
-export function DocsLayout({ current, page, group, before, after, extraToc, meta }: DocsLayoutProps) {
+export async function DocsLayout({ current, page: original, group, before, after, extraToc, meta }: DocsLayoutProps) {
+  const t = await getT();
+  const locale = await getServerLocale();
+  // The page in the reader's language (lib/docs/i18n.ts); interface texts fall back to t().
+  const tr = await docsTranslator();
+  const page = translatePage(original, tr);
+  const label = (text: string) => (tr && tr(text) !== text ? tr(text) : t(text));
   const entry = findByHref(current);
   const groupName = group ?? entry?.group ?? "Documentation";
   const { prev, next } = neighbours(current);
@@ -88,44 +105,44 @@ export function DocsLayout({ current, page, group, before, after, extraToc, meta
 
         <main className={s.main} id="docs-content">
           <article className={s.content}>
-            <p className={s.crumbs}>{groupName}</p>
-            <h1 className={s.title}>{page.title ?? page.label}</h1>
-            <p className={s.summary}>{page.summary}</p>
+            <p className={s.crumbs}>{label(groupName)}</p>
+            <h1 className={s.title}>{label(original.title ?? original.label)}</h1>
+            <p className={s.summary}>{label(original.summary)}</p>
             {meta}
 
             <div className={s.prose}>
               {before}
-              <Blocks blocks={page.blocks} />
+              <Blocks blocks={page.blocks} tr={tr} />
               {after}
             </div>
 
             <footer className={s.pageFoot}>
               <div className={s.footMeta}>
-                <span>Last updated {formatDate(page.updated)}</span>
+                <span>{t("Last updated {date}", { date: formatDate(page.updated, locale) })}</span>
                 {source && (
                   <a href={`${EXTERNAL_LINKS.github.repo}/blob/main/${source}`} target="_blank" rel="noopener noreferrer">
                     <SquarePen size={14} strokeWidth={1.9} aria-hidden="true" />
-                    Suggest an edit
+                    {t("Suggest an edit")}
                   </a>
                 )}
               </div>
 
               {(prev || next) && (
-                <nav className={s.pager} aria-label="Previous and next pages">
+                <nav className={s.pager} aria-label={t("Previous and next pages")}>
                   {prev && (
                     <Link href={prev.href} className={s.pagerLink}>
                       <ChevronLeft size={18} strokeWidth={1.9} aria-hidden="true" />
                       <span className={s.pagerText}>
-                        <span className={s.pagerLabel}>Previous</span>
-                        <span className={s.pagerTitle}>{prev.label}</span>
+                        <span className={s.pagerLabel}>{t("Previous")}</span>
+                        <span className={s.pagerTitle}>{label(prev.label)}</span>
                       </span>
                     </Link>
                   )}
                   {next && (
                     <Link href={next.href} className={`${s.pagerLink} ${s.pagerNext}`}>
                       <span className={s.pagerText}>
-                        <span className={s.pagerLabel}>Next</span>
-                        <span className={s.pagerTitle}>{next.label}</span>
+                        <span className={s.pagerLabel}>{t("Next")}</span>
+                        <span className={s.pagerTitle}>{label(next.label)}</span>
                       </span>
                       <ChevronRight size={18} strokeWidth={1.9} aria-hidden="true" />
                     </Link>
@@ -134,19 +151,25 @@ export function DocsLayout({ current, page, group, before, after, extraToc, meta
               )}
 
               <div className={s.siteFoot}>
-                © 2026 {LEGAL_ENTITY.name}, trading as {LEGAL_ENTITY.tradingName}. Ledger Chat is in early access.{" "}
-                <Link href="/docs/legal-notice" className={s.link}>
-                  Legal notice
-                </Link>
-                ,{" "}
-                <Link href="/docs/terms" className={s.link}>
-                  Terms
-                </Link>{" "}
-                and{" "}
-                <Link href="/docs/privacy" className={s.link}>
-                  Privacy
-                </Link>
-                .
+                {t("© 2026 {name}, trading as {tradingName}. Ledger Chat is in early access. {notice}, {terms} and {privacy}.", {
+                  name: LEGAL_ENTITY.name,
+                  tradingName: LEGAL_ENTITY.tradingName,
+                  notice: (
+                    <Link key="n" href="/docs/legal-notice" className={s.link}>
+                      {t("Legal notice")}
+                    </Link>
+                  ),
+                  terms: (
+                    <Link key="t" href="/docs/terms" className={s.link}>
+                      {t("Terms")}
+                    </Link>
+                  ),
+                  privacy: (
+                    <Link key="p" href="/docs/privacy" className={s.link}>
+                      {t("Privacy")}
+                    </Link>
+                  ),
+                })}
               </div>
             </footer>
           </article>

@@ -1,6 +1,8 @@
 # External security review: preparation package (NLnet D-4, D-5)
 
-**No external audit or external review of Ledger Chat exists.** `deployments/aztec-mainnet.json` has `"audit": null`. This file lists what a reviewer would receive. It is a preparation, not a claim. D-4 and D-5 are deliverables proposed in `docs/NLNET_DRAFT.md`, which has not been submitted or granted.
+Start at [`START_HERE.md`](START_HERE.md) for the current state, the scope by priority and the known issues.
+
+**An external audit begins on 25 November 2026; none has been completed.** `deployments/aztec-mainnet.json` keeps `"audit": null` until a report exists. This file lists what a reviewer receives. It is a preparation, not a claim. D-4 and D-5 are deliverables proposed in `docs/NLNET_DRAFT.md`: the proposal was submitted on 14 November 2026 and is under review; nothing has been awarded.
 
 ## Scope proposed
 
@@ -15,7 +17,8 @@
    - `lib/chat/safety-glyphs.ts` `safetyDigits`: the device-based safety number;
    - `lib/aztec/wallet/node-choice.ts` and the rollup check in `lib/aztec/wallet/client.ts`;
    - `lib/payments/personal-limits.ts`, checked inside `wallet.send`;
-   - `lib/communities/mls.ts`: membership sync of communities on MLS (off until the operator flips one).
+   - `lib/communities/mls.ts`: membership sync of communities on MLS (new communities start on MLS since 24 November 2026; older ones are not migrated);
+   - `lib/xmtp/client.ts` `routeFor` and `resolveInboxIdToAddress` (24 November 2026): sending in a chat keyed by an XMTP inbox or conversation id.
 6. The address binding, written as a standalone specification: `docs/aztec/G7_BINDING_SPEC.md`.
 7. Candidates for a second round, not built: a WebAuthn account contract with guardian recovery
    (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) and a private membership proof (`docs/design/PRIVATE_MEMBERSHIP.md`).

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Twitter, ExternalLink, RefreshCw } from "lucide-react";
+import { useT } from '@/lib/i18n/client';
 
 interface HumanityLedgerTweetFeedProps {
   height?: number;
@@ -14,6 +15,7 @@ export function HumanityLedgerTweetFeed({
   showHeader = true,
   theme = "dark",
 }: HumanityLedgerTweetFeedProps) {
+  const t = useT();
   const isDark = theme === "dark";
   const bgClass = isDark ? "bg-black" : "bg-white";
   const borderClass = isDark ? "border-white/10" : "border-black/10";
@@ -48,7 +50,7 @@ export function HumanityLedgerTweetFeed({
             </div>
             <div className="flex flex-col">
               <span className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white/80' : 'text-black/80'}`}>
-                @humanityledger
+                {t("@humanityledger")}
               </span>
               {/* "Active Feed" text has been explicitly removed as requested */}
             </div>
@@ -57,7 +59,7 @@ export function HumanityLedgerTweetFeed({
             <button
               onClick={refreshFeed}
               className={`p-1.5 rounded-lg border transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/40' : 'bg-black/5 hover:bg-black/10 border-black/10 text-black/40'}`}
-              title="Refresh Feed"
+              title={t("Refresh Feed")}
             >
               <RefreshCw size={11} className="currentColor" />
             </button>
@@ -66,7 +68,7 @@ export function HumanityLedgerTweetFeed({
               target="_blank"
               rel="noopener noreferrer"
               className={`p-1.5 rounded-lg border transition-all ${isDark ? 'bg-white/5 hover:bg-[#1d9bf0]/20 border-white/10 hover:border-[#1d9bf0]/30 text-white/40' : 'bg-black/5 hover:bg-[#1d9bf0]/10 border-black/10 hover:border-[#1d9bf0]/30 text-black/40'}`}
-              title="Open @humanityledger on X"
+              title={t("Open @humanityledger on X")}
             >
               <ExternalLink size={11} className="hover:text-[#1d9bf0] currentColor" />
             </a>

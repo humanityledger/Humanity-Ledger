@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import { t } from '@/lib/i18n/client';
 
 interface Props {
   children: ReactNode;
@@ -124,7 +125,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                 marginBottom: "8px",
                 textTransform: "uppercase",
               }}>
-                {isChunkError ? "Update Required" : "System Error"}
+                {isChunkError ? t("Update Required") : t("System Error")}
               </h1>
 
               <p style={{
@@ -137,8 +138,8 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                 marginBottom: "28px",
               }}>
                 {isChunkError
-                  ? "New version deployed. Tap below to reload."
-                  : "Module decoupling error. System state preserved."}
+                  ? t("New version deployed. Tap below to reload.")
+                  : t("Module decoupling error. System state preserved.")}
               </p>
 
               {/* Buttons */}
@@ -169,7 +170,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                     <polyline points="10 17 15 12 10 7"/>
                     <line x1="15" y1="12" x2="3" y2="12"/>
                   </svg>
-                  Connect Wallet
+                  {t("Connect Wallet")}
                 </button>
 
                 {/* Secondary: Reload */}
@@ -197,7 +198,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                     <polyline points="23 4 23 10 17 10"/>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                   </svg>
-                  Reload System
+                  {t("Reload System")}
                 </button>
 
                 {/* Tertiary: Home */}
@@ -217,7 +218,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                     cursor: "pointer",
                   }}
                 >
-                  Return to Landing
+                  {t("Return to Landing")}
                 </button>
               </div>
 
@@ -232,7 +233,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                 textAlign: "left",
               }}>
                 <div style={{ fontSize: "8px", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.3em", color: "rgba(0,0,0,0.3)", marginBottom: "6px" }}>
-                  Error Integrity
+                  {t("Error Integrity")}
                 </div>
                 <div style={{ fontSize: "9px", fontFamily: "monospace", color: "rgba(0,0,0,0.35)", wordBreak: "break-all", lineHeight: 1.5 }}>
                   {errorMsg.slice(0, 120)}

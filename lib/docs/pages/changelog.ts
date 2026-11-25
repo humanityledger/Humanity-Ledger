@@ -1,4 +1,4 @@
-﻿import type { DocPage } from "../types";
+import type { Block, DocPage } from "../types";
 
 /**
  * The changelog is written from the repository history, in plain language.
@@ -23,10 +23,36 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    id: "unreleased",
-    title: "Not yet released",
-    note: "In the repository, waiting for the next deployment.",
+    id: "2026-11-25",
+    title: "24 and 25 November 2026",
+    date: "2026-11-25",
     changes: [
+      { kind: "fixed", text: "Replies reach people again in chats whose sender Ledger Chat could not resolve. Those chats were filed under an XMTP identifier, and every reply in them showed Not sent." },
+      { kind: "new", text: "A message that could not be sent shows Retry next to Not sent, which sends the same text again." },
+      { kind: "new", text: "Ledger Chat in five languages: English, Spanish, Russian, German and Chinese. The language you pick applies to the website and to the chat, and is remembered on this device." },
+      { kind: "improved", text: "Video calls in HD on 4G and 5G: 720p at 30 frames a second, using up to 2.5 Mbps, keeping the picture sharp before it drops frames. Data saver now also lowers what you send, to 360p and 0.5 Mbps." },
+      { kind: "improved", text: "The private wallet has a new, lighter design: the balance on white, round keys for each action, a clearer opening screen, and a recipient picture on every payment so you can tell at a glance that it goes where you meant." },
+      { kind: "new", text: "Shield and Unshield show what each balance becomes while you type the amount." },
+      { kind: "fixed", text: "On iPhone, the home page no longer shows a grey band at the bottom of the screen when Safari hides its toolbar." },
+      { kind: "fixed", text: "Every page of the documentation failed to open for a few hours after the translation release. They open again, and a test now guards against the cause." },
+      { kind: "new", text: "New communities keep their posts in an end to end encrypted XMTP group from the first channel. Communities created before stay as they were." },
+      { kind: "security", text: "Communities created before 24 November 2026 are read-only: our server no longer stores new posts for them. The old posts stay, and an administrator can re-create the community end to end encrypted; each member chooses whether to join." },
+      { kind: "new", text: "Paying the network fee privately, through the shared PrivateFPC recommended by Aztec, is written and off by default. It has not been tried on Aztec Alpha." },
+      { kind: "security", text: "The four checks every change must pass run again: a package missing from the lockfile had stopped them, and nineteen tests that matched old code or comments now check the code itself." },
+    ],
+  },
+  {
+    id: "2026-11-24",
+    title: "18 to 23 November 2026",
+    date: "2026-11-23",
+    changes: [
+      { kind: "security", text: "Verify encryption: every chat has a Verify button. It shows a 60-digit safety number made from both people's XMTP inboxes and every device on them, so a device added to either account changes the number. Compare it in person or on a call, then mark the contact verified; if the number changes later, the chat tells you." },
+      { kind: "security", text: "Only the person who sent a message can edit it or delete it for everyone, and edits are accepted for 24 hours. Before, an edit or delete from the other person could change your own messages on your screen." },
+      { kind: "security", text: "Notification previews are hidden by default. Turn them on in Privacy if you want the text on your lock screen." },
+      { kind: "new", text: "Back up your chat history to an encrypted file protected by a passphrase, and restore it on another device signed in with the same wallet." },
+      { kind: "new", text: "Choose your own Aztec node. The wallet runs the same network checks on it and sends nothing through our relay." },
+      { kind: "new", text: "Payment limits on this device: receive only, or a cap per payment, checked before a payment is proven. Export your payments as a CSV file and copy a receipt from any payment card. Nothing is uploaded." },
+      { kind: "improved", text: "Before each payment, a short panel says what stays private and what is public on the network you are on. On Alpha, the account that pays the fee is public." },
       { kind: "improved", text: "Stickers: three new packs, Hoops, Hammy and Noel, 40 stickers in all. Each one plays a short moment of under three seconds across the whole screen when it arrives or when you tap it; you can keep typing and scrolling while it plays. Stickers sent from earlier packs, Spike the cactus included, still show in your chats." },
       { kind: "improved", text: "The closed beta page has a new look, and asking for an invitation is now three short steps with a summary to check before you send." },
       { kind: "security", text: "Communities moving to encrypted groups: an admin's app only removes people from a group when it has the full member list, so a partial answer from the server can never empty a group." },
@@ -37,7 +63,6 @@ export const RELEASES: Release[] = [
       { kind: "fixed", text: "Landing: scrolling with the mouse or the finger no longer shows half-scrolled or empty frames. Each scene now fades in over the one before it, and on phones the words and the picture each have their own part of the screen." },
       { kind: "improved", text: "Landing: one design for the whole page, with a number and a label on every part, a sources line under each, a menu on phones, and the current section marked in the bar." },
       { kind: "fixed", text: "Appearance: Theme, Wallpaper and Bubbles each have their own space in the bar, with the number of options beside each name. The same fix keeps every tab bar in the app laid out as designed." },
-      { kind: "improved", text: "Stickers: one pack, Spike the cactus. Stickers sent from earlier packs still show in your chats." },
       { kind: "improved", text: "Ledger Chat on a computer is wider, and the space around it follows the window, so zooming in or out keeps it whole." },
       { kind: "fixed", text: "Communities: the owner can always change every setting, and admins can reset the invite link so an old link stops working." },
       { kind: "fixed", text: "Your profile photo no longer appears on your contacts. Each contact shows their own photo, or their initials." },
@@ -212,12 +237,29 @@ export const RELEASES: Release[] = [
   },
 ];
 
+const KIND_LABEL: Record<ChangeKind, string> = { new: "New", improved: "Improved", fixed: "Fixed", security: "Security" };
+
+/** One section per release, newest first: a heading, its note, and each change with its kind. */
+export function releaseBlocks(releases: Release[] = RELEASES): Block[] {
+  return releases.flatMap((r): Block[] => [
+    { t: "h2", text: r.title, id: r.id },
+    ...(r.note ? [{ t: "p", text: r.note } as Block] : []),
+    { t: "ul", items: r.changes.map((c) => `**${KIND_LABEL[c.kind]}.** ${c.text}`) },
+  ]);
+}
+
 export const changelog: DocPage = {
   slug: "changelog",
   href: "/docs/changelog",
   label: "Changelog",
   summary: "What changed in Ledger Chat, newest first, written from the repository history.",
   keywords: ["changelog", "releases", "updates", "versions", "history", "what's new", "release notes"],
-  updated: "2026-11-17",
-  blocks: [],
+  updated: "2026-11-25",
+  blocks: [
+    {
+      t: "p",
+      text: "Every change below is live on ledgerchat.org: each one is deployed as soon as it is merged. The full history is in the [repository](https://github.com/humanityledger/Humanity-Ledger/commits/main).",
+    },
+    ...releaseBlocks(),
+  ],
 };

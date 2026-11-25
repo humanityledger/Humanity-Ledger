@@ -135,6 +135,27 @@ for (const [vpName, viewport] of VIEWPORTS) {
   }
   await ctx.close();
 }
+// The same surfaces in each language (hl_locale cookie, lib/i18n/locales.ts), above the fold.
+const host = new URL(base).hostname;
+for (const locale of ['es', 'ru', 'de', 'zh']) {
+  for (const [vpName, viewport] of VIEWPORTS) {
+    const ctx = await browser.newContext({ viewport, deviceScaleFactor: vpName === 'mobile' ? 2 : 1 });
+    await ctx.addCookies([{ name: 'hl_locale', value: locale, domain: host, path: '/' }]);
+    for (const [name, url] of [['home', '/'], ['connect', '/connect'], ['docs', '/docs/overview'], ['diagrams', '/docs/diagrams-system']]) {
+      const page = await ctx.newPage();
+      try {
+        await page.goto(base + url, { waitUntil: 'networkidle', timeout: 60000 });
+        await page.waitForTimeout(1500);
+        await page.screenshot({ path: path.join(out, `${locale}-${name}-${vpName}-fold.png`) });
+      } catch (e) {
+        report.push({ page: `${locale}-${name}`, viewport: vpName, errors: [String(e.message).slice(0, 160)] });
+      }
+      await page.close();
+    }
+    await ctx.close();
+  }
+}
+
 await browser.close();
 fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));

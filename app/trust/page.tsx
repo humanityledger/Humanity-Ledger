@@ -4,6 +4,7 @@ import mainnet from '../../deployments/aztec-mainnet.json';
 import { EXTERNAL_LINKS } from '@/lib/constants/links';
 import { SiteFooter, SiteHeader, Arrow } from '@/components/landing/site/Chrome';
 import s from '@/components/landing/site/site.module.css';
+import { getT } from '@/lib/i18n/server';
 
 /**
  * /trust: what a reviewer asks for (verdict prompt, "Trust centre"): assurance status, the
@@ -45,23 +46,24 @@ const STORED: { what: string; why: string }[] = [
   { what: 'Encrypted attachments', why: 'To deliver files; ciphertext only, the key is in the message' },
 ];
 
-export default function TrustPage() {
+export default async function TrustPage() {
+  const t = await getT();
   return (
-    <div className={s.site}>
-      <a href="#main" className={s.skip}>Skip to content</a>
+    <div className={s.site} data-site="public">
+      <a href="#main" className={s.skip}>{t("Skip to content")}</a>
       <SiteHeader home={false} />
       <main id="main">
         <section className={s.pageHead}>
           <div className={s.wrap}>
-            <p className={s.eyebrow}>Trust centre</p>
-            <h1 className={s.h1}>What a reviewer asks for, in one place.</h1>
-            <p className={s.lede}>Assurance status, how to report a vulnerability, every network and provider we rely on, and what our server stores and why.</p>
-            <nav className={s.toc} aria-label="On this page">
-              <a href="#assurance">Assurance</a>
-              <a href="#disclosure">Disclosure policy</a>
-              <a href="#providers">Networks and providers</a>
-              <a href="#data">What we store</a>
-              <a href="#changes">Changes and status</a>
+            <p className={s.eyebrow}>{t("Trust centre")}</p>
+            <h1 className={s.h1}>{t("What a reviewer asks for, in one place.")}</h1>
+            <p className={s.lede}>{t("Assurance status, how to report a vulnerability, every network and provider we rely on, and what our server stores and why.")}</p>
+            <nav className={s.toc} aria-label={t("On this page")}>
+              <a href="#assurance">{t("Assurance")}</a>
+              <a href="#disclosure">{t("Disclosure policy")}</a>
+              <a href="#providers">{t("Networks and providers")}</a>
+              <a href="#data">{t("What we store")}</a>
+              <a href="#changes">{t("Changes and status")}</a>
             </nav>
           </div>
         </section>
@@ -69,37 +71,33 @@ export default function TrustPage() {
         <section id="assurance" className={s.section} aria-labelledby="assurance-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="assurance-title">Assurance</h2>
+              <h2 className={s.h2} id="assurance-title">{t("Assurance")}</h2>
             </header>
             <dl className={s.facts}>
-              <div><dt>External audit</dt><dd>{rec.audit ? 'Published' : 'None yet'}</dd></div>
-              <div><dt>Internal security review</dt><dd>{rec.internalReview ? rec.internalReview.date : 'Not recorded'}</dd></div>
-              <div><dt>Source code</dt><dd>Public, MIT or Apache-2.0</dd></div>
-              <div><dt>Continuous integration</dt><dd>Every run is public</dd></div>
+              <div><dt>{t("External audit")}</dt><dd>{rec.audit ? t("Published") : t("None yet")}</dd></div>
+              <div><dt>{t("Internal security review")}</dt><dd>{rec.internalReview ? rec.internalReview.date : t("Not recorded")}</dd></div>
+              <div><dt>{t("Source code")}</dt><dd>{t("Public, MIT or Apache-2.0")}</dd></div>
+              <div><dt>{t("Continuous integration")}</dt><dd>{t("Every run is public")}</dd></div>
             </dl>
             <p className={s.note}>
-              {rec.internalReview ? (
-                <>
-                  The internal review covered the code at commit <code className={s.mono}>{rec.internalReview.baseCommit}</code>:{' '}
-                  <a className={s.extLink} href={`${REPO}/blob/main/${rec.internalReview.report}`} target="_blank" rel="noopener noreferrer">read the report</a>.{' '}
+              {t("{value}An internal review is not an external audit. When an external audit exists, its report will be linked here with every finding answered.", { value: rec.internalReview ? (
+                <>{t("The internal review covered the code at commit {0}:{value}{1}.{value2}", { 0: <code className={s.mono}>{rec.internalReview.baseCommit}</code>, value: ' ', 1: <a className={s.extLink} href={`${REPO}/blob/main/${rec.internalReview.report}`} target="_blank" rel="noopener noreferrer">{t("read the report")}</a>, value2: ' ' })}
                 </>
-              ) : null}
-              An internal review is not an external audit. When an external audit exists, its report will be linked here with every finding answered.
-            </p>
+              ) : null })}</p>
           </div>
         </section>
 
         <section id="disclosure" className={`${s.section} ${s.sectionWash}`} aria-labelledby="disclosure-title">
           <div className={`${s.wrap} ${s.prose}`}>
-            <h2 className={s.h2} id="disclosure-title">Disclosure policy</h2>
-            <p className={s.body}>If you find a vulnerability, please tell us privately first.</p>
+            <h2 className={s.h2} id="disclosure-title">{t("Disclosure policy")}</h2>
+            <p className={s.body}>{t("If you find a vulnerability, please tell us privately first.")}</p>
             <ul>
-              <li>Report through <a className={s.extLink} href={EXTERNAL_LINKS.github.security} target="_blank" rel="noopener noreferrer">GitHub private vulnerability reporting</a>, or the contact in <a className={s.extLink} href="/.well-known/security.txt">security.txt</a>.</li>
-              <li>Include the affected component, the steps to reproduce and the impact you see.</li>
-              <li>We acknowledge receipt within 48 hours and give a fix timeline within 7 business days.</li>
-              <li>Please do not disclose publicly until we have had 90 days to fix it.</li>
-              <li>In scope: sign-in, messaging, payments, communities, API routes and smart contracts. Out of scope: social engineering, physical attacks and denial of service.</li>
-              <li>There is no paid bug bounty today. If you wish, we credit you in our security acknowledgements.</li>
+              <li>{t("Report through {0}, or the contact in {1}.", { 0: <a className={s.extLink} href={EXTERNAL_LINKS.github.security} target="_blank" rel="noopener noreferrer">{t("GitHub private vulnerability reporting")}</a>, 1: <a className={s.extLink} href="/.well-known/security.txt">{t("security.txt")}</a> })}</li>
+              <li>{t("Include the affected component, the steps to reproduce and the impact you see.")}</li>
+              <li>{t("We acknowledge receipt within 48 hours and give a fix timeline within 7 business days.")}</li>
+              <li>{t("Please do not disclose publicly until we have had 90 days to fix it.")}</li>
+              <li>{t("In scope: sign-in, messaging, payments, communities, API routes and smart contracts. Out of scope: social engineering, physical attacks and denial of service.")}</li>
+              <li>{t("There is no paid bug bounty today. If you wish, we credit you in our security acknowledgements.")}</li>
             </ul>
           </div>
         </section>
@@ -107,18 +105,18 @@ export default function TrustPage() {
         <section id="providers" className={s.section} aria-labelledby="providers-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="providers-title">Networks and providers</h2>
-              <p className={s.body}>Everyone in the path of Ledger Chat, what they do, and what they can see. None of them can read direct or group messages, files, call media or payment amounts.</p>
+              <h2 className={s.h2} id="providers-title">{t("Networks and providers")}</h2>
+              <p className={s.body}>{t("Everyone in the path of Ledger Chat, what they do, and what they can see. None of them can read direct or group messages, files, call media or payment amounts.")}</p>
             </header>
             <div className={`${s.tableWrap} ${s.tableCard}`}>
               <table className={`${s.table} ${s.vis}`}>
-                <thead><tr><th scope="col">Who</th><th scope="col">What for</th><th scope="col">What they can see</th></tr></thead>
+                <thead><tr><th scope="col">{t("Who")}</th><th scope="col">{t("What for")}</th><th scope="col">{t("What they can see")}</th></tr></thead>
                 <tbody>
                   {PROVIDERS.map((p) => (
                     <tr key={p.name}>
-                      <th scope="row">{p.name}</th>
-                      <td data-k="What for">{p.role}</td>
-                      <td data-k="What they can see">{p.sees}</td>
+                      <th scope="row">{t(p.name)}</th>
+                      <td data-k="What for">{t(p.role)}</td>
+                      <td data-k="What they can see">{t(p.sees)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -130,17 +128,17 @@ export default function TrustPage() {
         <section id="data" className={`${s.section} ${s.sectionWash}`} aria-labelledby="data-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="data-title">What our server stores, and why</h2>
-              <p className={s.body}>Message content, call media and payment details are not in this list because our server never has them. Retention periods are not published yet.</p>
+              <h2 className={s.h2} id="data-title">{t("What our server stores, and why")}</h2>
+              <p className={s.body}>{t("Message content, call media and payment details are not in this list because our server never has them. Retention periods are not published yet.")}</p>
             </header>
             <div className={`${s.tableWrap} ${s.tableCard}`}>
               <table className={`${s.table} ${s.vis}`}>
-                <thead><tr><th scope="col">What</th><th scope="col">Why</th></tr></thead>
+                <thead><tr><th scope="col">{t("What")}</th><th scope="col">{t("Why")}</th></tr></thead>
                 <tbody>
                   {STORED.map((d) => (
                     <tr key={d.what}>
-                      <th scope="row">{d.what}</th>
-                      <td data-k="Why">{d.why}</td>
+                      <th scope="row">{t(d.what)}</th>
+                      <td data-k="Why">{t(d.why)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -152,14 +150,14 @@ export default function TrustPage() {
         <section id="changes" className={s.section} aria-labelledby="changes-title">
           <div className={s.wrap}>
             <header className={s.head}>
-              <h2 className={s.h2} id="changes-title">Changes and status</h2>
+              <h2 className={s.h2} id="changes-title">{t("Changes and status")}</h2>
             </header>
             <div className={s.cards}>
               {[
-                { title: 'Security changelog', text: 'Every fix with security impact, one line each.', href: `${REPO}/blob/main/SECURITY-CHANGELOG.md`, cta: 'Read it' },
-                { title: 'Changelog', text: 'Everything that changed, release by release.', href: '/docs/changelog', cta: 'Read it' },
-                { title: 'Service status', text: 'The networks Ledger Chat depends on, right now.', href: '/docs/status', cta: 'Check status' },
-                { title: 'Security architecture', text: 'Cryptography, keys, threat model and limits.', href: '/security', cta: 'Open it' },
+                { title: t("Security changelog"), text: t("Every fix with security impact, one line each."), href: `${REPO}/blob/main/SECURITY-CHANGELOG.md`, cta: t("Read it") },
+                { title: t("Changelog"), text: t("Everything that changed, release by release."), href: '/docs/changelog', cta: t("Read it") },
+                { title: t("Service status"), text: t("The networks Ledger Chat depends on, right now."), href: '/docs/status', cta: t("Check status") },
+                { title: t("Security architecture"), text: t("Cryptography, keys, threat model and limits."), href: '/security', cta: t("Open it") },
               ].map((c) => (
                 <a key={c.title} className={s.card} href={c.href} {...(c.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
                   <h3>{c.title}</h3>

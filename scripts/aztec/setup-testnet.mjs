@@ -110,6 +110,20 @@ async function ensureAccount(name) {
   return address;
 }
 
+// The public endpoint balances across nodes: one may not have seen a contract deployed a second
+// ago. Reads right after a deploy are retried instead of failing the whole setup.
+async function retry(label, fn, tries = 12, delayMs = 5000) {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i >= tries) throw e;
+      log(`${label}: not visible yet (${String(e?.message ?? e).slice(0, 80)}), retry ${i}/${tries - 1}`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 const admin = await ensureAccount('admin');
 const faucet = await ensureAccount('faucet');
 
@@ -130,10 +144,10 @@ for (const t of TOKENS) {
     saveState(state);
     log(`${t.symbol} deployed at ${token.address}`);
   }
-  const isMinter = (await token.methods.is_minter(faucet).simulate({ from: admin })).result;
+  const isMinter = (await retry(`${t.symbol} is_minter`, () => token.methods.is_minter(faucet).simulate({ from: admin }))).result;
   if (!isMinter) {
     log(`making the faucet a minter of ${t.symbol} ...`);
-    await token.methods.set_minter(faucet, true).send({ from: admin, fee, wait: { timeout: 900 } });
+    await retry(`${t.symbol} set_minter`, () => token.methods.set_minter(faucet, true).send({ from: admin, fee, wait: { timeout: 900 } }), 6, 10000);
   }
   log(`${t.symbol}: faucet is minter`);
 }

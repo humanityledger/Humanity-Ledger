@@ -161,9 +161,12 @@ export interface SearchEntry {
  * One entry per page and one per section, so a result can take the reader
  * straight to the heading that answers the question.
  */
-export function buildSearchIndex(extra: { page: DocPage; group: string }[] = []): SearchEntry[] {
+/** `view` shows each page as a reader in another language sees it (lib/docs/i18n.ts translatePage). */
+export function buildSearchIndex(extra: { page: DocPage; group: string }[] = [], view: (p: DocPage) => DocPage = (p) => p, label: (s: string) => string = (s) => s): SearchEntry[] {
   const out: SearchEntry[] = [];
-  for (const { page, group } of [...ALL, ...extra]) {
+  for (const { page: source, group: sourceGroup } of [...ALL, ...extra]) {
+    const page = view(source);
+    const group = label(sourceGroup);
     const title = page.title ?? page.label;
     let section: { id: string; text: string } | null = null;
     let buffer: string[] = [];

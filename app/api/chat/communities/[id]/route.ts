@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 import { getInMemoryCommunityBySlugOrId } from '@/lib/communities/in-memory-communities';
+import { legacyPostsClosed } from '@/lib/communities/legacy';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,6 +90,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         isMember,
         membersCount: community._count?.members ?? (members || []).length,
         postsCount,
+        // Legacy (posts stored here) and read-only: lib/communities/legacy.ts.
+        postsReadOnly: legacyPostsClosed(community),
+        successorId: community.successorId ?? null,
       },
     });
   } catch (e: any) {

@@ -198,9 +198,10 @@ function Seq({ L, id }: { L: SeqLayout; id: string }) {
   );
 }
 
-export function Diagram({ code, caption, title }: { code: string; caption: string; title?: string }) {
-  const L = layoutDiagram(code);
-  const id = `dg${hash(code)}`;
+export function Diagram({ code, caption, title, tr }: { code: string; caption: string; title?: string; tr?: ((s: string) => string) | null }) {
+  // Laid out from the translated texts, so boxes fit them; the Mermaid source below stays as written.
+  const L = layoutDiagram(code, tr ?? undefined);
+  const id = `dg${hash(code)}${tr ? 't' : ''}`;
   return (
     <figure className={s.diagram}>
       {title ? <p className={s.diagramTitle}>{title}</p> : null}

@@ -19,6 +19,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n/client';
 
 // ─── Local type definitions (mirrors @aztec/aztec.js types) ──────────────────
 // These are declared locally so TypeScript is satisfied without a static import.
@@ -64,6 +65,7 @@ const AztecContext = createContext<AztecContextType>({
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const tr = useT();
   const [pxe, setPxe]                   = useState<PXE | null>(null);
   const [isReady, setIsReady]           = useState(false);
   const [error, setError]               = useState<string | null>(null);
@@ -123,7 +125,7 @@ export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             pxeClient = await pxeInitWithTimeout();
         } catch (pxeErr: any) {
             console.warn('🟡 [Aztec] PXE init skipped (timeout or unavailable):', pxeErr?.message);
-            setError(pxeErr?.message || 'PXE unavailable');
+            setError(pxeErr?.message || tr("PXE unavailable"));
             return; // Graceful degradation — app still works without ZK
         }
 
@@ -131,10 +133,10 @@ export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         let info = { chainId: 31337, protocolVersion: 1 }; // Fallback values
         try {
             info = await pxeClient.getNodeInfo();
-            setNodeInfo(info);
+            setNodeInfo(tr(info));
         } catch (e) {
             console.warn('🟡 [Aztec] Sequencer unreachable, entering Offline Read-Only Mode.');
-            setNodeInfo(info); // Set fallback
+            setNodeInfo(tr(info)); // Set fallback
         }
 
         // Fetch registered accounts (populated by Aztec Sandbox by default)
@@ -157,7 +159,7 @@ export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Only ZK-specific features (Ledger Chat ZK mode, HumanityLedger proofs) are gated.
         const msg = err?.message ?? 'Failed to initialize Aztec PXE';
         console.warn('🔴 [Aztec] PXE init failed (Sandbox not running?)', msg);
-        setError(msg);
+        setError(tr(msg));
       }
     };
 
@@ -183,7 +185,7 @@ export const AztecProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const msg = err?.message ?? 'Aztec init failed';
         console.warn('🔴 [Aztec] PXE init outer catch:', msg);
         // Do NOT propagate — graceful degradation, app works without local Sandbox
-        setError(msg);
+        setError(tr(msg));
       });
     }
   }, []);

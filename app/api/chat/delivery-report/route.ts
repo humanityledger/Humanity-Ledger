@@ -14,7 +14,7 @@ import { bumpCounter } from '@/lib/ops/counters';
 
 export const dynamic = 'force-dynamic';
 
-const KINDS = new Set(['send_published', 'send_failed', 'publish_pending', 'publish_retrying', 'publish_gave_up', 'group_failed', 'client_failed', 'stream_restarted', 'stream_failed', 'receive_unresolved', 'receive_cleared']);
+const KINDS = new Set(['send_published', 'send_failed', 'publish_pending', 'publish_retrying', 'publish_gave_up', 'group_failed', 'client_failed', 'stream_restarted', 'stream_failed', 'receive_unresolved', 'receive_cleared', 'multi_tab', 'publish_debug']);
 const BROWSERS = new Set(['chrome', 'safari', 'firefox', 'edge', 'other']);
 
 export async function POST(req: NextRequest) {

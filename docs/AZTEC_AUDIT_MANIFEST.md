@@ -1,5 +1,7 @@
 # Humanity Ledger on Aztec: audit manifest
 
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](audit/START_HERE.md) (24 November 2026).
+
 **Date:** 10 November 2026. **Base:** `main` at `39c56b1` plus the G2 UI, G7, payment-rail and voice consolidation changes described here.
 **Status:** nothing of ours is deployed on Aztec Alpha, and the contracts have had no external review (G8).
 

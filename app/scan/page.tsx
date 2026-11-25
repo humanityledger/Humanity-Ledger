@@ -10,6 +10,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { parseScanPayload } from '@/lib/scan/parseScanPayload';
 import { completeSessionHandshake, previewLink } from '@/lib/scan/sessionHandshake';
 import { useSignMessage, useAccount } from 'wagmi';
+import { useT } from '@/lib/i18n/client';
 
 const VIEWFINDER_SIZE = 260;
 
@@ -85,6 +86,7 @@ function ViewfinderOverlay({ active }: { active: boolean }) {
 }
 
 export default function ScanPage() {
+  const tr = useT();
   const router = useRouter();
   const { address } = useSystemAccount();
   const { open: openAppKit } = useAppKit();
@@ -160,7 +162,7 @@ export default function ScanPage() {
         if (!currentAddr) {
           setPinScanData(decodedText);
           setNeedsWallet(true);
-          setErrMsg('Sign in on this phone with your wallet first. Then the computer can be linked.');
+          setErrMsg(tr("Sign in on this phone with your wallet first. Then the computer can be linked."));
           setStatus('error');
           hasScannedRef.current = false;
           setTimeout(() => openAppKit(), 400);
@@ -173,28 +175,28 @@ export default function ScanPage() {
         if (!preview.ok) {
           setPinScanData(decodedText);
           if (preview.needsWallet) { setNeedsWallet(true); setTimeout(() => openAppKit(), 400); }
-          setErrMsg(preview.message);
+          setErrMsg(tr(preview.message));
           setStatus('error');
           hasScannedRef.current = false;
           return;
         }
         setPinScanData(decodedText);
-        setLinkLabel(preview.label);
+        setLinkLabel(tr(preview.label));
         setStatus('pin_required');
         return;
       } else if (route.type === 'wallet' && route.walletAddress) {
-        setSuccessLabel('Opening Chat');
+        setSuccessLabel(tr("Opening Chat"));
         sessionStorage.setItem('ledger_scan_peer', route.walletAddress.toLowerCase());
         setStatus('success');
         setTimeout(() => router.push('/chat'), 900);
         return;
       } else {
-        setErrMsg('QR code not recognized. Try a session QR or a wallet address.');
+        setErrMsg(tr("QR code not recognized. Try a session QR or a wallet address."));
         setStatus('error');
         hasScannedRef.current = false;
       }
     } catch {
-      setErrMsg('Something went wrong. Please try again.');
+      setErrMsg(tr("Something went wrong. Please try again."));
       setStatus('error');
       hasScannedRef.current = false;
     }
@@ -245,7 +247,7 @@ export default function ScanPage() {
     if (camError && tab === 'camera') {
       const isDenied = /denied|permission|not allowed/i.test(camError);
       setStatus(isDenied ? 'denied' : 'error');
-      if (!isDenied) setErrMsg(camError);
+      if (!isDenied) setErrMsg(tr(camError));
     }
   }, [camError, tab]);
 
@@ -270,22 +272,22 @@ export default function ScanPage() {
         const needsWalletConnect = 'needsWallet' in result && result.needsWallet;
         if (needsWalletConnect) {
           setNeedsWallet(true);
-          setErrMsg('Connect your wallet first, then tap "Retry" to complete the QR link.');
+          setErrMsg(tr("Connect your wallet first, then tap \"Retry\" to complete the QR link."));
           setStatus('error');
           hasScannedRef.current = false;
           setTimeout(() => openAppKit(), 600);
         } else {
-          setErrMsg(result.message);
+          setErrMsg(tr(result.message));
           setStatus('error');
           hasScannedRef.current = false;
         }
         return;
       }
-      setSuccessLabel('Computer linked');
+      setSuccessLabel(tr("Computer linked"));
       setStatus('success');
       setTimeout(() => router.push('/chat'), 1400);
     } catch {
-      setErrMsg('The computer could not be linked. Refresh the code on the computer and scan it again.');
+      setErrMsg(tr("The computer could not be linked. Refresh the code on the computer and scan it again."));
       setStatus('error');
       hasScannedRef.current = false;
     }
@@ -299,7 +301,7 @@ export default function ScanPage() {
       const decoded = await scanFileForQR(file);
       await handleDecoded(decoded);
     } catch {
-      setErrMsg('No valid QR code detected in the image.');
+      setErrMsg(tr("No valid QR code detected in the image."));
       setStatus('error');
       hasScannedRef.current = false;
     } finally {
@@ -366,10 +368,10 @@ export default function ScanPage() {
       <header className="relative z-30 flex items-center justify-between px-5 py-4 bg-black/40 backdrop-blur-md text-white border-b border-white/10">
         <button onClick={() => router.back()} className="flex items-center gap-2 py-1">
           <ArrowLeft size={20} strokeWidth={2.5} />
-          <span className="font-semibold text-[15px]">Back</span>
+          <span className="font-semibold text-[15px]">{tr("Back")}</span>
         </button>
         <div className="absolute left-1/2 -translate-x-1/2 font-semibold text-[15px]">
-          Link Device
+          {tr("Link Device")}
         </div>
         <div className="w-8 h-8 flex items-center justify-center">
           <QrCode size={20} />
@@ -383,7 +385,7 @@ export default function ScanPage() {
         {status === 'starting' && tab === 'camera' && (
           <div className="flex flex-col items-center gap-4 bg-black/60 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
             <Loader2 className="animate-spin text-white" size={36} />
-            <span className="text-white font-medium text-sm">Accessing camera...</span>
+            <span className="text-white font-medium text-sm">{tr("Accessing camera...")}</span>
           </div>
         )}
 
@@ -395,9 +397,7 @@ export default function ScanPage() {
             </div>
             {/* WhatsApp/Signal style instructions */}
             <div className="px-8 py-5 bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 text-center max-w-[85%] mx-auto shadow-xl">
-              <p className="text-white font-medium text-[15px] leading-relaxed">
-                Go to <span className="font-bold text-green-400">ledgerchat.org/connect</span> on your computer and point your phone at the screen to capture the code.
-              </p>
+              <p className="text-white font-medium text-[15px] leading-relaxed">{tr("Go to {0} on your computer and point your phone at the screen to capture the code.", { 0: <span className="font-bold text-green-400">{tr("ledgerchat.org/connect")}</span> })}</p>
             </div>
           </div>
         )}
@@ -408,16 +408,16 @@ export default function ScanPage() {
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
               <Camera size={30} className="text-red-400" />
             </div>
-            <h2 className="text-white font-bold text-xl mb-2">Camera Access Required</h2>
+            <h2 className="text-white font-bold text-xl mb-2">{tr("Camera Access Required")}</h2>
             <p className="text-white/60 text-[15px] leading-relaxed mb-8">
-              To link your device by scanning a QR code, please allow camera access in your browser settings.
+              {tr("To link your device by scanning a QR code, please allow camera access in your browser settings.")}
             </p>
             <div className="w-full flex flex-col gap-3">
               <button onClick={reset} className="w-full py-4 bg-white text-black font-bold text-[15px] rounded-xl shadow-lg">
-                I've allowed it, Retry
+                {tr("I've allowed it, Retry")}
               </button>
               <button onClick={() => setTab('file')} className="w-full py-4 bg-transparent border border-white/20 text-white font-semibold text-[15px] rounded-xl">
-                Upload from Gallery
+                {tr("Upload from Gallery")}
               </button>
             </div>
           </div>
@@ -430,24 +430,24 @@ export default function ScanPage() {
               <Shield size={30} className="text-red-400" />
             </div>
             <h2 className="text-white font-bold text-xl mb-2">
-              {needsWallet ? 'Wallet Required' : 'Link Failed'}
+              {needsWallet ? tr("Wallet Required") : tr("Link Failed")}
             </h2>
             <p className="text-white/60 text-[15px] leading-relaxed mb-8">{errMsg}</p>
             
             {needsWallet ? (
               <div className="flex flex-col gap-3 w-full">
                 <button onClick={() => openAppKit()} className="w-full py-4 bg-[#25D366] text-white font-bold text-[15px] rounded-xl shadow-lg">
-                  Connect Wallet
+                  {tr("Connect Wallet")}
                 </button>
                 {pinScanData && (
                   <button onClick={() => { setNeedsWallet(false); setErrMsg(''); if (pinScanData) { hasScannedRef.current = false; handleRouteRef.current(pinScanData); } }} className="w-full py-4 border border-white/20 text-white font-semibold text-[15px] rounded-xl">
-                    Retry with PIN
+                    {tr("Retry with PIN")}
                   </button>
                 )}
               </div>
             ) : (
               <button onClick={reset} className="w-full py-4 bg-white text-black font-bold text-[15px] rounded-xl shadow-lg">
-                Try Again
+                {tr("Try Again")}
               </button>
             )}
           </div>
@@ -460,22 +460,21 @@ export default function ScanPage() {
               <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
                 <Shield size={28} className="text-white" />
               </div>
-              <h2 className="text-white font-bold text-2xl mb-2 text-center">Link this computer?</h2>
+              <h2 className="text-white font-bold text-2xl mb-2 text-center">{tr("Link this computer?")}</h2>
               <p className="text-white/80 text-[15px] text-center mb-4 leading-relaxed px-4">
-                <strong>{linkLabel ?? 'A computer'}</strong> wants to use your Ledger Chat account.
-              </p>
+                {tr("{0} wants to use your Ledger Chat account.", { 0: <strong>{linkLabel ?? tr("A computer")}</strong> })}</p>
               <p role="note" className="text-[13px] text-center mb-3 leading-relaxed px-4 py-3 rounded-2xl bg-[#ff2a85]/10 text-[#ffb3cf] border border-[#ff2a85]/25">
-                It will be able to read and send your messages. Only link it if you opened ledgerchat.org yourself on a computer in front of you. Never scan a code someone sent you.
+                {tr("It will be able to read and send your messages. Only link it if you opened ledgerchat.org yourself on a computer in front of you. Never scan a code someone sent you.")}
               </p>
               <p className="text-white/50 text-[13px] text-center mb-8 leading-relaxed px-4">
-                Your wallet stays on this phone. Unlink the computer any time in Settings → Linked devices.
+                {tr("Your wallet stays on this phone. Unlink the computer any time in Settings → Linked devices.")}
               </p>
               <div className="w-full flex flex-col gap-3">
                 <button onClick={handlePinConfirm} className="w-full py-4 bg-white text-black font-bold text-[15px] rounded-2xl">
-                  Link this computer
+                  {tr("Link this computer")}
                 </button>
                 <button onClick={reset} className="w-full py-4 text-white/50 font-medium text-[15px] hover:text-white transition-colors">
-                  Cancel
+                  {tr("Cancel")}
                 </button>
               </div>
             </div>
@@ -494,7 +493,7 @@ export default function ScanPage() {
                  </div>
                )}
                <h2 className="text-white font-bold text-xl">
-                 {status === 'verifying_pin' ? 'Linking the computer…' : successLabel}
+                 {status === 'verifying_pin' ? tr("Linking the computer…") : successLabel}
                </h2>
              </div>
           </div>
@@ -506,17 +505,17 @@ export default function ScanPage() {
             <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
               <Upload size={30} className="text-white/60" />
             </div>
-            <h2 className="text-white font-bold text-xl mb-2">Upload QR Code</h2>
+            <h2 className="text-white font-bold text-xl mb-2">{tr("Upload QR Code")}</h2>
             <p className="text-white/60 text-[15px] leading-relaxed mb-8">
-              Select an image from your device's photo gallery that contains a valid QR code.
+              {tr("Select an image from your device's photo gallery that contains a valid QR code.")}
             </p>
             <label className="w-full cursor-pointer flex items-center justify-center gap-2 py-4 bg-white text-black font-bold text-[15px] rounded-2xl shadow-lg">
               {fileLoading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-              {fileLoading ? 'Scanning image...' : 'Choose from Gallery'}
+              {fileLoading ? tr("Scanning image...") : tr("Choose from Gallery")}
               <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} disabled={fileLoading} />
             </label>
             <button onClick={() => setTab('camera')} className="mt-4 text-white/50 text-[15px] font-medium hover:text-white">
-              Back to Camera
+              {tr("Back to Camera")}
             </button>
           </div>
         )}

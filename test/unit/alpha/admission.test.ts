@@ -47,7 +47,8 @@ describe('wiring', () => {
     expect(script).toMatch(/--count 1/);
     const sql = fs.readFileSync('prisma/migrations/20261119140000_alpha_admission/migration.sql', 'utf8');
     expect(sql).toMatch(/ADD COLUMN "sanctionsResult"/);
-    expect(sql).not.toMatch(/DROP|DELETE/i);
+    // Statements only: a comment may say what the purge script deletes later.
+    expect(sql.replace(/--[^\n]*/g, '')).not.toMatch(/DROP|DELETE/i);
     expect(fs.existsSync('scripts/alpha/purge.mjs')).toBe(true);
   });
 });

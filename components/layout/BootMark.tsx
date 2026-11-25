@@ -1,3 +1,6 @@
+'use client';
+
+import { useT } from '@/lib/i18n/client';
 /**
  * The one loading mark of Ledger Chat. Every screen shown while the app opens (the PIN gate check,
  * the chat bundle, the account settings) draws this same lockup in the same place, on the same
@@ -8,13 +11,14 @@
  * Motion is transform only and stops under reduced motion.
  */
 export function BootMark({ label = 'Opening Ledger Chat' }: { label?: string }) {
+  const t = useT();
   return (
     <div className="hl-boot" role="status" aria-label={label}>
       <span className="hl-boot-lockup" aria-hidden="true">
         <span className="hl-boot-logo">
           <img src="/boot-mark.webp" alt="" width={28} height={28} draggable={false} decoding="sync" />
         </span>
-        <span className="hl-boot-name">Ledger Chat</span>
+        <span className="hl-boot-name">{t("Ledger Chat")}</span>
       </span>
       <span className="hl-boot-line" aria-hidden="true" />
       <span className="sr-only">{label}</span>

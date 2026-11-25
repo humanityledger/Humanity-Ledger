@@ -129,6 +129,34 @@ describe('buildMetrics', () => {
   });
 });
 
+describe('the payment token and the closed beta (the wallet Protocol tab)', () => {
+  const CUSDC = { name: 'Clean USDC', address: '0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38', decimals: 6, issuer: 'human.tech (Shield bridge)', verifiedOnChain: true, readOn: '2026-11-19' };
+  const withBeta = (beta: { enabled: boolean; until?: string; maxTesters?: number }, cusdc: typeof CUSDC | undefined = CUSDC) =>
+    snapshot({ record: { contracts: [], tokens: [HLC], audit: false, cusdc, beta } });
+
+  it('cUSDC is the payment token, with its contract address and issuer', () => {
+    const m = byId(buildMetrics(withBeta({ enabled: true, until: '2027-02-23T23:59:59Z' })), 'cusdc');
+    expect(m).toMatchObject({ status: 'live', value: 'cUSDC', raw: CUSDC.address, group: 'token' });
+    expect(m.detail).toMatch(/human\.tech/);
+    expect(m.detail).toMatch(/neither issues nor holds/);
+  });
+
+  it('the beta is open only while enabled, before its end and with a verified token', () => {
+    const now = new Date('2026-11-25T08:00:00Z');
+    expect(byId(buildMetrics(withBeta({ enabled: true, until: '2027-02-23T23:59:59Z', maxTesters: 100 }), now), 'cusdc-beta')).toMatchObject({ status: 'live', value: 'Open, by invitation' });
+    expect(byId(buildMetrics(withBeta({ enabled: false, until: '2027-02-23T23:59:59Z' }), now), 'cusdc-beta').value).toBe('Closed');
+    expect(byId(buildMetrics(withBeta({ enabled: true, until: '2026-11-01T00:00:00Z' }), now), 'cusdc-beta').value).toBe('Closed');
+    expect(byId(buildMetrics(withBeta({ enabled: true, until: '2027-02-23T23:59:59Z' }, { ...CUSDC, verifiedOnChain: false }), now), 'cusdc-beta').value).toBe('Closed');
+  });
+
+  it('the wallet tab shows cUSDC, not HLC, which is no longer listed on Alpha', () => {
+    const src = readFileSync('components/protocol/ProtocolSummary.tsx', 'utf8');
+    expect(src).toContain("id: 'cusdc'");
+    expect(src).toContain("id: 'cusdc-beta'");
+    expect(src).not.toMatch(/hlc-supply|HLC total supply/);
+  });
+});
+
 describe('canonicalJson', () => {
   it('sorts keys at every level, drops undefined and writes bigint as decimal', () => {
     expect(canonicalJson({ b: 1, a: { d: 2n, c: undefined, b: [{ z: 1, y: 2 }] } })).toBe('{"a":{"b":[{"y":2,"z":1}],"d":"2"},"b":1}');

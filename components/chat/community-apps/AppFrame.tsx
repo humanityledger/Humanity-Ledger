@@ -15,6 +15,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { APP_FRAME_SANDBOX } from '@/lib/community-apps/framePolicy';
+import { useT } from '@/lib/i18n/client';
 
 interface Identity { id: string; label: string }
 interface Entry {
@@ -50,6 +51,7 @@ function entryId(e: { scope: string; key: string; member?: Identity }) {
 }
 
 export function AppFrame({ communityId, appId, version, title, onRuntimeError, onWriteRejected, onVersionChange }: AppFrameProps) {
+  const t = useT();
   const frameRef = useRef<HTMLIFrameElement>(null);
   const store = useRef(new Map<string, Entry>());
   const ctxRef = useRef<Context | null>(null);
@@ -228,7 +230,7 @@ export function AppFrame({ communityId, appId, version, title, onRuntimeError, o
           />
           {!loaded && (
             <div className="absolute inset-0 flex items-center justify-center bg-[var(--hl-bg)]" aria-hidden>
-              <span className="text-[13px] text-[var(--hl-ink-3)]">Loading…</span>
+              <span className="text-[13px] text-[var(--hl-ink-3)]">{t("Loading…")}</span>
             </div>
           )}
         </>

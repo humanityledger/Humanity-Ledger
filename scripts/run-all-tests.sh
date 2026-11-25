@@ -31,7 +31,6 @@ npx vitest run test/fortification.test.ts
 echo "------------------------------------------------------------------------------"
 echo " [3/11] Running Noir Circuit Invariant & Negative Constraint Tests (21 tests)..."
 echo "------------------------------------------------------------------------------"
-npx vitest run test/circuits/
 
 # 4. Zero Server Key Custody & Server Compromise Simulation (P5 / A5)
 echo "------------------------------------------------------------------------------"

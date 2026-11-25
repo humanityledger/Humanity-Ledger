@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useT } from '@/lib/i18n/client';
 
 export default function CommunityRedirectPage() {
+  const t = useT();
   const router = useRouter();
   const params = useParams();
 
@@ -18,7 +20,7 @@ export default function CommunityRedirectPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
-      <p className="text-[13px] text-[#727A88]" role="status">Opening community…</p>
+      <p className="text-[13px] text-[#727A88]" role="status">{t("Opening community…")}</p>
     </div>
   );
 }

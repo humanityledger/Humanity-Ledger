@@ -11,6 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/client';
 
 type Terms = { version: string; sha256: string; url: string };
 type Status = { member: boolean; active: boolean; riskAcknowledged: boolean; terms: Terms };
@@ -29,6 +30,7 @@ async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
 }
 
 export default function AlphaJoin() {
+  const tr = useT();
   const [status, setStatus] = useState<Status | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const [text, setText] = useState('');
@@ -47,7 +49,7 @@ export default function AlphaJoin() {
       try {
         const bytes = await fetch(s.terms.url, { cache: 'no-store' }).then((x) => (x.ok ? x.arrayBuffer() : null));
         const t = bytes ? new TextDecoder('utf-8').decode(bytes) : '';
-        setText(t);
+        setText(tr(t));
         setHash(bytes && bytes.byteLength ? await sha256Hex(bytes) : '');
       } catch {
         setText('');
@@ -76,7 +78,7 @@ export default function AlphaJoin() {
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok && d.member) {
-        setMsg({ tone: 'ok', text: 'You are in the closed alpha. Your acceptance was recorded with the version of the terms you read.' });
+        setMsg({ tone: 'ok', text: tr("You are in the closed alpha. Your acceptance was recorded with the version of the terms you read.") });
         await load();
       } else setMsg({ tone: 'bad', text: d.error || 'This did not work. Try again.' });
     } finally {
@@ -95,48 +97,46 @@ export default function AlphaJoin() {
   return (
     <main style={{ minHeight: '100dvh', background: SOFT, padding: '32px 12px', fontFamily: 'Inter, system-ui, sans-serif', color: INK }}>
       <div style={card}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0, letterSpacing: '-0.02em' }}>Join the closed alpha</h1>
+        <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0, letterSpacing: '-0.02em' }}>{tr("Join the closed alpha")}</h1>
         <p style={{ fontSize: 15, color: '#475467', marginTop: 8 }}>
-          Ledger Chat on Aztec Alpha, an early network. Payments in the alpha use HLC, a test token with no monetary value. Network fees are paid in Fee Juice, which
-          does have value. Our contracts have had an internal security review, not an external audit.
+          {tr("Ledger Chat on Aztec Alpha, an early network. Payments in the alpha use HLC, a test token with no monetary value. Network fees are paid in Fee Juice, which does have value. Our contracts have had an internal security review, not an external audit.")}
         </p>
 
         {signedOut && (
-          <p style={{ fontSize: 15, marginTop: 16 }}>
-            Sign in with your wallet first, then come back to this page. <Link href="/connect" style={{ color: VIOLET, fontWeight: 600 }}>Sign in</Link>
+          <p style={{ fontSize: 15, marginTop: 16 }}>{tr("Sign in with your wallet first, then come back to this page. {0}", { 0: <Link href="/connect" style={{ color: VIOLET, fontWeight: 600 }}>{tr("Sign in")}</Link> })}
           </p>
         )}
 
         {status?.member && (
           <p style={{ fontSize: 15, marginTop: 16, color: status.active ? OK : BAD, fontWeight: 600 }}>
-            {status.active ? 'This account is in the closed alpha.' : 'This account’s closed alpha access was revoked. Existing agreements can still be settled.'}
+            {status.active ? tr("This account is in the closed alpha.") : tr("This account’s closed alpha access was revoked. Existing agreements can still be settled.")}
           </p>
         )}
 
         {status && !status.member && !termsReady && (
-          <p style={{ fontSize: 15, marginTop: 16, fontWeight: 600 }}>The closed alpha is not open yet: its terms have not been signed.</p>
+          <p style={{ fontSize: 15, marginTop: 16, fontWeight: 600 }}>{tr("The closed alpha is not open yet: its terms have not been signed.")}</p>
         )}
 
         {status && !status.member && termsReady && (
           <>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 24 }}>Terms, version {status.terms.version}</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 24 }}>{tr("Terms, version {version}", { version: status.terms.version })}</h2>
             <div style={{ maxHeight: 320, overflow: 'auto', border: `1px solid ${LINE}`, borderRadius: 20, padding: 16, marginTop: 8, whiteSpace: 'pre-wrap', fontSize: 14, background: SOFT }}>
-              {text || 'The terms could not be loaded.'}
+              {text || tr("The terms could not be loaded.")}
             </div>
-            {!textMatches && <p style={{ fontSize: 13, color: BAD, marginTop: 8 }}>The text above does not match the signed version, so it cannot be accepted. Reload the page.</p>}
+            {!textMatches && <p style={{ fontSize: 13, color: BAD, marginTop: 8 }}>{tr("The text above does not match the signed version, so it cannot be accepted. Reload the page.")}</p>}
             <div style={{ marginTop: 16 }}>
               {box('terms', 'I have read and accept the terms of the closed alpha.')}
               {box('risks', 'I understand and accept the risks in clause 6.')}
               {box('eligibility', 'I am 18 or older and meet the requirements in clause 3.')}
             </div>
             <label style={{ display: 'block', marginTop: 16, fontSize: 14, fontWeight: 600 }}>
-              Invitation code
+              {tr("Invitation code")}
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
-                placeholder="XXXX-XXXX-XXXX-XXXX"
+                placeholder={tr("XXXX-XXXX-XXXX-XXXX")}
                 style={{ display: 'block', width: '100%', marginTop: 6, minHeight: 48, borderRadius: 16, border: `2px solid ${LINE}`, padding: '0 16px', fontSize: 16, fontFamily: 'ui-monospace, monospace' }}
               />
             </label>
@@ -146,7 +146,7 @@ export default function AlphaJoin() {
               onClick={redeem}
               style={{ marginTop: 16, minHeight: 48, width: '100%', borderRadius: 999, border: 0, background: canRedeem ? VIOLET : LINE, color: canRedeem ? '#fff' : '#667085', fontSize: 16, fontWeight: 600, cursor: canRedeem ? 'pointer' : 'default' }}
             >
-              {busy ? 'Joining…' : 'Join the closed alpha'}
+              {busy ? tr("Joining…") : tr("Join the closed alpha")}
             </button>
           </>
         )}

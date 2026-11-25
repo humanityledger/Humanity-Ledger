@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation";
 import { ChevronRight, CornerDownLeft, FileText, Hash, LoaderCircle, Search } from "lucide-react";
 import type { SearchEntry } from "@/lib/docs/registry";
+import { useLocale, useT } from "@/lib/i18n/client";
 import s from "./Docs.module.css";
 
 /**
@@ -103,6 +104,8 @@ function Highlight({ text, query }: { text: string; query: string }) {
 }
 
 export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT();
+  const locale = useLocale();
   const router = useRouter();
   const [index, setIndex] = useState<SearchEntry[] | null>(null);
   const [query, setQuery] = useState("");
@@ -125,13 +128,25 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
   useEffect(() => {
     if (!open || index) return;
     let cancelled = false;
-    import("@/lib/docs/searchIndex")
-      .then((m) => !cancelled && setIndex(m.SEARCH_INDEX))
+    // In another language the index is built from the translated pages (lib/docs/i18n.ts); the
+    // page keywords stay English, so an English term still finds its page.
+    const load = async (): Promise<SearchEntry[]> => {
+      const m = await import("@/lib/docs/searchIndex");
+      if (locale === "en") return m.SEARCH_INDEX;
+      const [{ translatePage, translatorFrom }, dict] = await Promise.all([
+        import("@/lib/docs/i18n"),
+        import(`@/lib/i18n/docs/${locale}.json`).then((d) => d.default as Record<string, string>),
+      ]);
+      const tr = translatorFrom(dict);
+      return m.buildIndex((p) => translatePage(p, tr), (s) => (tr(s) !== s ? tr(s) : t(s)));
+    };
+    load()
+      .then((ix) => !cancelled && setIndex(ix))
       .catch(() => !cancelled && setIndex([]));
     return () => {
       cancelled = true;
     };
-  }, [open, index]);
+  }, [open, index, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const results = useMemo(() => {
     if (!index) return [];
@@ -187,14 +202,14 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div className={s.searchOverlay} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={s.searchPanel} role="dialog" aria-modal="true" aria-label="Search documentation" onKeyDown={onKeyDown}>
+      <div className={s.searchPanel} role="dialog" aria-modal="true" aria-label={t("Search documentation")} onKeyDown={onKeyDown}>
         <div className={s.searchInputRow}>
           <Search size={18} strokeWidth={1.9} aria-hidden="true" />
           <input
             ref={inputRef}
             className={s.searchInput}
             type="search"
-            placeholder="Search the documentation"
+            placeholder={t("Search the documentation")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             role="combobox"
@@ -204,7 +219,7 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
             autoComplete="off"
             spellCheck={false}
           />
-          <button type="button" className={s.kbd} onClick={onClose} aria-label="Close search" style={{ cursor: "pointer" }}>
+          <button type="button" className={s.kbd} onClick={onClose} aria-label={t("Close search")} style={{ cursor: "pointer" }}>
             Esc
           </button>
         </div>
@@ -212,17 +227,17 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
         <div className={s.results} ref={listRef}>
           {!index ? (
             <div className={s.searchEmpty} role="status">
-              <LoaderCircle size={18} strokeWidth={2} className={s.spin} aria-label="Loading" />
+              <LoaderCircle size={18} strokeWidth={2} className={s.spin} aria-label={t("Loading")} />
             </div>
           ) : results.length === 0 ? (
             <div className={s.searchEmpty} role="status">
-              <strong>No results for “{query.trim()}”</strong>
-              Try a shorter word, or a different one such as PIN, wallet or encryption.
+              <strong>{t("No results for “{query}”", { query: query.trim() })}</strong>
+              {t("Try a shorter word, or a different one such as PIN, wallet or encryption.")}
             </div>
           ) : (
             <>
               <p className={s.resultGroup}>{query.trim() ? `${results.length} ${results.length === 1 ? "result" : "results"}` : "Suggested"}</p>
-              <ul className={s.resultList} id={listId} role="listbox" aria-label="Results">
+              <ul className={s.resultList} id={listId} role="listbox" aria-label={t("Results")}>
                 {results.map(({ entry }, i) => {
                   const Icon = entry.section ? Hash : FileText;
                   return (
@@ -271,16 +286,16 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
             <span className={s.kbd}>
               <CornerDownLeft size={12} strokeWidth={2} />
             </span>
-            to open
+            {t("to open")}
           </span>
           <span>
             <span className={s.kbd}>↑</span>
             <span className={s.kbd}>↓</span>
-            to move
+            {t("to move")}
           </span>
           <span>
             <span className={s.kbd}>Esc</span>
-            to close
+            {t("to close")}
           </span>
         </div>
       </div>

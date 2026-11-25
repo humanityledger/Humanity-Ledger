@@ -25,10 +25,13 @@ import type { PayPrefill } from '@/lib/payments/request-draft';
 import { AlphaRiskAck, NO_ACK, acked } from './AlphaRiskAck';
 import { ProvingMemoryNote } from './ProvingMemoryNote';
 import { ProvingStatus } from './ProvingStatus';
+import { PaymentDisclosure } from './PaymentDisclosure';
+import { paymentDisclosure } from '@/lib/payments/disclosure';
 import { useAddressFingerprint } from './useAddressFingerprint';
 import { useValueMode } from '@/lib/aztec/useValueMode';
 import { effectiveToken } from '@/components/zk/wallet/walletLogic';
 import { EXITS_ONLY_MESSAGE, VALUE_MODE_UNCONFIRMED_MESSAGE } from '@/lib/aztec/value-mode';
+import { useT } from '@/lib/i18n/client';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 
@@ -50,6 +53,7 @@ interface ZkMoneyModalProps {
 }
 
 export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myAddress, recipientAddress, recipientName, dmPeerInboxId, selfInboxId, prefill, onSuccess }) => {
+  const tr = useT();
   const [wallet, setWallet] = useState<WalletSnapshot | null>(() => (typeof window === 'undefined' ? null : getPrivateWallet().state));
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const ready = wallet?.phase === 'ready';
@@ -70,19 +74,19 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
     body = (
       <div className="h-full bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-[14px] text-[#4a505c]">
         {NO_PRIVATE_TOKENS_MESSAGE}
-        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>Close</button>
+        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>{tr("Close")}</button>
       </div>
     );
   } else if (dmPeerInboxId && ready) {
-    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} peerAddress={recipientAddress} balances={wallet?.balances} prefill={prefill} onClose={onClose} onPaid={posted} />;
+    body = <DirectPaymentForm dmPeerInboxId={dmPeerInboxId} selfInboxId={selfInboxId ?? ''} peerName={recipientName} peerAddress={recipientAddress} balances={wallet?.balances} feeJuice={wallet?.feeJuice} prefill={prefill} onClose={onClose} onPaid={posted} />;
   } else if (dmPeerInboxId || !ALPHA) {
     // Wallet not open yet (DM: only to open it, no typed-address payment posted), or a test-network community.
     body = <ZkWalletPanel address={myAddress} onClose={onClose} initialSheet={dmPeerInboxId ? null : 'send'} onPaymentSent={dmPeerInboxId ? undefined : ({ txHash, token }) => posted(txHash, token)} />;
   } else {
     body = (
       <div className="h-full bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-[14px] text-[#4a505c]">
-        On {networkLabel()}, private payments from a chat go only to a verified address, in a direct conversation.
-        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>Close</button>
+        {tr("On")}{" "}{tr(networkLabel())}{tr(", private payments from a chat go only to a verified address, in a direct conversation.")}
+        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>{tr("Close")}</button>
       </div>
     );
   }
@@ -106,7 +110,8 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
   );
 };
 
-function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, balances, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; peerAddress?: string; balances?: WalletSnapshot['balances']; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
+function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, balances, feeJuice, prefill, onClose, onPaid }: { dmPeerInboxId: string; selfInboxId: string; peerName?: string; peerAddress?: string; balances?: WalletSnapshot['balances']; feeJuice?: WalletSnapshot['feeJuice']; prefill?: PayPrefill; onClose: () => void; onPaid: (txHash: string, token: TokenKey) => void }) {
+  const tr = useT();
   const [payee, setPayee] = useState<{ address?: string; verified: boolean } | null>(null);
   // Read on every render: cUSDC is listed for beta members once their membership is known (walletLogic.effectiveToken).
   const [chosen, setToken] = useState<TokenKey | null>(prefill?.token ?? null);
@@ -152,7 +157,9 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
   // G7 on every network; the fingerprint check is an extra out-of-band confirmation, never a substitute.
   const valueMode = useValueMode();
   const paused = valueMode && valueMode.mode !== 'open' ? (valueMode.unconfirmed ? VALUE_MODE_UNCONFIRMED_MESSAGE : EXITS_ONLY_MESSAGE) : null;
-  const blocked = !!paused || !!recipientIssue || !!lowBalance || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
+  // What the payment reveals and what its fee can be, before confirming (lib/payments/disclosure.ts).
+  const disclosure = paymentDisclosure({ network: AZTEC_WALLET_CONFIG.network, peerName: peerName || '', fee: feeJuice ? { balance: feeJuice.balance, minForTx: feeJuice.minForTx, plan: feeJuice.plan } : undefined });
+  const blocked = !!disclosure.feeProblem || !!paused || !!recipientIssue || !!lowBalance || !payee?.address || !payee.verified || !fingerprint || !confirmedFingerprint || (ALPHA && !acked(ack));
   const once = useRef(singleFlight()).current; // 4.19: a double tap never pays twice
   const send = () => once(async () => {
     if (busy || blocked) return;
@@ -165,7 +172,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
       onPaid(txHash, token);
       onClose();
     } catch (e) {
-      setError(`${humanError(e)} Nothing was sent unless your wallet activity shows the transaction.`);
+      setError(tr("{humanError} Nothing was sent unless your wallet activity shows the transaction.", { humanError: humanError(e) }));
     } finally {
       setBusy(false);
       setAck(NO_ACK);
@@ -176,35 +183,32 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
   const who = peerName || 'This person';
 
   return (
-    <div className="h-full overflow-y-auto overscroll-contain bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4" role="dialog" aria-label="Private payment">
-      <h2 className="text-[17px] font-semibold text-[#15171c]">Private payment</h2>
+    <div className="h-full overflow-y-auto overscroll-contain bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4" role="dialog" aria-label={tr("Private payment")}>
+      <h2 className="text-[17px] font-semibold text-[#15171c]">{tr("Private payment")}</h2>
       <p className="text-[13px] text-[#727a88] leading-snug">
         {payee === null
-          ? 'Checking the saved address…'
+          ? tr("Checking the saved address…")
           : !payee.address
-            ? `${who} has not shared an Aztec address in this chat yet.`
-            : `To ${who}:`}
+            ? tr("{who} has not shared an Aztec address in this chat yet.", { who })
+            : tr("To {who}:", { who })}
       </p>
 
       {payee?.address && (
         <div className="rounded-xl border border-[#e4e7ec] bg-[#f9fafb] p-3 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-[12px] font-medium text-[#4a505c]">Recipient Aztec Address</span>
+            <span className="text-[12px] font-medium text-[#4a505c]">{tr("Recipient Aztec Address")}</span>
             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${payee.verified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-              {payee.verified ? '✓ Verified (G7)' : 'Not verified: payment blocked'}
+              {payee.verified ? tr("✓ Verified (G7)") : tr("Not verified: payment blocked")}
             </span>
           </div>
           <div className="flex items-center justify-between font-mono text-[11px] text-[#15171c] bg-white border border-[#e4e7ec] rounded-lg px-2.5 py-1.5">
             <span className="truncate mr-2">{payee.address.slice(0, 14)}…{payee.address.slice(-10)}</span>
             {fingerprint && (
-              <span className="font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 flex-shrink-0" title="Address fingerprint (SHA-256)">
-                FP: {fingerprint}
+              <span className="font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 flex-shrink-0" title={tr("Address fingerprint (SHA-256)")}>{tr("FP: {fingerprint}", { fingerprint })}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-[#727a88] leading-tight">
-            Verification confirms control of the signing key. For large amounts, always confirm this fingerprint directly with {who}.
-          </p>
+          <p className="text-[11px] text-[#727a88] leading-tight">{tr("Verification confirms control of the signing key. For large amounts, always confirm this fingerprint directly with {who}.", { who })}</p>
           <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -213,40 +217,40 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
               onChange={(e) => setConfirmedFingerprint(e.target.checked)}
               disabled={busy}
             />
-            <span className="text-[11.5px] text-[#4a505c]">
-              I confirm the recipient fingerprint ({fingerprint}) matches {who}
+            <span className="text-[11.5px] text-[#4a505c]">{tr("I confirm the recipient fingerprint ({fingerprint}) matches {who}", { fingerprint, who })}
             </span>
           </label>
         </div>
       )}
 
       <label className="block text-[13px] text-[#4a505c]">
-        Token
+        {tr("Token")}
         <select className={`${field} mt-1`} value={token} disabled={busy || !!prefill} onChange={(e) => setToken(e.target.value as TokenKey)}>
           {AZTEC_WALLET_CONFIG.tokens.map((t) => (
-            <option key={t.key} value={t.key}>{ALPHA ? t.symbol : `${t.symbol} (test)`}</option>
+            <option key={t.key} value={t.key}>{ALPHA ? tr(t.symbol) : tr("{symbol} (test)", { symbol: t.symbol })}</option>
           ))}
         </select>
       </label>
       <label className="block text-[13px] text-[#4a505c]">
-        Amount
+        {tr("Amount")}
         <input className={`${field} mt-1`} inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} disabled={busy || !!prefill} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} />
       </label>
+      <PaymentDisclosure d={disclosure} />
       <ProvingMemoryNote />
       {ALPHA && <AlphaRiskAck kind="payment" value={ack} onChange={setAck} disabled={busy} />}
-      {busy && <ProvingStatus label="Checking the address, then proving the payment on this device" startedAt={startedAt || Date.now()} />}
+      {busy && <ProvingStatus label={tr("Checking the address, then proving the payment on this device")} startedAt={startedAt || Date.now()} />}
       {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
       {recipientIssue && (
         <p role="status" data-testid="beta-recipient" className={recipientIssue.checking ? 'text-[13px] text-[#4a505c]' : 'rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]'}>
-          {recipientIssue.text}
+          {tr(recipientIssue.text)}
         </p>
       )}
       {lowBalance && !busy && <p role="status" data-testid="low-balance" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{lowBalance}</p>}
       <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
-        {busy ? 'Proving on this device…' : 'Send privately'}
+        {busy ? tr("Proving on this device…") : tr("Send privately")}
       </button>
       {error && <p className="text-[13px] text-[#7a2e12] bg-[#fdf0eb] border border-[#f5d3c4] rounded-xl px-3 py-2" role="alert">{error}</p>}
-      <button type="button" className="w-full min-h-[44px] text-[13.5px] text-[#4a505c]" disabled={busy} onClick={onClose}>Cancel</button>
+      <button type="button" className="w-full min-h-[44px] text-[13.5px] text-[#4a505c]" disabled={busy} onClick={onClose}>{tr("Cancel")}</button>
     </div>
   );
 }

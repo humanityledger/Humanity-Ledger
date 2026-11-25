@@ -11,15 +11,22 @@ import { RELEASES } from "./pages/changelog";
 
 const blogEntries = BLOG_POSTS.map((p) => ({ page: p.page, group: "Blog" }));
 
-export const SEARCH_INDEX = [
-  ...buildSearchIndex(blogEntries),
-  ...RELEASES.map((r) => ({
-    href: `/docs/changelog#${r.id}`,
-    page: "Changelog",
-    group: "Company",
-    section: r.title,
-    summary: "",
-    keywords: "",
-    text: r.changes.map((c) => c.text).join(" "),
-  })),
-];
+import type { DocPage } from "./types";
+
+/** The index as a reader in another language sees it: `view` translates a page, `label` a text. */
+export function buildIndex(view?: (p: DocPage) => DocPage, label: (s: string) => string = (s) => s) {
+  return [
+    ...buildSearchIndex(blogEntries, view, label),
+    ...RELEASES.map((r) => ({
+      href: `/docs/changelog#${r.id}`,
+      page: label("Changelog"),
+      group: label("Company"),
+      section: label(r.title),
+      summary: "",
+      keywords: "",
+      text: r.changes.map((c) => label(c.text)).join(" "),
+    })),
+  ];
+}
+
+export const SEARCH_INDEX = buildIndex();

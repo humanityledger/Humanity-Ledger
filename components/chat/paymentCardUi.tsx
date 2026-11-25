@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { useT } from '@/lib/i18n/client';
 
 export type CardTone = 'ok' | 'wait' | 'bad' | 'neutral';
 
@@ -65,6 +66,7 @@ export function PaymentCardFrame({
   state: string;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div
       className="w-[300px] max-w-full rounded-[18px] border border-[#e4e7ec] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_24px_-16px_rgba(16,24,40,0.18)]"
@@ -73,7 +75,7 @@ export function PaymentCardFrame({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[#5b606b]">{eyebrow}</span>
-        <StatusPill tone={status.tone}>{status.label}</StatusPill>
+        <StatusPill tone={status.tone}>{t(status.label)}</StatusPill>
       </div>
       {children}
     </div>

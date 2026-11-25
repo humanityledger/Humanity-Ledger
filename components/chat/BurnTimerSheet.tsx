@@ -8,6 +8,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, X } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 const TIMER_OPTIONS = [
   { label: 'Off',     value: null,    desc: 'Messages stay forever' },
@@ -28,6 +29,7 @@ interface BurnTimerSheetProps {
 }
 
 export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: BurnTimerSheetProps) {
+  const t = useT();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -58,8 +60,8 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
                   <Flame size={20} className="text-red-500" />
                 </div>
                 <div>
-                  <p className="text-[16px] font-semibold text-[#15171c]">Disappearing messages</p>
-                  <p className="text-[12px] text-black/40 font-medium">Messages auto-delete after being read</p>
+                  <p className="text-[16px] font-semibold text-[#15171c]">{t("Disappearing messages")}</p>
+                  <p className="text-[12px] text-black/40 font-medium">{t("Messages auto-delete after being read")}</p>
                 </div>
               </div>
               <button
@@ -90,17 +92,17 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
                       ) : (
                         <div className="w-[18px] h-[18px] rounded-full border-2 border-current opacity-30" />
                       )}
-                      <span className="text-[15px] font-bold">{opt.label}</span>
+                      <span className="text-[15px] font-bold">{t(opt.label)}</span>
                     </div>
                     <span className={`text-[12px] font-medium ${isActive ? 'text-white/70' : 'text-black/40'}`}>
-                      {opt.desc}
+                      {t(opt.desc)}
                     </span>
                   </button>
                 );
               })}
             </div>
             <p className="px-6 pb-6 text-[12.5px] leading-relaxed text-[#5b606b]">
-              Ledger Chat removes them from both devices when the timer ends. Before that, the other person can still copy them or photograph the screen, and a modified app could ignore the timer.
+              {t("Ledger Chat removes them from both devices when the timer ends. Before that, the other person can still copy them or photograph the screen, and a modified app could ignore the timer.")}
             </p>
           </motion.div>
         </motion.div>

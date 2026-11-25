@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { getInMemoryCommunityBySlugOrId } from '@/lib/communities/in-memory-communities';
 import { memberNames } from '@/lib/communities/member-names';
+import { legacyPostsClosed, legacyReadOnlyBody } from '@/lib/communities/legacy';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Each post carries its author's Ledger Chat name, so members can tell who wrote what.
     const names = await memberNames(posts.map((p: any) => p.authorAddress));
     return NextResponse.json({
+      readOnly: legacyPostsClosed(community),
+      successorId: community.successorId ?? null,
       posts: posts.map((p: any) => ({ ...p, authorName: names.get(String(p.authorAddress || '').toLowerCase()) ?? null })),
     });
   } catch (e: any) {
@@ -89,6 +92,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         { error: 'This community keeps posts in an XMTP group. The server does not store them.', code: 'COMMUNITY_MLS' },
         { status: 410 },
       );
+    }
+    // Legacy community (posts stored here): read-only since 25 November 2026 (lib/communities/legacy.ts).
+    if (legacyPostsClosed(community)) {
+      return NextResponse.json(legacyReadOnlyBody(community), { status: 410 });
     }
 
     const isOwner = community.ownerAddress?.toLowerCase() === caller.toLowerCase();

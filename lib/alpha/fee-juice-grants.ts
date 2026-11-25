@@ -29,7 +29,13 @@ export interface GrantInput {
 /** The budget in base units, or null when ALPHA_FEE_JUICE_BUDGET is empty or invalid (D-4 default). */
 export function parseBudget(raw: string | undefined): bigint | null {
   if (!raw || !/^\d+(\.\d+)?$/.test(raw.trim())) return null;
-  const v = parseUnits(raw.trim(), FEE_JUICE_DECIMALS);
+  // parseUnits refuses zero with an error; a budget of 0 means "no budget", like an empty one.
+  let v: bigint;
+  try {
+    v = parseUnits(raw.trim(), FEE_JUICE_DECIMALS);
+  } catch {
+    return null;
+  }
   return v > 0n ? v : null;
 }
 

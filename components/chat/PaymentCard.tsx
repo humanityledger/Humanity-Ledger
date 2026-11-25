@@ -20,6 +20,7 @@ import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
 import { CardAmount, PaymentCardFrame, SpecRow } from './paymentCardUi';
 import { paymentReceipt } from '@/lib/payments/activity-report';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 const BTN = 'h-9 px-3.5 rounded-[10px] text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[#15171c] text-white hover:bg-[#2b2f38]';
 const shortTx = (h: string) => (h.length > 18 ? `${h.slice(0, 8)}…${h.slice(-6)}` : h);
@@ -50,6 +51,7 @@ export function paymentCardWords(state: PaymentCardState, isMe: boolean): { titl
 }
 
 export const PaymentCard = React.memo(function PaymentCard({ raw, isMe }: { raw: string; isMe: boolean }) {
+  const tr = useT();
   const msg = useMemo(() => parsePaymentMessage(raw), [raw]);
   const wallet = useWallet();
   const [checking, setChecking] = useState(false);
@@ -83,12 +85,12 @@ export const PaymentCard = React.memo(function PaymentCard({ raw, isMe }: { raw:
   return (
     <PaymentCardFrame eyebrow={`${isMe ? 'Your payment' : 'Private payment'} · ${msg.token.symbol}`} status={{ tone: words.tone, label: words.pill }} testId="payment-card" state={state.kind}>
       <CardAmount value={shownValue} symbol={msg.token.symbol} />
-      <p className="mt-2 text-[13px] font-semibold text-[#15171c]">{words.title}</p>
-      <p className="mt-0.5 text-[12.5px] leading-snug text-[#3d424b]">{words.detail}</p>
+      <p className="mt-2 text-[13px] font-semibold text-[#15171c]">{tr(words.title)}</p>
+      <p className="mt-0.5 text-[12.5px] leading-snug text-[#3d424b]">{tr(words.detail)}</p>
       <dl className="mt-3 border-t border-[#eef0f3] pt-1.5">
-        <SpecRow label="Network">{networkLabel()}</SpecRow>
+        <SpecRow label={tr("Network")}>{tr(networkLabel())}</SpecRow>
         {msg.txHash && (
-          <SpecRow label="Transaction">
+          <SpecRow label={tr("Transaction")}>
             {link ? (
               <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-[12px] text-[#2754d6] hover:underline">
                 {shortTx(msg.txHash)} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
@@ -105,15 +107,15 @@ export const PaymentCard = React.memo(function PaymentCard({ raw, isMe }: { raw:
           className="mt-3 text-[12.5px] font-semibold text-[#2754d6] hover:underline"
           onClick={() => {
             const meta = AZTEC_WALLET_CONFIG.tokens.find((t) => t.address.toLowerCase() === msg.token.address.toLowerCase());
-            void navigator.clipboard?.writeText(paymentReceipt(receiptEntry, meta, networkLabel(), link || undefined)).then(() => toast.success('Receipt copied'), () => toast.error('Could not copy'));
+            void navigator.clipboard?.writeText(paymentReceipt(receiptEntry, meta, networkLabel(), link || undefined)).then(() => toast.success(tr("Receipt copied")), () => toast.error(tr("Could not copy")));
           }}
         >
-          Copy receipt
+          {tr("Copy receipt")}
         </button>
       )}
       {!isMe && state.kind === 'awaiting' && state.walletOpen && (
         <button type="button" className={`${BTN} mt-3`} disabled={checking} onClick={check}>
-          {checking ? 'Checking…' : 'Check now'}
+          {checking ? tr("Checking…") : tr("Check now")}
         </button>
       )}
       <DisclosurePanel action={isMe ? 'send' : 'receive'} compact />

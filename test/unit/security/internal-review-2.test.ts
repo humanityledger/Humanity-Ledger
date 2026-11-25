@@ -45,7 +45,10 @@ describe('internal review 2', () => {
   });
   it('the reports say what they are, and no audit is claimed', () => {
     expect(read('docs/audit/INTERNAL_SECURITY_REVIEW_2026-11-19.md')).toMatch(/It is not an audit/);
-    expect(read('docs/audit/EXTERNAL_REVIEW_PACKAGE.md')).toMatch(/No external audit or external review of Ledger Chat exists/);
+    // Until a report exists the package says none has been completed (an audit beginning is not one).
+    const pkg = read('docs/audit/EXTERNAL_REVIEW_PACKAGE.md');
+    expect(pkg).toMatch(/No external audit or external review of Ledger Chat exists|none has been completed/);
+    expect(pkg).not.toMatch(/\b(has been|was|is) (externally )?audited\b|audit (is )?complete/i);
     expect(JSON.parse(read('deployments/aztec-mainnet.json')).audit).toBeNull();
   });
 });

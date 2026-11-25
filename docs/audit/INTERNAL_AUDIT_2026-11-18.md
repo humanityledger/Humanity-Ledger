@@ -1,5 +1,7 @@
 # Auditoría interna de Humanity Ledger / Ledger Chat — 18 de noviembre de 2026
 
+> **History.** This document is kept as written. For the current state and scope, read [`docs/audit/START_HERE.md`](START_HERE.md) (24 November 2026).
+
 **Qué es este documento.** Una auditoría interna hecha por un modelo de lenguaje (Claude) sobre el monorepo `humanityledger/Humanity-Ledger`, rama `main` en `2707065` más las correcciones de esta misma rama. **No es una auditoría externa** y no sustituye la de una firma especializada (Trail of Bits, Spearbit, Cantina, OpenZeppelin, Zellic). Ningún texto del proyecto puede decir "auditado" por este documento.
 
 **Método.** Primero el estado real (`docs/STATUS.md`, `deployments/aztec-mainnet.json`, `docs/MAINNET_READINESS.md`, `docs/AZTEC_DECISIONS.md`). Después, componente por componente, cada afirmación contrastada con el código, los tests y los despliegues. Se distingue siempre entre lo que hace el código, lo que dicen los documentos, lo que está desplegado en Aztec Alpha y el riesgo residual. Cada hallazgo indica archivo y línea o sección. Lo que no se pudo verificar se dice.

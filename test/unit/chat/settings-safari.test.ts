@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { untranslated } from '../../helpers/untranslated';
 
-const css = readFileSync('app/globals.css', 'utf8');
-const settings = readFileSync('components/chat/LedgerSettingsFull.tsx', 'utf8');
+const css = untranslated(readFileSync('app/globals.css', 'utf8'));
+const settings = untranslated(readFileSync('components/chat/LedgerSettingsFull.tsx', 'utf8'));
 
 describe('Settings opens its sections on phones and tablets (cause found 18/11/2026)', () => {
   it('the global nav centering rule never un-hides a hidden nav', () => {
@@ -24,7 +25,7 @@ describe('Settings opens its sections on phones and tablets (cause found 18/11/2
     expect(settings).toMatch(/e\.key === 'Escape'\) setActiveTab\('home'\)/);
   });
   it('the WebKit and Chromium test exists and covers desktop, iPhone 15 and iPad Pro 11', () => {
-    const t = readFileSync('scripts/ui/settings-webkit.mjs', 'utf8');
+    const t = untranslated(readFileSync('scripts/ui/settings-webkit.mjs', 'utf8'));
     expect(t).toMatch(/devices\['iPhone 15'\]/);
     expect(t).toMatch(/devices\['iPad Pro 11'\]/);
     expect(t).toMatch(/\['webkit', webkit\], \['chromium', chromium\]/);

@@ -8,12 +8,14 @@
  */
 import React from 'react';
 import s from './site.module.css';
+import { useT } from '@/lib/i18n/client';
 
 interface Step { title: string; text: string }
 
 const AMOUNT = '25.00';
 
 function Vis({ i }: { i: number }) {
+  const t = useT();
   if (i === 0) {
     return (
       <svg viewBox="0 0 220 120" aria-hidden="true" className={`${s.pv} ${s.pv1}`}>
@@ -59,7 +61,7 @@ function Vis({ i }: { i: number }) {
   return (
     <svg viewBox="0 0 220 120" aria-hidden="true" className={`${s.pv} ${s.pv4}`}>
       <rect x="30" y="34" width="160" height="52" rx="8" fill="#fff" stroke="#c9ced8" />
-      <text x="46" y="56" fontSize="11" fill="#5f6673">Received, private</text>
+      <text x="46" y="56" fontSize="11" fill="#5f6673">{t("Received, private")}</text>
       <text x="46" y="76" style={{ fontFamily: 'var(--mono)' }} fontSize="18" fill="#15171c">{AMOUNT}</text>
       <path d="M166 52.5V49a5 5 0 0 1 10 0v3.5M164 52.5h14v11h-14z" fill="none" stroke="#15171c" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
@@ -67,6 +69,7 @@ function Vis({ i }: { i: number }) {
 }
 
 export function ProofSequence({ steps, label }: { steps: readonly Step[]; label: React.ReactNode }) {
+  const t = useT();
   const ref = React.useRef<HTMLOListElement>(null);
   const [armed, setArmed] = React.useState(false);
   const [played, setPlayed] = React.useState(false);
@@ -102,14 +105,14 @@ export function ProofSequence({ steps, label }: { steps: readonly Step[]; label:
     <div>
       <div className={s.proofBar}>
         {label}
-        <button type="button" className={s.replay} onClick={replay}>Replay</button>
+        <button type="button" className={s.replay} onClick={replay}>{t("Replay")}</button>
       </div>
       <ol ref={ref} className={`${s.proof} ${armed ? s.armed : ''} ${played ? s.played : ''}`} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {steps.map((st, i) => (
           <li key={st.title} className={s.proofStep}>
             <div className={s.proofVis}><Vis i={i} /></div>
-            <h3 className={s.proofTitle}>{st.title}</h3>
-            <p className={s.proofText}>{st.text}</p>
+            <h3 className={s.proofTitle}>{t(st.title)}</h3>
+            <p className={s.proofText}>{t(st.text)}</p>
           </li>
         ))}
       </ol>

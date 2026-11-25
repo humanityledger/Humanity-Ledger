@@ -93,7 +93,9 @@ export async function createSecureGroup(
   client: Client,
   memberAddresses: string[],
   groupName: string,
-  description: string = ''
+  description: string = '',
+  /** A community's first channel starts with its creator only; members are added as they join. */
+  opts: { allowCreatorOnly?: boolean } = {},
 ): Promise<string> {
   // 1. Sanitize all metadata inputs (XSS prevention)
   const safeName = sanitizeGroupMetadata(groupName);
@@ -118,7 +120,7 @@ export async function createSecureGroup(
     });
   }
 
-  if (validatedIdentifiers.length < 1) {
+  if (validatedIdentifiers.length < 1 && !opts.allowCreatorOnly) {
     throw new Error('[GroupChat] At least 1 valid member address is required.');
   }
 

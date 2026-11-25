@@ -39,6 +39,7 @@ import { useMotionPreset } from './motion';
 import { useNow } from './useNow';
 import { buzz, HAPTIC } from './haptics';
 import s from './activities.module.css';
+import { useT } from '@/lib/i18n/client';
 
 export const CALL_SURFACE_ID = 'live-call-surface';
 
@@ -51,6 +52,7 @@ const SWIPE_VELOCITY = 380;
 const AURA: Record<Tone, string> = { live: s.auraLive, warn: s.auraWarn, danger: s.auraDanger, violet: s.auraViolet, neutral: s.auraNeutral };
 
 export function Island({ quiet = false }: { quiet?: boolean }) {
+  const t = useT();
   const activities = useActivities((st) => st.activities);
   const presentation = useActivities((st) => st.presentation);
   const expandedId = useActivities((st) => st.expandedId);

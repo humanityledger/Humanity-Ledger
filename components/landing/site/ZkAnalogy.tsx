@@ -7,6 +7,7 @@
  */
 import React from 'react';
 import s from './site.module.css';
+import { useT } from '@/lib/i18n/client';
 
 interface Step { title: string; text: string }
 
@@ -25,6 +26,7 @@ function Balls({ colours }: { colours: [string, string] }) {
 }
 
 export function ZkAnalogy({ steps }: { steps: readonly Step[] }) {
+  const tr = useT();
   const ref = React.useRef<HTMLDivElement>(null);
   const [step, setStep] = React.useState(0);
   const driven = React.useRef(false);
@@ -56,15 +58,15 @@ export function ZkAnalogy({ steps }: { steps: readonly Step[] }) {
     <div ref={ref} className={s.analogy} data-step={step}>
       <div className={s.anaStage}>
         <div className={s.anaView}>
-          <span className={s.anaCaption}>You see</span>
+          <span className={s.anaCaption}>{tr("You see")}</span>
           <Balls colours={['#ff3b30', '#10b981']} />
         </div>
         <div className={s.anaView}>
-          <span className={s.anaCaption}>Your friend sees</span>
+          <span className={s.anaCaption}>{tr("Your friend sees")}</span>
           <Balls colours={['#9aa1ad', '#9aa1ad']} />
         </div>
       </div>
-      <div className={s.anaSteps} role="group" aria-label="The two-balls example, step by step">
+      <div className={s.anaSteps} role="group" aria-label={tr("The two-balls example, step by step")}>
         {steps.map((st, i) => (
           <button
             key={st.title}
@@ -73,8 +75,8 @@ export function ZkAnalogy({ steps }: { steps: readonly Step[] }) {
             aria-pressed={step === i}
             onClick={() => { driven.current = true; setStep(i); }}
           >
-            <b>{st.title}</b>
-            <span>{st.text}</span>
+            <b>{tr(st.title)}</b>
+            <span>{tr(st.text)}</span>
           </button>
         ))}
       </div>

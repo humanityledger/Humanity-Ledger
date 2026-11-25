@@ -32,40 +32,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify unique protocol identifiers are present in circuits
+      - name: Verify the protocol identifier is present in the normative spec
         run: |
           echo "Verifying cryptographic authorship watermarks..."
 
-          # Each circuit must contain the canonical protocol identifier comment
           FAIL=0
-          for circuit in escrow identity streams; do
-            FILE="circuits/${circuit}/src/main.nr"
-            if [ ! -f "$FILE" ]; then
-              echo "MISSING: $FILE"
-              FAIL=1
-              continue
-            fi
-            # Verify the file contains our canonical header (unique string present in no other repo)
-            if ! grep -q "Humanity Ledger Protocol" "$FILE"; then
-              echo "WATERMARK MISSING in $FILE"
-              FAIL=1
-            else
-              echo "[OK] $circuit watermark present"
-            fi
-          done
+          # The standalone Noir circuits were retired to archive/standalone-circuits (25 Nov 2026).
 
           # Verify HLSPEC 2026.1 identifier is present in the normative spec
           if ! grep -q "HLSPEC 2026.1" docs/PROTOCOL_SPEC.md 2>/dev/null; then
             echo "WARNING: HLSPEC 2026.1 identifier not found in PROTOCOL_SPEC.md"
           else
             echo "[OK] HLSPEC 2026.1 identifier verified"
-          fi
-
-          # Verify CONSTRAINT_COMPLETENESS.md is present and contains canonical commit
-          if ! grep -q "783df711" circuits/CONSTRAINT_COMPLETENESS.md 2>/dev/null; then
-            echo "WARNING: Canonical commit reference missing from CONSTRAINT_COMPLETENESS.md"
-          else
-            echo "[OK] Canonical commit reference verified in CONSTRAINT_COMPLETENESS.md"
           fi
 
           if [ "$FAIL" -eq 1 ]; then
@@ -285,5 +263,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify VK artifacts have not been tampered with
-        run: node scripts/zk/check-artifacts.mjs --fast
+      - name: Verify the aztec-nr artifacts have not been tampered with
+        run: node scripts/aztec/pin-artifacts.mjs --check

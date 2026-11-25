@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { legacyPostsClosed, legacyReadOnlyBody } from '@/lib/communities/legacy';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
@@ -36,6 +37,10 @@ export async function POST(req: Request) {
         { error: 'This community keeps posts in an XMTP group. The server does not store them.', code: 'COMMUNITY_MLS' },
         { status: 410 },
       );
+    }
+    // Legacy community: read-only since 25 November 2026 (lib/communities/legacy.ts).
+    if (legacyPostsClosed(community)) {
+      return NextResponse.json(legacyReadOnlyBody(community), { status: 410 });
     }
 
     const isOwner = community.ownerAddress?.toLowerCase() === authorAddress;

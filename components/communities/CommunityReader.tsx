@@ -16,6 +16,11 @@
  * read and sent through the person's XMTP client, the server never receives them, and an admin's
  * client keeps the group's members equal to the server's list.
  *
+ * A legacy community (made before 24 November 2026, posts stored by our server) is read-only
+ * (lib/communities/legacy.ts): the old posts stay readable, the composer is replaced by a notice
+ * that says why, and an owner or admin can re-create it end-to-end encrypted. Once re-created, every
+ * member sees a button to join the new one; nobody is added for them and old posts are not copied.
+ *
  * Built for people who do not want a guide: text at least 18px, labels in
  * ordinary words, text contrast at least 7:1 on its background, tap targets at
  * least 48px. No hashes, contract addresses or protocol names on this screen.
@@ -32,11 +37,16 @@ import { toast } from 'sonner';
 import { Copy, MessageCircle, Pin, Wallet } from 'lucide-react';
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
-import { mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
+import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
+import { createCommunityGroup } from '@/lib/communities/mls';
+import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
+import { useT } from '@/lib/i18n/client';
 
 export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';
 /** For a community whose posts live in an XMTP MLS group (lib/communities/mls.ts). */
+/** For a read-only legacy community (lib/communities/legacy.ts): nothing new is written here. */
+export const LEGACY_VISIBILITY_SENTENCE = 'Our server can read the posts in this community. That is why it no longer takes new ones.';
 export const MLS_VISIBILITY_SENTENCE = 'Only members can read what you write here. Posts are end-to-end encrypted and our server does not store them. Who is a member is still known to our server.';
 
 /** Text colours on white used here, with their contrast ratio. All are at least 7:1. */
@@ -70,7 +80,13 @@ export interface CommunityReaderProps {
   fetchImpl?: typeof fetch;
   /** The signed-in XMTP client; needed only for a community whose posts live in an MLS group. */
   xmtpClient?: any;
+  /** Opens another community (the encrypted re-creation of a read-only one). */
+  onOpenCommunity?: (id: string) => void;
 }
+
+/** Why a legacy community no longer takes posts, in one place for the screen and its tests. */
+export const READ_ONLY_TITLE = 'This community is read-only';
+export const READ_ONLY_SENTENCE = 'It was made before 24 November 2026, when posts were stored on our server, which can read them. It no longer accepts new posts. The old posts stay here as they were: our server can still read them, and they are not moved.';
 
 const DEFAULT_TITLE = /^community post$/i;
 
@@ -126,7 +142,8 @@ export function authorLabel(p: ReaderPost, me: string, nameFor?: (address: strin
   return { name, wallet: name === wallet ? '' : wallet, mine: false };
 }
 
-export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, fetchImpl, xmtpClient }: CommunityReaderProps) {
+export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, fetchImpl, xmtpClient, onOpenCommunity }: CommunityReaderProps) {
+  const tr = useT();
   // Stable across renders: the loaders below depend on it, and a new function each render would refetch in a loop.
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
   const me = myAddress.toLowerCase();
@@ -137,11 +154,19 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [mayPin, setMayPin] = useState(false);
   const [menu, setMenu] = useState<{ at: MenuAt; post: Shown } | null>(null);
   const [posts, setPosts] = useState<Shown[]>([]);
-  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error' | 'waiting'>('loading');
   const [draft, setDraft] = useState('');
   // Set from the community: the XMTP group that carries the posts, when the community is on MLS.
   const [mlsGroup, setMlsGroup] = useState<string | null>(null);
   const [mlsAdmin, setMlsAdmin] = useState<CommunityLike | null>(null);
+  const [mlsMember, setMlsMember] = useState<CommunityLike | null>(null);
+  // A legacy community: read-only, with the community it was re-created as, if any.
+  const [readOnly, setReadOnly] = useState(false);
+  const [successorId, setSuccessorId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [about, setAbout] = useState<{ description: string; isPrivate: boolean }>({ description: '', isPrivate: true });
+  const [moving, setMoving] = useState<'idle' | 'confirm' | 'working'>('idle');
+  const [moveError, setMoveError] = useState('');
   const senders = useRef(new Map<string, string>());
   const listEnd = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -159,9 +184,14 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       const mine = (Array.isArray(c?.members) ? c.members : []).find((m: any) => String(m?.walletAddress || '').toLowerCase() === me);
       const owner = String(c?.ownerAddress || '').toLowerCase() === me;
       setMayPin(owner || mine?.role === 'ADMIN' || (!!mine && c?.permissions?.pinMessages === true));
+      setIsAdmin(owner || mine?.role === 'ADMIN');
+      setReadOnly(c?.postsReadOnly === true);
+      setSuccessorId(typeof c?.successorId === 'string' && c.successorId ? c.successorId : null);
+      setAbout({ description: typeof c?.description === 'string' ? c.description : '', isPrivate: c?.isPrivate !== false });
       const group = mlsGroupOf(c);
       setMlsGroup(group);
       setMlsAdmin(group && (owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
+      setMlsMember(group && mine && !(owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
     } catch { /* the header falls back to "Community" */ }
   }, [communityId, f, headers, me]);
 
@@ -170,6 +200,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       // Posts live in the XMTP group: read them there, never from the server.
       if (!xmtpClient) { setLoad('error'); return; }
       try {
+        // Not in the group yet: a member who is online adds people who joined (lib/communities/mls.ts).
+        await xmtpClient.conversations?.sync?.().catch?.(() => {});
+        const inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
+        if (!inGroup) { setLoad((st) => (st === 'ready' ? 'ready' : 'waiting')); return; }
         const list = await readGroupPosts(xmtpClient, mlsGroup);
         const incoming: ReaderPost[] = [];
         for (const m of list) {
@@ -200,6 +234,8 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         setLoad('error');
         return;
       }
+      if (d?.readOnly === true) setReadOnly(true);
+      if (typeof d?.successorId === 'string' && d.successorId) setSuccessorId(d.successorId);
       const incoming: ReaderPost[] = Array.isArray(d.posts) ? d.posts : [];
       setPosts((prev) => {
         // Posts still sending or failed on this device stay until they are resolved.
@@ -218,6 +254,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     if (!mlsGroup || !mlsAdmin || !xmtpClient) return;
     syncGroupMembers(xmtpClient, mlsGroup, mlsAdmin, me).catch(() => { /* retried next time the community opens */ });
   }, [mlsGroup, mlsAdmin, xmtpClient, me]);
+  // Any other member's client adds people who joined while no admin was online (never removes).
+  useEffect(() => {
+    if (!mlsGroup || !mlsMember || !xmtpClient) return;
+    addMissingMembers(xmtpClient, mlsGroup, mlsMember, me).catch(() => { /* retried next time the community opens */ });
+  }, [mlsGroup, mlsMember, xmtpClient, me]);
 
   useEffect(() => {
     setLoad('loading');
@@ -259,7 +300,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title: 'Community post', content: body, contentHtml: body }),
+        body: JSON.stringify({ title: tr("Community post"), content: body, contentHtml: body }),
       });
       status = res.status;
       const d = await res.json().catch(() => ({}));
@@ -268,9 +309,50 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         return;
       }
       serverError = typeof d?.error === 'string' ? d.error : undefined;
+      if (res.status === 410 && d?.code === 'COMMUNITY_LEGACY_READ_ONLY') {
+        // The screen was out of date: show the notice, and keep the text so nothing is lost.
+        setReadOnly(true);
+        if (typeof d?.successorId === 'string' && d.successorId) setSuccessorId(d.successorId);
+        setDraft(body);
+        setPosts((prev) => prev.filter((p) => p.id !== localId));
+        return;
+      }
     } catch { /* status stays null: no answer */ }
     // A failed post stays on screen, marked, with what to do next. It never looks sent.
     setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: sendFailure(status, serverError) } : p)));
+  };
+
+  const recreate = async () => {
+    setMoving('working');
+    setMoveError('');
+    const r = await recreateOnMls({
+      community: { id: communityId, name: name || 'Community', description: about.description, isPrivate: about.isPrivate },
+      headers,
+      fetchImpl: f,
+      createGroup: async (n) => {
+        if (!xmtpClient) throw new Error('not ready');
+        return createCommunityGroup(xmtpClient, n);
+      },
+    });
+    if (r.ok) {
+      setSuccessorId(r.id);
+      setMoving('idle');
+      toast.success(tr("The encrypted community is ready. Invite people, or they join from here."));
+      onOpenCommunity?.(r.id);
+      return;
+    }
+    setMoving('confirm');
+    setMoveError(tr(r.error));
+  };
+
+  const follow = async () => {
+    if (!successorId) return;
+    setMoving('working');
+    setMoveError('');
+    const r = await followSuccessor(communityId, headers, f);
+    setMoving('idle');
+    if (r.ok) { onOpenCommunity?.(r.id); return; }
+    setMoveError(tr(r.error));
   };
 
   const dismiss = (id: string) => setPosts((prev) => prev.filter((p) => p.id !== id));
@@ -278,9 +360,9 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const copy = async (text: string, done: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(done);
+      toast.success(tr(done));
     } catch {
-      toast.error('Could not copy on this device.');
+      toast.error(tr("Could not copy on this device."));
     }
   };
 
@@ -293,22 +375,22 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         body: JSON.stringify({ action: 'PIN_MESSAGE', communityId, messageId: id }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d?.ok) toast.success('Pin added. You find it in Manage.');
-      else toast.error(typeof d?.error === 'string' ? d.error : 'The pin was not added. Try again.');
+      if (res.ok && d?.ok) toast.success(tr("Pin added. You find it in Manage."));
+      else toast.error(typeof d?.error === 'string' ? d.error : tr("The pin was not added. Try again."));
     } catch {
-      toast.error('This device could not reach the server. Check your connection and try again.');
+      toast.error(tr("This device could not reach the server. Check your connection and try again."));
     }
   };
 
   const menuItems = (p: Shown): MenuItem[] => {
     const addr = (p.authorAddress || '').toLowerCase();
     const mine = addr === me;
-    const items: MenuItem[] = [{ label: 'Copy text', icon: <Copy size={16} strokeWidth={1.9} />, onSelect: () => copy(postText(p), 'Text copied.') }];
+    const items: MenuItem[] = [{ label: tr("Copy text"), icon: <Copy size={16} strokeWidth={1.9} />, onSelect: () => copy(postText(p), 'Text copied.') }];
     if (/^0x[0-9a-f]{40}$/.test(addr)) {
       items.push({ label: mine ? 'Copy your wallet' : 'Copy wallet address', icon: <Wallet size={16} strokeWidth={1.9} />, onSelect: () => copy(addr, 'Wallet address copied.') });
-      if (!mine && onMessage) items.push({ label: 'Message privately', icon: <MessageCircle size={16} strokeWidth={1.9} />, onSelect: () => onMessage(addr) });
+      if (!mine && onMessage) items.push({ label: tr("Message privately"), icon: <MessageCircle size={16} strokeWidth={1.9} />, onSelect: () => onMessage(addr) });
     }
-    if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: 'Pin', icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
+    if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: tr("Pin"), icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
     return items;
   };
 
@@ -318,38 +400,43 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   return (
     <section className="flex-1 flex flex-col h-full min-h-0 bg-white" aria-label={title}>
       <header className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-[#d4d8de] bg-white">
-        <button type="button" onClick={onBack} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label="Back to your communities">
+        <button type="button" onClick={onBack} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Back to your communities")}>
           <span aria-hidden="true" className="text-[22px] leading-none">‹</span>
-          <span className="hidden sm:inline">Back</span>
+          <span className="hidden sm:inline">{tr("Back")}</span>
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[21px] sm:text-[22px] font-semibold leading-tight truncate" style={{ color: INK }}>{title}</h1>
           {members !== null && (
-            <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? '1 member' : `${members} members`}</p>
+            <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? tr("1 member") : tr("{members} members", { members })}</p>
           )}
         </div>
         <button type="button" onClick={onManage} className={`${btn} border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`} style={{ color: INK }}>
-          Manage
+          {tr("Manage")}
         </button>
       </header>
 
       <p className="shrink-0 px-4 sm:px-6 py-3 text-[18px] leading-snug bg-[#f2f4f7] border-b border-[#d4d8de]" style={{ color: INK }} role="note">
-        {mlsGroup ? MLS_VISIBILITY_SENTENCE : VISIBILITY_SENTENCE}
+        {tr(mlsGroup ? MLS_VISIBILITY_SENTENCE : readOnly ? LEGACY_VISIBILITY_SENTENCE : VISIBILITY_SENTENCE)}
       </p>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4" aria-live="polite">
         {load === 'loading' && posts.length === 0 && (
-          <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">Loading the posts…</p>
+          <p className="text-[18px] py-10 text-center" style={{ color: INK_SOFT }} role="status">{tr("Loading the posts…")}</p>
+        )}
+        {load === 'waiting' && posts.length === 0 && (
+          <div className="py-10 text-center" role="status" data-testid="mls-waiting">
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.")}</p>
+          </div>
         )}
         {load === 'error' && posts.length === 0 && (
           <div className="py-10 text-center" role="alert">
-            <p className="text-[18px] leading-snug" style={{ color: INK }}>The posts could not be loaded. Check your connection and try again.</p>
-            <button type="button" onClick={() => { setLoad('loading'); fetchPosts(); }} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>Try again</button>
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("The posts could not be loaded. Check your connection and try again.")}</p>
+            <button type="button" onClick={() => { setLoad('loading'); fetchPosts(); }} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
           </div>
         )}
         {load === 'ready' && posts.length === 0 && (
           <div className="py-10 text-center">
-            <p className="text-[18px] leading-snug" style={{ color: INK }}>No posts yet. Write the first one below.</p>
+            <p className="text-[18px] leading-snug" style={{ color: INK }}>{readOnly ? tr("There are no old posts in this community.") : tr("No posts yet. Write the first one below.")}</p>
           </div>
         )}
         <ol className="flex flex-col gap-4 max-w-[720px] mx-auto">
@@ -363,7 +450,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 key={p.id}
                 failed={p.state === 'failed'}
                 mine={author.mine}
-                label={`Post by ${author.name}`}
+                label={tr("Post by {name}", { name: author.name })}
                 onMenu={(at) => setMenu({ at, post: p })}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -382,13 +469,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 </div>
                 {heading && <p className="text-[19px] font-semibold mt-2" style={{ color: INK }}>{heading}</p>}
                 <p className="text-[18px] leading-relaxed mt-2 whitespace-pre-wrap break-words" style={{ color: INK }}>{text}</p>
-                {p.state === 'sending' && <p className="text-[16px] mt-2" style={{ color: INK_SOFT }} role="status">Sending…</p>}
+                {p.state === 'sending' && <p className="text-[16px] mt-2" style={{ color: INK_SOFT }} role="status">{tr("Sending…")}</p>}
                 {p.state === 'failed' && (
                   <div className="mt-2" role="alert">
                     <p className="text-[17px] font-semibold leading-snug" style={{ color: DANGER }}>{p.error}</p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] text-white hover:bg-[#2a2d34]`}>Try again</button>
-                      <button type="button" onClick={() => dismiss(p.id)} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>Remove</button>
+                      <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
+                      <button type="button" onClick={() => dismiss(p.id)} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>{tr("Remove")}</button>
                     </div>
                   </div>
                 )}
@@ -396,17 +483,57 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             );
           })}
         </ol>
-        {menu && <ContextMenu at={menu.at} items={menuItems(menu.post)} label="Post actions" onClose={() => setMenu(null)} />}
+        {menu && <ContextMenu at={menu.at} items={menuItems(menu.post)} label={tr("Post actions")} onClose={() => setMenu(null)} />}
         <div ref={listEnd} />
       </div>
 
+      {readOnly ? (
+        <div
+          className="shrink-0 border-t border-[#d4d8de] bg-[#f2f4f7] px-4 sm:px-6 pt-4 pb-[max(16px,env(safe-area-inset-bottom))]"
+          role="region"
+          aria-label={tr(READ_ONLY_TITLE)}
+          data-testid="legacy-read-only"
+        >
+          <div className="max-w-[720px] mx-auto">
+            <h2 className="text-[19px] font-semibold leading-snug" style={{ color: INK }}>{tr(READ_ONLY_TITLE)}</h2>
+            <p className="text-[18px] leading-snug mt-1" style={{ color: INK }}>{tr(READ_ONLY_SENTENCE)}</p>
+            {successorId ? (
+              <>
+                <p className="text-[18px] leading-snug mt-3" style={{ color: INK }}>{tr("It continues as a new community where posts are end-to-end encrypted and our server does not store them. Joining is your choice.")}</p>
+                <button type="button" onClick={follow} disabled={moving === 'working'} className={`${btn} mt-3 px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
+                  {moving === 'working' ? tr("Joining…") : tr("Join the encrypted community")}
+                </button>
+              </>
+            ) : isAdmin ? (
+              moving === 'idle' ? (
+                <button type="button" onClick={() => { setMoveError(''); setMoving('confirm'); }} className={`${btn} mt-3 px-6 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>
+                  {tr("Re-create it end-to-end encrypted")}
+                </button>
+              ) : (
+                <div className="mt-3" data-testid="legacy-recreate-confirm">
+                  <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("A new community starts with the same name, and its posts are end-to-end encrypted. Members are not added for them: each one sees a button here to join. Old posts are not copied.")}</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button type="button" onClick={recreate} disabled={moving === 'working'} className={`${btn} px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
+                      {moving === 'working' ? tr("Creating…") : tr("Create the encrypted community")}
+                    </button>
+                    <button type="button" onClick={() => setMoving('idle')} disabled={moving === 'working'} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>{tr("Cancel")}</button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <p className="text-[18px] leading-snug mt-3" style={{ color: INK_SOFT }}>{tr("An owner or admin can re-create it end-to-end encrypted. You will then see a button here to join.")}</p>
+            )}
+            {moveError && <p className="text-[17px] font-semibold leading-snug mt-2" style={{ color: DANGER }} role="alert">{moveError}</p>}
+          </div>
+        </div>
+      ) : (
       <form
         className="shrink-0 border-t border-[#d4d8de] bg-white px-3 sm:px-6 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]"
         onSubmit={(e) => { e.preventDefault(); submit(draft); }}
       >
         <div className="max-w-[720px] mx-auto">
           <label htmlFor={`community-write-${communityId}`} className="block text-[18px] font-semibold mb-2" style={{ color: INK }}>
-            Write a post
+            {tr("Write a post")}
           </label>
           <textarea
             id={`community-write-${communityId}`}
@@ -416,18 +543,19 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             rows={2}
             maxLength={8000}
             data-allow-context
-            placeholder="Write your message here"
+            placeholder={tr("Write your message here")}
             className="w-full rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] leading-relaxed resize-none placeholder:text-[#4a505c] bg-white"
             style={{ color: INK }}
           />
           {/* Send is the only action here. */}
           <div className="flex justify-end gap-2 mt-2">
             <button type="submit" disabled={!draft.trim()} className={`${btn} px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
-              Send
+              {tr("Send")}
             </button>
           </div>
         </div>
       </form>
+      )}
     </section>
   );
 }

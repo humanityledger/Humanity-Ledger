@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, RefreshCw } from 'lucide-react';
 import { formatCount, type GrowthPoint } from '@/lib/communities/analytics';
 import { ZkCommunityTreasury } from '@/components/zk/ZkCommunityTreasury';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Community analytics for owners and admins. Every figure comes from
@@ -92,6 +93,7 @@ function SkeletonBlock({ className }: { className: string }) {
 }
 
 export default function CommunityAnalytics({ communityId, community: initialCommunity }: CommunityAnalyticsProps) {
+  const t = useT();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -157,8 +159,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-[18px] font-semibold tracking-tight text-[#15171C] truncate">{communityName}</h1>
-          <p className="text-[13px] text-[#727A88]">
-            Analytics · from the server database · established {formatDate(data?.community?.createdAt)}
+          <p className="text-[13px] text-[#727A88]">{t("Analytics · from the server database · established {formatDate}", { formatDate: formatDate(data?.community?.createdAt) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -173,7 +174,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                   activeTab === id ? 'bg-white text-[#15171C] border border-[#E4E7EC]' : 'text-[#727A88] hover:text-[#15171C] border border-transparent'
                 }`}
               >
-                {label}
+                {t(label)}
                 {id === 'members' && state === 'ready' ? (
                   <span className="ml-1 tabular-nums text-[#727A88]">{formatCount(members.length)}</span>
                 ) : null}
@@ -184,10 +185,10 @@ export default function CommunityAnalytics({ communityId, community: initialComm
             onClick={handleRefresh}
             disabled={refreshing}
             className="h-9 px-3 inline-flex items-center gap-1.5 bg-white border border-[#E4E7EC] rounded-xl text-[13px] font-medium text-[#15171C] hover:bg-[#F2F4F7] disabled:text-[#A3A9B4] transition-colors duration-150 ease-out"
-            title="Read the figures again"
+            title={t("Read the figures again")}
           >
             <RefreshCw size={14} strokeWidth={1.5} />
-            {refreshing ? 'Reading…' : 'Refresh'}
+            {refreshing ? t("Reading…") : t("Refresh")}
           </button>
         </div>
       </div>
@@ -202,13 +203,13 @@ export default function CommunityAnalytics({ communityId, community: initialComm
           <SkeletonBlock className="h-56" />
         </div>
       ) : state === 'forbidden' ? (
-        <Panel title="Analytics are for owners and admins">
-          <p className="text-[13px] text-[#475061]">Your account is not an owner or admin of this community.</p>
+        <Panel title={t("Analytics are for owners and admins")}>
+          <p className="text-[13px] text-[#475061]">{t("Your account is not an owner or admin of this community.")}</p>
         </Panel>
       ) : state === 'error' ? (
-        <Panel title="Analytics could not be read">
+        <Panel title={t("Analytics could not be read")}>
           <p className="text-[13px] text-[#475061]">
-            The server did not answer. No figures are shown rather than figures that may be wrong.
+            {t("The server did not answer. No figures are shown rather than figures that may be wrong.")}
           </p>
         </Panel>
       ) : (
@@ -216,22 +217,21 @@ export default function CommunityAnalytics({ communityId, community: initialComm
           {activeTab === 'overview' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <Metric label="Members" value={formatCount(stats.totalMembers)} note="Wallets signed in with Ethereum" />
-                <Metric label="Owners and admins" value={formatCount(stats.adminCount)} note="Can moderate and configure" />
-                <Metric label="Channels" value={formatCount(stats.totalChannels)} note="Rooms in this community" />
-                <Metric label="Posts" value={formatCount(stats.totalPosts)} note="Published with a title" />
-                <Metric label="Channel messages" value={formatCount(stats.totalChannelMessages)} note="All time" />
-                <Metric label="Messages, 30 days" value={formatCount(stats.channelMessages30d)} note="Channel messages" />
+                <Metric label={t("Members")} value={formatCount(stats.totalMembers)} note={t("Wallets signed in with Ethereum")} />
+                <Metric label={t("Owners and admins")} value={formatCount(stats.adminCount)} note={t("Can moderate and configure")} />
+                <Metric label={t("Channels")} value={formatCount(stats.totalChannels)} note={t("Rooms in this community")} />
+                <Metric label={t("Posts")} value={formatCount(stats.totalPosts)} note={t("Published with a title")} />
+                <Metric label={t("Channel messages")} value={formatCount(stats.totalChannelMessages)} note={t("All time")} />
+                <Metric label={t("Messages, 30 days")} value={formatCount(stats.channelMessages30d)} note={t("Channel messages")} />
               </div>
 
               <p className="text-[12px] leading-relaxed text-[#727A88] px-1">
-                Channel messages and posts are stored on the Ledger Chat server and are readable by it: they are
-                not end-to-end encrypted. Direct messages use XMTP and are not counted here.
+                {t("Channel messages and posts are stored on the Ledger Chat server and are readable by it: they are not end-to-end encrypted. Direct messages use XMTP and are not counted here.")}
               </p>
 
-              <Panel title="Member growth" note="Members at the end of each month, UTC. Last 12 months.">
+              <Panel title={t("Member growth")} note={t("Members at the end of each month, UTC. Last 12 months.")}>
                 {growth.length === 0 ? (
-                  <p className="py-6 text-center text-[13px] text-[#727A88]">No members recorded.</p>
+                  <p className="py-6 text-center text-[13px] text-[#727A88]">{t("No members recorded.")}</p>
                 ) : (
                   <>
                     <div className="h-44 flex items-end gap-2 border-b border-[#E4E7EC]">
@@ -243,7 +243,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                             <div
                               style={{ height: `${h}px` }}
                               className="w-full max-w-[36px] bg-[#15171C] rounded-t-[4px]"
-                              title={`${p.label}: ${p.total} members, ${p.joined} joined`}
+                              title={t("{label}: {total} members, {joined} joined", { label: p.label, total: p.total, joined: p.joined })}
                             />
                           </div>
                         );
@@ -260,9 +260,9 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                 )}
               </Panel>
 
-              <Panel title="Recent activity" note="Community creation and the latest posts and messages.">
+              <Panel title={t("Recent activity")} note={t("Community creation and the latest posts and messages.")}>
                 {activities.length === 0 ? (
-                  <p className="py-6 text-center text-[13px] text-[#727A88]">No activity recorded.</p>
+                  <p className="py-6 text-center text-[13px] text-[#727A88]">{t("No activity recorded.")}</p>
                 ) : (
                   <ul className="divide-y divide-[#E4E7EC]">
                     {activities.map((a) => (
@@ -281,12 +281,12 @@ export default function CommunityAnalytics({ communityId, community: initialComm
           )}
 
           {activeTab === 'members' && (
-            <Panel title="Members" note="Wallets in this community, oldest first.">
+            <Panel title={t("Members")} note={t("Wallets in this community, oldest first.")}>
               <div className="relative mb-3">
                 <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#727A88]" />
                 <input
                   type="text"
-                  placeholder="Filter by address"
+                  placeholder={t("Filter by address")}
                   value={searchMember}
                   onChange={(e) => setSearchMember(e.target.value)}
                   className="w-full h-9 pl-8 pr-3 bg-white border border-[#E4E7EC] rounded-xl text-[13px] font-mono text-[#15171C] outline-none focus:border-[#2754D6] transition-colors duration-150 ease-out"
@@ -296,16 +296,16 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                 <table className="w-full text-left text-[13px]">
                   <thead>
                     <tr className="border-b border-[#E4E7EC] text-[12px] text-[#727A88]">
-                      <th className="py-2 pr-4 font-medium">Wallet</th>
-                      <th className="py-2 pr-4 font-medium">Role</th>
-                      <th className="py-2 font-medium text-right">Joined</th>
+                      <th className="py-2 pr-4 font-medium">{t("Wallet")}</th>
+                      <th className="py-2 pr-4 font-medium">{t("Role")}</th>
+                      <th className="py-2 font-medium text-right">{t("Joined")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E4E7EC]">
                     {filteredMembers.length === 0 ? (
                       <tr>
                         <td colSpan={3} className="py-6 text-center text-[#727A88]">
-                          {members.length === 0 ? 'No members recorded.' : 'No member matches this address.'}
+                          {members.length === 0 ? t("No members recorded.") : t("No member matches this address.")}
                         </td>
                       </tr>
                     ) : (
@@ -315,7 +315,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                             {shortAddress(m.address)}
                           </td>
                           <td className="py-2.5 pr-4 text-[#475061]">
-                            {m.role === 'OWNER' ? 'Owner' : m.role === 'ADMIN' ? 'Admin' : 'Member'}
+                            {m.role === 'OWNER' ? t("Owner") : m.role === 'ADMIN' ? t("Admin") : t("Member")}
                           </td>
                           <td className="py-2.5 text-right tabular-nums text-[#727A88]">{formatDate(m.joinedAt)}</td>
                         </tr>

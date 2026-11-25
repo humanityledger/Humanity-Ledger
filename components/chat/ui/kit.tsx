@@ -12,6 +12,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export const shortAddr = (addr?: string | null) => (addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '');
 
@@ -131,6 +132,7 @@ export function Sheet({
   footer?: React.ReactNode;
   wide?: boolean;
 }) {
+  const t = useT();
   const id = React.useId();
   React.useEffect(() => {
     if (!open) return;
@@ -166,7 +168,7 @@ export function Sheet({
                 <h2 id={id} className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">{title}</h2>
                 {subtitle && <p className="text-[14px] text-[#727a88] mt-0.5">{subtitle}</p>}
               </div>
-              <IconButton label="Close" onClick={onClose} className="-mr-1.5 -mt-1">
+              <IconButton label={t("Close")} onClick={onClose} className="-mr-1.5 -mt-1">
                 <X size={18} strokeWidth={1.9} />
               </IconButton>
             </div>

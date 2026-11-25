@@ -25,6 +25,7 @@ import { useAccount, useConnect, useSignMessage, useReconnect, useChainId, useSw
 import { useAppKit } from '@reown/appkit/react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
+import { useT } from '@/lib/i18n/client';
 
 const UniversalEliteWallpaper = dynamic(
   () => import('@/components/shared/UniversalEliteWallpaper').then(m => ({ default: m.UniversalEliteWallpaper })),
@@ -35,6 +36,7 @@ const QR_TTL = 300;
 
 //  HUGE ANIMATED LEDGER 
 function HugeAnimatedLedger() {
+  const t = useT();
   const [splashes, setSplashes] = useState<{ id: number; x: number; y: number }[]>([]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -56,7 +58,7 @@ function HugeAnimatedLedger() {
       <motion.img
         src="/worldmap.png"
         className="w-full h-full object-contain relative z-10 drop-shadow-[0_20px_40px_rgba(0,0,0,0.15)] group-hover:drop-shadow-[0_40px_80px_rgba(0,0,0,0.30)] transition-all duration-500"
-        alt="Humanity Ledger"
+        alt={t("Humanity Ledger")}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         animate={{ y: [0, -20, 0] }}

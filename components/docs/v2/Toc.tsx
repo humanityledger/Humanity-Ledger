@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { ArrowUp, TextAlignStart } from "lucide-react";
 import type { TocItem } from "@/lib/docs/registry";
+import { useT } from "@/lib/i18n/client";
 import s from "./Docs.module.css";
 
 /**
@@ -13,6 +14,7 @@ import s from "./Docs.module.css";
  * scroll events anywhere in the document and measures headings directly.
  */
 export function Toc({ items }: { items: TocItem[] }) {
+  const t = useT();
   const [active, setActive] = useState<string>(items[0]?.id ?? "");
 
   useEffect(() => {
@@ -46,10 +48,10 @@ export function Toc({ items }: { items: TocItem[] }) {
   if (items.length < 2) return <aside className={s.toc} aria-hidden="true" />;
 
   return (
-    <aside className={s.toc} aria-label="On this page">
+    <aside className={s.toc} aria-label={t("On this page")}>
       <p className={s.tocTitle}>
         <TextAlignStart size={15} strokeWidth={1.9} aria-hidden="true" />
-        On this page
+        {t("On this page")}
       </p>
       <ul className={s.tocList}>
         {items.map((item) => (
@@ -59,7 +61,7 @@ export function Toc({ items }: { items: TocItem[] }) {
               className={`${s.tocLink} ${item.level === 3 ? s.tocSub : ""} ${active === item.id ? s.tocActive : ""}`}
               aria-current={active === item.id ? "location" : undefined}
             >
-              {item.text}
+              {t(item.text)}
             </a>
           </li>
         ))}
@@ -70,7 +72,7 @@ export function Toc({ items }: { items: TocItem[] }) {
         onClick={() => document.querySelector("[data-docs-root]")?.scrollIntoView({ behavior: "smooth", block: "start" })}
       >
         <ArrowUp size={14} strokeWidth={2} aria-hidden="true" />
-        Back to top
+        {t("Back to top")}
       </button>
     </aside>
   );

@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CallsIcon, ChatsIcon, CommunitiesIcon, StatusIcon } from '@/components/chat/icons/LedgerIcons';
+import { useT } from '@/lib/i18n/client';
 
 export type NavTab = 'updates' | 'calls' | 'communities' | 'chats';
 
@@ -20,8 +21,9 @@ const TABS: { id: NavTab; label: string; Icon: React.ComponentType<{ size?: numb
 
 /** The four sections of Ledger Chat, shown as tabs above the list. */
 export const CrystalNavBar: React.FC<CrystalNavBarProps> = ({ activeTab, onTabChange, unreadCounts = {} }) => {
+  const t = useT();
   return (
-    <nav aria-label="Sections" className="relative z-10 shrink-0 bg-white border-b border-[#eceef2] px-2">
+    <nav aria-label={t("Sections")} className="relative z-10 shrink-0 bg-white border-b border-[#eceef2] px-2">
       <div className="flex" role="tablist">
         {TABS.map(({ id, label, Icon }) => {
           const active = activeTab === id;
@@ -45,7 +47,7 @@ export const CrystalNavBar: React.FC<CrystalNavBarProps> = ({ activeTab, onTabCh
                   </span>
                 )}
               </span>
-              <span className="truncate max-w-full">{label}</span>
+              <span className="truncate max-w-full">{t(label)}</span>
               {active && (
                 <motion.span
                   layoutId="nav-indicator"

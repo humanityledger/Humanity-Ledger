@@ -20,18 +20,19 @@ import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { toast } from 'sonner';
-import { ArrowDown, ClipboardPaste, Lock, ScanLine, Share2, LockOpen, UserPlus } from 'lucide-react';
+import { ArrowDown, ArrowRight, ClipboardPaste, Lock, ScanLine, Share2, LockOpen, UserPlus } from 'lucide-react';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
 import { decodePaymentRequest, encodePaymentRequest, humanError, isAztecAddress } from '@/lib/aztec/wallet/client';
 import { AZTEC_WALLET_CONFIG, explorerTxUrl, networkLabel, type TokenKey } from '@/lib/aztec/wallet/config';
-import { formatUnits } from '@/lib/aztec/wallet/amounts';
+import { formatUnits, parseUnits } from '@/lib/aztec/wallet/amounts';
 import { amountProblem, effectiveToken, recipientProblem } from './walletLogic';
+import { useT } from '@/lib/i18n/client';
 
 export { amountProblem, recipientProblem };
 import { PaymentProgress, type PaymentStage } from '@/components/zk/PaymentProgress';
 import { usePaymentProofActivity } from '@/lib/activities/hooks';
 import {
-  AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, groupHex, shortHex,
+  AddressAvatar, AddressBox, AmountInput, Card, FOCUS, INK, INK_2, INK_3, KV, Notice, OK, PrimaryButton, SecondaryButton, StepDots, TextButton, TokenChips, TokenMark, groupHex, shortHex,
 } from './WalletUI';
 import { isTestToken, TEST_TOKEN_NOTE } from '@/lib/payments/assets';
 import { DisclosurePanel } from '@/components/privacy/DisclosurePanel';
@@ -66,6 +67,7 @@ export function SendFlow({
   /** Lets the sheet show a Back arrow on the review step. */
   onStepChange?: (step: 'details' | 'review' | 'running', back?: () => void) => void;
 }) {
+  const tr = useT();
   const { state, wallet } = useAztecWallet('');
   const [chosen, setToken] = useState<TokenKey | null>(null);
   const tokens = listedTokens();
@@ -132,7 +134,7 @@ export function SendFlow({
   const paste = async () => {
     const text = await readClipboard();
     if (!text) {
-      toast.error('This browser did not allow reading the clipboard. Paste into the field instead.');
+      toast.error(tr("This browser did not allow reading the clipboard. Paste into the field instead."));
       return;
     }
     if (!applyRequest(text)) setTo(text);
@@ -185,30 +187,45 @@ export function SendFlow({
     return (
       <div className="space-y-4" data-testid="send-review">
         <StepDots steps={['Details', 'Review']} at={1} />
-        <div className="text-center pt-1 pb-2">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
-            You send privately
+        <div className="relative pt-1 pb-2 flex flex-col items-center text-center">
+          {/* From your private balance to this address: the two ends of the payment. */}
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <TokenMark symbol={symbol} size={44} />
+            <ArrowRight size={18} strokeWidth={1.8} style={{ color: '#a3a9b4' }} />
+            <AddressAvatar address={to} size={44} />
+          </div>
+          <p className="mt-4 text-[14px] font-medium" style={{ color: INK_3 }}>
+            {tr("You send privately")}
           </p>
-          <p className="mt-1 text-[40px] font-semibold tracking-[-0.035em] tabular-nums leading-tight" style={{ color: INK }}>
+          <p className="mt-1 text-[44px] font-semibold tracking-[-0.045em] tabular-nums leading-tight" style={{ color: INK }}>
             {amount} <span className="text-[20px]" style={{ color: INK_2 }}>{symbol}</span>
           </p>
         </div>
         <Card as="div" className="px-5 py-1">
-          <KV k="To" v={shortHex(to, 8)} mono />
+          <KV
+            k="To"
+            v={
+              <span className="inline-flex items-center gap-2 max-w-full">
+                <AddressAvatar address={to} size={20} />
+                <span className="truncate">{shortHex(to, 8)}</span>
+              </span>
+            }
+            mono
+          />
           <KV k="From" v="Your private balance" />
           <KV k="Network" v={networkLabel()} />
           {isTestToken(symbol) && <KV k="Asset" v={`${symbol}, ${TEST_TOKEN_NOTE.toLowerCase()}`} />}
-          <KV k="Network fee" v={ALPHA ? 'Fee Juice' : 'Sponsored'} hint={ALPHA ? 'Paid by your account, in public.' : 'Paid by the network’s sponsored fee contract.'} />
+          <KV k="Network fee" v={ALPHA ? 'Fee Juice' : 'Sponsored'} hint={ALPHA ? tr("Paid by your account, in public.") : tr("Paid by the network’s sponsored fee contract.")} />
         </Card>
-        <p className="font-mono text-[12.5px] leading-[1.6] break-all rounded-2xl bg-[#f7f8fa] border border-[#e4e7ec] px-4 py-3" style={{ color: INK_2 }} aria-label="Full recipient address">
+        <p className="font-mono text-[12.5px] leading-[1.6] break-all rounded-[20px] bg-[#f7f8fa] px-4 py-3" style={{ color: INK_2 }} aria-label={tr("Full recipient address")}>
           {groupHex(to)}
         </p>
         <DisclosurePanel action="send" />
-        <Notice tone="warn">Check the address. A payment cannot be reversed.</Notice>
+        <Notice tone="warn">{tr("Check the address. A payment cannot be reversed.")}</Notice>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-          <SecondaryButton onClick={() => setStep('details')}>Edit</SecondaryButton>
+          <SecondaryButton onClick={() => setStep('details')}>{tr("Edit")}</SecondaryButton>
           <PrimaryButton onClick={submit} busy={busy}>
-            Send privately
+            {tr("Send privately")}
           </PrimaryButton>
         </div>
       </div>
@@ -239,18 +256,18 @@ export function SendFlow({
 
       <div>
         <div className="flex items-center justify-between">
-          <label htmlFor="wallet-send-to" className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
-            Recipient's Aztec address
+          <label htmlFor="wallet-send-to" className="text-[14px] font-medium" style={{ color: INK_3 }}>
+            {tr("Recipient's Aztec address")}
           </label>
           <div className="flex items-center gap-1">
-            <TextButton onClick={paste} label="Paste the address">
+            <TextButton onClick={paste} label={tr("Paste the address")}>
               <span className="inline-flex items-center gap-1.5">
-                <ClipboardPaste size={15} strokeWidth={1.9} aria-hidden="true" /> Paste
+                <ClipboardPaste size={15} strokeWidth={1.9} aria-hidden="true" />{" "}{tr("Paste")}
               </span>
             </TextButton>
-            <TextButton onClick={() => setScanning((v) => !v)} label={scanning ? 'Stop scanning' : 'Scan a QR code'}>
+            <TextButton onClick={() => setScanning((v) => !v)} label={scanning ? tr("Stop scanning") : tr("Scan a QR code")}>
               <span className="inline-flex items-center gap-1.5">
-                <ScanLine size={15} strokeWidth={1.9} aria-hidden="true" /> {scanning ? 'Stop' : 'Scan'}
+                <ScanLine size={15} strokeWidth={1.9} aria-hidden="true" /> {scanning ? tr("Stop") : tr("Scan")}
               </span>
             </TextButton>
           </div>
@@ -263,13 +280,13 @@ export function SendFlow({
           onBlur={() => {
             if (to.startsWith('aztec:')) applyRequest(to);
           }}
-          placeholder="0x… (64 characters)"
+          placeholder={tr("0x… (64 characters)")}
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
           aria-invalid={toErr ? true : undefined}
-          className={`mt-1.5 w-full rounded-2xl border-2 px-4 py-3 font-mono text-[14px] leading-[1.5] resize-none outline-none break-all ${
-            toErr ? 'border-[#b42318]' : 'border-[#e4e7ec] focus:border-[#15171c]'
+          className={`mt-1.5 w-full rounded-[20px] border px-4 py-3 font-mono text-[14px] leading-[1.5] resize-none outline-none break-all ${
+            toErr ? 'border-[#f3c9c4] bg-[#fffafa]' : 'border-transparent bg-[#f7f8fa] focus:bg-white focus:border-[#e4e7ec]'
           }`}
           style={{ color: INK }}
         />
@@ -278,29 +295,34 @@ export function SendFlow({
             {toErr}
           </p>
         )}
+        {!toErr && isAztecAddress(to) && (
+          <p className="mt-2 flex items-center gap-2 text-[13px] font-medium" style={{ color: INK_2 }}>
+            <AddressAvatar address={to} size={22} />
+            <span className="font-mono tabular-nums" style={{ color: INK }}>{shortHex(to, 6)}</span>
+            <span style={{ color: OK }}>{tr("Valid Aztec address")}</span>
+          </p>
+        )}
       </div>
 
       {scanning && (
         <div className="overflow-hidden rounded-2xl border border-[#e4e7ec]">
           <QrScanner
             onScanSuccess={(text: string) => {
-              if (!applyRequest(text)) toast.error('That QR code is not an Aztec payment request.');
+              if (!applyRequest(text)) toast.error(tr("That QR code is not an Aztec payment request."));
             }}
           />
         </div>
       )}
 
       {max === 0n && (
-        <Notice tone="info">
-          Your private balance is empty. {ALPHA ? 'Shield tokens first, or ask someone to pay you.' : 'Get test tokens and shield them first.'}
+        <Notice tone="info">{tr("Your private balance is empty. {value}", { value: ALPHA ? tr("Shield tokens first, or ask someone to pay you.") : tr("Get test tokens and shield them first.") })}
         </Notice>
       )}
 
       <PrimaryButton type="submit" disabled={!canReview}>
-        Review
+        {tr("Review")}
       </PrimaryButton>
-      <p className="text-[13px] leading-relaxed text-center" style={{ color: INK_3 }}>
-        Paid from your private balance. {SEND_DISCLOSURE.summary}
+      <p className="text-[13px] leading-relaxed text-center" style={{ color: INK_3 }}>{tr("Paid from your private balance. {summary}", { summary: tr(SEND_DISCLOSURE.summary) })}
       </p>
     </form>
   );
@@ -309,6 +331,7 @@ export function SendFlow({
 /* ─── Receive ──────────────────────────────────────────────────────────────── */
 
 export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
+  const tr = useT();
   const { state, wallet } = useAztecWallet('');
   const [chosen, setToken] = useState<TokenKey | null>(null);
   const tokens = listedTokens();
@@ -327,10 +350,10 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
     setAdding(true);
     try {
       await wallet.addSender(sender);
-      toast.success('Sender added. Payments from this address will now appear.');
+      toast.success(tr("Sender added. Payments from this address will now appear."));
       setSender('');
     } catch (err) {
-      toast.error(humanError(err));
+      toast.error(tr(humanError(err)));
     } finally {
       setAdding(false);
     }
@@ -340,11 +363,9 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
     <div className="space-y-4">
       <div className="rounded-[24px] border border-[#e4e7ec] bg-[#f7f8fa] p-5 flex flex-col items-center gap-3">
         <div className="rounded-[20px] bg-white p-1.5 border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)] overflow-hidden" data-testid="receive-qr">
-          <BrandedQr value={request} title="Payment request QR code" style={{ width: 224 }} />
+          <BrandedQr value={request} title={tr("Payment request QR code")} style={{ width: 224 }} />
         </div>
-        <p className="text-center text-[14px] leading-snug max-w-[280px]" style={{ color: INK_2 }}>
-          Show this code to the person paying you. It contains your Aztec address{amountOk ? `, ${symbolOf(token)} and ${amount}` : ''}.
-        </p>
+        <p className="text-center text-[14px] leading-snug max-w-[280px]" style={{ color: INK_2 }}>{tr("Show this code to the person paying you. It contains your Aztec address{value}.", { value: amountOk ? tr(", {symbolOf} and {amount}", { symbolOf: symbolOf(token), amount }) : '' })}</p>
         {canShare && (
           <button
             type="button"
@@ -352,23 +373,23 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
             className={`min-h-[44px] px-4 rounded-full text-[14px] font-semibold bg-white border border-[#d4d8de] hover:bg-[#f2f4f7] inline-flex items-center gap-2 ${FOCUS}`}
             style={{ color: INK }}
           >
-            <Share2 size={16} strokeWidth={1.9} aria-hidden="true" /> Share request
+            <Share2 size={16} strokeWidth={1.9} aria-hidden="true" />{" "}{tr("Share request")}
           </button>
         )}
       </div>
 
-      <AddressBox label="Your Aztec address" value={aztecAddress} />
+      <AddressBox label={tr("Your Aztec address")} value={aztecAddress} />
 
       <TokenChips tokens={tokens} value={token} onChange={setToken} />
       <label className="block">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
-          Amount to request (optional)
+        <span className="text-[14px] font-medium" style={{ color: INK_3 }}>
+          {tr("Amount to request (optional)")}
         </span>
         <input
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/,/g, '.').replace(/[^\d.]/g, ''))}
-          placeholder="Any amount"
+          placeholder={tr("Any amount")}
           className="mt-1.5 w-full min-h-[52px] rounded-2xl border-2 border-[#e4e7ec] px-4 text-[17px] tabular-nums outline-none focus:border-[#15171c] placeholder:text-[#8a909c]"
           style={{ color: INK }}
         />
@@ -376,20 +397,19 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
 
       <Card as="div" className="p-5">
         <div className="flex items-center gap-2 text-[15px] font-semibold" style={{ color: INK }}>
-          <UserPlus size={17} strokeWidth={1.9} aria-hidden="true" /> Not seeing a payment?
+          <UserPlus size={17} strokeWidth={1.9} aria-hidden="true" />{" "}{tr("Not seeing a payment?")}
         </div>
         <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-          Aztec wallets find incoming payments through tags shared with the sender. If a payment from someone new does not appear after a sync,
-          add their Aztec address here.
+          {tr("Aztec wallets find incoming payments through tags shared with the sender. If a payment from someone new does not appear after a sync, add their Aztec address here.")}
         </p>
         <div className="mt-3 flex flex-col sm:flex-row gap-2">
           <input
             value={sender}
             onChange={(e) => setSender(e.target.value.trim())}
-            placeholder="Sender's Aztec address"
+            placeholder={tr("Sender's Aztec address")}
             spellCheck={false}
             aria-invalid={senderErr ? true : undefined}
-            aria-label="Sender's Aztec address"
+            aria-label={tr("Sender's Aztec address")}
             className="min-w-0 flex-1 min-h-[48px] rounded-2xl border-2 border-[#e4e7ec] px-4 font-mono text-[13.5px] outline-none focus:border-[#15171c] placeholder:text-[#8a909c]"
             style={{ color: INK }}
           />
@@ -399,7 +419,7 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
             disabled={!sender || !!senderErr || adding}
             className={`min-h-[48px] px-5 rounded-2xl text-white text-[15px] font-semibold bg-[#15171c] hover:bg-[#262932] disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
           >
-            {adding ? 'Adding…' : 'Add'}
+            {adding ? tr("Adding…") : tr("Add")}
           </button>
         </div>
         {senderErr && (
@@ -415,6 +435,7 @@ export function ReceiveView({ aztecAddress }: { aztecAddress: string }) {
 /* ─── Shield and Unshield ──────────────────────────────────────────────────── */
 
 export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDone: () => void }) {
+  const tr = useT();
   const { state, wallet } = useAztecWallet('');
   const [chosen, setToken] = useState<TokenKey | null>(null);
   const tokens = listedTokens();
@@ -429,44 +450,54 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
   const privateUnits = bal?.privateUnits ?? 0n;
   const max = mode === 'shield' ? publicUnits : privateUnits;
   const amountErr = amountProblem(amount, decimals, max);
+  // What each balance becomes, shown while typing. Only for an amount the wallet would accept.
+  const moving = useMemo(() => {
+    if (!amount || amountErr) return null;
+    try {
+      const u = parseUnits(amount, decimals);
+      return u > 0n && u <= max ? u : null;
+    } catch {
+      return null;
+    }
+  }, [amount, amountErr, decimals, max]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!wallet || amountErr || !amount) return;
     setBusy(true);
     setError(null);
-    const id = toast.loading('Making the proof on this device. This can take up to a minute.');
+    const id = toast.loading(tr("Making the proof on this device. This can take up to a minute."));
     try {
       if (mode === 'shield') await wallet.shield(token, amount);
       else await wallet.unshield(token, amount);
-      toast.success(mode === 'shield' ? 'Shielded. The amount is now private.' : 'Unshielded to your public balance.', { id });
+      toast.success(mode === 'shield' ? tr("Shielded. The amount is now private.") : tr("Unshielded to your public balance."), { id });
       onDone();
     } catch (err) {
       const m = humanError(err);
-      setError(m);
-      toast.error(m, { id });
+      setError(tr(m));
+      toast.error(tr(m), { id });
     } finally {
       setBusy(false);
     }
   };
 
-  const from = mode === 'shield' ? { label: 'Public balance', units: publicUnits, icon: <LockOpen size={16} strokeWidth={2} aria-hidden="true" /> } : { label: 'Private balance', units: privateUnits, icon: <Lock size={16} strokeWidth={2} aria-hidden="true" /> };
-  const to = mode === 'shield' ? { label: 'Private balance', units: privateUnits, icon: <Lock size={16} strokeWidth={2} aria-hidden="true" /> } : { label: 'Public balance', units: publicUnits, icon: <LockOpen size={16} strokeWidth={2} aria-hidden="true" /> };
+  const from = mode === 'shield' ? { label: tr("Public balance"), units: publicUnits, icon: <LockOpen size={16} strokeWidth={2} aria-hidden="true" /> } : { label: tr("Private balance"), units: privateUnits, icon: <Lock size={16} strokeWidth={2} aria-hidden="true" /> };
+  const to = mode === 'shield' ? { label: tr("Private balance"), units: privateUnits, icon: <Lock size={16} strokeWidth={2} aria-hidden="true" /> } : { label: tr("Public balance"), units: publicUnits, icon: <LockOpen size={16} strokeWidth={2} aria-hidden="true" /> };
 
   return (
     <form onSubmit={submit} className="space-y-4">
       <p className="text-[14px] leading-relaxed" style={{ color: INK_2 }}>
-        {mode === 'shield' ? 'Moves tokens from your public Aztec balance into private notes.' : 'Moves tokens from your private notes to your public Aztec balance.'}
+        {mode === 'shield' ? tr("Moves tokens from your public Aztec balance into private notes.") : tr("Moves tokens from your private notes to your public Aztec balance.")}
       </p>
       <DisclosurePanel action={mode} />
 
-      <div className="relative" aria-label={`${from.label} to ${to.label}`}>
-        <BalanceLeg title="From" {...from} decimals={decimals} symbol={symbol} />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center z-[1]" aria-hidden="true">
-          <ArrowDown size={16} strokeWidth={2.2} style={{ color: INK }} />
+      <div className="relative" aria-label={tr("{label} to {label2}", { label: from.label, label2: to.label })}>
+        <BalanceLeg title={tr("From")} {...from} decimals={decimals} symbol={symbol} after={moving !== null ? from.units - moving : undefined} />
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-[14px] bg-white border border-[#e4e7ec] shadow-[0_4px_12px_-6px_rgba(16,24,40,0.25)] flex items-center justify-center z-[1]" aria-hidden="true">
+          <ArrowDown size={17} strokeWidth={2.2} style={{ color: INK }} />
         </span>
         <div className="h-2" />
-        <BalanceLeg title="To" {...to} decimals={decimals} symbol={symbol} />
+        <BalanceLeg title={tr("To")} {...to} decimals={decimals} symbol={symbol} after={moving !== null ? to.units + moving : undefined} gains={moving !== null} />
       </div>
 
       <TokenChips tokens={tokens} value={token} onChange={setToken} />
@@ -482,33 +513,46 @@ export function ShieldFlow({ mode, onDone }: { mode: 'shield' | 'unshield'; onDo
       />
       {error && <Notice tone="bad">{error}</Notice>}
       <PrimaryButton type="submit" busy={busy} disabled={!amount || !!amountErr || max === 0n}>
-        {mode === 'shield' ? 'Shield' : 'Unshield'}
+        {mode === 'shield' ? tr("Shield") : tr("Unshield")}
       </PrimaryButton>
       {max === 0n && (
         <p className="text-[13px] text-center" style={{ color: INK_3 }}>
-          {mode === 'shield' ? 'There is nothing in your public balance to shield.' : 'There is nothing in your private balance to unshield.'}
+          {mode === 'shield' ? tr("There is nothing in your public balance to shield.") : tr("There is nothing in your private balance to unshield.")}
         </p>
       )}
     </form>
   );
 }
 
-function BalanceLeg({ title, label, units, icon, decimals, symbol }: { title: string; label: string; units: bigint; icon: React.ReactNode; decimals: number; symbol: string }) {
+function BalanceLeg({
+  title, label, units, icon, decimals, symbol, after, gains,
+}: { title: string; label: string; units: bigint; icon: React.ReactNode; decimals: number; symbol: string; after?: bigint; gains?: boolean }) {
+  const tr = useT();
   return (
-    <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] px-4 py-3 flex items-center gap-3">
-      <span className="w-9 h-9 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center shrink-0" style={{ color: INK }}>
-        {icon}
+    <div className="rounded-[20px] bg-[#f7f8fa] px-4 py-3.5 flex items-center gap-3">
+      <span className="relative shrink-0">
+        <TokenMark symbol={symbol} size={38} />
+        <span className="absolute -right-1 -bottom-1 w-[18px] h-[18px] rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center [&>svg]:w-[11px] [&>svg]:h-[11px]" style={{ color: INK }}>
+          {icon}
+        </span>
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <span className="block text-[14px] font-medium" style={{ color: INK_3 }}>
           {title}
         </span>
         <span className="block text-[15px] font-semibold" style={{ color: INK }}>
           {label}
         </span>
       </span>
-      <span className="text-[15px] font-semibold tabular-nums shrink-0" style={{ color: INK }}>
-        {formatUnits(units, decimals)} <span style={{ color: INK_2 }}>{symbol}</span>
+      <span className="text-right shrink-0">
+        <span className="block text-[15px] font-semibold tabular-nums" style={{ color: INK }}>
+          {formatUnits(units, decimals)} <span style={{ color: INK_2 }}>{symbol}</span>
+        </span>
+        {after !== undefined && (
+          <span className="block text-[12.5px] font-semibold tabular-nums" style={{ color: gains ? OK : INK_3 }} aria-label={tr("After: {amount} {symbol}", { amount: formatUnits(after, decimals), symbol })}>
+            {tr("After {amount}", { amount: formatUnits(after, decimals) })}
+          </span>
+        )}
       </span>
     </div>
   );

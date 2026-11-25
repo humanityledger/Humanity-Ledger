@@ -40,19 +40,22 @@ import { ScrollProgressBar } from "@/components/ui/ScrollProgressBar";
 import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 
 import { AztecProvider } from "@/context/AztecContext";
+import { getServerLocale, getT, loadMessages } from '@/lib/i18n/server';
+import { I18nProvider } from '@/lib/i18n/client';
+import { HTML_LANG } from '@/lib/i18n/locales';
 
 
 // No global WalletConnect *wallet* SDK (WalletConnectProvider): it opened a second WalletConnect core and
 // relay WebSocket on every page, for a pairing screen nothing in the app shows. Sign-in uses AppKit.
 
 const inter = Inter({ 
-  subsets: ['latin'], 
+  subsets: ['latin', 'latin-ext', 'cyrillic'], 
   variable: '--font-inter',
   display: 'swap'
 })
 
 const aztecFont = Inter({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   variable: '--font-aztec-serif',
   display: 'swap',
 })
@@ -60,7 +63,7 @@ const aztecFont = Inter({
 // Editorial display face for headings on the public pages (landing, docs,
 // /connect, footer). Body text stays Inter.
 const displaySerif = Instrument_Serif({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   weight: '400',
   style: ['normal', 'italic'],
   variable: '--font-display',
@@ -68,7 +71,7 @@ const displaySerif = Instrument_Serif({
 })
 
 const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
   weight: ['400', '500', '700'],
   variable: '--font-aztec-mono',
   display: 'swap',
@@ -255,6 +258,10 @@ export default async function RootLayout({
   children: React.ReactNode
 
 }) {
+  const t = await getT();
+  // The language of this request (cookie hl_locale, else Accept-Language): rendered in it from the first byte.
+  const locale = await getServerLocale();
+  const messages = await loadMessages(locale);
 
   const headersList = await headers();
 
@@ -331,7 +338,7 @@ export default async function RootLayout({
 
   return (
 
-    <html lang="en" className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang={HTML_LANG[locale]} className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
         {/* The boot mark's image (components/layout/BootMark.tsx): fetched before the first paint so it never pops in. */}
@@ -341,22 +348,37 @@ export default async function RootLayout({
         {/* Wallet in-app browsers (MetaMask, Trust, Coinbase, Rainbow, OKX, Phantom…) draw pages larger
             than Safari or Chrome on the same phone, so Ledger Chat looked zoomed in. There the page
             is laid out ~10% wider and shown at 0.9, which matches what the phone's own browser shows.
-            Pinch zoom stays available (WCAG 1.4.4). Runs now and again once Next's viewport tag exists.
-            iPhone and iPad (Safari, Chrome, any iOS browser): maximum-scale=1 stops the page from zooming
-            in when a field gets focus. iOS ignores it for the person's own pinch zoom, which keeps
-            working; Android is not given it, because there it would block pinch zoom. minimum-scale=1
-            and shrink-to-fit=no keep the layout at the phone's width even if something overflows.
-            Next.js rewrites the tag on navigation, so it is put back whenever it changes. */}
+            On iPhone only a wallet's own browser counts (its name is in the user agent): Safari with a wallet
+            extension also has window.ethereum, but draws at the normal size.
+            minimum-scale equal to the initial scale keeps the layout at the phone's width even if something
+            overflows, so the page is never shrunk to fit. On iOS, maximum-scale equal to the initial scale stops
+            Safari zooming into the message field when it is tapped. Since iOS 10 Safari ignores
+            maximum-scale for pinch zoom, so pinching still works there (WCAG 1.4.4).
+            Android (Chrome and others): the cap is set only while a text field is in use, from the touch
+            that focuses it until it loses focus, so typing never zooms and pinch zoom works the rest of
+            the time. Next.js rewrites the tag on navigation, so it is put back whenever it changes. */}
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){try{
 var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);
 var named=/MetaMaskMobile|TrustWallet|Trust\\/|CoinbaseWallet|CoinbaseBrowser|Rainbow|OKApp|Phantom|imToken|TokenPocket|BitKeep|Bitget|Zerion|BinanceWeb3|Rabby|SafePal|Uniswap/i.test(ua);
 var ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
-if(ios&&!(named||window.ethereum)){var ci='width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover';var si=function(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=ci;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)if(m[i].getAttribute('content')!==ci)m[i].setAttribute('content',ci)};si();document.addEventListener('DOMContentLoaded',si,{once:true});try{new MutationObserver(si).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']})}catch(e){}return}
-if(!mobile||!(named||window.ethereum))return;
-document.documentElement.setAttribute('data-wallet-browser','1');
-var c='width=device-width, initial-scale=0.9, viewport-fit=cover, interactive-widget=resizes-content';
-function set(){var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=c;document.head.appendChild(n);return}for(var i=0;i<m.length;i++)m[i].setAttribute('content',c)}
-set();document.addEventListener('DOMContentLoaded',set,{once:true});
+if(!mobile&&!ios)return;
+var wallet=!!(named||(window.ethereum&&!ios));
+if(wallet)document.documentElement.setAttribute('data-wallet-browser','1');
+var scale=wallet?'0.9':'1';
+var base='width=device-width, initial-scale='+scale+', minimum-scale='+scale+', viewport-fit=cover'+(wallet?', interactive-widget=resizes-content':'');
+var locked=ios;
+var tag=function(){return base+(locked?', maximum-scale='+scale:'')};
+var busy=false;
+var si=function(){if(busy)return;busy=true;try{var c=tag();var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=c;document.head.appendChild(n)}else{for(var i=0;i<m.length;i++)if(m[i].getAttribute('content')!==c)m[i].setAttribute('content',c)}}finally{busy=false}};
+si();document.addEventListener('DOMContentLoaded',si,{once:true});
+try{new MutationObserver(si).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']})}catch(e){}
+if(ios)return;
+var editable=function(el){if(!el||el.nodeType!==1)return false;var t=el.tagName;if(t==='TEXTAREA'||el.isContentEditable)return true;if(t!=='INPUT')return false;return !/^(button|checkbox|radio|range|color|file|image|submit|reset|hidden)$/i.test(el.type||'')};
+var on=function(e){var el=e.target&&e.target.closest?e.target.closest('input,textarea,[contenteditable]'):null;if(editable(el)&&!locked){locked=true;si()}};
+var off=function(){setTimeout(function(){if(locked&&!editable(document.activeElement)){locked=false;si()}},250)};
+document.addEventListener('touchstart',on,{capture:true,passive:true});
+document.addEventListener('focusin',on,true);
+document.addEventListener('focusout',off,true);
 }catch(e){}})();` }} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
 
@@ -612,10 +634,11 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] bg-black text-white px-4 py-2 rounded-lg font-bold text-sm">
 
-          Skip to main content
+          {t("Skip to main content")}
 
         </a>
 
+        <I18nProvider locale={locale} messages={messages}>
         {mobileLanding ? children : (<>
         <ScrollProgressBar />
 
@@ -657,6 +680,7 @@ set();document.addEventListener('DOMContentLoaded',set,{once:true});
 
         </Providers>
         </>)}
+        </I18nProvider>
 
       </body>
 

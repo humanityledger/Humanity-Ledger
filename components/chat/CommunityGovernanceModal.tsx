@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Vote, Plus, CheckCircle2, XCircle, Clock, ChevronRight, X, Shield, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n/client';
 
 interface CommunityGovernanceProps {
   communityId: string;
@@ -12,6 +13,7 @@ interface CommunityGovernanceProps {
 }
 
 export function CommunityGovernanceView({ communityId, communityName, myAddress }: CommunityGovernanceProps) {
+  const t = useT();
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,7 +44,7 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
-      toast.error('Title and description are required');
+      toast.error(t("Title and description are required"));
       return;
     }
 
@@ -59,17 +61,17 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
       });
 
       if (res.ok) {
-        toast.success('Proposal submitted successfully');
+        toast.success(t("Proposal submitted successfully"));
         setTitle('');
         setDescription('');
         setShowCreateModal(false);
         fetchProposals();
       } else {
         const err = await res.json();
-        toast.error(err.error || 'Failed to submit proposal');
+        toast.error(err.error || t("Failed to submit proposal"));
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error submitting proposal');
+      toast.error(err.message || t("Error submitting proposal"));
     } finally {
       setSubmitting(false);
     }
@@ -90,14 +92,14 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
       });
 
       if (res.ok) {
-        toast.success(`Vote cast: ${choice}`);
+        toast.success(t("Vote cast: {choice}", { choice }));
         fetchProposals();
       } else {
         const err = await res.json();
-        toast.error(err.error || 'Failed to record vote');
+        toast.error(err.error || t("Failed to record vote"));
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error recording vote');
+      toast.error(err.message || t("Error recording vote"));
     } finally {
       setVotingId(null);
     }
@@ -114,17 +116,16 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88] bg-[#f2f4f7] px-2.5 py-0.5 rounded-full">
-                Consensus Engine
+                {t("Consensus Engine")}
               </span>
               <span className="text-[11px] font-semibold text-[#15171c] bg-black/5 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Shield size={11} /> 1 Wallet = 1 Vote
+                <Shield size={11} />{" "}{t("1 Wallet = 1 Vote")}
               </span>
             </div>
             <h2 className="text-xl md:text-2xl font-bold text-[#15171c] tracking-tight">
-              {communityName} Governance
-            </h2>
+              {t("{communityName} Governance", { communityName })}</h2>
             <p className="text-[13px] text-[#727a88] mt-0.5">
-              Decentralized decision making. Submit and vote on proposals directly on-chain.
+              {t("Decentralized decision making. Submit and vote on proposals directly on-chain.")}
             </p>
           </div>
         </div>
@@ -133,7 +134,7 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
           onClick={() => setShowCreateModal(true)}
           className="px-5 py-2.5 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 shrink-0"
         >
-          <Plus size={15} /> New Proposal
+          <Plus size={15} />{" "}{t("New Proposal")}
         </button>
       </div>
 
@@ -154,15 +155,15 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
           <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] flex items-center justify-center mx-auto text-[#15171c]">
             <Vote size={22} strokeWidth={1.75} />
           </div>
-          <h3 className="text-[17px] font-bold text-[#15171c]">No active proposals</h3>
+          <h3 className="text-[17px] font-bold text-[#15171c]">{t("No active proposals")}</h3>
           <p className="text-[13px] text-[#727a88] max-w-sm mx-auto leading-relaxed">
-            Proposals allow community members to submit, discuss, and vote on collective decisions.
+            {t("Proposals allow community members to submit, discuss, and vote on collective decisions.")}
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="mt-3 px-5 py-2.5 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl transition-colors inline-flex items-center gap-1.5"
           >
-            <Plus size={14} /> Create the first proposal
+            <Plus size={14} />{" "}{t("Create the first proposal")}
           </button>
         </div>
       ) : (
@@ -183,10 +184,10 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <span className="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#f2f4f7] text-[#15171c] inline-block mb-2 border border-[#E4E7EC]">
-                      {proposal.status || 'ACTIVE'}
+                      {proposal.status || t("ACTIVE")}
                     </span>
                     <h3 className="text-lg font-bold text-[#15171c] leading-snug">
-                      {proposal.question || proposal.title}
+                      {proposal.question || t( proposal.title)}
                     </h3>
                   </div>
                   <div className="text-right text-[12px] font-medium text-[#727a88] shrink-0 flex items-center gap-1.5">
@@ -196,37 +197,35 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
                 </div>
 
                 <p className="text-[14px] text-[#15171c]/75 leading-relaxed">
-                  {proposal.description}
+                  {t(proposal.description)}
                 </p>
 
                 {/* ── Monochrome Voting Bar ── */}
                 <div className="space-y-2 pt-2">
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-[#15171c] flex items-center gap-1.5 font-mono">
-                      <CheckCircle2 size={13} /> For ({forPct}%)
+                      <CheckCircle2 size={13} />{" "}{t("For (")}{forPct}%)
                     </span>
                     <span className="text-[#727a88] flex items-center gap-1.5 font-mono">
-                      <XCircle size={13} /> Against ({againstPct}%)
+                      <XCircle size={13} />{" "}{t("Against (")}{againstPct}%)
                     </span>
                   </div>
                   <div className="h-2.5 w-full bg-[#f2f4f7] rounded-full overflow-hidden flex border border-[#E4E7EC]">
                     <div style={{ width: `${forPct}%` }} className="bg-[#15171c] transition-colors" />
                     <div style={{ width: `${againstPct}%` }} className="bg-[#d0d5dd] transition-colors" />
                   </div>
-                  <div className="text-[11px] font-medium text-[#727a88] text-right font-mono">
-                    Total votes: {totalVotes}
+                  <div className="text-[11px] font-medium text-[#727a88] text-right font-mono">{t("Total votes: {totalVotes}", { totalVotes })}
                   </div>
                 </div>
 
                 {/* ── Vote Actions ── */}
                 <div className="pt-3 flex items-center justify-between border-t border-[#E4E7EC]">
-                  <span className="text-[12px] font-mono text-[#727a88]">
-                    Proposed by {proposal.creatorAddress?.slice(0, 6)}...{proposal.creatorAddress?.slice(-4)}
+                  <span className="text-[12px] font-mono text-[#727a88]">{t("Proposed by {slice}...{slice2}", { slice: proposal.creatorAddress?.slice(0, 6), slice2: proposal.creatorAddress?.slice(-4) })}
                   </span>
 
                   {hasVoted ? (
                     <span className="text-xs font-semibold text-[#15171c] bg-black/5 px-3 py-1.5 rounded-xl border border-[#E4E7EC] flex items-center gap-1">
-                      <Check size={12} /> Vote Submitted
+                      <Check size={12} />{" "}{t("Vote Submitted")}
                     </span>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -235,14 +234,14 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
                         disabled={votingId === proposal.id}
                         className="px-4 py-2 bg-[#15171c] hover:bg-black text-white text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
                       >
-                        Vote For
+                        {t("Vote For")}
                       </button>
                       <button
                         onClick={() => handleVote(proposal.id, 'AGAINST')}
                         disabled={votingId === proposal.id}
                         className="px-4 py-2 bg-[#f2f4f7] hover:bg-[#e4e7ec] text-[#15171c] text-xs font-semibold rounded-xl border border-[#E4E7EC] transition-colors disabled:opacity-50"
                       >
-                        Vote Against
+                        {t("Vote Against")}
                       </button>
                     </div>
                   )}
@@ -264,7 +263,7 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
               className="bg-white rounded-2xl max-w-lg w-full p-6 border border-[#E4E7EC] space-y-4"
             >
               <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
-                <h3 className="text-lg font-bold text-[#15171c]">Create Governance Proposal</h3>
+                <h3 className="text-lg font-bold text-[#15171c]">{t("Create Governance Proposal")}</h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="p-1 rounded-full hover:bg-black/5 text-[#727a88] hover:text-[#15171c] transition-colors"
@@ -276,26 +275,26 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
               <form onSubmit={handleCreateProposal} className="space-y-4">
                 <div>
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88] block mb-1.5">
-                    Question / Title
+                    {t("Question / Title")}
                   </label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Approve communal treasury grant for developer docs"
+                    placeholder={t("e.g. Approve communal treasury grant for developer docs")}
                     className="w-full px-4 py-3 bg-[#f2f4f7] rounded-xl outline-none text-sm font-semibold text-[#15171c] border border-transparent focus:border-[#15171c] focus:bg-white transition-colors placeholder:text-[#a3a9b4]"
                   />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-[#727a88] block mb-1.5">
-                    Description & Specifications
+                    {t("Description & Specifications")}
                   </label>
                   <textarea
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Provide full context, rationale, and consequences of passing this proposal..."
+                    placeholder={t("Provide full context, rationale, and consequences of passing this proposal...")}
                     className="w-full px-4 py-3 bg-[#f2f4f7] rounded-xl outline-none text-sm text-[#15171c] resize-none border border-transparent focus:border-[#15171c] focus:bg-white transition-colors placeholder:text-[#a3a9b4]"
                   />
                 </div>
@@ -306,14 +305,14 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress 
                     onClick={() => setShowCreateModal(false)}
                     className="flex-1 py-3 bg-[#f2f4f7] hover:bg-[#e5e9ee] text-[#15171c] font-semibold rounded-xl text-sm transition-colors"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="flex-1 py-3 bg-[#15171c] hover:bg-black text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
                   >
-                    {submitting ? 'Submitting...' : 'Submit Proposal'}
+                    {submitting ? t("Submitting...") : t("Submit Proposal")}
                   </button>
                 </div>
               </form>

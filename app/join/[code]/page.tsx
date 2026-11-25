@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { Metadata } from 'next';
 import { Shield, Users, Lock, Globe, ArrowRight, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { getT } from '@/lib/i18n/server';
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -56,6 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function JoinCommunityPage({ params }: Props) {
+  const t = await getT();
   const resolvedParams = await params;
   const code = resolvedParams.code.toUpperCase();
 
@@ -71,15 +73,15 @@ export default async function JoinCommunityPage({ params }: Props) {
         <div className="w-14 h-14 rounded-2xl bg-[#f2f4f7] flex items-center justify-center text-[#15171c] mb-6 mx-auto">
           <XCircle size={28} strokeWidth={2} />
         </div>
-        <h1 className="text-[22px] font-bold text-[#15171c] mb-2 tracking-tight">Link Expired</h1>
+        <h1 className="text-[22px] font-bold text-[#15171c] mb-2 tracking-tight">{t("Link Expired")}</h1>
         <p className="text-[14px] text-[#727a88] leading-relaxed mb-6 max-w-xs mx-auto">
-          This invite link has expired or was revoked by the administrator. Ask the group admin for a new link.
+          {t("This invite link has expired or was revoked by the administrator. Ask the group admin for a new link.")}
         </p>
         <Link
           href="/chat"
           className="flex items-center justify-center gap-2 w-full max-w-xs mx-auto py-3 bg-[#15171c] hover:bg-black text-white rounded-xl font-semibold text-[14px] transition-all active:scale-95 shadow-sm"
         >
-          Open Ledger Chat
+          {t("Open Ledger Chat")}
         </Link>
       </Layout>
     );
@@ -101,20 +103,20 @@ export default async function JoinCommunityPage({ params }: Props) {
         </div>
 
         <p className="text-[14px] text-[#727a88] leading-relaxed mb-5 max-w-xs mx-auto">
-          {community.description || 'A community on Ledger Chat. People in it can read what is posted. It is not a private conversation.'}
+          {community.description || t("A community on Ledger Chat. People in it can read what is posted. It is not a private conversation.")}
         </p>
 
         <div className="flex items-center justify-center gap-2 mb-6 bg-[#f2f4f7] px-3.5 py-1.5 rounded-full border border-black/[0.04] w-fit mx-auto">
           <Users size={13} className="text-[#15171c]" />
-          <span className="text-[12px] font-semibold text-[#15171c]">{memberCount} {memberCount === 1 ? 'Member' : 'Members'}</span>
+          <span className="text-[12px] font-semibold text-[#15171c]">{memberCount} {memberCount === 1 ? t("Member") : t("Members")}</span>
         </div>
 
         <div className="w-full max-w-xs mx-auto space-y-3">
           <Link href={'/chat?join=' + code} className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#15171c] hover:bg-black text-white rounded-xl font-semibold text-[15px] transition-all active:scale-95 shadow-sm">
-            Join Private Community <ArrowRight size={16} />
+            {t("Join Private Community")}{" "}<ArrowRight size={16} />
           </Link>
           <p className="text-[12.5px] font-medium text-[#727a88] leading-relaxed text-center">
-            You were invited to this private group. Only people with this link can join.
+            {t("You were invited to this private group. Only people with this link can join.")}
           </p>
         </div>
       </Layout>
@@ -134,12 +136,12 @@ export default async function JoinCommunityPage({ params }: Props) {
       </div>
 
       <p className="text-[14px] text-[#727a88] leading-relaxed mb-5 max-w-xs mx-auto">
-        {community.description || 'A secure, cryptographically verified community on Humanity Ledger.'}
+        {community.description || t("A secure, cryptographically verified community on Humanity Ledger.")}
       </p>
 
       <div className="flex items-center gap-2 mb-6 bg-[#f2f4f7] px-3.5 py-1.5 rounded-full border border-black/[0.04] w-fit mx-auto">
         <Users size={13} className="text-[#15171c]" />
-        <span className="text-[12px] font-semibold text-[#15171c]">{memberCount} {memberCount === 1 ? 'Member' : 'Members'}</span>
+        <span className="text-[12px] font-semibold text-[#15171c]">{memberCount} {memberCount === 1 ? t("Member") : t("Members")}</span>
       </div>
 
       <div className="w-full max-w-xs mx-auto space-y-3">
@@ -148,10 +150,10 @@ export default async function JoinCommunityPage({ params }: Props) {
           href={`/chat?join=${code}`}
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#15171c] hover:bg-black text-white rounded-xl font-semibold text-[15px] transition-all active:scale-95 shadow-sm"
         >
-          Join Community <ArrowRight size={16} />
+          {t("Join Community")}{" "}<ArrowRight size={16} />
         </Link>
         <p className="text-[12px] text-[#727a88] text-center px-2">
-          Connect with your Ethereum wallet. Messages and transactions are cryptographically signed.
+          {t("Connect with your Ethereum wallet. Messages and transactions are cryptographically signed.")}
         </p>
       </div>
     </Layout>
@@ -159,7 +161,8 @@ export default async function JoinCommunityPage({ params }: Props) {
 }
 
 // ── Shared Layout wrapper ────────────────────────────────────────────────────
-function Layout({ children }: { children: React.ReactNode }) {
+async function Layout({ children }: { children: React.ReactNode }) {
+  const t = await getT();
   return (
     <div className="min-h-screen bg-[#f2f4f7] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
       <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-sm border border-black/[0.06] flex flex-col items-center text-center relative z-10">
@@ -169,7 +172,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <div className="mt-8 flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
         <Shield size={13} className="text-[#15171c]" />
         <Link href="/" className="text-[12px] font-semibold text-[#727a88] hover:text-[#15171c]">
-          Humanity Ledger · Sovereign Protocol
+          {t("Humanity Ledger · Sovereign Protocol")}
         </Link>
       </div>
     </div>

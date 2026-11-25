@@ -31,6 +31,7 @@ import { ALPHA_MAX_AMOUNT, TREASURY_ADDRESS_SET, contractQuote } from '@/lib/pro
 import { deployRefusal } from '@/lib/protocol/agreement-gate';
 import mainnetRecord from '@/deployments/aztec-mainnet.json';
 import pendingRecompile from '@/deployments/aztec-pending-recompile.json';
+import { useT } from '@/lib/i18n/client';
 
 const ALPHA = AZTEC_WALLET_CONFIG.network === 'mainnet';
 /** Real value (cUSDC) never goes into escrow or stream contracts without an external audit (lib/aztec/agreement-policy.ts). */
@@ -79,6 +80,7 @@ export interface AgreementComposerProps {
 }
 
 export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClose, onSend, onOpenWallet }: AgreementComposerProps) {
+  const tr = useT();
   const [wallet, setWallet] = useState<WalletSnapshot>(() => getPrivateWallet().state);
   useEffect(() => getPrivateWallet().subscribe(setWallet), []);
   const [peer, setPeer] = useState<string | undefined>();
@@ -132,7 +134,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
       }
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not share your address.');
+      setError(e instanceof Error ? e.message : tr("Could not share your address."));
     }
   };
 
@@ -155,12 +157,12 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
     if (!peer) return;
     const refused = refusalFor(kind);
     if (refused) {
-      setError(refused);
+      setError(tr(refused));
       setStartedAt(0);
       return;
     }
     if (kind === 'escrow' && quote && !quote.q.ok) {
-      setError('This amount is refused. The contract would not accept the fee.');
+      setError(tr("This amount is refused. The contract would not accept the fee."));
       setStartedAt(0);
       return;
     }
@@ -195,37 +197,36 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Private agreement"
+        aria-label={tr("Private agreement")}
         className="w-full sm:max-w-[420px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-black/10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92vh] supports-[height:100dvh]:max-h-[92dvh] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-[17px] font-semibold text-[#15171c]">Private agreement with {peerName}</h2>
-          <button type="button" aria-label="Close" disabled={!!step} onClick={onClose} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center">
+          <h2 className="text-[17px] font-semibold text-[#15171c]">{tr("Private agreement with {peerName}", { peerName })}</h2>
+          <button type="button" aria-label={tr("Close")} disabled={!!step} onClick={onClose} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center">
             <X size={16} />
           </button>
         </div>
         <p className="text-[13px] text-[#727a88] mt-1 leading-snug">
           {ALPHA
-            ? `An escrow or a payment stream in its own contract on ${networkLabel()}. HLC is a test token with no monetary value; the network fee is paid in Fee Juice. ${FEE_PRIVACY.short} The contracts have no external audit.`
-            : 'An escrow or a payment stream in its own contract on the Aztec test network. Amounts and parties stay private. Test tokens only, no value. The contracts have no external audit.'}
+            ? tr("An escrow or a payment stream in its own contract on {networkLabel}. HLC is a test token with no monetary value; the network fee is paid in Fee Juice. {short} The contracts have no external audit.", { networkLabel: networkLabel(), short: FEE_PRIVACY.short })
+            : tr("An escrow or a payment stream in its own contract on the Aztec test network. Amounts and parties stay private. Test tokens only, no value. The contracts have no external audit.")}
         </p>
         {/* Shown first, before any field and before any transaction: the same refusal assertCanOpen enforces. */}
         {(() => {
           const notice = refusalFor(kind) ?? refusalFor(kind === 'escrow' ? 'stream' : 'escrow');
           return notice ? (
             <p role="status" className="mt-3 rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24] leading-snug">
-              {notice} You can still share your Aztec address.
-            </p>
+              {tr("{notice} You can still share your Aztec address.", { notice })}</p>
           ) : null;
         })()}
 
         {!ready ? (
           <div className="mt-4">
-            <p className="text-[14px] text-[#4a505c]">Open your private wallet first.</p>
+            <p className="text-[14px] text-[#4a505c]">{tr("Open your private wallet first.")}</p>
             {onOpenWallet && (
               <button type="button" className="mt-3 h-10 px-4 rounded-full bg-[#15171c] text-white text-[14px] font-semibold" onClick={onOpenWallet}>
-                Open private wallet
+                {tr("Open private wallet")}
               </button>
             )}
           </div>
@@ -233,17 +234,17 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
           <>
             <div className="mt-4 rounded-2xl border border-[#eceef2] p-3.5">
               <p className="flex items-center gap-2 text-[13.5px] font-semibold text-[#15171c]">
-                <KeyRound size={14} /> Aztec addresses
+                <KeyRound size={14} />{" "}{tr("Aztec addresses")}
               </p>
               <p className="text-[13px] text-[#727a88] mt-1 leading-snug">
                 {peer
                   ? peerVerified
-                    ? `${peerName}'s address is saved and verified for this chat: ${peer.slice(0, 10)}…${peer.slice(-4)}.`
-                    : `${peerName}'s address ${peer.slice(0, 10)}…${peer.slice(-4)} is not verified. Ask them to share it again from an up-to-date Ledger Chat; agreements need a verified address.`
-                  : `${peerName} has not shared an Aztec address in this chat yet. Share yours and ask them to share theirs.`}
+                    ? tr("{peerName}'s address is saved and verified for this chat: {slice}…{slice2}.", { peerName, slice: peer.slice(0, 10), slice2: peer.slice(-4) })
+                    : tr("{peerName}'s address {slice}…{slice2} is not verified. Ask them to share it again from an up-to-date Ledger Chat; agreements need a verified address.", { peerName, slice: peer.slice(0, 10), slice2: peer.slice(-4) })
+                  : tr("{peerName} has not shared an Aztec address in this chat yet. Share yours and ask them to share theirs.", { peerName })}
               </p>
               <button type="button" className="mt-2.5 h-9 px-3.5 rounded-full bg-[#eff1f4] text-[13.5px] font-semibold text-[#15171c]" disabled={!!step} onClick={share}>
-                Share my Aztec address
+                {tr("Share my Aztec address")}
               </button>
             </div>
 
@@ -251,34 +252,34 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
               <div className="mt-4 space-y-3">
                 <div className="flex gap-2">
                   <button type="button" className={seg(kind === 'escrow')} onClick={() => { setKind('escrow'); setDuration(DURATIONS.escrow[1].s); }}>
-                    <Lock size={14} /> Escrow
+                    <Lock size={14} />{" "}{tr("Escrow")}
                   </button>
                   <button type="button" className={seg(kind === 'stream')} onClick={() => { setKind('stream'); setDuration(DURATIONS.stream[1].s); }}>
-                    <Waves size={14} /> Stream
+                    <Waves size={14} />{" "}{tr("Stream")}
                   </button>
                 </div>
                 <p className="text-[12.5px] text-[#727a88] leading-snug">
                   {kind === 'escrow'
-                    ? `${peerName} can claim the amount until the deadline; after it, you can take it back.`
-                    : `The amount is paid out second by second over the duration; ${peerName} withdraws what has accrued, and you can cancel at any time.`}
+                    ? tr("{peerName} can claim the amount until the deadline; after it, you can take it back.", { peerName })
+                    : tr("The amount is paid out second by second over the duration; {peerName} withdraws what has accrued, and you can cancel at any time.", { peerName })}
                 </p>
                 <label className="block text-[13px] text-[#4a505c]">
-                  Token
+                  {tr("Token")}
                   <select className={`${field} mt-1`} value={token} onChange={(e) => setToken(e.target.value)}>
                     {AGREEMENT_TOKENS.map((t) => (
-                      <option key={t.address} value={t.address}>{ALPHA ? t.symbol : `${t.symbol} (test)`}</option>
+                      <option key={t.address} value={t.address}>{ALPHA ? tr(t.symbol) : tr("{symbol} (test)", { symbol: t.symbol })}</option>
                     ))}
                   </select>
                 </label>
                 <label className="block text-[13px] text-[#4a505c]">
-                  Amount
+                  {tr("Amount")}
                   <input className={`${field} mt-1`} inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} />
                 </label>
                 <label className="block text-[13px] text-[#4a505c]">
-                  {kind === 'escrow' ? 'Time to claim' : 'Duration'}
+                  {kind === 'escrow' ? tr("Time to claim") : tr("Duration")}
                   <select className={`${field} mt-1`} value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
                     {DURATIONS[kind].map((d) => (
-                      <option key={d.s} value={d.s}>{d.label}</option>
+                      <option key={d.s} value={d.s}>{tr(d.label)}</option>
                     ))}
                   </select>
                 </label>
@@ -289,34 +290,30 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                   try {
                     const { upfront } = streamTerms(parseUnits(amount, t.decimals), duration, 0);
                     return (
-                      <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">
-                        A stream starts {STREAM_START_SLACK / 60} minutes in the past, so the network can accept it: {peerName} can withdraw at least {formatUnits(upfront, t.decimals)} {t.symbol} as soon as it lands (plus what accrues while it is proven), and the rest over the duration.
-                      </p>
+                      <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">{tr("A stream starts {value} minutes in the past, so the network can accept it: {peerName} can withdraw at least {formatUnits} {symbol} as soon as it lands (plus what accrues while it is proven), and the rest over the duration.", { value: STREAM_START_SLACK / 60, peerName, formatUnits: formatUnits(upfront, t.decimals), symbol: t.symbol })}</p>
                     );
                   } catch {
                     return null;
                   }
                 })()}
                 {quote?.q.ok && (
-                  <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">
-                    No protocol fee during the closed alpha. {kind === 'escrow' ? 'Recipient' : 'The recipient can receive up to'}: {formatUnits(quote.q.net, quote.decimals)} {quote.symbol}. The network fee is paid separately, in Fee Juice.
-                  </p>
+                  <p className="text-[12.5px] text-[#4a505c] leading-snug" role="note">{tr("No protocol fee during the closed alpha. {value}: {formatUnits} {symbol}. The network fee is paid separately, in Fee Juice.", { value: kind === 'escrow' ? tr("Recipient") : tr("The recipient can receive up to"), formatUnits: formatUnits(quote.q.net, quote.decimals), symbol: quote.symbol })}</p>
                 )}
                 {quote && !quote.q.ok && (
                   <p role="status" className="text-[12.5px] text-[#7a2e12] leading-snug">
                     {quote.q.reason === 'above-alpha-maximum'
-                      ? `Refused: the closed alpha accepts at most ${formatUnits(ALPHA_MAX_AMOUNT, quote.decimals)} ${quote.symbol} per ${kind === 'escrow' ? 'escrow' : 'stream'}. The contract refuses more.`
-                      : 'Enter an amount above zero.'}
+                      ? tr("Refused: the closed alpha accepts at most {formatUnits} {symbol} per {value}. The contract refuses more.", { formatUnits: formatUnits(ALPHA_MAX_AMOUNT, quote.decimals), symbol: quote.symbol, value: kind === 'escrow' ? 'escrow' : 'stream' })
+                      : tr("Enter an amount above zero.")}
                   </p>
                 )}
                 <p className="text-[12.5px] text-[#727a88] leading-snug">
-                  The amount comes from your private balance. Proving runs on this device and can take a few minutes.
+                  {tr("The amount comes from your private balance. Proving runs on this device and can take a few minutes.")}
                 </p>
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
                 {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
                 <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !!refusalFor(kind) || (!!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
-                  {kind === 'escrow' ? 'Open escrow' : 'Open stream'}
+                  {kind === 'escrow' ? tr("Open escrow") : tr("Open stream")}
                 </button>
               </div>
             )}

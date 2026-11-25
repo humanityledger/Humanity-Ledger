@@ -117,24 +117,11 @@ describe('Humanity Ledger — 300-Item Fortification Checklist Automated Verific
   // Domain 2: Aztec / Noir / UltraHonk Circuit and PXE Hardening (Items 41–80)
   // -------------------------------------------------------------------------
   describe('Domain 2: Aztec / Noir & Circuit Hardening', () => {
-    it('Item 41: Verification keys for all production circuits exist with UltraHonk BN254 specifications', () => {
-      const circuits = ['escrow', 'streams', 'identity'];
-      for (const name of circuits) {
-        const vkPath = path.join(root, `circuits/${name}/target/${name}.vk.json`);
-        expect(fs.existsSync(vkPath), `Missing VK for circuit: ${name}`).toBe(true);
-        const vk = JSON.parse(fs.readFileSync(vkPath, 'utf8'));
-        expect(vk.provingSystem).toBe('UltraHonk');
-        expect(vk.curve).toBe('BN254');
-        expect(vk.vkSha256).toMatch(/^0x[0-9a-f]{64}$/);
-      }
-    });
-
-    it('Item 43: VK metadata does not claim an on-chain registry that does not exist', () => {
-      for (const name of ['escrow', 'streams', 'identity']) {
-        const vk = JSON.parse(fs.readFileSync(path.join(root, `circuits/${name}/target/${name}.vk.json`), 'utf8'));
-        expect(vk.onChainRegistry).toBeNull();
-        expect(vk.l1Anchoring).toBeUndefined();
-      }
+    it('Item 41: the aztec-nr artifacts the product proves with are pinned; the standalone circuits are retired', () => {
+      const pins = fs.readFileSync(path.join(root, 'lib/aztec/artifact-pins.ts'), 'utf8');
+      for (const c of ['PrivateEscrow', 'PaymentStream', 'IdentityCredential']) expect(pins).toContain(`contract: "${c}"`);
+      expect(fs.existsSync(path.join(root, 'circuits'))).toBe(false);
+      expect(fs.existsSync(path.join(root, 'archive/standalone-circuits/README.md'))).toBe(true);
     });
 
     it('Item 47: Pinned documentation of Noir and Barretenberg versions in CIRCUITS.md', () => {
@@ -146,11 +133,9 @@ describe('Humanity Ledger — 300-Item Fortification Checklist Automated Verific
       expect(content).toContain('HumanityTimeLockVault');
     });
 
-    it('Item 49: Negative tests enforce circuit boundary conditions', () => {
-      const escrowTest = fs.readFileSync(path.join(root, 'test/circuits/escrow.test.ts'), 'utf8');
-      expect(escrowTest).toContain('current_timestamp <= deadline');
-      expect(escrowTest).toContain('amount must be > 0');
-      expect(escrowTest).toContain('amount exceeds MAX_ESCROW_AMOUNT');
+    it('Item 49: the retired circuits keep their known issues written down', () => {
+      const readme = fs.readFileSync(path.join(root, 'archive/standalone-circuits/README.md'), 'utf8');
+      for (const id of ['ZK-01', 'ZK-02', 'ZK-03', 'ZK-04', 'ZK-05', 'ZK-06', 'ZK-07']) expect(readme).toContain(id);
     });
   });
 
@@ -290,8 +275,8 @@ describe('Humanity Ledger — 300-Item Fortification Checklist Automated Verific
       const codeownersPath = path.join(root, '.github/CODEOWNERS');
       expect(fs.existsSync(codeownersPath)).toBe(true);
       const content = fs.readFileSync(codeownersPath, 'utf8');
-      expect(content).toContain('circuits/');
       expect(content).toContain('contracts/');
+      expect(content).toContain('contracts/aztec/');
       expect(content).toContain('lib/security/');
     });
 

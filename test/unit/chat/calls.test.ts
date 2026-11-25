@@ -11,9 +11,10 @@ import { createHmac } from 'node:crypto';
 import { CALL_AUDIO, FALLBACK_ICE, callConstraints, callVideo, loadIceConfig, loadIceServers, peerServerOptions, preferRed, tuneOpusSdp, tuneSenders } from '@/lib/calls/media';
 import { finishCallMetrics, markFirstAudio, markSetup, recentCallMetrics, sampleHeap, startCallMetrics } from '@/lib/calls/metrics';
 import { RESUME_ATTEMPT_MS, RESUME_DEADLINE_MS, acceptResume, basePeerId, glareKeepsMine, isResumeMeta, resumeDelay, shouldDialResume } from '@/lib/calls/resume';
+import { untranslated } from '../../helpers/untranslated';
 
 const root = path.resolve(__dirname, '../../..');
-const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
+const read = (p: string) => untranslated(fs.readFileSync(path.join(root, p), 'utf8'));
 
 const SDP = [
   'v=0',
@@ -67,7 +68,12 @@ describe('call media', () => {
     });
     await tuneSenders({ getSenders: () => [sender('audio'), sender('video')] });
     expect(sent.find((x) => x.kind === 'audio').p.encodings[0]).toMatchObject({ priority: 'high', networkPriority: 'high' });
-    expect(sent.find((x) => x.kind === 'video').p).toMatchObject({ degradationPreference: 'maintain-framerate' });
+    expect(sent.find((x) => x.kind === 'video').p).toMatchObject({ degradationPreference: 'balanced' });
+    // HD on 4G and 5G: 720p30 may use up to 2.5 Mbps, sent at full resolution.
+    expect(sent.find((x) => x.kind === 'video').p.encodings[0]).toMatchObject({ maxBitrate: 2_500_000, maxFramerate: 30, scaleResolutionDownBy: 1 });
+    sent.length = 0;
+    await tuneSenders({ getSenders: () => [sender('video')] }, { saver: true });
+    expect(sent[0].p.encodings[0]).toMatchObject({ maxBitrate: 500_000, maxFramerate: 15 });
     sent.length = 0;
     await tuneSenders({ getSenders: () => [sender('video')] }, { screen: true });
     expect(sent[0].p).toMatchObject({ degradationPreference: 'maintain-resolution' });
@@ -240,7 +246,9 @@ describe('call screen and chat', () => {
     expect(chat.match(/ref=\{remoteAudioRef\}/g)).toHaveLength(1);
     expect(chat).not.toMatch(/muted=\{false\}/);
     const remoteVideos = chat.match(/<video\s+ref=\{el => attachVideo\(el, (remoteStream|remoteScreen)\)\}[^>]*>/g) ?? [];
-    expect(remoteVideos.length).toBeGreaterThanOrEqual(3);
+    // The camera and the shared screen; the earlier picture-in-picture copy is gone.
+    expect(remoteVideos.length).toBeGreaterThanOrEqual(2);
+    for (const v of chat.match(/<video\s+ref=[\s\S]*?\/>/g) ?? []) expect(v).toMatch(/\bmuted\b/);
     for (const v of remoteVideos) expect(v).toMatch(/\bmuted\b/);
     // attachVideo mutes again in code, whatever the markup says.
     expect(chat).toMatch(/function attachVideo\(el: HTMLVideoElement \| null, stream: MediaStream \| null\) \{[\s\S]{0,200}el\.muted = true;/);

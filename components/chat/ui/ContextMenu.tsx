@@ -13,6 +13,7 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useT } from '@/lib/i18n/client';
 
 export interface MenuItem {
   label: string;
@@ -28,6 +29,7 @@ export interface MenuAt {
 }
 
 export function ContextMenu({ at, items, label, onClose }: { at: MenuAt; items: MenuItem[]; label: string; onClose: () => void }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: at.y, left: at.x });
 
@@ -101,7 +103,7 @@ export function ContextMenu({ at, items, label, onClose }: { at: MenuAt; items: 
             className={`min-h-[44px] flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[16px] outline-none hover:bg-[#f2f4f7] focus-visible:bg-[#eff1f4] disabled:opacity-40 ${it.danger ? 'text-[#9b1c16]' : 'text-[#15171c]'}`}
           >
             {it.icon ? <span className="w-5 flex justify-center shrink-0 text-[#3d424b]" aria-hidden="true">{it.icon}</span> : null}
-            <span className="truncate">{it.label}</span>
+            <span className="truncate">{t(it.label)}</span>
           </button>
         ))}
       </div>

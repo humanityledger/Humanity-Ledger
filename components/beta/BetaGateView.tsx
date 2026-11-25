@@ -25,6 +25,7 @@ import {
 } from '@/lib/beta/gate';
 import s from './BetaGateView.module.css';
 import { BetaRequestForm } from './BetaRequestForm';
+import { useT } from '@/lib/i18n/client';
 
 const CONNECT = '/connect?redirect=%2Fbeta';
 const STATUS_URL = '/api/beta/cusdc/status';
@@ -44,6 +45,7 @@ const primary =
 const quiet = 'text-[13.5px] font-medium text-[#667085] hover:text-[#15171C] transition-colors';
 
 export default function BetaGateView() {
+  const t = useT();
   const router = useRouter();
   const [status, setStatus] = useState<GateStatus | null>(null);
   const [signedOut, setSignedOut] = useState(false);
@@ -120,7 +122,7 @@ export default function BetaGateView() {
     setBusy(false);
     if (res?.ok) return finish();
     const view = redeemErrorView(res ? res.status : null, body);
-    setError(view.text);
+    setError(t(view.text));
     if (view.step === 'wallet') setSignedOut(true);
     else if (view.step !== 'stay') setStep(view.step);
     if (res?.status === 409) void load();
@@ -137,9 +139,9 @@ export default function BetaGateView() {
       });
       const data = await r.json().catch(() => null);
       if (r.ok) { invalidateCusdcBeta(); setAgreed(false); await load(); }
-      else setError(redeemErrorView(r.status, data).text);
+      else setError(t(redeemErrorView(r.status, data).text));
     } catch {
-      setError(redeemErrorView(null, null).text);
+      setError(t(redeemErrorView(null, null).text));
     } finally {
       setBusy(false);
     }
@@ -166,41 +168,41 @@ export default function BetaGateView() {
 
   let body: React.ReactNode;
   if (stage === 'loading' || (stage === 'member' && step !== 'done')) {
-    body = <Skeleton label={stage === 'member' ? 'Opening Ledger Chat' : 'Checking your place in the beta'} />;
+    body = <Skeleton label={stage === 'member' ? t("Opening Ledger Chat") : t("Checking your place in the beta")} />;
   } else if (step === 'done') {
     body = <Granted onOpen={() => router.push('/chat')} />;
   } else if (asking && (stage === 'signedOut' || stage === 'join')) {
     body = <BetaRequestForm wallet={status?.wallet} primaryClass={primary} quietClass={quiet} onBack={() => setAsking(false)} />;
   } else if (stage === 'signedOut') {
     body = (
-      <Panel title="Connect your wallet" text="The beta is tied to the Ethereum wallet you sign in with. Your invitation is not used until you unlock." headingRef={heading}>
+      <Panel title={t("Connect your wallet")} text={t("The beta is tied to the Ethereum wallet you sign in with. Your invitation is not used until you unlock.")} headingRef={heading}>
         {error && <ErrorLine text={error} />}
-        <Link href={CONNECT} className={`${primary} mt-7 flex items-center justify-center`}>Connect wallet</Link>
+        <Link href={CONNECT} className={`${primary} mt-7 flex items-center justify-center`}>{t("Connect wallet")}</Link>
         <button type="button" className={`${quiet} mt-5 block mx-auto`} onClick={() => setAsking(true)} data-testid="beta-ask">
-          I don&apos;t have a code yet
+          {t("I don't have a code yet")}
         </button>
       </Panel>
     );
   } else if (stage === 'unavailable') {
     body = (
-      <Panel title="The beta is not reachable right now" text="Nothing was changed. Check your connection and try again in a minute." headingRef={heading}>
-        <button type="button" className={`${primary} mt-7`} onClick={() => { setFailed(false); void load(); }}>Try again</button>
+      <Panel title={t("The beta is not reachable right now")} text={t("Nothing was changed. Check your connection and try again in a minute.")} headingRef={heading}>
+        <button type="button" className={`${primary} mt-7`} onClick={() => { setFailed(false); void load(); }}>{t("Try again")}</button>
       </Panel>
     );
   } else if (stage === 'revoked') {
-    body = <Panel title="Your access was revoked" text="Your cUSDC balance stays visible and you can still move your own funds out. New cUSDC payments are off for this account." headingRef={heading} />;
+    body = <Panel title={t("Your access was revoked")} text={t("Your cUSDC balance stays visible and you can still move your own funds out. New cUSDC payments are off for this account.")} headingRef={heading} />;
   } else if (stage === 'waiting') {
-    body = <Panel title="You are a member" text={status!.accessReasons[0] ?? 'cUSDC payments are paused for now.'} headingRef={heading} />;
+    body = <Panel title={t("You are a member")} text={status!.accessReasons[0] ?? t("cUSDC payments are paused for now.")} headingRef={heading} />;
   } else if (stage === 'closed') {
-    body = <Panel title="The beta is not open" text={status!.reasons[0] ?? 'Invitations work once the beta opens.'} headingRef={heading} />;
+    body = <Panel title={t("The beta is not open")} text={status!.reasons[0] ?? t("Invitations work once the beta opens.")} headingRef={heading} />;
   } else if (stage === 'full') {
-    body = <Panel title="All places are taken" text="The closed beta has reached its limit. Messages, calls and public tips keep working as before." headingRef={heading} />;
+    body = <Panel title={t("All places are taken")} text={t("The closed beta has reached its limit. Messages, calls and public tips keep working as before.")} headingRef={heading} />;
   } else if (stage === 'notice') {
     body = (
-      <Panel title="The notice changed" text="Read the new version and confirm it to keep using cUSDC." headingRef={heading}>
+      <Panel title={t("The notice changed")} text={t("Read the new version and confirm it to keep using cUSDC.")} headingRef={heading}>
         <Notice status={status!} agreed={agreed} onAgree={setAgreed} />
         {error && <ErrorLine text={error} />}
-        <button type="button" className={`${primary} mt-6`} disabled={!agreed || busy} onClick={confirmNotice}>{busy ? 'Saving' : 'Confirm the notice'}</button>
+        <button type="button" className={`${primary} mt-6`} disabled={!agreed || busy} onClick={confirmNotice}>{busy ? t("Saving") : t("Confirm the notice")}</button>
       </Panel>
     );
   } else if (step === 'wallet') {
@@ -211,27 +213,26 @@ export default function BetaGateView() {
             <span className="h-4 w-4 rounded-full bg-gradient-to-br from-[#2754D6] to-[#8FA8F5]" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[12px] font-medium text-[#667085]">Signed in as</span>
+            <span className="block text-[12px] font-medium text-[#667085]">{t("Signed in as")}</span>
             <span className="block font-mono text-[15px] tracking-[-0.01em] text-[#15171C]" title={status?.wallet}>{shortAddress(status?.wallet)}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ECFDF5] px-2.5 py-1 text-[12px] font-semibold text-[#047857]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" aria-hidden /> Connected
-          </span>
+            {t("{0} Connected", { 0: <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" aria-hidden /> })}</span>
         </div>
         {status?.reserved && (
           <p className="mt-4 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3 text-[13.5px] text-[#065F46]" data-testid="beta-reserved">
-            A place is reserved for this wallet. You can join without a code.
+            {t("A place is reserved for this wallet. You can join without a code.")}
           </p>
         )}
-        <button type="button" className={`${primary} mt-6`} onClick={() => setStep(status?.reserved ? 'notice' : 'code')}>Continue</button>
+        <button type="button" className={`${primary} mt-6`} onClick={() => setStep(status?.reserved ? 'notice' : 'code')}>{t("Continue")}</button>
       </section>
     );
   } else if (step === 'code') {
     body = (
       <section>
-        <h2 ref={heading} tabIndex={-1} className="text-[15px] font-semibold text-[#15171C] outline-none">Your invitation code</h2>
-        <p className="mt-1 text-[13.5px] text-[#667085]">Sixteen characters. Paste it into any box.</p>
-        <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-1.5 sm:gap-2" role="group" aria-label="Invitation code">
+        <h2 ref={heading} tabIndex={-1} className="text-[15px] font-semibold text-[#15171C] outline-none">{t("Your invitation code")}</h2>
+        <p className="mt-1 text-[13.5px] text-[#667085]">{t("Sixteen characters. Paste it into any box.")}</p>
+        <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-1.5 sm:gap-2" role="group" aria-label={t("Invitation code")}>
           {blocks.map((b, i) => (
             <React.Fragment key={i}>
               {i > 0 && <span className="h-px w-2 sm:w-2.5 bg-slate-300" aria-hidden />}
@@ -242,7 +243,7 @@ export default function BetaGateView() {
                 onPaste={(e) => { e.preventDefault(); onBlock(i, e.clipboardData.getData('text')); }}
                 onKeyDown={(e) => onKey(i, e)}
                 onFocus={(e) => e.currentTarget.select()}
-                aria-label={`Code, part ${i + 1} of 4`}
+                aria-label={t("Code, part {value} of 4", { value: i + 1 })}
                 autoComplete="one-time-code"
                 autoCapitalize="characters"
                 autoCorrect="off"
@@ -256,34 +257,34 @@ export default function BetaGateView() {
           ))}
         </div>
         {error && <ErrorLine text={error} />}
-        <button type="button" className={`${primary} mt-6`} disabled={!isCompleteCode(blocks)} onClick={() => { setError(null); setStep('notice'); }}>Continue</button>
+        <button type="button" className={`${primary} mt-6`} disabled={!isCompleteCode(blocks)} onClick={() => { setError(null); setStep('notice'); }}>{t("Continue")}</button>
         <div className="mt-6 rounded-2xl border border-white/80 bg-white/60 backdrop-blur-md px-4 py-3.5" data-testid="beta-request">
           {status?.request === 'pending' ? (
             <p className="text-[13.5px] text-[#475467]">{requestNoteFor('pending')}</p>
           ) : (
             <>
-              <p className="text-[14px] font-medium text-[#15171C]">No code yet?</p>
-              <p className="mt-0.5 text-[13.5px] text-[#667085]">Ask for one and we will reply by email.</p>
+              <p className="text-[14px] font-medium text-[#15171C]">{t("No code yet?")}</p>
+              <p className="mt-0.5 text-[13.5px] text-[#667085]">{t("Ask for one and we will reply by email.")}</p>
               <button type="button" className={`${quiet} mt-2 !text-[#2754D6]`} onClick={() => setAsking(true)} data-testid="beta-ask">
-                Request an invitation
+                {t("Request an invitation")}
               </button>
             </>
           )}
         </div>
-        <button type="button" className={`${quiet} mt-4 block mx-auto`} onClick={() => setStep('wallet')}>Back</button>
+        <button type="button" className={`${quiet} mt-4 block mx-auto`} onClick={() => setStep('wallet')}>{t("Back")}</button>
       </section>
     );
   } else {
     body = (
       <section>
-        <h2 ref={heading} tabIndex={-1} className="text-[15px] font-semibold text-[#15171C] outline-none">Technical notice</h2>
-        <p className="mt-1 text-[13.5px] text-[#667085]">Real cUSDC, small caps, no independent audit yet.</p>
+        <h2 ref={heading} tabIndex={-1} className="text-[15px] font-semibold text-[#15171C] outline-none">{t("Technical notice")}</h2>
+        <p className="mt-1 text-[13.5px] text-[#667085]">{t("Real cUSDC, small caps, no independent audit yet.")}</p>
         <Notice status={status!} agreed={agreed} onAgree={setAgreed} />
         {error && <ErrorLine text={error} />}
         <button type="button" className={`${primary} mt-6`} disabled={!agreed || busy || !canUnlock} onClick={unlock}>
-          {busy ? <span className="inline-flex items-center gap-2"><span className={s.spinner} aria-hidden />Unlocking</span> : 'Unlock cUSDC Beta'}
+          {busy ? <span className="inline-flex items-center gap-2">{t("{0}Unlocking", { 0: <span className={s.spinner} aria-hidden /> })}</span> : t("Unlock cUSDC Beta")}
         </button>
-        <button type="button" className={`${quiet} mt-4 block mx-auto`} disabled={busy} onClick={() => setStep(viaReserved ? 'wallet' : 'code')}>Back</button>
+        <button type="button" className={`${quiet} mt-4 block mx-auto`} disabled={busy} onClick={() => setStep(viaReserved ? 'wallet' : 'code')}>{t("Back")}</button>
       </section>
     );
   }
@@ -295,8 +296,8 @@ export default function BetaGateView() {
       <span className={`${s.orb} ${s.orbC}`} aria-hidden />
       <div className="relative mx-auto flex w-full max-w-[480px] flex-col">
         <header className="flex items-center justify-between gap-3">
-          <Link href="/chat" aria-label="Ledger Chat" className="rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-[#2754D6]/15">
-            <HLLogo variant="full" theme="dark" size={24} label="Ledger Chat" />
+          <Link href="/chat" aria-label={t("Ledger Chat")} className="rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-[#2754D6]/15">
+            <HLLogo variant="full" theme="dark" size={24} label={t("Ledger Chat")} />
           </Link>
           <CapacityPill capacity={capacity} remaining={remaining} />
         </header>
@@ -304,12 +305,12 @@ export default function BetaGateView() {
         <div className={`mt-6 overflow-hidden ${s.glass}`}>
           {(joining || stage === 'signedOut') && (
             <div className="px-6 pt-7 sm:px-9 sm:pt-9">
-              <p className={s.eyebrow}>Private payments on Aztec Alpha</p>
+              <p className={s.eyebrow}>{t("Private payments on Aztec Alpha")}</p>
               <h1 ref={joining && step === 'wallet' ? heading : undefined} tabIndex={-1} className={`mt-3 text-[38px] sm:text-[44px] leading-[1.02] outline-none ${s.display}`}>
-                Join the closed beta
+                {t("Join the closed beta")}
               </h1>
               <p className="mt-2.5 text-[14.5px] leading-relaxed text-[#475467]">
-                Send and receive cUSDC privately in your chats. Every payment is proven on your device and settled on Aztec Alpha. Access is by invitation from the operator only.
+                {t("Send and receive cUSDC privately in your chats. Every payment is proven on your device and settled on Aztec Alpha. Access is by invitation from the operator only.")}
               </p>
               {joining && !asking && <Stepper current={current} />}
             </div>
@@ -318,7 +319,7 @@ export default function BetaGateView() {
         </div>
 
         <footer className="mt-6 text-center text-[12.5px] text-[#667085]">
-          Ledger Chat · Aztec Alpha Privacy Layer
+          {t("Ledger Chat · Aztec Alpha Privacy Layer")}
         </footer>
       </div>
     </main>
@@ -326,18 +327,19 @@ export default function BetaGateView() {
 }
 
 function CapacityPill({ capacity, remaining }: { capacity: number; remaining: number | null }) {
+  const t = useT();
   const taken = remaining === null ? null : Math.min(capacity, Math.max(0, capacity - remaining));
   return (
     <div
       className={`inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full pl-2.5 pr-3 ${s.glassSoft}`}
       data-testid="beta-capacity"
-      aria-label={remaining === null ? `Closed beta, ${capacity} spots` : `Closed beta, ${remaining} of ${capacity} spots left`}
+      aria-label={remaining === null ? t("Closed beta, {capacity} spots", { capacity }) : t("Closed beta, {remaining} of {capacity} spots left", { remaining, capacity })}
     >
       <span className={`relative h-1.5 w-1.5 shrink-0 rounded-full bg-[#10B981] ${s.pulse}`} aria-hidden />
-      <span className="text-[12px] font-semibold tracking-[-0.005em] text-[#15171C]">Closed Beta</span>
+      <span className="text-[12px] font-semibold tracking-[-0.005em] text-[#15171C]">{t("Closed Beta")}</span>
       <span className="h-3 w-px bg-slate-200" aria-hidden />
       <span className="text-[12px] tabular-nums text-[#667085]">
-        {remaining === null ? `${capacity} spots` : <><span className="font-semibold text-[#15171C]">{remaining}</span> of {capacity} left</>}
+        {remaining === null ? t("{capacity} spots", { capacity }) : <>{t("{0} of {capacity} left", { 0: <span className="font-semibold text-[#15171C]">{remaining}</span>, capacity })}</>}
       </span>
       {taken !== null && (
         <span className="hidden h-1 w-10 overflow-hidden rounded-full bg-slate-100 sm:block" aria-hidden>
@@ -349,8 +351,9 @@ function CapacityPill({ capacity, remaining }: { capacity: number; remaining: nu
 }
 
 function Stepper({ current }: { current: number }) {
+  const t = useT();
   return (
-    <ol className="mt-6 grid grid-cols-3 gap-2" aria-label="Steps">
+    <ol className="mt-6 grid grid-cols-3 gap-2" aria-label={t("Steps")}>
       {STEPS.map((x, i) => {
         const done = i < current;
         const active = i === current;
@@ -358,7 +361,7 @@ function Stepper({ current }: { current: number }) {
           <li key={x.key} aria-current={active ? 'step' : undefined}>
             <span className={`block h-[3px] rounded-full transition-colors duration-300 ${done ? 'bg-[#10B981]' : active ? 'bg-[#2754D6]' : 'bg-slate-200'}`} />
             <span className={`mt-2 block text-[12px] font-medium ${active ? 'text-[#15171C]' : done ? 'text-[#047857]' : 'text-[#98A2B3]'}`}>
-              {i + 1}. {x.label}
+              {i + 1}. {t(x.label)}
             </span>
           </li>
         );
@@ -378,6 +381,7 @@ function Panel({ title, text, headingRef, children }: { title: string; text: str
 }
 
 function Notice({ status, agreed, onAgree }: { status: GateStatus; agreed: boolean; onAgree: (v: boolean) => void }) {
+  const t = useT();
   return (
     <>
       <ul className="mt-4 max-h-[34vh] space-y-2 overflow-y-auto rounded-2xl border border-white/80 bg-white/60 backdrop-blur-md px-4 py-3.5 text-[13.5px] leading-relaxed text-[#344054]">
@@ -385,7 +389,7 @@ function Notice({ status, agreed, onAgree }: { status: GateStatus; agreed: boole
           <li key={line} className="flex gap-2.5"><span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[#98A2B3]" aria-hidden />{line}</li>
         ))}
       </ul>
-      <p className="mt-2 text-[11.5px] text-[#98A2B3]">Technical notice {status.notice.version}. Not legal terms.</p>
+      <p className="mt-2 text-[11.5px] text-[#98A2B3]">{t("Technical notice {version}. Not legal terms.", { version: status.notice.version })}</p>
       <label className="mt-4 flex cursor-pointer items-start gap-3 select-none">
         <input type="checkbox" checked={agreed} onChange={(e) => onAgree(e.target.checked)} className="peer sr-only" />
         <span
@@ -396,7 +400,7 @@ function Notice({ status, agreed, onAgree }: { status: GateStatus; agreed: boole
             <path d="M2.5 6.2l2.3 2.3L9.5 3.8" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <span className="text-[14px] leading-snug text-[#15171C]">I have read the beta notice and I understand it.</span>
+        <span className="text-[14px] leading-snug text-[#15171C]">{t("I have read the beta notice and I understand it.")}</span>
       </label>
     </>
   );
@@ -419,6 +423,7 @@ function Skeleton({ label }: { label: string }) {
 }
 
 function Granted({ onOpen }: { onOpen: () => void }) {
+  const t = useT();
   return (
     <section className="flex flex-col items-center py-4 text-center" aria-live="polite">
       <div className={`relative grid h-[76px] w-[76px] place-items-center ${s.successRing}`}>
@@ -428,14 +433,14 @@ function Granted({ onOpen }: { onOpen: () => void }) {
           <path d="M26 39l8.5 8.5L51 31" fill="none" stroke="#fff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" className={s.successCheck} />
         </svg>
       </div>
-      <h1 className={`mt-5 text-[36px] leading-[1.05] ${s.display}`}>Access granted</h1>
+      <h1 className={`mt-5 text-[36px] leading-[1.05] ${s.display}`}>{t("Access granted")}</h1>
       <p className="mt-2 max-w-[340px] text-[14.5px] leading-relaxed text-[#475467]">
-        cUSDC is unlocked for this wallet. It appears in your private wallet at its next refresh.
+        {t("cUSDC is unlocked for this wallet. It appears in your private wallet at its next refresh.")}
       </p>
       <div className="mt-6 h-[3px] w-40 overflow-hidden rounded-full bg-slate-100" aria-hidden>
         <span className={`block h-full bg-[#2754D6] ${s.redirectBar}`} />
       </div>
-      <button type="button" className={`${primary} mt-6`} onClick={onOpen}>Open Ledger Chat</button>
+      <button type="button" className={`${primary} mt-6`} onClick={onOpen}>{t("Open Ledger Chat")}</button>
     </section>
   );
 }

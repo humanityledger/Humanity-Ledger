@@ -18,7 +18,7 @@ export const diagramsSystem: DocPage = {
   title: "The system in diagrams",
   summary: "How Ledger Chat is put together, how you sign in and how a computer is linked to your phone, drawn one step at a time.",
   keywords: ["diagram", "architecture", "mermaid", "sign in", "siwe", "linked devices", "middleware", "scaling", "relay"],
-  updated: "2026-11-21",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -142,16 +142,18 @@ export const diagramsSystem: DocPage = {
       "Both kinds of wallet sign in. A contract wallet is asked on its own chain whether the signature is valid; a signature does not depend on the chain.",
       "Contract wallets"),
     d(`sequenceDiagram
-  participant U as You
+  participant C as Computer
   participant S as Our server
-  participant M as Your inbox
-  U->>S: Email address
-  S->>M: One-time code
-  U->>S: The code
-  S-->>U: Session for an account with a random identifier
-  Note over S: Routes that need a wallet refuse this account explicitly`,
-      "Signing in with email. The account has no wallet, so anything that needs one says so instead of failing later.",
-      "Sign in with email"),
+  participant P as Your phone, signed in
+  C->>C: New P-256 key pair
+  C->>S: Ask for a link code
+  S-->>C: QR code with the computer's public key, four minutes
+  P->>C: Scan the QR code
+  Note over P: Shows which computer asks, links nothing until you confirm
+  P->>S: Claim code and channel key, encrypted to the computer's key
+  S-->>C: Session, only to the browser that opened the code`,
+      "Signing in on a computer from your phone. There is no email or password sign in; the computer never receives the wallet.",
+      "Sign in from your phone"),
     d(`flowchart TB
   Msg[Exact text the wallet will sign] --> Parse[Read its fields]
   Parse --> F[Website, address, chain,<br/>nonce, issued, expires]
@@ -423,12 +425,12 @@ export const diagramsPayments: DocPage = {
   title: "Payments in diagrams",
   summary: "Public payments from your wallet and private payments on Aztec, from the key to the fee, drawn step by step.",
   keywords: ["diagram", "payment", "aztec", "pxe", "private", "fee juice", "note", "nullifier", "eip-712", "eip-681"],
-  updated: "2026-11-21",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "hint",
       tone: "warning",
-      text: "Private payments run on Aztec Alpha with a cap per payment. The contracts have had an internal security review, not an external audit.",
+      text: "Private payments run on Aztec Alpha with a cap per payment. The contracts have had an internal security review; the external audit begins on 25 November 2026.",
     },
     { t: "h2", text: "From your wallet", id: "public" },
     d(`sequenceDiagram

@@ -24,6 +24,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Copy, Eye, EyeOff, X } from 'lucide-react';
 import { cleanAmount } from './walletLogic';
+import { useT } from '@/lib/i18n/client';
 
 export { cleanAmount };
 
@@ -81,9 +82,10 @@ export function splitAmount(text: string): [string, string] {
  * smaller, the symbol after it. With `hidden`, four dots of the same weight.
  */
 export function BigAmount({ text, symbol, hidden, muted }: { text: string; symbol: string; hidden?: boolean; muted?: boolean }) {
+  const tr = useT();
   const [whole, frac] = splitAmount(text);
   return (
-    <span className="inline-flex items-baseline gap-2 min-w-0 max-w-full" aria-label={hidden ? `Balance hidden, ${symbol}` : `${text} ${symbol}`}>
+    <span className="inline-flex items-baseline gap-2 min-w-0 max-w-full" aria-label={hidden ? tr("Balance hidden, {symbol}", { symbol }) : `${text} ${symbol}`}>
       <span
         className="font-semibold tracking-[-0.04em] tabular-nums leading-none truncate text-[44px] sm:text-[52px]"
         style={{ color: muted ? '#a3a9b4' : INK }}
@@ -107,6 +109,66 @@ export function Figure({ text, hidden, strong, className = '' }: { text: string;
     </span>
   );
 }
+
+/* ─── marks ────────────────────────────────────────────────────────────────── */
+
+const TOKEN_TINT: Record<string, string> = {
+  USD: '#3b6cf6',
+  HLC: '#15171c',
+  ETH: '#6b7bf2',
+};
+
+/**
+ * A round mark for a token: one flat colour, a dollar sign for dollar tokens (cUSDC), the first
+ * letter otherwise. Our own drawing, never an issuer's logo.
+ */
+export function TokenMark({ symbol, size = 28 }: { symbol: string; size?: number; shielded?: boolean }) {
+  const sym = (symbol || '?').toUpperCase();
+  const dollar = /USD/.test(sym);
+  const bg = dollar ? TOKEN_TINT.USD : TOKEN_TINT[sym] ?? TOKEN_TINT.HLC;
+  const glyph = dollar ? '$' : sym.replace(/^C(?=[A-Z]{2})/, '').slice(0, 1);
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex items-center justify-center rounded-full shrink-0 text-white font-semibold select-none"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.46), lineHeight: 1, background: bg }}
+    >
+      {glyph}
+    </span>
+  );
+}
+
+/**
+ * A picture of an Aztec address: colours read from its first bytes, the same on every screen and
+ * every device. Two different addresses almost never look alike, so a person can tell at a glance
+ * that the recipient on the review is the one they scanned. It replaces nothing: the full
+ * address is always shown next to it.
+ */
+export function AddressAvatar({ address, size = 40 }: { address: string; size?: number }) {
+  const hex = (address || '').replace(/^0x/i, '').toLowerCase();
+  const byte = (i: number) => {
+    const v = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    return Number.isFinite(v) ? v : 0;
+  };
+  const h1 = Math.round((byte(0) / 255) * 360);
+  const h2 = (h1 + 70 + Math.round((byte(1) / 255) * 140)) % 360;
+  const h3 = (h2 + 50 + Math.round((byte(2) / 255) * 90)) % 360;
+  const angle = Math.round((byte(3) / 255) * 360);
+  const cx = 25 + Math.round((byte(4) / 255) * 50);
+  const cy = 25 + Math.round((byte(5) / 255) * 50);
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block rounded-full shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: `radial-gradient(circle at ${cx}% ${cy}%, hsl(${h3} 85% 70% / 0.95), transparent 46%), conic-gradient(from ${angle}deg, hsl(${h1} 72% 52%), hsl(${h2} 70% 46%), hsl(${h1} 72% 52%))`,
+      }}
+    />
+  );
+}
+
 
 /* ─── buttons ──────────────────────────────────────────────────────────────── */
 
@@ -143,8 +205,9 @@ export function IconButton({
 
 /** Eye toggle beside the balance. */
 export function HideAmountsButton({ hidden, onToggle }: { hidden: boolean; onToggle: () => void }) {
+  const tr = useT();
   return (
-    <IconButton label={hidden ? 'Show amounts' : 'Hide amounts'} onClick={onToggle} pressed={hidden} size={40}>
+    <IconButton label={hidden ? tr("Show amounts") : tr("Hide amounts")} onClick={onToggle} pressed={hidden} size={40}>
       {hidden ? <EyeOff size={18} strokeWidth={1.9} /> : <Eye size={18} strokeWidth={1.9} />}
     </IconButton>
   );
@@ -208,8 +271,8 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
-      className={`w-full min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 transition-[background-color,transform] active:scale-[0.99] disabled:bg-[#e4e7ec] disabled:text-[#5b606b] disabled:active:scale-100 ${FOCUS} ${
-        tone === 'danger' ? 'bg-[#b42318] hover:bg-[#962018] text-white' : 'bg-[#15171c] hover:bg-[#262932] text-white'
+      className={`w-full min-h-[56px] px-5 rounded-[18px] text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 transition-[background-color,transform] active:scale-[0.99] disabled:bg-[#f1f2f4] disabled:text-[#8a909c] disabled:active:scale-100 ${FOCUS} ${
+        tone === 'danger' ? 'bg-[#b42318] hover:bg-[#962018] text-white' : 'bg-[#0d0f14] hover:bg-[#2a2d34] text-white'
       }`}
     >
       {busy && <Spinner />}
@@ -224,7 +287,7 @@ export function SecondaryButton({ children, onClick, disabled }: { children: Rea
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold border-2 border-[#15171c] bg-white hover:bg-[#f7f8fa] disabled:opacity-40 ${FOCUS}`}
+      className={`w-full min-h-[56px] px-5 rounded-[18px] text-[16px] font-semibold bg-[#f4f5f7] hover:bg-[#eceef1] disabled:opacity-40 ${FOCUS}`}
       style={{ color: INK }}
     >
       {children}
@@ -302,6 +365,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
   label: string;
 }) {
+  const tr = useT();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const move = (i: number) => {
     const n = (i + options.length) % options.length;
@@ -309,7 +373,7 @@ export function Segmented<T extends string>({
     refs.current[n]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className="flex p-1 rounded-2xl bg-[#f2f4f7] gap-1">
+    <div role="tablist" aria-label={label} className="flex p-1 rounded-[16px] bg-[#f4f5f7] gap-1">
       {options.map((o, i) => {
         const on = o.value === value;
         return (
@@ -331,7 +395,7 @@ export function Segmented<T extends string>({
               on ? 'bg-white text-[#15171c] shadow-[0_1px_2px_rgba(16,24,40,0.08),0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-[#5b606b] hover:text-[#15171c]'
             }`}
           >
-            {o.label}
+            {tr(o.label)}
             {o.badge ? (
               <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-[12px] font-semibold tabular-nums flex items-center justify-center ${on ? 'bg-[#15171c] text-white' : 'bg-white text-[#15171c]'}`}>
                 {o.badge > 99 ? '99+' : o.badge}
@@ -354,9 +418,10 @@ export function TokenChips<T extends string>({
   value: T;
   onChange: (k: T) => void;
 }) {
+  const tr = useT();
   if (tokens.length <= 1) return null;
   return (
-    <div role="radiogroup" aria-label="Token" className="flex flex-wrap gap-2">
+    <div role="radiogroup" aria-label={tr("Token")} className="flex flex-wrap gap-2">
       {tokens.map((t) => {
         const on = t.key === value;
         return (
@@ -366,10 +431,11 @@ export function TokenChips<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(t.key)}
-            className={`min-h-[40px] px-4 rounded-full text-[14px] font-semibold border transition-colors ${FOCUS} ${
-              on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f7f8fa]'
+            className={`min-h-[44px] pl-1.5 pr-4 rounded-full text-[15px] font-semibold border inline-flex items-center gap-2 transition-[background-color,border-color] ${FOCUS} ${
+              on ? 'bg-white border-[#0d0f14] text-[#0d0f14]' : 'bg-[#f4f5f7] border-transparent text-[#3d424b] hover:bg-[#eceef1]'
             }`}
           >
+            <TokenMark symbol={t.symbol} size={28} />
             {t.symbol}
           </button>
         );
@@ -382,7 +448,7 @@ export function TokenChips<T extends string>({
 
 export function Card({ children, className = '', as: As = 'section', label }: { children: React.ReactNode; className?: string; as?: 'section' | 'div'; label?: string }) {
   return (
-    <As aria-label={label} className={`bg-white rounded-[20px] border border-[#e4e7ec] ${className}`}>
+    <As aria-label={label} className={`bg-white rounded-[24px] border border-[#eef0f3] ${className}`}>
       {children}
     </As>
   );
@@ -393,7 +459,7 @@ export function CardHead({ title, sub, action }: { title: string; sub?: string; 
   return (
     <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-1">
       <div className="min-w-0">
-        <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <h3 className="text-[16px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>
           {title}
         </h3>
         {sub && (
@@ -450,6 +516,7 @@ async function copyText(text: string): Promise<boolean> {
 
 /** A row that copies its value. Says "Copied" for a moment, or "Not copied" when the browser refuses. */
 export function CopyKV({ k, v, display }: { k: string; v: string; display?: string }) {
+  const tr = useT();
   const [state, setState] = useState<'' | 'yes' | 'no'>('');
   useEffect(() => {
     if (!state) return;
@@ -461,14 +528,14 @@ export function CopyKV({ k, v, display }: { k: string; v: string; display?: stri
       type="button"
       onClick={async () => setState((await copyText(v)) ? 'yes' : 'no')}
       className={`w-full flex items-center justify-between gap-4 min-h-[52px] py-2.5 border-t border-[#eef0f3] first:border-t-0 text-left rounded-lg ${FOCUS}`}
-      aria-label={`Copy ${k}`}
+      aria-label={tr("Copy {k}", { k })}
     >
       <span className="text-[15px] shrink-0" style={{ color: INK_2 }}>
         {k}
       </span>
       <span className="flex items-center gap-2 min-w-0">
         <span className="font-mono text-[13.5px] truncate" style={{ color: state === 'no' ? BAD : INK }} role={state ? 'status' : undefined}>
-          {state === 'yes' ? 'Copied' : state === 'no' ? 'Not copied' : display ?? shortHex(v)}
+          {state === 'yes' ? tr("Copied") : state === 'no' ? tr("Not copied") : display ?? shortHex(v)}
         </span>
         {state === 'yes' ? <Check size={15} strokeWidth={2.2} style={{ color: OK }} aria-hidden="true" /> : <Copy size={15} strokeWidth={1.9} style={{ color: INK_3 }} aria-hidden="true" />}
       </span>
@@ -478,6 +545,7 @@ export function CopyKV({ k, v, display }: { k: string; v: string; display?: stri
 
 /** A full address in a quiet box, grouped, with Copy. */
 export function AddressBox({ label, value }: { label: string; value: string }) {
+  const tr = useT();
   const [state, setState] = useState<'' | 'yes' | 'no'>('');
   useEffect(() => {
     if (!state) return;
@@ -485,15 +553,15 @@ export function AddressBox({ label, value }: { label: string; value: string }) {
     return () => clearTimeout(t);
   }, [state]);
   return (
-    <div className="rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] px-4 py-3">
+    <div className="rounded-[20px] bg-[#f7f8fa] px-4 py-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }}>
+        <span className="text-[14px] font-medium" style={{ color: INK_3 }}>
           {label}
         </span>
-        <TextButton onClick={async () => setState((await copyText(value)) ? 'yes' : 'no')} label={`Copy ${label}`}>
+        <TextButton onClick={async () => setState((await copyText(value)) ? 'yes' : 'no')} label={tr("Copy {label}", { label })}>
           <span className="inline-flex items-center gap-1.5">
             {state === 'yes' ? <Check size={15} strokeWidth={2.2} aria-hidden="true" /> : <Copy size={15} strokeWidth={1.9} aria-hidden="true" />}
-            {state === 'yes' ? 'Copied' : state === 'no' ? 'Not copied' : 'Copy'}
+            {state === 'yes' ? tr("Copied") : state === 'no' ? tr("Not copied") : tr("Copy")}
           </span>
         </TextButton>
       </div>
@@ -522,8 +590,8 @@ export function Notice({ tone = 'info', children, action }: { tone?: 'info' | 'w
 /* ─── amount input ─────────────────────────────────────────────────────────── */
 
 /**
- * The large amount field: centred, tabular, with the symbol after it and the
- * available balance and Max below.
+ * The amount panel: a soft grey field with the figure large on the left and the token on the right,
+ * the available balance and Max under it. Red outline when the amount cannot be sent.
  */
 export function AmountInput({
   value,
@@ -546,18 +614,23 @@ export function AmountInput({
   invalid?: string | null;
   autoFocus?: boolean;
 }) {
+  const tr = useT();
   const id = useId();
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (autoFocus) ref.current?.focus({ preventScroll: true });
   }, [autoFocus]);
-  const size = value.length > 12 ? 30 : value.length > 8 ? 38 : 46;
+  const size = value.length > 14 ? 28 : value.length > 9 ? 36 : 44;
   return (
-    <div className={`rounded-[20px] border-2 px-4 pt-4 pb-3 transition-colors ${invalid ? 'border-[#b42318]' : 'border-[#e4e7ec] focus-within:border-[#15171c]'}`}>
-      <label htmlFor={id} className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-center" style={{ color: INK_3 }}>
-        Amount
+    <div
+      className={`rounded-[24px] border px-5 pt-4 pb-4 transition-colors ${
+        invalid ? 'border-[#f3c9c4] bg-[#fffafa]' : 'border-transparent bg-[#f7f8fa] focus-within:bg-white focus-within:border-[#e4e7ec]'
+      }`}
+    >
+      <label htmlFor={id} className="block text-[14px] font-medium" style={{ color: INK_3 }}>
+        {tr("Amount")}
       </label>
-      <div className="flex items-baseline justify-center gap-2 mt-1 min-w-0">
+      <div className="mt-1 flex items-center gap-3 min-w-0">
         <input
           ref={ref}
           id={id}
@@ -569,24 +642,25 @@ export function AmountInput({
           onChange={(e) => onChange(cleanAmount(e.target.value, decimals))}
           aria-invalid={invalid ? true : undefined}
           aria-describedby={`${id}-help`}
-          className="min-w-0 bg-transparent text-center font-semibold tracking-[-0.03em] tabular-nums outline-none placeholder:text-[#c3c8d0]"
-          style={{ color: INK, fontSize: size, width: `${Math.max(2, value.length + 1)}ch`, maxWidth: '100%' }}
+          className="flex-1 min-w-0 bg-transparent font-medium tracking-[-0.035em] tabular-nums outline-none placeholder:text-[#c3c8d0] h-[56px]"
+          style={{ color: INK, fontSize: size }}
         />
-        <span className="text-[18px] font-semibold shrink-0" style={{ color: INK_2 }}>
+        <span className="inline-flex items-center gap-2 h-10 pl-1 pr-3.5 rounded-full bg-white border border-[#eef0f3] text-[15px] font-semibold shrink-0" style={{ color: INK }}>
+          <TokenMark symbol={symbol} size={30} />
           {symbol}
         </span>
       </div>
-      <div id={`${id}-help`} className="mt-2 flex items-center justify-between gap-2 text-[13px]">
+      <div id={`${id}-help`} className="mt-1 flex items-center justify-between gap-2 text-[13px]">
         <span className="tabular-nums truncate" style={{ color: invalid ? BAD : INK_3 }} role={invalid ? 'alert' : undefined}>
           {invalid || `${availableLabel} ${available} ${symbol}`}
         </span>
         <button
           type="button"
           onClick={onMax}
-          className={`min-h-[36px] px-3 rounded-full text-[13px] font-semibold bg-[#f2f4f7] hover:bg-[#e9ecf0] shrink-0 ${FOCUS}`}
+          className={`min-h-[32px] px-3 rounded-full text-[13px] font-semibold hover:bg-[#eceef1] shrink-0 ${FOCUS}`}
           style={{ color: INK }}
         >
-          Max
+          {tr("Max")}
         </button>
       </div>
     </div>
@@ -612,6 +686,7 @@ export function Sheet({
   onBack?: () => void;
   children: React.ReactNode;
 }) {
+  const tr = useT();
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -634,7 +709,7 @@ export function Sheet({
   }, []);
   return (
     <motion.div className="absolute inset-0 z-20 flex flex-col justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button type="button" aria-label="Close" tabIndex={-1} className="absolute inset-0 bg-[#0b0c0e]/40 backdrop-blur-[2px]" onClick={onClose} />
+      <button type="button" aria-label={tr("Close")} tabIndex={-1} className="absolute inset-0 bg-[#0d0f14]/20" onClick={onClose} />
       <motion.div
         ref={panel}
         role="dialog"
@@ -645,13 +720,13 @@ export function Sheet({
         animate={{ y: 0 }}
         exit={{ y: 48 }}
         transition={{ duration: 0.18, ease: [0.22, 0.8, 0.24, 1] }}
-        className="relative max-h-[92%] flex flex-col rounded-t-[28px] bg-white shadow-[0_-12px_40px_rgba(16,24,40,0.12)] outline-none"
+        className="relative max-h-[92%] flex flex-col rounded-t-[32px] bg-white shadow-[0_-8px_32px_rgba(16,24,40,0.08)] outline-none"
       >
         <div className="shrink-0 px-5 pt-3">
           <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-[#d4d8de]" aria-hidden="true" />
           <div className="flex items-center gap-1 min-h-[48px]">
             {onBack && (
-              <IconButton label="Back" onClick={onBack}>
+              <IconButton label={tr("Back")} onClick={onBack}>
                 <span className="text-[22px] leading-none" aria-hidden="true">
                   ‹
                 </span>
@@ -667,7 +742,7 @@ export function Sheet({
                 </p>
               )}
             </div>
-            <IconButton label="Close" onClick={onClose}>
+            <IconButton label={tr("Close")} onClick={onClose}>
               <X size={19} strokeWidth={2} />
             </IconButton>
           </div>
@@ -680,23 +755,23 @@ export function Sheet({
 
 /* ─── steps ────────────────────────────────────────────────────────────────── */
 
-/** "1 Details — 2 Review" at the top of a two-step sheet. */
+/** "1 Details, 2 Review" at the top of a two-step sheet: a bar per step that fills as you go. */
 export function StepDots({ steps, at }: { steps: string[]; at: number }) {
+  const tr = useT();
   return (
-    <ol className="flex items-center gap-2 mb-4" aria-label="Steps">
+    <ol className="grid gap-2 mb-4" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={tr("Steps")}>
       {steps.map((s, i) => (
-        <li key={s} className="flex items-center gap-2 min-w-0" aria-current={i === at ? 'step' : undefined}>
-          <span
-            className={`w-6 h-6 rounded-full text-[12px] font-semibold flex items-center justify-center shrink-0 ${
-              i < at ? 'bg-[#15171c] text-white' : i === at ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#5b606b]'
-            }`}
-          >
-            {i < at ? <Check size={13} strokeWidth={2.6} aria-hidden="true" /> : i + 1}
+        <li key={s} className="min-w-0" aria-current={i === at ? 'step' : undefined}>
+          <span className="block h-1 rounded-full overflow-hidden bg-[#eceef2]" aria-hidden="true">
+            <span
+              className="block h-full rounded-full bg-[#15171c] transition-[width] duration-300 ease-out motion-reduce:transition-none"
+              style={{ width: i <= at ? '100%' : '0%' }}
+            />
           </span>
-          <span className="text-[13px] font-semibold truncate" style={{ color: i <= at ? INK : INK_3 }}>
-            {s}
+          <span className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold truncate" style={{ color: i <= at ? INK : INK_3 }}>
+            {i < at ? <Check size={13} strokeWidth={2.6} aria-hidden="true" /> : <span className="tabular-nums" aria-hidden="true">{i + 1}</span>}
+            {tr(s)}
           </span>
-          {i < steps.length - 1 && <span className="w-6 h-px bg-[#d4d8de] shrink-0" aria-hidden="true" />}
         </li>
       ))}
     </ol>

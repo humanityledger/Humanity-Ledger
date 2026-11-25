@@ -1,6 +1,7 @@
 /** The rail uses Ledger Chat's own icons, no dead entries, and wallets without a photo get a glyph. */
 import fs from 'node:fs';
 import { walletCells, walletInk } from '@/components/chat/WalletGlyph';
+import { untranslated } from '../../helpers/untranslated';
 
 describe('wallet glyph', () => {
   it('is deterministic, mirrored, never empty or full', () => {
@@ -20,7 +21,7 @@ describe('wallet glyph', () => {
 });
 
 describe('rail', () => {
-  const src = fs.readFileSync('components/terminal/LedgerChatV2.tsx', 'utf8');
+  const src = untranslated(fs.readFileSync('components/terminal/LedgerChatV2.tsx', 'utf8'));
   const rail = src.slice(src.indexOf('<nav aria-label="Ledger Chat"'), src.indexOf('</nav>', src.indexOf('<nav aria-label="Ledger Chat"')));
   it('has Chats, Calls, Status, Contacts, Communities, Payments and Settings with the custom icons', () => {
     for (const icon of ['ChatsIcon', 'CallsIcon', 'StatusIcon', 'ContactsIcon', 'CommunitiesIcon', 'PaymentsIcon', 'SettingsIcon']) expect(rail).toContain(`<${icon}`);
@@ -33,7 +34,7 @@ describe('rail', () => {
     expect(at(seq[0])).toBeGreaterThan(-1);
   });
   it('the settings icon is a gear outline with a hub, not a sun of spokes', () => {
-    const icons = fs.readFileSync('components/chat/icons/LedgerIcons.tsx', 'utf8');
+    const icons = untranslated(fs.readFileSync('components/chat/icons/LedgerIcons.tsx', 'utf8'));
     const gear = icons.slice(icons.indexOf('export const SettingsIcon'), icons.indexOf('export const BellIcon'));
     expect((gear.match(/A9 9 0 0 1/g) || []).length).toBe(8);
     expect(gear).toMatch(/<circle cx="12" cy="12" r="2.75" \/>/);
@@ -47,6 +48,6 @@ describe('rail', () => {
     expect(src).not.toMatch(/const initials = address \? address\.slice\(2, 4\)/);
   });
   it('no icon in the set comes from an icon library', () => {
-    expect(fs.readFileSync('components/chat/icons/LedgerIcons.tsx', 'utf8')).not.toMatch(/lucide|heroicons|@mui/);
+    expect(untranslated(fs.readFileSync('components/chat/icons/LedgerIcons.tsx', 'utf8'))).not.toMatch(/lucide|heroicons|@mui/);
   });
 });

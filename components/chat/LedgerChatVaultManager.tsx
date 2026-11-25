@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Download, Trash2, Folder, Image as ImageIcon, FileText, Music, FileArchive } from 'lucide-react';
 import { vault } from '@/lib/core/SecureVault';
+import { useT } from '@/lib/i18n/client';
 
 interface VaultFile {
   id: string;
@@ -35,6 +36,7 @@ function getFileIcon(type: string) {
 }
 
 export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
+  const t = useT();
   const [files, setFiles] = useState<VaultFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'images' | 'documents'>('all');
@@ -126,11 +128,10 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
           <div>
             <h2 className="text-[20px] font-semibold text-black flex items-center gap-2">
               <Lock size={20} className="text-[#15171c]" />
-              Secure Vault
+              {t("Secure Vault")}
             </h2>
             <p className="text-[13px] font-medium text-black/50 mt-1">
-              {files.length} encrypted files • {formatBytes(totalSize)} total
-            </p>
+              {t("{length} encrypted files • {formatBytes} total", { length: files.length, formatBytes: formatBytes(totalSize) })}</p>
           </div>
           <button
             onClick={onClose}
@@ -165,8 +166,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                 className="flex items-center gap-2"
               >
                 <span className="text-[12px] font-semibold text-[#15171c] mr-2">
-                  {selectedFiles.size} selected
-                </span>
+                  {t("{size} selected", { size: selectedFiles.size })}</span>
                 <button
                   onClick={handleDownloadSelected}
                   className="w-8 h-8 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] hover:bg-[#eff1f4] transition-colors"
@@ -189,12 +189,12 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-3">
               <div className="w-8 h-8 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
-              <p className="text-[13px] tabular-nums text-black/40">Decrypting vault manifest...</p>
+              <p className="text-[13px] tabular-nums text-black/40">{t("Decrypting vault manifest...")}</p>
             </div>
           ) : filteredFiles.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-black/30">
               <Folder size={48} className="opacity-50" />
-              <p className="text-[15px] font-medium text-center">No files found in this category.</p>
+              <p className="text-[15px] font-medium text-center">{t("No files found in this category.")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -243,7 +243,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         {/* Footer info */}
         <div className="p-4 bg-[#f2f4f7] border-t border-black/5 flex items-center justify-center gap-2">
             <Lock size={12} className="text-black/40" />
-            <span className="text-[12.5px] tabular-nums font-semibold text-black/40">AES-256-GCM Encrypted Storage</span>
+            <span className="text-[12.5px] tabular-nums font-semibold text-black/40">{t("AES-256-GCM Encrypted Storage")}</span>
         </div>
       </motion.div>
     </motion.div>

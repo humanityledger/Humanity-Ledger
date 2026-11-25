@@ -6,10 +6,12 @@
  */
 import React, { useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 const SLOW_AFTER_S = 90;
 
 export function ProvingStatus({ label, startedAt, proving = true }: { label: string; startedAt: number; proving?: boolean }) {
+  const t = useT();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -25,10 +27,10 @@ export function ProvingStatus({ label, startedAt, proving = true }: { label: str
       </p>
       <p className="text-[12.5px] text-[#727a88] leading-snug">
         {!proving
-          ? 'Reading from the Aztec node. Nothing is sent.'
+          ? t("Reading from the Aztec node. Nothing is sent.")
           : s < SLOW_AFTER_S
-          ? 'The proof is made on this device; your private data does not leave it.'
-          : 'This is taking longer than usual. The first proof on a device can take several minutes. Keep this tab open; if it fails, nothing is sent.'}
+          ? t("The proof is made on this device; your private data does not leave it.")
+          : t("This is taking longer than usual. The first proof on a device can take several minutes. Keep this tab open; if it fails, nothing is sent.")}
       </p>
     </div>
   );

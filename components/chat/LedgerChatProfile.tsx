@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, BellOff, Trash2, Ban, EyeOff, FileText, Image as ImageIcon, Link2, Copy, CheckCircle2, AlertTriangle, UserCircle2 } from 'lucide-react';
 import { getBlocklist, unblockUser } from '@/lib/wallet/blocklist';
+import { useT } from '@/lib/i18n/client';
 
 interface LedgerChatProfileProps {
   peerAddress: string;
@@ -19,6 +20,7 @@ export function LedgerChatProfile({
   onBlockUser,
   getDisplayName
 }: LedgerChatProfileProps) {
+  const t = useT();
   const [activeTab, setActiveTab] = useState<'info' | 'media' | 'privacy'>('info');
   const [copied, setCopied] = useState(false);
 
@@ -42,7 +44,7 @@ export function LedgerChatProfile({
     >
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-black/5 shrink-0 bg-[#f2f4f7]">
-        <h2 className="text-[17px] font-semibold text-black">Contact Info</h2>
+        <h2 className="text-[17px] font-semibold text-black">{t("Contact Info")}</h2>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors">
           <X size={20} className="text-black" />
         </button>
@@ -76,13 +78,13 @@ export function LedgerChatProfile({
             <div className="w-12 h-12 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] group-hover:bg-[#eff1f4] transition-colors">
               <BellOff size={22} />
             </div>
-            <span className="text-[12px] font-semibold text-black/60 group-hover:text-[#15171c]">Mute</span>
+            <span className="text-[12px] font-semibold text-black/60 group-hover:text-[#15171c]">{t("Mute")}</span>
           </button>
           <button className="flex flex-col items-center gap-2 group">
             <div className="w-12 h-12 rounded-full bg-[#30d158]/10 flex items-center justify-center text-[#30d158] group-hover:bg-[#30d158]/20 transition-colors">
               <UserCircle2 size={22} />
             </div>
-            <span className="text-[12px] font-semibold text-black/60 group-hover:text-[#30d158]">Add</span>
+            <span className="text-[12px] font-semibold text-black/60 group-hover:text-[#30d158]">{t("Add")}</span>
           </button>
         </div>
 
@@ -117,17 +119,17 @@ export function LedgerChatProfile({
                   <div className="flex items-start gap-3">
                     <Shield size={20} className="text-[#30d158] shrink-0 mt-0.5" />
                     <div>
-                      <h3 className="text-[14px] font-semibold text-black">End-to-End Encrypted</h3>
+                      <h3 className="text-[14px] font-semibold text-black">{t("End-to-End Encrypted")}</h3>
                       <p className="text-[13px] text-black/60 mt-1 leading-relaxed">
-                        Messages with this contact are end-to-end encrypted with MLS over XMTP. Calls are encrypted between your devices with DTLS-SRTP.
+                        {t("Messages with this contact are end-to-end encrypted with MLS over XMTP. Calls are encrypted between your devices with DTLS-SRTP.")}
                       </p>
                     </div>
                   </div>
                 </div>
                 
                 <div className="bg-[#f2f4f7] rounded-2xl p-4">
-                  <h3 className="text-[12.5px] font-semibold text-black/40 mb-3">About</h3>
-                  <p className="text-[15px] font-medium text-black">"Sovereign individual building on L2."</p>
+                  <h3 className="text-[12.5px] font-semibold text-black/40 mb-3">{t("About")}</h3>
+                  <p className="text-[15px] font-medium text-black">{t("\"Sovereign individual building on L2.\"")}</p>
                 </div>
               </motion.div>
             )}
@@ -151,7 +153,7 @@ export function LedgerChatProfile({
                   </div>
                 </div>
                 <p className="text-center text-[12px] font-semibold text-black/40 mt-4">
-                  Media gallery integration pending.
+                  {t("Media gallery integration pending.")}
                 </p>
               </motion.div>
             )}
@@ -169,8 +171,8 @@ export function LedgerChatProfile({
                     <div className="flex items-center gap-3">
                       <EyeOff size={20} className="text-black" />
                       <div>
-                        <span className="block text-[15px] font-semibold text-black">Read Receipts</span>
-                        <span className="block text-[12px] text-black/50">Allow peer to see when you read</span>
+                        <span className="block text-[15px] font-semibold text-black">{t("Read Receipts")}</span>
+                        <span className="block text-[12px] text-black/50">{t("Allow peer to see when you read")}</span>
                       </div>
                     </div>
                     <div className="w-10 h-6 bg-[#30d158] rounded-full relative">
@@ -182,7 +184,7 @@ export function LedgerChatProfile({
                     className="w-full flex items-center gap-3 p-4 hover:bg-black/5 transition-colors text-left border-b border-black/5"
                   >
                     <Trash2 size={20} className="text-[#d93036]" />
-                    <span className="block text-[15px] font-semibold text-[#d93036]">Clear Chat History</span>
+                    <span className="block text-[15px] font-semibold text-[#d93036]">{t("Clear Chat History")}</span>
                   </button>
                   <button 
                     onClick={onBlockUser}
@@ -190,8 +192,8 @@ export function LedgerChatProfile({
                   >
                     <Ban size={20} className="text-[#d93036]" />
                     <div>
-                      <span className="block text-[15px] font-semibold text-[#d93036]">Block Contact</span>
-                      <span className="block text-[12px] text-[#d93036]/70">They won't be able to message you</span>
+                      <span className="block text-[15px] font-semibold text-[#d93036]">{t("Block Contact")}</span>
+                      <span className="block text-[12px] text-[#d93036]/70">{t("They won't be able to message you")}</span>
                     </div>
                   </button>
                 </div>
@@ -199,12 +201,12 @@ export function LedgerChatProfile({
                 <div className="bg-red-50 rounded-2xl p-4 mt-4 border border-red-100 flex items-start gap-3">
                   <AlertTriangle size={20} className="text-[#d93036] shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-[13px] font-semibold text-red-600">Report Abuse</h4>
+                    <h4 className="text-[13px] font-semibold text-red-600">{t("Report Abuse")}</h4>
                     <p className="text-[12px] text-red-600/80 mt-1">
-                      If this contact is sending spam or violating guidelines, report them. This action blocks them and flags the conversation.
+                      {t("If this contact is sending spam or violating guidelines, report them. This action blocks them and flags the conversation.")}
                     </p>
                     <button className="mt-2 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 text-[12.5px] font-semibold rounded-lg transition-colors">
-                      Report User
+                      {t("Report User")}
                     </button>
                   </div>
                 </div>

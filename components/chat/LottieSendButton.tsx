@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { ArrowUp, Send } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 interface LottieSendButtonProps {
   onTrigger?: () => void;
@@ -14,6 +15,7 @@ interface LottieSendButtonProps {
  * blue rounded square with a paper plane, beside the message field.
  */
 export function LottieSendButton({ onTrigger, disabled, className = '' }: LottieSendButtonProps) {
+  const t = useT();
   return (
     <button
       type="submit"
@@ -24,7 +26,7 @@ export function LottieSendButton({ onTrigger, disabled, className = '' }: Lottie
           ? 'bg-[#e4e7ec] text-[#a3a9b4] md:bg-[#2456e6]/35 md:text-white cursor-not-allowed'
           : 'bg-[#15171c] text-white hover:bg-[#2b2f38] md:bg-[#2456e6] md:hover:bg-[#1d47c4] active:scale-95'
       } ${className}`}
-      aria-label="Send message"
+      aria-label={t("Send message")}
     >
       <ArrowUp size={20} strokeWidth={2.2} className="md:hidden" aria-hidden="true" />
       <Send size={19} strokeWidth={1.9} className="hidden md:block -translate-x-[1px] translate-y-[1px]" aria-hidden="true" />

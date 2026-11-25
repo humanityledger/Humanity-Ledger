@@ -30,7 +30,7 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 |---|---|---|---|---|
 | 1, 3, 20 | Chat without Fee Juice; chat-only; progressive onboarding | 6 | EXISTÍA | Chat runs on XMTP; the wallet opens only for payments (`components/zk/ZkWalletPanel.tsx`) |
 | 2 | Onboarding under 45 s | 6 | SIN VERIFICAR | Not measured |
-| 4 | Recovery without a single wallet | 2 | EXISTÍA + DECISIÓN | Passkeys wrap the account root (`passkey.ts`). Guardian recovery needs an audited account contract: after G8 (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) |
+| 4 | Recovery without a single wallet | 2 | EXISTÍA + DECISIÓN | Passkeys wrap the account root (`passkey.ts`). Guardian recovery is not built: it waits for an account contract with an external audit, after G8 (`docs/design/ACCOUNT_RECOVERY_PASSKEY.md`) |
 | 5 | Passkey sign-in | 2 | EXISTÍA + DECISIÓN | Passkey unlock (PRF). A WebAuthn account contract waits for G8 (same document) |
 | 6 | Privacy state per action | 1 | HECHO | `lib/privacy/disclosure.ts`, `components/privacy/DisclosurePanel.tsx` in send, shield, unshield and the chat cards |
 | 7 | Contacts by QR, link, username | 2 | EXISTÍA | `components/chat/profile/BrandedQr.tsx`, `app/u/page.tsx` |
@@ -128,6 +128,12 @@ Duplicates merged: 1 + 3 + 20 → "chat first, payments later"; 40 + 98 → "10�
 | R9 | Private membership proof | 4 | DECISIÓN taken: later | `docs/design/PRIVATE_MEMBERSHIP.md` |
 | R10 | Verifiable receipt | 3 | HECHO (v1) | Receipt proves inclusion of the transaction and says the amount is stated, not proven. Note-inclusion proof: API not verified, v2 |
 | R11 | On-device tax report | 3 | HECHO | CSV from the wallet's record, formulas neutralised, nothing uploaded |
+
+## After phase 8 (24 November 2026)
+
+- #255: three sticker packs (40), a full-window sticker scene, the closed beta page and a three-step request form.
+- #257: a Verify button in every chat; marking a contact verified on the device.
+- Next: wave 2 of the portal. These steps are hardening, a test-network run, the review package and a plan for Stefan to sign; none of them is a deployment. The plan is `claude/prompt-portal-l1-l2-2026-11-24.md` in the project.
 
 ## Phase 8 (`claude/align-fase-8`)
 

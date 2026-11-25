@@ -22,6 +22,7 @@
 
 
 import { diag, short } from './diag';
+import { COUNTERFACTUAL_DEFAULT_CHAIN, SCW_CHAINS, detectWalletKind, isPlainEcdsa, type WalletKind } from './wallet-kind';
 import { Buffer } from 'buffer';
 
 if (typeof window !== 'undefined' && !window.Buffer) {
@@ -106,6 +107,17 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
       console.warn('[XMTP] Static inboxStateFromInboxIds failed', e);
     }
 
+    // browser-sdk 5 reads inbox state through the client (preferences), not a static method: the
+    // static call is absent there, so without this every unknown sender stayed unresolved and
+    // their chat was filed under an inbox id (24 November 2026, "Not sent" in "71e71fd9…8f34").
+    if ((!states || !states[0]) && (client as any)?.preferences?.inboxStateFromInboxIds) {
+      try {
+        states = await (client as any).preferences.inboxStateFromInboxIds([inboxId], true);
+      } catch (e) {
+        console.warn('[XMTP] preferences.inboxStateFromInboxIds failed', e);
+      }
+    }
+
     if (states && states[0]) {
       const state = states[0];
       const identifiers: any[] = state.identifiers ?? state.accountIdentifiers ?? [];
@@ -139,7 +151,10 @@ export async function resolveInboxIdToAddress(inboxId: string, client?: Client):
         const members: any[] = typeof dmAny.members === 'function' ? await dmAny.members() : (dmAny.members ?? []);
         const targetMember = members.find((m: any) => m.inboxId?.toLowerCase() === inboxId.toLowerCase());
         if (targetMember) {
-          const addrs = targetMember.accountAddresses || targetMember.addresses || [];
+          const addrs: string[] = targetMember.accountAddresses || targetMember.addresses
+            || (targetMember.accountIdentifiers ?? [])
+              .filter((id: any) => id?.identifierKind === 'Ethereum' && id?.identifier)
+              .map((id: any) => id.identifier);
           if (addrs && addrs.length > 0) {
             const addr = addrs[0].toLowerCase();
             cacheInboxId(inboxId.toLowerCase(), addr);
@@ -191,12 +206,20 @@ export async function warmInboxIdCache(client: Client): Promise<void> {
  *  - signMessage receives string ONLY (no Uint8Array) and must return Uint8Array
  *  - getIdentifier returns { identifier: checksumAddress, identifierKind: "Ethereum" }
  */
-function buildXmtpSigner(wagmiSigner: {
-  getAddress: () => Promise<string>;
-  signMessage: (message: string | Uint8Array) => Promise<string>;
-}) {
+function buildXmtpSigner(
+  wagmiSigner: {
+    getAddress: () => Promise<string>;
+    signMessage: (message: string | Uint8Array) => Promise<string>;
+  },
+  kind: WalletKind = { type: 'EOA' },
+  onSignature?: (hex: string) => void,
+) {
+  // Smart contract wallets register as SCW on the chain their contract lives on (lib/xmtp/wallet-kind.ts).
+  const scwChain = kind.type === 'SCW' ? kind.chainId : 0;
+  const scw = kind.type === 'SCW' ? { getChainId: () => BigInt(scwChain) } : {};
   return {
-    type: 'EOA' as const,
+    type: kind.type,
+    ...scw,
 
     // getIdentifier: async function returning the exact Identifier shape
     getIdentifier: async (): Promise<XmtpIdentifier> => {
@@ -214,6 +237,7 @@ function buildXmtpSigner(wagmiSigner: {
     // signMessage receives string only, must return Uint8Array
     signMessage: async (message: string): Promise<Uint8Array> => {
       const hexSig = await wagmiSigner.signMessage(message);
+      onSignature?.(hexSig);
       return hexToBytes(hexSig);
     },
   };
@@ -228,6 +252,8 @@ export async function getXMTPClient(
   wagmiSigner: {
     getAddress: () => Promise<string>;
     signMessage: (message: string | Uint8Array) => Promise<string>;
+    /** The chain the wallet is on: where a smart contract wallet is looked for first. */
+    getChainId?: () => Promise<number | undefined> | number | undefined;
   },
   hooks?: {
     /** About to ask for the signature that unlocks the local message database. */
@@ -246,10 +272,25 @@ export async function getXMTPClient(
   // The time a signature takes (the person switching to the wallet app, or approving on their
   // phone for a computer linked by QR) does not count against the start-up watchdog below.
   let signing = 0;
-  const signer = buildXmtpSigner({
+  // EOA or smart contract wallet (lib/xmtp/wallet-kind.ts). Detection never blocks sign-in: any
+  // failure keeps EOA, and a non-ECDSA signature below retries as a smart contract wallet.
+  const preferredChain = await Promise.resolve(wagmiSigner.getChainId?.()).catch(() => undefined);
+  // Detected once per account and device: a returning visit does not wait on seven RPC reads.
+  const kindKey = `ledger_xmtp_wallet_kind_${address}`;
+  let kind: WalletKind | null = null;
+  try { const c = JSON.parse(localStorage.getItem(kindKey) || 'null'); if (c?.type === 'EOA' || (c?.type === 'SCW' && Number.isInteger(c.chainId))) kind = c; } catch {}
+  if (!kind) {
+    kind = await detectWalletKind(address, preferredChain ?? null).catch(() => ({ type: 'EOA' as const }));
+  }
+  const rememberKind = (k: WalletKind) => { try { localStorage.setItem(kindKey, JSON.stringify(k)); } catch {} };
+  let lastSignature = '';
+  diag('signer_kind', { kind: kind.type, chain: kind.type === 'SCW' ? kind.chainId : undefined });
+  const countingSigner = {
     getAddress: wagmiSigner.getAddress,
-    signMessage: async (m) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
-  });
+    signMessage: async (m: string | Uint8Array) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
+  };
+  const remember = (hex: string) => { lastSignature = hex; };
+  let signer = buildXmtpSigner(countingSigner, kind, remember);
 
   //  Local database key (F-01): never stored in plaintext (lib/xmtp/device-key-vault.ts).
   // One signature to sign in: the key is kept on this device wrapped by a non-extractable
@@ -305,7 +346,7 @@ export async function getXMTPClient(
   }
 
   let client: Client;
-  try {
+  const createOnce = async (): Promise<Client> => {
     // Watchdog: 20 s of Client.create work (WASM load, network), not counting time spent waiting
     // for a signature — a WASM or network hang must never freeze the UI, a person signing must
     // never be cut off.
@@ -322,8 +363,8 @@ export async function getXMTPClient(
       }, 500);
     });
     createTimeout.catch(() => {});
-    client = await Promise.race([
-      Client.create(signer, {
+    return await Promise.race([
+      Client.create(signer as any, {
         env: XMTP_ENV,
         codecs: [],
         dbEncryptionKey,
@@ -334,6 +375,19 @@ export async function getXMTPClient(
       }),
       createTimeout,
     ]).finally(() => clearInterval(watchdog)) as Client;
+  };
+  try {
+    try {
+      client = await createOnce();
+    } catch (first: any) {
+      // The wallet answered with a smart contract signature (ERC-6492: a wallet not deployed yet,
+      // so no code to find above) while registered as EOA: register again as a smart contract wallet.
+      if (kind!.type !== 'EOA' || !lastSignature || isPlainEcdsa(lastSignature)) throw first;
+      const chainId = preferredChain && (SCW_CHAINS as readonly number[]).includes(Number(preferredChain)) ? Number(preferredChain) : COUNTERFACTUAL_DEFAULT_CHAIN;
+      diag('signer_kind_retry', { chain: chainId });
+      signer = buildXmtpSigner(countingSigner, { type: 'SCW', chainId }, remember);
+      client = await createOnce();
+    }
   } catch (err: any) {
     const errorMsg = err?.message || '';
     if (
@@ -351,6 +405,8 @@ export async function getXMTPClient(
     throw err;
   }
 
+  // Only a kind that registered successfully is remembered.
+  rememberKind((signer as any).type === 'SCW' ? { type: 'SCW', chainId: Number((signer as any).getChainId()) } : { type: 'EOA' });
   clientRegistry.set(address, client);
   diag('client_ready', { env: XMTP_ENV, inbox: short((client as any).inboxId), installation: short((client as any).installationId) });
 
@@ -398,7 +454,8 @@ export async function revokeXMTPInstallations(
   },
   inboxId: string
 ): Promise<number> {
-  const signer = buildXmtpSigner(wagmiSigner);
+  const kind = await detectWalletKind((await wagmiSigner.getAddress()).toLowerCase()).catch(() => ({ type: 'EOA' as const }));
+  const signer = buildXmtpSigner(wagmiSigner, kind);
   const states = await (Client as any).inboxStateFromInboxIds([inboxId], XMTP_ENV);
   if (states && states[0] && states[0].installations) {
     const installationsToRevoke = selectInstallationsToRevoke(states[0].installations);
@@ -560,6 +617,15 @@ export async function getRegisteredAddress(address: string): Promise<string> {
 
 const ETH_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 
+/** The recipient has no XMTP inbox yet: nothing can reach them until they sign in once. */
+export class PeerNotOnXmtpError extends Error {
+  readonly code = 'PEER_NOT_ON_XMTP';
+  constructor(readonly address: string) {
+    super('PEER_NOT_ON_XMTP: this address has not turned on Ledger Chat or another XMTP app yet');
+    this.name = 'PeerNotOnXmtpError';
+  }
+}
+
 export async function sendMessage(
   client: Client | null | undefined,
   toAddress: string,
@@ -579,13 +645,25 @@ export async function sendMessage(
     throw new Error('Direct messaging to Aztec address is not supported over XMTP MLS');
   }
 
-  const normalizedTo = await getRegisteredAddress(toAddress);
-  const finalTo = (normalizedTo && normalizedTo.length === 42) ? normalizedTo : toAddress;
+  // A chat is not always keyed by an Ethereum address. When the stream could not resolve who
+  // wrote (24 November 2026: a chat titled "71e71fd9…8f34"), the chat is filed under the sender's
+  // XMTP inbox id or the conversation id, and every reply in it failed with "Not sent": the id
+  // was handed to XMTP as if it were an Ethereum address. Those chats now reach the same DM.
+  const route = await routeFor(client, toAddress);
+  const finalTo = route.kind === 'address'
+    ? await (async () => {
+        const normalizedTo = await getRegisteredAddress(route.address);
+        return (normalizedTo && normalizedTo.length === 42) ? normalizedTo : route.address;
+      })()
+    : route.ref;
 
   const identifier: XmtpIdentifier = {
     identifier: finalTo,
     identifierKind: 'Ethereum',
   };
+  const openDm = (): Promise<any> => route.kind === 'address'
+    ? client.conversations.newDmWithIdentifier(identifier)
+    : route.open();
 
   const cacheKey = `${client.inboxId || ''}:${finalTo.toLowerCase()}`;
   let lastError: any = null;
@@ -604,7 +682,7 @@ export async function sendMessage(
   for (let i = 0; i < 4; i++) {
     try {
       if (!dm) {
-        dm = await withTimeout(client.conversations.newDmWithIdentifier(identifier), 8000, 'newDm timeout');
+        dm = await withTimeout(openDm(), 8000, 'newDm timeout');
         // Not awaited (it added up to 3 s to the first message), but queued in the same per-
         // conversation order as the publishes: a sync racing the first publish of a new
         // conversation is the kind of collision the serial queue exists to prevent.
@@ -629,7 +707,7 @@ export async function sendMessage(
         // more attempts (that delayed every following message): publish in the background.
         break;
       }
-      if (isSyncWaitError(sendErr)) {
+      if (route.kind === 'address' && isSyncWaitError(sendErr)) {
         // "synced N messages … from cursor": the DM was created and its commit published; only
         // the wait for the network's receipt ran out. Use that DM instead of creating another
         // handle, so the welcome that lets the other person see the chat is not left behind.
@@ -639,6 +717,13 @@ export async function sendMessage(
           activeDmCache.set(cacheKey, dm);
           continue;
         }
+      }
+      // The other person has no XMTP inbox (never signed in to Ledger Chat or another XMTP app):
+      // no retry can open the chat. Say so instead of four attempts and a generic failure.
+      if (route.kind === 'address' && i === 0 && !(await canReceiveMessages(client, finalTo))) {
+        diag('send_peer_not_registered', {});
+        reportDelivery('peer_not_registered', sendErr);
+        throw new PeerNotOnXmtpError(finalTo);
       }
       // Nothing was created yet: a fresh conversation handle is safe.
       activeDmCache.delete(cacheKey);
@@ -660,6 +745,53 @@ export async function sendMessage(
   diag('send_failed', { error: String(lastError?.message ?? lastError).slice(0, 120) });
   reportDelivery('send_failed', lastError);
   throw new Error(`Message delivery failed via XMTP: ${lastError?.message || 'Network error'}`);
+}
+
+const INBOX_ID_RE = /^[0-9a-f]{64}$/i;
+const CONVERSATION_ID_RE = /^[0-9a-f]{32}$/i;
+
+type SendRoute =
+  | { kind: 'address'; address: string }
+  | { kind: 'ref'; ref: string; open: () => Promise<any> };
+
+/**
+ * Where a message for this chat key goes. An Ethereum address is the normal case. An XMTP inbox
+ * id is resolved to its address when the network knows it, and otherwise used directly
+ * (getDmByInboxId, then newDm). A conversation id opens that conversation, which only exists
+ * on this device if we are a member of it. Anything else fails with a sentence a person can act
+ * on, never an SDK error about an invalid address.
+ */
+export async function routeFor(client: Client, key: string): Promise<SendRoute> {
+  const k = (key || '').trim();
+  if (ETH_ADDR_RE.test(k)) return { kind: 'address', address: k };
+  const conversations: any = client.conversations;
+  if (INBOX_ID_RE.test(k)) {
+    const inboxId = k.toLowerCase();
+    const addr = await resolveInboxIdToAddress(inboxId, client).catch(() => null);
+    if (addr && ETH_ADDR_RE.test(addr)) return { kind: 'address', address: addr };
+    return {
+      kind: 'ref',
+      ref: inboxId,
+      open: async () => (await conversations.getDmByInboxId?.(inboxId)) ?? conversations.newDm(inboxId),
+    };
+  }
+  if (CONVERSATION_ID_RE.test(k)) {
+    const convId = k.toLowerCase();
+    return {
+      kind: 'ref',
+      ref: convId,
+      open: async () => {
+        let convo = await conversations.getConversationById?.(convId);
+        if (!convo) {
+          try { await conversations.sync(); } catch { /* the local copy may still be enough */ }
+          convo = await conversations.getConversationById?.(convId);
+        }
+        if (!convo) throw new Error('This conversation is not on this device any more. Start a new chat with their address.');
+        return convo;
+      },
+    };
+  }
+  throw new Error('This chat has no address to send to. Start a new chat with their address.');
 }
 
 /** Typing, read receipts and similar control messages: not worth a delivery report each. */
@@ -821,10 +953,38 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
         // "Sync failed to wait for intent": the publish intent is waiting for the group's state.
         // A sync processes the pending commits that intent waits on; then the next publish can
         // finish instead of waiting on the same intent again (production log, 20/11/2026).
-        if (isSyncWaitError(err)) await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
+        if (isSyncWaitError(err)) {
+          await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
+          if (attempt === 2) void reportPublishState(entry.dm);
+        }
         schedulePublishRetry(cacheKey, entry.dm, attempt + 1);
       });
   }, Math.min(1000 * 2 ** attempt, 30_000));
+}
+
+/**
+ * Why a publish keeps waiting on its intent (24 Nov 2026: Chrome on the desktop gave up every day
+ * since 18 Nov while Safari on phones published). The SDK's own debugInfo() says whether the
+ * conversation's MLS state may have forked from the other members; a forked conversation never
+ * resolves its intents. Reported once per stuck conversation, with no ids: the epoch and the
+ * fork flags only.
+ */
+export async function reportPublishState(dm: any): Promise<string | null> {
+  try {
+    const info = await withTimeout<any>(dm?.debugInfo?.(), 5000, 'debugInfo timeout');
+    if (!info) return null;
+    const line = publishStateLine(info);
+    reportDelivery('publish_debug', line);
+    return line;
+  } catch {
+    return null;
+  }
+}
+
+/** The debugInfo() fields that explain a stuck publish, as one short line. */
+export function publishStateLine(info: { epoch?: unknown; maybeForked?: unknown; isCommitLogForked?: unknown; forkDetails?: unknown }): string {
+  const forkDetails = typeof info.forkDetails === 'string' ? info.forkDetails.replace(/[0-9a-f]{16,}/gi, '…').slice(0, 60) : '';
+  return `epoch=${String(info.epoch ?? '?')} maybeForked=${info.maybeForked === true} commitLogForked=${info.isCommitLogForked === true}${forkDetails ? ` details=${forkDetails}` : ''}`;
 }
 
 /**

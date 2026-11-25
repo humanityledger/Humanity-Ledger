@@ -4,7 +4,7 @@
  * with membership. Also the Payments history CSV and the landing photos.
  */
 import fs from 'node:fs';
-import { BETA_PASS_COOKIE, betaGateOn, chatGateDecision, signBetaPass, verifyBetaPass } from '@/lib/beta/pass';
+import { BETA_PASS_COOKIE, betaGateOn, signBetaPass, verifyBetaPass } from '@/lib/beta/pass';
 import { historyCsv } from '@/lib/payments/history-csv';
 import record from '../../../deployments/aztec-mainnet.json';
 
@@ -26,18 +26,10 @@ describe('the beta pass', () => {
     expect(betaGateOn(record)).toBe((record as { cusdcBeta: { enabled: boolean } }).cusdcBeta.enabled);
     expect(betaGateOn({ cusdcBeta: { enabled: false } })).toBe(false);
   });
-  it('signed out to /connect, no pass to /beta, member through; off or harness open', () => {
-    const base = { gateOn: true, harness: false, session: W, passOk: true };
-    expect(chatGateDecision(base)).toBe('open');
-    expect(chatGateDecision({ ...base, passOk: false })).toBe('beta');
-    expect(chatGateDecision({ ...base, session: null, passOk: false })).toBe('connect');
-    expect(chatGateDecision({ ...base, gateOn: false, session: null })).toBe('open');
-    expect(chatGateDecision({ ...base, harness: true, session: null })).toBe('open');
-  });
-  it('is wired into the middleware and both beta routes', () => {
+  it('no longer gates the chat; both beta routes still set the pass', () => {
     const mw = fs.readFileSync('middleware.ts', 'utf8');
-    expect(mw).toMatch(/if \(pathname === '\/chat' \|\| pathname\.startsWith\('\/chat\/'\)\) \{/);
-    expect(mw).toMatch(/verifyBetaPass\(req\.cookies\.get\(BETA_PASS_COOKIE\)\?\.value, session, getEdgeSecret\(\)\)/);
+    expect(mw).not.toMatch(/url\.pathname = '\/beta'/);
+    expect(mw).not.toMatch(/verifyBetaPass/);
     expect(fs.readFileSync('app/api/beta/cusdc/status/route.ts', 'utf8')).toMatch(/await applyBetaPass\(res, w, !!member\);/);
     expect(fs.readFileSync('app/api/beta/cusdc/redeem/route.ts', 'utf8')).toMatch(/if \(r\.status === 200\) await applyBetaPass\(res, who, true\);/);
     expect(BETA_PASS_COOKIE).toBe('hl_beta_pass');

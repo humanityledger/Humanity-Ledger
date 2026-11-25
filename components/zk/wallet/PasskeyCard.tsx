@@ -16,6 +16,7 @@ import { AZTEC_WALLET_CONFIG } from '@/lib/aztec/wallet/config';
 import { humanError } from '@/lib/aztec/wallet/client';
 import { MAX_PASSKEYS, type PasskeyRecord } from '@/lib/aztec/wallet/passkey';
 import { Card, CardHead, FOCUS, INK, INK_2, INK_3, Notice, Pill, PrimaryButton, SecondaryButton, TextButton } from './WalletUI';
+import { useT } from '@/lib/i18n/client';
 
 const network = AZTEC_WALLET_CONFIG.network as 'testnet' | 'mainnet';
 
@@ -53,6 +54,7 @@ function DeviceIcon({ label }: { label: string }) {
 }
 
 export function PasskeyOpen({ address, onOpen, disabled }: { address: string; onOpen: () => Promise<void>; disabled?: boolean }) {
+  const t = useT();
   const { records } = usePasskeyRecords(address);
   const [busy, setBusy] = useState(false);
   if (!records?.length) return null;
@@ -64,10 +66,10 @@ export function PasskeyOpen({ address, onOpen, disabled }: { address: string; on
           setBusy(true);
           try {
             await onOpen();
-            toast.success('Private wallet open');
+            toast.success(t("Private wallet open"));
           } catch (err) {
             const m = passkeyMessage(err);
-            if (m) toast.error(m);
+            if (m) toast.error(t(m));
           } finally {
             setBusy(false);
           }
@@ -75,17 +77,17 @@ export function PasskeyOpen({ address, onOpen, disabled }: { address: string; on
       >
         <span className="inline-flex items-center gap-2">
           <Fingerprint size={18} strokeWidth={2} aria-hidden="true" />
-          {busy ? 'Waiting for your passkey' : 'Open with a passkey'}
+          {busy ? t("Waiting for your passkey") : t("Open with a passkey")}
         </span>
       </SecondaryButton>
       <p className="mt-2 text-center text-[12.5px]" style={{ color: INK_3 }}>
-        {records.length === 1 ? 'One passkey' : `${records.length} passkeys`} can open this account without your Ethereum wallet.
-      </p>
+        {t("{value} can open this account without your Ethereum wallet.", { value: records.length === 1 ? t("One passkey") : t("{length} passkeys", { length: records.length }) })}</p>
     </div>
   );
 }
 
 export function PasskeyCard({ address, onEnroll, disabled }: { address: string; onEnroll: (label: string) => Promise<{ backedUp: boolean }>; disabled?: boolean }) {
+  const t = useT();
   const { records, reload } = usePasskeyRecords(address);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -102,10 +104,10 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
       setLabel('');
       setAdding(false);
       await reload();
-      toast.success(backedUp ? 'Passkey added' : 'Passkey added on this device. The backup could not be saved; add it again later to use it elsewhere.');
+      toast.success(backedUp ? t("Passkey added") : t("Passkey added on this device. The backup could not be saved; add it again later to use it elsewhere."));
     } catch (err) {
       const m = passkeyMessage(err);
-      if (m) toast.error(m);
+      if (m) toast.error(t(m));
     } finally {
       setBusy(false);
     }
@@ -117,9 +119,9 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
       const store = await import('@/lib/aztec/wallet/passkey-store');
       await store.removeRecord(r.evm, r.network, r.credentialId);
       await reload();
-      toast.success('Passkey removed. You can also delete it from your password manager.');
+      toast.success(t("Passkey removed. You can also delete it from your password manager."));
     } catch (err) {
-      toast.error(humanError(err));
+      toast.error(t(humanError(err)));
     } finally {
       setConfirming(null);
       setBusy(false);
@@ -127,39 +129,37 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
   };
 
   return (
-    <Card label="Passkeys">
+    <Card label={t("Passkeys")}>
       <CardHead
-        title="Passkeys"
-        sub="Open this wallet with Face ID, Touch ID, Windows Hello or a security key."
-        action={records ? <Pill tone={count ? 'ok' : 'neutral'}>{`${count} of ${MAX_PASSKEYS}`}</Pill> : undefined}
+        title={t("Passkeys")}
+        sub={t("Open this wallet with Face ID, Touch ID, Windows Hello or a security key.")}
+        action={records ? <Pill tone={count ? 'ok' : 'neutral'}>{t("{count} of {MAX_PASSKEYS}", { count, MAX_PASSKEYS })}</Pill> : undefined}
       />
       <div className="px-5 pb-5">
         {records === null ? (
-          <div className="mt-2 h-[60px] rounded-2xl bg-[#f7f8fa] animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Loading passkeys" />
+          <div className="mt-2 h-[60px] rounded-2xl bg-[#f7f8fa] animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label={t("Loading passkeys")} />
         ) : count === 0 ? (
           <div className="mt-2 rounded-2xl border border-dashed border-[#d0d5dd] px-4 py-4 flex items-center gap-3">
-            <DeviceIcon label="passkey" />
+            <DeviceIcon label={t("passkey")} />
             <p className="text-[14px] leading-snug" style={{ color: INK_2 }}>
-              No passkey yet. Only your Ethereum wallet opens this account. A passkey gives you a second way in.
+              {t("No passkey yet. Only your Ethereum wallet opens this account. A passkey gives you a second way in.")}
             </p>
           </div>
         ) : (
-          <ul className="mt-1 -mx-1" aria-label="Enrolled passkeys">
+          <ul className="mt-1 -mx-1" aria-label={t("Enrolled passkeys")}>
             {records.map((r) => (
               <li key={r.credentialId} className="px-1 py-3 border-t border-[#eef0f3] first:border-t-0">
                 {confirming === r.credentialId ? (
-                  <div className="flex items-center gap-3" role="group" aria-label={`Remove ${r.label}?`}>
-                    <span className="flex-1 min-w-0 text-[14px] leading-snug" style={{ color: INK }}>
-                      Remove <span className="font-semibold">{r.label}</span>? It will no longer open this wallet.
-                    </span>
-                    <TextButton onClick={() => setConfirming(null)} disabled={busy}>Cancel</TextButton>
+                  <div className="flex items-center gap-3" role="group" aria-label={t("Remove {label}?", { label: r.label })}>
+                    <span className="flex-1 min-w-0 text-[14px] leading-snug" style={{ color: INK }}>{t("Remove {0}? It will no longer open this wallet.", { 0: <span className="font-semibold">{r.label}</span> })}</span>
+                    <TextButton onClick={() => setConfirming(null)} disabled={busy}>{t("Cancel")}</TextButton>
                     <button
                       type="button"
                       onClick={() => void remove(r)}
                       disabled={busy}
                       className={`min-h-[40px] px-3 rounded-full text-[14px] font-semibold text-white bg-[#b42318] hover:bg-[#962018] disabled:opacity-40 ${FOCUS}`}
                     >
-                      Remove
+                      {t("Remove")}
                     </button>
                   </div>
                 ) : (
@@ -167,14 +167,13 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
                     <DeviceIcon label={r.label} />
                     <span className="flex-1 min-w-0">
                       <span className="block text-[15px] font-semibold truncate" style={{ color: INK }}>{r.label}</span>
-                      <span className="block text-[13px]" style={{ color: INK_3 }}>
-                        Added {new Date(r.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <span className="block text-[13px]" style={{ color: INK_3 }}>{t("Added {toLocaleDateString}", { toLocaleDateString: new Date(r.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) })}
                       </span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setConfirming(r.credentialId)}
-                      aria-label={`Remove ${r.label}`}
+                      aria-label={t("Remove {label}", { label: r.label })}
                       className={`w-11 h-11 rounded-full grid place-items-center hover:bg-[#f7f8fa] ${FOCUS}`}
                     >
                       <Trash2 size={17} strokeWidth={1.9} style={{ color: INK_2 }} aria-hidden="true" />
@@ -188,21 +187,21 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
 
         {adding ? (
           <div className="mt-4 rounded-2xl border border-[#e4e7ec] bg-[#f7f8fa] p-4">
-            <label className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_3 }} htmlFor={inputId}>
-              Name
+            <label className="block text-[14px] font-medium" style={{ color: INK_3 }} htmlFor={inputId}>
+              {t("Name")}
             </label>
             <input
               id={inputId}
               value={label}
               onChange={(e) => setLabel(e.target.value.slice(0, 60))}
-              placeholder={defaultLabel()}
+              placeholder={t(defaultLabel())}
               autoComplete="off"
               className="mt-1.5 w-full h-12 px-4 rounded-2xl border border-[#e4e7ec] bg-white text-[16px] focus:outline-none focus:border-[#15171c]"
               style={{ color: INK }}
             />
             <ol className="mt-3 space-y-1.5 text-[13.5px] leading-snug" style={{ color: INK_2 }}>
-              <li className="flex gap-2"><span className="font-semibold tabular-nums" style={{ color: INK }}>1</span>Your Ethereum wallet signs once more, to confirm it is this account.</li>
-              <li className="flex gap-2"><span className="font-semibold tabular-nums" style={{ color: INK }}>2</span>Your device asks for Face ID, Touch ID, your PIN or your security key.</li>
+              <li className="flex gap-2">{t("{0}Your Ethereum wallet signs once more, to confirm it is this account.", { 0: <span className="font-semibold tabular-nums" style={{ color: INK }}>1</span> })}</li>
+              <li className="flex gap-2">{t("{0}Your device asks for Face ID, Touch ID, your PIN or your security key.", { 0: <span className="font-semibold tabular-nums" style={{ color: INK }}>2</span> })}</li>
             </ol>
             <div className="mt-4 grid grid-cols-[auto_1fr] gap-2">
               <button
@@ -212,34 +211,34 @@ export function PasskeyCard({ address, onEnroll, disabled }: { address: string; 
                 className={`min-h-[52px] px-5 rounded-2xl text-[16px] font-semibold border border-[#e4e7ec] bg-white hover:bg-[#f2f4f7] disabled:opacity-40 ${FOCUS}`}
                 style={{ color: INK }}
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <PrimaryButton onClick={() => void add()} busy={busy} disabled={disabled}>
-                {busy ? 'Waiting for your wallet' : 'Add passkey'}
+                {busy ? t("Waiting for your wallet") : t("Add passkey")}
               </PrimaryButton>
             </div>
           </div>
         ) : (
           <div className="mt-4">
             <SecondaryButton disabled={disabled || busy || full || records === null} onClick={() => setAdding(true)}>
-              {full ? `At most ${MAX_PASSKEYS} passkeys` : 'Add a passkey'}
+              {full ? t("At most {MAX_PASSKEYS} passkeys", { MAX_PASSKEYS }) : t("Add a passkey")}
             </SecondaryButton>
           </div>
         )}
 
         <div className="mt-4">
           <Notice tone="warn">
-            A passkey can open this wallet and spend from it, exactly like your Ethereum wallet. Add passkeys only on devices you control.
+            {t("A passkey can open this wallet and spend from it, exactly like your Ethereum wallet. Add passkeys only on devices you control.")}
           </Notice>
         </div>
         <dl className="mt-3 grid grid-cols-1 gap-2 text-[13px] leading-snug" style={{ color: INK_3 }}>
           <div>
-            <dt className="inline font-semibold" style={{ color: INK_2 }}>Where it lives. </dt>
-            <dd className="inline">The passkey stays in your device or password manager. Ledger Chat keeps only the account key encrypted by it, and cannot open that.</dd>
+            <dt className="inline font-semibold" style={{ color: INK_2 }}>{t("Where it lives.")}{" "}</dt>
+            <dd className="inline">{t("The passkey stays in your device or password manager. Ledger Chat keeps only the account key encrypted by it, and cannot open that.")}</dd>
           </div>
           <div>
-            <dt className="inline font-semibold" style={{ color: INK_2 }}>Recovery. </dt>
-            <dd className="inline">Lose your Ethereum wallet and a passkey still opens the account. Lose both and nobody can open it, Ledger Chat included.</dd>
+            <dt className="inline font-semibold" style={{ color: INK_2 }}>{t("Recovery.")}{" "}</dt>
+            <dd className="inline">{t("Lose your Ethereum wallet and a passkey still opens the account. Lose both and nobody can open it, Ledger Chat included.")}</dd>
           </div>
         </dl>
       </div>
