@@ -10,12 +10,19 @@ import path from 'node:path';
 import {
   clearCutoff,
   clearedAtMs,
-  markCleared,
+  clearRescuedMessages,
+  deletedAtMs,
+  hiddenAfterDelete,
+  isRescuedMessage,
   lineWasCleared,
+  markCleared,
+  markDeleted,
+  markRescuedMessage,
   previewAfterClear,
   previewAfterDelete,
   survivesClear,
   toMs,
+  unmarkDeleted,
 } from '@/lib/chat/cleared-chats';
 import { hiddenIds, markDeletedForMe } from '@/lib/chat/deleted-messages';
 
@@ -157,5 +164,52 @@ describe('every path in the chat screen asks the same rule', () => {
   it('delete for me records first, then updates thread and line', () => {
     expect(src).toContain('Could not delete this message on this device. It is still in the chat.');
     expect(src).toMatch(/previewAfterDelete\(thread, id, isSystemSignal\)/);
+  });
+
+  it('handles BigInt XMTP sentAtNs, unmarks deleted on new activity, and saves background messages', () => {
+    expect(src).not.toMatch(/typeof m\.sentAtNs === 'number'\s*\n\s*\?\s*\(m\.sentAtNs > 1e15/);
+    expect(src).not.toContain('!(deletedAtMs(a, [address]) > 0)');
+    expect(src).toContain('scanDmsForActivity');
+    expect(src).toContain('unmarkDeleted(');
+  });
+});
+
+describe('delete conversation revival, account scoping, and BigInt timestamps', () => {
+  const OTHER = '0x9999999999999999999999999999999999999999';
+
+  it('treats BigInt XMTP nanosecond timestamps properly across clear cut-offs', () => {
+    expect(survivesClear(BigInt('1700000001000000000'), 1_700_000_000_000)).toBe(true);
+    expect(survivesClear(BigInt('1700000000000000000'), 1_700_000_000_000)).toBe(false);
+    expect(survivesClear(BigInt('1699999999000000000'), 1_700_000_000_000)).toBe(false);
+  });
+
+  it('scopes clear and delete cut-offs by account so another wallet is never affected', () => {
+    const s = kv();
+    expect(markDeleted(PEER, [ME], 5_000, s)).toBe(true);
+    expect(deletedAtMs(PEER, [ME], s)).toBe(5_000);
+    expect(clearedAtMs(PEER, [ME], s)).toBe(5_000);
+    // Switching to OTHER wallet must not inherit ME deletion
+    expect(deletedAtMs(PEER, [OTHER], s)).toBe(0);
+    expect(clearedAtMs(PEER, [OTHER], s)).toBe(0);
+  });
+
+  it('unmarks deletion when new activity revives the chat while preserving pre-delete clear cutoff', () => {
+    const s = kv();
+    markDeleted(PEER, [ME], 5_000, s);
+    expect(hiddenAfterDelete({ peerAddress: PEER, lastMessage: 'old', lastAt: 4_000 }, deletedAtMs(PEER, [ME], s))).toBe(true);
+    unmarkDeleted(PEER, [ME], s);
+    expect(deletedAtMs(PEER, [ME], s)).toBe(0);
+    // Clear cutoff remains intact so old history stays hidden while new messages appear
+    expect(clearedAtMs(PEER, [ME], s)).toBe(5_000);
+    expect(survivesClear(4_000, clearedAtMs(PEER, [ME], s))).toBe(false);
+    expect(survivesClear(5_001, clearedAtMs(PEER, [ME], s))).toBe(true);
+  });
+
+  it('tracks rescued clock-skew message IDs and clears them on subsequent delete', () => {
+    const s = kv();
+    markRescuedMessage(PEER, 'msg-skew-1', [ME], s);
+    expect(isRescuedMessage(PEER, 'msg-skew-1', [ME], s)).toBe(true);
+    clearRescuedMessages(PEER, [ME], s);
+    expect(isRescuedMessage(PEER, 'msg-skew-1', [ME], s)).toBe(false);
   });
 });

@@ -68,6 +68,7 @@ node_modules/
 # Local Storage (Local Vault / Backups)
 /vault-storage/
 /data/
+/.data/
 /lib/blockchain/abi/*.json
 !/lib/blockchain/abi/SystemDeadmanSwitch.json
 

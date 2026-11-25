@@ -13,9 +13,10 @@ import { NextResponse } from 'next/server';
 
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
-import { r2ConfigFromEnv, r2Get } from '@/lib/storage/r2';
+import { getChatAttachment } from '@/lib/storage/chat-attachment-store';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const ID_RE = /^[0-9a-f]{32}$/;
 
@@ -26,15 +27,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   if (!ID_RE.test(id || '')) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const limit = await checkRateLimit(caller, { max: 240, windowSec: 60, prefix: 'chat-att-get' });
+  // Rate limit allows high-speed chunked downloading of large files up to 32 GB (up to 3000 chunks/min)
+  const limit = await checkRateLimit(caller, { max: 3000, windowSec: 60, prefix: 'chat-att-get' });
   if (!limit.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
-  const cfg = r2ConfigFromEnv();
-  if (!cfg) return NextResponse.json({ error: 'storage_unavailable' }, { status: 503 });
-
   try {
-    const body = await r2Get(cfg, `chat-attachments/${id}`);
+    const body = await getChatAttachment(id);
     if (!body) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
     return new NextResponse(body as BodyInit, {
       status: 200,
       headers: {

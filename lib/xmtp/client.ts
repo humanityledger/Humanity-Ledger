@@ -478,6 +478,8 @@ export function destroyXMTPClient(address: string): void {
   inboxIdToAddressCache.clear();
   registeredAddressCache.clear();
   activeDmCache.clear();
+  resolvedDmIds.clear();
+  dmIdToPeerCache.clear();
 }
 
 /**
@@ -1197,6 +1199,107 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
  */
 /** DM ids whose peer discoverNewPeers already resolved, per inbox. */
 const resolvedDmIds = new Map<string, Set<string>>();
+/** Cached lowercase peer address per DM conversation id, per inbox. */
+const dmIdToPeerCache = new Map<string, Map<string, string>>();
+
+/** Forgets a previously resolved DM id for a deleted peer so future activity is detected promptly. */
+export function forgetResolvedPeer(client: Client | null | undefined, peerAddress: string): void {
+  if (!client || !peerAddress) return;
+  const selfInboxId = (client as any).inboxId ?? '';
+  const target = peerAddress.toLowerCase();
+  const seen = resolvedDmIds.get(selfInboxId);
+  const byId = dmIdToPeerCache.get(selfInboxId);
+  if (seen && byId) {
+    for (const [dmId, peer] of byId.entries()) {
+      if (peer === target) seen.delete(dmId);
+    }
+  }
+}
+
+export interface DmScanEntry {
+  peerAddress: string;
+  dmId: string;
+  messages: any[];
+  lastMessage: any | null;
+}
+
+/**
+ * Syncs and inspects DMs from the network:
+ * - For DMs NOT in `visiblePeers` (brand new or previously deleted chats): calls `dm.sync()`
+ *   and reads recent messages so any post-deletion messages are discovered even if the stream
+ *   dropped or arrived while offline.
+ * - For DMs already in `visiblePeers`: reads local `dm.lastMessage()` so missed stream events
+ *   after `syncAll` are still surfaced without extra per-DM network calls.
+ */
+export async function scanDmsForActivity(
+  client: Client,
+  selfAddress: string,
+  options: {
+    visiblePeers: Set<string>;
+    blockedPeers?: Set<string>;
+    fullSync?: boolean;
+  },
+): Promise<DmScanEntry[]> {
+  try {
+    const selfInboxId = (client as any).inboxId ?? '';
+    const selfNorm = selfAddress.toLowerCase();
+    const convs = client.conversations as any;
+
+    if (options.fullSync && typeof convs.syncAll === 'function') {
+      await convs.syncAll([0, 1]).catch(() => convs.sync());
+    } else {
+      await convs.sync().catch(() => {});
+    }
+
+    const dms: any[] = (await convs.listDms?.()) || [];
+    let byId = dmIdToPeerCache.get(selfInboxId);
+    if (!byId) { byId = new Map(); dmIdToPeerCache.set(selfInboxId, byId); }
+
+    const entries: DmScanEntry[] = [];
+    for (const dm of dms) {
+      if (!dm) continue;
+      try {
+        let peerLower = dm.id ? byId.get(dm.id) : undefined;
+        if (!peerLower) {
+          const resolved = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress || selfAddress, client);
+          if (resolved && /^0x[a-fA-F0-9]{40}$/i.test(resolved)) {
+            peerLower = resolved.toLowerCase();
+            if (dm.id) byId.set(dm.id, peerLower);
+          }
+        }
+        if (!peerLower || peerLower === selfNorm) continue;
+        if (options.blockedPeers?.has(peerLower)) continue;
+
+        const isVisible = options.visiblePeers.has(peerLower);
+        if (!isVisible) {
+          // Hidden/deleted or brand-new conversation: sync it explicitly so post-delete messages arrive.
+          if (typeof dm.sync === 'function') {
+            await dm.sync().catch(() => {});
+          }
+          const msgs: any[] = typeof dm.messages === 'function'
+            ? ((await dm.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !_isXmtpSystemMsg(m))
+            : [];
+          const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+          entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: msgs, lastMessage: last });
+        } else {
+          // Visible chat: lightweight local read after sync/syncAll to catch missed previews.
+          let last: any = null;
+          if (typeof dm.lastMessage === 'function') {
+            const candidate = await dm.lastMessage().catch(() => null);
+            if (candidate && !_isXmtpSystemMsg(candidate)) last = candidate;
+          }
+          if (last) {
+            entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: [], lastMessage: last });
+          }
+        }
+      } catch { /* ignore per-dm resolution failure */ }
+    }
+    return entries;
+  } catch (e) {
+    console.warn('[XMTP] scanDmsForActivity failed:', e);
+    return [];
+  }
+}
 
 export async function discoverNewPeers(
   client: Client,
@@ -1214,12 +1317,17 @@ export async function discoverNewPeers(
     // with the number of conversations, for every open window.
     let seen = resolvedDmIds.get(selfInboxId);
     if (!seen) { seen = new Set(); resolvedDmIds.set(selfInboxId, seen); }
+    let byId = dmIdToPeerCache.get(selfInboxId);
+    if (!byId) { byId = new Map(); dmIdToPeerCache.set(selfInboxId, byId); }
 
     for (const dm of dms) {
       if (dm?.id && seen.has(dm.id)) continue;
       try {
         const peerAddr = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress, client);
-        if (peerAddr && dm?.id) seen.add(dm.id);
+        if (peerAddr && dm?.id) {
+          seen.add(dm.id);
+          byId.set(dm.id, peerAddr.toLowerCase());
+        }
         if (
           peerAddr &&
           /^0x[a-fA-F0-9]{40}$/i.test(peerAddr) &&
@@ -1265,10 +1373,11 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
   if (signal?.aborted) return;
 
   // Try the v5 high-level AsyncStreamProxy path first (Client.conversations.streamAllMessages())
-  // If it returns something iterable, use it directly.
+  // Explicitly include Unknown (0) and Allowed (1) consent states (never Denied = 2) so
+  // deleted or freshly reopened conversations never get suppressed at the protocol level.
   let streamResult: any;
   try {
-    streamResult = await (client.conversations as any).streamAllMessages();
+    streamResult = await (client.conversations as any).streamAllMessages({ consentStates: [0, 1] });
   } catch (e) {
     diag('stream_open_failed', { path: 'iterable', error: String((e as Error)?.message ?? e).slice(0, 120) });
   }
@@ -1308,13 +1417,13 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
   let streamCloser: any;
 
   const enqueue = (msg: any) => {
-    if (closed) return;
+    if (closed || _isXmtpSystemMsg(msg)) return;
     if (waiting) {
       const resolve = waiting;
       waiting = null;
       resolve({ msg });
     } else {
-      if (_isXmtpSystemMsg(msg)) return; queue.push(msg);
+      queue.push(msg);
     }
   };
 
@@ -1332,6 +1441,8 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
     streamCloser = (client.conversations as any).streamAllMessages(
       (msg: any) => enqueue(msg),
       () => { diag('stream_error', { path: 'callback' }); close(); }, // onFail → close stream gracefully
+      undefined,
+      [0, 1],
     );
   } catch (e) {
     console.warn('[XMTP] streamAllMessages callback API failed:', e);

@@ -33,16 +33,26 @@ function storage(): Storage | undefined {
   }
 }
 
-function keysFor(peer: string, owners: ReadonlyArray<string | null | undefined>): string[] {
-  const p = peer.toLowerCase();
-  const keys = [`ledger_cleared_${p}`];
+function validOwners(owners: ReadonlyArray<string | null | undefined>): string[] {
+  const out: string[] = [];
   for (const o of owners) {
-    if (!o) continue;
-    keys.push(`ledger_cleared_${o.toLowerCase()}_${p}`);
-    // Earlier builds also wrote the checksummed form; it is still read.
-    if (o !== o.toLowerCase()) keys.push(`ledger_cleared_${o}_${p}`);
+    if (!o || o === '0x0') continue;
+    out.push(o);
   }
-  return [...new Set(keys)];
+  return out;
+}
+
+function keysFor(peer: string, owners: ReadonlyArray<string | null | undefined>, forWrite = false): string[] {
+  const p = peer.toLowerCase();
+  const real = validOwners(owners);
+  const scoped: string[] = [];
+  for (const o of real) {
+    scoped.push(`ledger_cleared_${o.toLowerCase()}_${p}`);
+    // Earlier builds also wrote the checksummed form; it is still read.
+    if (o !== o.toLowerCase()) scoped.push(`ledger_cleared_${o}_${p}`);
+  }
+  if (forWrite && scoped.length > 0) return [...new Set(scoped)];
+  return [...new Set([`ledger_cleared_${p}`, ...scoped])];
 }
 
 /** The cut-off for a conversation, in ms, or 0 when it was never cleared. */
@@ -53,7 +63,7 @@ export function clearedAtMs(
 ): number {
   if (!peer || !s) return 0;
   let max = 0;
-  for (const k of keysFor(peer, owners)) {
+  for (const k of keysFor(peer, owners, false)) {
     try {
       const v = parseInt(s.getItem(k) || '0', 10);
       if (Number.isFinite(v) && v > max) max = v;
@@ -74,7 +84,7 @@ export function markCleared(
 ): boolean {
   if (!s || !peer || !(atMs > 0)) return false;
   try {
-    for (const k of keysFor(peer, owners)) s.setItem(k, String(atMs));
+    for (const k of keysFor(peer, owners, true)) s.setItem(k, String(atMs));
     return clearedAtMs(peer, owners, s) >= atMs;
   } catch {
     return false;
@@ -171,11 +181,13 @@ export function previewAfterDelete(
  *     deletion arrives. Then it comes back with that message only, as in other messengers.
  */
 
-function deletedKeysFor(peer: string, owners: ReadonlyArray<string | null | undefined>): string[] {
+function deletedKeysFor(peer: string, owners: ReadonlyArray<string | null | undefined>, forWrite = false): string[] {
   const p = peer.toLowerCase();
-  const keys = [`ledger_deleted_${p}`];
-  for (const o of owners) if (o) keys.push(`ledger_deleted_${o.toLowerCase()}_${p}`);
-  return [...new Set(keys)];
+  const real = validOwners(owners);
+  const scoped: string[] = [];
+  for (const o of real) scoped.push(`ledger_deleted_${o.toLowerCase()}_${p}`);
+  if (forWrite && scoped.length > 0) return [...new Set(scoped)];
+  return [...new Set([`ledger_deleted_${p}`, ...scoped])];
 }
 
 /** When this conversation was deleted on this device (ms), or 0. */
@@ -186,7 +198,7 @@ export function deletedAtMs(
 ): number {
   if (!peer || !s) return 0;
   let max = 0;
-  for (const k of deletedKeysFor(peer, owners)) {
+  for (const k of deletedKeysFor(peer, owners, false)) {
     try {
       const v = parseInt(s.getItem(k) || '0', 10);
       if (Number.isFinite(v) && v > max) max = v;
@@ -208,11 +220,96 @@ export function markDeleted(
   if (!s || !peer || !(atMs > 0)) return false;
   if (!markCleared(peer, owners, atMs, s)) return false;
   try {
-    for (const k of deletedKeysFor(peer, owners)) s.setItem(k, String(atMs));
+    for (const k of deletedKeysFor(peer, owners, true)) s.setItem(k, String(atMs));
     return deletedAtMs(peer, owners, s) >= atMs;
   } catch {
     return false;
   }
+}
+
+/**
+ * Removes the deletion mark for a peer on this device, allowing the conversation
+ * to be restored and new messages to be shown properly when communication resumes.
+ */
+export function unmarkDeleted(
+  peer: string,
+  owners: ReadonlyArray<string | null | undefined>,
+  s: Storage | undefined = storage(),
+): void {
+  if (!s || !peer) return;
+  for (const k of deletedKeysFor(peer, owners, false)) {
+    try {
+      s.removeItem(k);
+    } catch { /* ignored */ }
+  }
+}
+
+/**
+ * Removes the clear mark for a peer on this device.
+ */
+export function unmarkCleared(
+  peer: string,
+  owners: ReadonlyArray<string | null | undefined>,
+  s: Storage | undefined = storage(),
+): void {
+  if (!s || !peer) return;
+  for (const k of keysFor(peer, owners, false)) {
+    try {
+      s.removeItem(k);
+    } catch { /* ignored */ }
+  }
+}
+
+function rescuedKey(peer: string, owners: ReadonlyArray<string | null | undefined>): string {
+  const real = validOwners(owners);
+  const o = real[0]?.toLowerCase();
+  const p = peer.toLowerCase();
+  return o ? `ledger_rescued_${o}_${p}` : `ledger_rescued_${p}`;
+}
+
+/** Records a newly received post-clear message id rescued across clock skew so reloads keep it. */
+export function markRescuedMessage(
+  peer: string,
+  msgId: string,
+  owners: ReadonlyArray<string | null | undefined>,
+  s: Storage | undefined = storage(),
+): void {
+  if (!s || !peer || !msgId) return;
+  try {
+    const key = rescuedKey(peer, owners);
+    const cur: string[] = JSON.parse(s.getItem(key) || '[]');
+    if (Array.isArray(cur) && !cur.includes(msgId)) {
+      const next = [...cur.slice(-49), msgId];
+      s.setItem(key, JSON.stringify(next));
+    }
+  } catch { /* ignored */ }
+}
+
+export function isRescuedMessage(
+  peer: string | null | undefined,
+  msgId: string | null | undefined,
+  owners: ReadonlyArray<string | null | undefined>,
+  s: Storage | undefined = storage(),
+): boolean {
+  if (!s || !peer || !msgId) return false;
+  try {
+    const cur = JSON.parse(s.getItem(rescuedKey(peer, owners)) || '[]');
+    return Array.isArray(cur) && cur.includes(msgId);
+  } catch {
+    return false;
+  }
+}
+
+export function clearRescuedMessages(
+  peer: string,
+  owners: ReadonlyArray<string | null | undefined>,
+  s: Storage | undefined = storage(),
+): void {
+  if (!s || !peer) return;
+  try {
+    s.removeItem(rescuedKey(peer, owners));
+    s.removeItem(`ledger_rescued_${peer.toLowerCase()}`);
+  } catch { /* ignored */ }
 }
 
 /** True when a list line belongs to a deleted conversation with nothing newer than the deletion. */

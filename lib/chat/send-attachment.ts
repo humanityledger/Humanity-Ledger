@@ -63,17 +63,24 @@ function inlineMessage(bytes: Uint8Array, input: AttachmentInput, mime: string):
 type Upload = { ok: true; url: string; contentDigest: string } | { ok: false; reason: 'unavailable' | 'plaintext' | 'error'; message?: string };
 
 async function upload(ciphertext: Uint8Array, fetchImpl: typeof fetch): Promise<Upload> {
-  let res: Response;
-  try {
-    res = await fetchImpl('/api/chat/attachments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: ciphertext as BodyInit,
-      credentials: 'same-origin',
-    });
-  } catch {
-    return { ok: false, reason: 'unavailable' };
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      res = await fetchImpl('/api/chat/attachments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: ciphertext as BodyInit,
+        credentials: 'same-origin',
+      });
+    } catch {
+      res = null;
+    }
+    if (res && (res.ok || res.status === 503 || res.status === 422 || res.status === 401 || res.status === 413 || res.status === 415)) {
+      break;
+    }
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 250));
   }
+  if (!res) return { ok: false, reason: 'unavailable' };
   const data = await res.json().catch(() => ({} as any));
   if (res.ok && typeof data.url === 'string' && typeof data.contentDigest === 'string') {
     return { ok: true, url: data.url, contentDigest: data.contentDigest };
@@ -91,12 +98,13 @@ export async function prepareAttachmentMessage(
 ): Promise<PreparedAttachment> {
   if (original.size === 0) throw new AttachmentError('The file is empty');
 
-  // Photos are re-encoded first (lib/chat/compress-image.ts): smaller, metadata removed, and small
-  // enough for the inline path when file storage is unavailable.
+  // Photos up to 20 MB are re-encoded first (lib/chat/compress-image.ts): smaller, metadata removed,
+  // and small enough for the inline path if file storage is ever unreachable.
+  // Files above 20 MB bypass canvas decoding and go straight through chunked large-file encryption (up to 32 GB).
   let file: Blob = original;
   let input: AttachmentInput = originalInput;
   const originalMime = (originalInput.mimeType || original.type || '').split(';')[0].trim().toLowerCase();
-  if (!originalInput.isVoiceNote && isCompressiblePhoto(originalMime, original.size, INLINE_MAX_BYTES)) {
+  if (original.size <= MAX_ATTACHMENT_BYTES && !originalInput.isVoiceNote && isCompressiblePhoto(originalMime, original.size, INLINE_MAX_BYTES)) {
     const shrunk = await shrinkPhoto(original, INLINE_MAX_BYTES).catch(() => null);
     if (shrunk) {
       file = shrunk;

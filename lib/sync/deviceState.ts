@@ -189,6 +189,10 @@ export class DeviceStateStore {
         const n = parseInt(raw, 10);
         if (Number.isFinite(n) && n > 0) add(`cleared:${p}`, n);
       });
+      scan(`ledger_deleted_${this.legacyAccount}_`, (p, raw) => {
+        const n = parseInt(raw, 10);
+        if (Number.isFinite(n) && n > 0) add(`deleted:${p}`, n);
+      });
       const archived = JSON.parse(this.kv.getItem(`ledger_archived_${this.legacyAccount}`) || '[]');
       if (Array.isArray(archived)) for (const p of archived) if (typeof p === 'string') add(`archived:${p.toLowerCase()}`, true);
       const favs = JSON.parse(this.kv.getItem('ledger_favourites') || '[]');
@@ -218,6 +222,10 @@ export class DeviceStateStore {
         case 'cleared':
           if (typeof v === 'number') this.kv.setItem(`ledger_cleared_${this.legacyAccount}_${peer}`, String(v));
           else this.kv.removeItem(`ledger_cleared_${this.legacyAccount}_${peer}`);
+          break;
+        case 'deleted':
+          if (typeof v === 'number') this.kv.setItem(`ledger_deleted_${this.legacyAccount}_${peer}`, String(v));
+          else this.kv.removeItem(`ledger_deleted_${this.legacyAccount}_${peer}`);
           break;
         case 'archived':
           this.kv.setItem(`ledger_archived_${this.legacyAccount}`, JSON.stringify(this.peersWhere('archived')));

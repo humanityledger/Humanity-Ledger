@@ -430,11 +430,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     if (!isDev || !isLocalhost) {
       if (!pathname.startsWith('/api/auth/session')) {
         earlySession = await extractSessionAddress(req);
-        // The private wallet's node relay (fallback route, app/api/aztec/node) syncs in bursts:
-        // its own bucket, so a sync never starves the chat's requests or the other way round.
+        // The private wallet's node relay (fallback route, app/api/aztec/node) syncs in bursts,
+        // and chunked attachment uploads up to 32 GB (2048 x 16 MiB pieces) use /api/chat/attachments:
+        // give each its own bucket so neither starves normal chat requests or gets throttled mid-transfer.
         const relay = pathname === '/api/aztec/node';
+        const att = pathname === '/api/chat/attachments' || pathname.startsWith('/api/chat/attachments/');
         const rateLimitRes = earlySession
-          ? applyRateLimit((relay ? 'relay:' : 'u:') + earlySession, relay ? 1200 : 600)
+          ? applyRateLimit((att ? 'att:' : relay ? 'relay:' : 'u:') + earlySession, att ? 3000 : relay ? 1200 : 600)
           : applyRateLimit((relay ? 'relay-ip:' : 'ip:') + clientIp, relay ? 60 : 150);
         if (rateLimitRes) return rateLimitRes;
         // TURN credentials: a call needs one, a refresh every few hours. Its own small bucket, so a

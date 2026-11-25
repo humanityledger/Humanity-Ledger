@@ -23,7 +23,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
 import { OTHER_TAB_NOTICE, watchOtherTabs } from '@/lib/xmtp/tab-presence';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -131,7 +131,7 @@ import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
-import { clearCutoff, clearedAtMs, deletedAtMs, hiddenAfterDelete, lineWasCleared, markCleared, markDeleted, previewAfterClear, previewAfterDelete, survivesClear } from '@/lib/chat/cleared-chats';
+import { clearCutoff, clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
 
 
 
@@ -1645,10 +1645,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     // The list line counts as shown: its message may not be in the thread (not loaded yet) and,
     // with this device's clock behind the network's, it would otherwise come back after the clear.
     const listLine = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === peerLower);
+    const peerMsgs = messages.filter(m => (m.conversationId || '').toLowerCase() === dmId);
+    const maxShown = peerMsgs.reduce((acc, m) => Math.max(acc, toMs(m.sentAtNs)), listLine?.lastMessage && listLine.lastAt ? toMs(listLine.lastAt) : 0);
     const clearTs = clearCutoff(
       Date.now(),
       [
-        ...messages.filter(m => (m.conversationId || '').toLowerCase() === dmId).map(m => m.sentAtNs),
+        ...peerMsgs.map(m => m.sentAtNs),
         listLine?.lastMessage ? listLine.lastAt : undefined,
       ],
     );
@@ -1659,6 +1661,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       toast.error(tr("Could not clear this chat on this device. Nothing was removed."));
       return;
     }
+    preClearMaxMsgMsRef.current.set(peerLower, maxShown);
+    peerMsgs.forEach(m => { if (m.id) preClearIdsRef.current.add(String(m.id)); });
+    clearRescuedMessages(peerLower, [myAddr, address]);
     if (myAddr) {
       try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
     }
@@ -1725,16 +1730,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   };
 
   // Delete a conversation on this device (and on your other devices, through the synced state).
-  // It used to leave the screen only, and came back with every message on the next sync. Now the
-  // deletion is recorded (lib/chat/cleared-chats.ts, markDeleted): old messages never show again,
-  // and the conversation stays out of the list until a newer message arrives.
+  // It stays hidden until a newer message arrives or you start messaging that peer again.
   const deleteConversation = (peer: string) => {
     const peerLower = peer.toLowerCase();
     const dmId = `dm-${peerLower}`;
     const myAddr = (effectiveAddress || address || '').toLowerCase();
     const listLine = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === peerLower);
+    const peerMsgs = messagesRef.current.filter(m => (m.conversationId || '').toLowerCase() === dmId);
+    const maxShown = peerMsgs.reduce((acc, m) => Math.max(acc, toMs(m.sentAtNs)), listLine?.lastAt ? toMs(listLine.lastAt) : 0);
     const cut = clearCutoff(Date.now(), [
-      ...messagesRef.current.filter(m => (m.conversationId || '').toLowerCase() === dmId).map(m => m.sentAtNs),
+      ...peerMsgs.map(m => m.sentAtNs),
       listLine?.lastAt,
     ]);
     if (!markDeleted(peerLower, [myAddr, address], cut)) {
@@ -1742,6 +1747,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       toast.error(tr("Could not delete this chat on this device. Nothing was removed."));
       return;
     }
+    preClearMaxMsgMsRef.current.set(peerLower, maxShown);
+    peerMsgs.forEach(m => { if (m.id) preClearIdsRef.current.add(String(m.id)); });
+    clearRescuedMessages(peerLower, [myAddr, address]);
+    knownPeersRef.current.delete(peerLower);
+    forgetResolvedPeer(client, peerLower);
     if (myAddr) {
       try { setSynced(myAddr, { [`cleared:${peerLower}`]: cut, [`deleted:${peerLower}`]: cut }); } catch {}
     }
@@ -1758,7 +1768,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       chatDB.removeConversation(peerLower).catch(() => {});
       chatDB.removeConversation(dmId).catch(() => {});
     }).catch(() => {});
-    if (activePeer?.toLowerCase() === peerLower) setActivePeer(null);
+    if (activePeer?.toLowerCase() === peerLower) {
+      activeXmtpDmIdRef.current = null;
+      activePeerInboxIdRef.current = '';
+      setActivePeer(null);
+    }
     setSidebarMenu(null);
     toast.success(tr("Chat deleted"));
   };
@@ -1813,6 +1827,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
    */
   const confirmedMsgIds = useRef<Set<string>>(new Set());
   const optimisticContentMap = useRef<Map<string, string>>(new Map()); // content -> optimisticId
+  const preClearMaxMsgMsRef = useRef<Map<string, number>>(new Map());
+  const preClearIdsRef = useRef<Set<string>>(new Set());
   // Prune confirmedMsgIds to prevent unbounded growth in long sessions.
   // [FIX] Raised from 500/250 to 2000/1000 — fetchHistorical bulk-inserts all history IDs.
   // In conversations with 300-500 messages, the old threshold would prune IDs that are still
@@ -1939,11 +1955,17 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           readPeers.includes(c.peerAddress.toLowerCase()) && c.unreadCount ? { ...c, unreadCount: 0 } : c
         ));
       }
-      // A chat deleted on another device: recorded here too, and taken out of the list.
+      // A chat deleted (or revived by a newer message) on another device: mirror locally.
       const deleted = keys.filter(k => k.startsWith('deleted:'));
       for (const k of deleted) {
-        const ts = Number(store.get(k) || 0);
-        if (ts > 0) markDeleted(k.slice(8), [me], ts);
+        const peerKey = k.slice(8);
+        const val = store.get(k);
+        if (val === null) {
+          unmarkDeleted(peerKey, [me]);
+        } else {
+          const ts = Number(val || 0);
+          if (ts > 0) markDeleted(peerKey, [me], ts);
+        }
       }
       if (deleted.length) setConversations(prev => prev.filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [me]))));
       // A chat cleared on another device: its list line is re-checked against the cut-off.
@@ -4096,13 +4118,17 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                  const { chatDB } = await import('@/lib/chat/indexeddb');
                  for (const p of pData.messages) {
                      const peer = (p.sender?.toLowerCase() === address.toLowerCase() ? p.recipient : p.sender)?.toLowerCase();
-                     if (!peer) continue;
+                     if (!peer || blockedPeersRef.current.has(peer)) continue;
                      const ts = p.createdAt ? new Date(p.createdAt).getTime() : Date.now();
                      // Cleared or deleted here: it must not come back into the thread or the list line.
-                     if (!survivesClear(ts, clearedAtMs(peer, [address])) || (p.id && isHidden(peer, String(p.id)))) continue;
+                     if ((!survivesClear(ts, clearedAtMs(peer, [effectiveAddress, address])) && !(p.id && isRescuedMessage(peer, String(p.id), [effectiveAddress, address]))) || (p.id && isHidden(peer, String(p.id)))) continue;
                      // A deleted chat only comes back if the message is newer than the deletion.
-                     const peerDelAt = deletedAtMs(peer, [address]);
+                     const peerDelAt = deletedAtMs(peer, [effectiveAddress, address]);
                      if (peerDelAt > 0 && ts <= peerDelAt) continue;
+                     if (peerDelAt > 0) {
+                       unmarkDeleted(peer, [effectiveAddress, address]);
+                       try { setSynced(address.toLowerCase(), { [`deleted:${peer}`]: null }); } catch {}
+                     }
                      const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
                          merged.push({ peerAddress: peer, lastMessage: lastMessageOf(p.content).slice(0, 30), lastAt: new Date(ts) });
@@ -4144,7 +4170,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              }
           }
 
-          merged = merged.map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [address]))).filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [address])));
+          merged = merged
+            .filter(c => !blockedPeersRef.current.has((c.peerAddress || '').toLowerCase()))
+            .map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [effectiveAddress, address])))
+            .filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [effectiveAddress, address])));
           if (merged.length > 0) {
             localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: merged.map((c: any) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
           }
@@ -4484,7 +4513,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     conversations.forEach(c => knownPeersRef.current.add(c.peerAddress.toLowerCase()));
 
     
+    let syncCount = 0;
     const syncGlobal = async () => {
+      if (cancelled) return;
+      const runIndex = syncCount++;
       try {
         if (address) await syncOfflineQueue(client, address);
         
@@ -4511,7 +4543,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const isMeMsg = dm.sender?.toLowerCase() === address?.toLowerCase();
                 const peerAddress = isMeMsg ? dm.recipient : dm.sender;
                 const peerLower = peerAddress?.toLowerCase() ?? '';
-                if (!peerLower || !survivesClear(dm.createdAt, clearedAtMs(peerLower, [address])) || isHidden(peerLower, dmId)) continue;
+                if (!peerLower || blockedPeersRef.current.has(peerLower) || !survivesClear(dm.createdAt, clearedAtMs(peerLower, [effectiveAddress, address])) || isHidden(peerLower, dmId)) continue;
+                const delAtDirect = deletedAtMs(peerLower, [effectiveAddress, address]);
+                if (delAtDirect > 0) {
+                  if (toMs(dm.createdAt) <= delAtDirect) continue;
+                  unmarkDeleted(peerLower, [effectiveAddress, address]);
+                  try { setSynced(address.toLowerCase(), { [`deleted:${peerLower}`]: null }); } catch {}
+                }
                 const activePeerLower = activePeerRef.current?.toLowerCase() ?? '';
                 const isFromActivePeer = peerLower === activePeerLower;
                 
@@ -4555,56 +4593,217 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           console.warn('[LedgerChat] Direct poll error:', directErr);
         }
         
-        // Discover new peers from the XMTP network
-        const newPeerAddrs = await discoverNewPeers(client, address, knownPeersRef.current);
+        // Discover new peers AND revive previously deleted chats when new messages arrive on XMTP.
+        // Never resurrect chats from explicitly blocked peers.
+        const visibleSet = new Set(conversationsRef.current.map(c => (c.peerAddress || '').toLowerCase()).filter(Boolean));
+        const dmEntries = await scanDmsForActivity(client, address, {
+          visiblePeers: visibleSet,
+          blockedPeers: blockedPeersRef.current,
+          fullSync: runIndex === 0 || runIndex % 3 === 0,
+        });
 
-        if (newPeerAddrs.length > 0 && !cancelled) {
-          setConversations(prev => {
-            const prevSet = new Set(prev.map(c => (c.peerAddress || '').toLowerCase()));
-            const toAdd: ConversationMeta[] = newPeerAddrs
-              .filter(a => !prevSet.has(a.toLowerCase()))
-              .filter(a => a.toLowerCase() !== address?.toLowerCase()) // never add self
-              .filter(a => !(deletedAtMs(a, [address]) > 0)) // don't resurrect deleted chats
-              .map(a => ({
-                peerAddress: a,
-                lastMessage: ' New message received',
-                lastAt: new Date(),
-              }));
+        if (!cancelled && dmEntries.length > 0) {
+          const toRevive: Array<{ peerAddress: string; lastMessage: string; lastAt: Date; unreadCount: number; msgsToSave: any[] }> = [];
+          const previewUpdates = new Map<string, { lastMessage: string; lastAt: Date; bumpUnread: boolean }>();
+          const myInboxId = String((client as any).inboxId ?? '').toLowerCase();
 
-            if (!toAdd.length) return prev;
-            toAdd.forEach(c => syncToAddressBook(c.peerAddress));
-            
-            const updated = [...toAdd, ...prev];
-            persistToLocal(updated);
-            return updated;
-          });
+          for (const entry of dmEntries) {
+            const pLower = entry.peerAddress.toLowerCase();
+            if (!pLower || pLower === address?.toLowerCase() || blockedPeersRef.current.has(pLower)) continue;
+            if (entry.dmId) convIdToPeer.current.set(entry.dmId, pLower);
+
+            const delAt = deletedAtMs(pLower, [effectiveAddress, address]);
+            const clearAt = clearedAtMs(pLower, [effectiveAddress, address]);
+            const cutMs = Math.max(delAt, clearAt);
+
+            if (!visibleSet.has(pLower)) {
+              const surviving = entry.messages
+                .map((m: any) => {
+                  const rawContent = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
+                  let mappedContent = rawContent;
+                  let burnAtNs: number | undefined = undefined;
+                  const msgMs = toMs(m.sentAtNs ?? m.sentAt ?? m.sent);
+                  if (rawContent.startsWith('__BURN_')) {
+                    const parts = rawContent.split('__::');
+                    if (parts.length >= 2) {
+                      const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
+                      mappedContent = parts.slice(1).join('__::');
+                      burnAtNs = msgMs + seconds * 1000;
+                    }
+                  }
+                  return { raw: m, rawContent, mappedContent, burnAtNs, msgMs };
+                })
+                .filter(({ raw, rawContent, burnAtNs, msgMs }) => {
+                  if (!raw.id || isHidden(pLower, String(raw.id))) return false;
+                  if (burnAtNs && burnAtNs <= Date.now()) return false;
+                  if (isSystemSignal(rawContent) && !rawContent.startsWith('__CALL_OFFER__')) return false;
+                  if (cutMs > 0) {
+                    return survivesClear(msgMs, cutMs) || isRescuedMessage(pLower, String(raw.id), [effectiveAddress, address]);
+                  }
+                  return true;
+                });
+
+              if (surviving.length > 0) {
+                const latest = surviving[surviving.length - 1];
+                if (delAt > 0) {
+                  unmarkDeleted(pLower, [effectiveAddress, address]);
+                  try { setSynced(address.toLowerCase(), { [`deleted:${pLower}`]: null }); } catch {}
+                }
+                knownPeersRef.current.add(pLower);
+
+                const mappedMsgs = surviving.map(({ raw, mappedContent, burnAtNs, msgMs }) => ({
+                  id: raw.id,
+                  senderInboxId: raw.senderInboxId ?? '',
+                  senderAddress: String(raw.senderInboxId ?? '').toLowerCase() === myInboxId ? address.toLowerCase() : pLower,
+                  content: mappedContent,
+                  burnAtNs,
+                  sentAtNs: msgMs,
+                  status: 'delivered',
+                  conversationId: `dm-${pLower}`,
+                }));
+                const nonCallMsgs = mappedMsgs.filter(m => !String(m.content || '').startsWith('__CALL_'));
+                if (nonCallMsgs.length > 0) {
+                  chatDB.saveMessages(nonCallMsgs).catch(() => {});
+                }
+                const latestLabel = latest.rawContent.startsWith('__CALL_OFFER__')
+                  ? 'Incoming call...'
+                  : lastMessageOf(latest.mappedContent).slice(0, 80);
+                chatDB.saveConversation({ peerAddress: pLower, lastAt: latest.msgMs }).catch(() => {});
+
+                const readTs = address ? Number(getSynced(address, `read:${pLower}`) || 0) : 0;
+                const isFromPeer = String(latest.raw.senderInboxId ?? '').toLowerCase() !== myInboxId;
+                const isActive = activePeerRef.current?.toLowerCase() === pLower;
+                toRevive.push({
+                  peerAddress: pLower,
+                  lastMessage: latestLabel,
+                  lastAt: new Date(latest.msgMs || Date.now()),
+                  unreadCount: isFromPeer && !isActive && readTs < latest.msgMs ? 1 : 0,
+                  msgsToSave: nonCallMsgs,
+                });
+              } else if (delAt === 0 && clearAt === 0) {
+                // Brand new XMTP DM with no text messages yet (e.g. opened by peer)
+                knownPeersRef.current.add(pLower);
+                toRevive.push({
+                  peerAddress: pLower,
+                  lastMessage: ' New message received',
+                  lastAt: new Date(),
+                  unreadCount: 0,
+                  msgsToSave: [],
+                });
+              }
+            } else if (entry.lastMessage) {
+              const m = entry.lastMessage;
+              const rawContent = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
+              if (
+                m.id &&
+                !isHidden(pLower, String(m.id)) &&
+                (!isSystemSignal(rawContent) || rawContent.startsWith('__CALL_OFFER__'))
+              ) {
+                const msgMs = toMs(m.sentAtNs ?? m.sentAt ?? m.sent);
+                const okClear = cutMs === 0 || survivesClear(msgMs, cutMs) || isRescuedMessage(pLower, String(m.id), [effectiveAddress, address]);
+                const curConv = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === pLower);
+                const curMs = curConv?.lastAt ? new Date(curConv.lastAt).getTime() : 0;
+                if (okClear && msgMs > curMs + 500) {
+                  let mappedContent = rawContent;
+                  if (rawContent.startsWith('__BURN_')) {
+                    const parts = rawContent.split('__::');
+                    if (parts.length >= 2) mappedContent = parts.slice(1).join('__::');
+                  }
+                  const label = rawContent.startsWith('__CALL_OFFER__') ? 'Incoming call...' : lastMessageOf(mappedContent).slice(0, 80);
+                  const isFromPeer = String(m.senderInboxId ?? '').toLowerCase() !== myInboxId;
+                  const readTs = address ? Number(getSynced(address, `read:${pLower}`) || 0) : 0;
+                  const isActive = activePeerRef.current?.toLowerCase() === pLower;
+                  previewUpdates.set(pLower, {
+                    lastMessage: label,
+                    lastAt: new Date(msgMs),
+                    bumpUnread: isFromPeer && !isActive && readTs < msgMs,
+                  });
+                }
+              }
+            }
+          }
+
+          if (toRevive.length > 0 || previewUpdates.size > 0) {
+            setConversations(prev => {
+              const prevMap = new Map(prev.map(c => [c.peerAddress.toLowerCase(), c]));
+              const additions: ConversationMeta[] = [];
+              for (const r of toRevive) {
+                if (!prevMap.has(r.peerAddress)) {
+                  additions.push({
+                    peerAddress: r.peerAddress,
+                    lastMessage: r.lastMessage,
+                    lastAt: r.lastAt,
+                    unreadCount: r.unreadCount,
+                  });
+                }
+              }
+              const updatedExisting = prev.map(c => {
+                const p = c.peerAddress.toLowerCase();
+                const upd = previewUpdates.get(p);
+                if (!upd) return c;
+                return {
+                  ...c,
+                  lastMessage: upd.lastMessage || c.lastMessage,
+                  lastAt: upd.lastAt,
+                  unreadCount: upd.bumpUnread ? Math.max(c.unreadCount || 0, 1) : c.unreadCount,
+                };
+              });
+              const updated = [...additions, ...updatedExisting];
+              persistToLocal(updated);
+              return updated;
+            });
+            toRevive.forEach(r => syncToAddressBook(r.peerAddress));
+          }
+        } else {
+          // Keep discoverNewPeers cache warm if needed
+          await discoverNewPeers(client, address, knownPeersRef.current);
         }
         
         // --- 10000% GUARANTEE FALLBACK POLL FOR ACTIVE PEER ---
         if (activePeerRef.current) {
            try {
-              const rawMsgs = await getMessages(client, activePeerRef.current);
-              if (rawMsgs && rawMsgs.length > 0 && !cancelled) {
+              const peerNowAtStart = activePeerRef.current;
+              const rawMsgs = await getMessages(client, peerNowAtStart);
+              if (rawMsgs && rawMsgs.length > 0 && !cancelled && activePeerRef.current?.toLowerCase() === peerNowAtStart.toLowerCase()) {
+                 const clearCutPoll = clearedAtMs(peerNowAtStart, [effectiveAddress, address]);
+                 const toSaveInDb: any[] = [];
                  setMessages(prev => {
                     const existingIds = new Set(prev.map(m => m.id));
                     const newRaw = rawMsgs.filter(m => {
                         if (!m.id || existingIds.has(m.id)) return false;
+                        if (isHidden(peerNowAtStart, String(m.id))) return false;
                         const cStr = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
-                        return !cStr.includes('initiatedByInboxId') && !cStr.includes('addedInboxes') && !cStr.includes('group is inactive');
+                        if (cStr.includes('initiatedByInboxId') || cStr.includes('addedInboxes') || cStr.includes('group is inactive')) return false;
+                        if (clearCutPoll > 0 && !survivesClear(m.sentAtNs ?? m.sentAt ?? m.sent, clearCutPoll) && !isRescuedMessage(peerNowAtStart, String(m.id), [effectiveAddress, address])) {
+                          return false;
+                        }
+                        return true;
                       });
                     if (newRaw.length === 0) return prev;
                     const peerNow = activePeerRef.current;
-                    if (!peerNow) return prev; // chat was closed while the poll was running
+                    if (!peerNow || peerNow.toLowerCase() !== peerNowAtStart.toLowerCase()) return prev;
                     
                     const selfId = (client as any).inboxId ?? "";
                     const mapped = newRaw.map((m: any) => {
                        const isFromPeer = m.senderInboxId !== selfId;
                        let content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+                       let burnAtNs: number | undefined = undefined;
+                       const msgMs = nsToDate(m.sentAtNs ?? m.sentAt).getTime();
+                       if (typeof content === 'string' && content.startsWith('__BURN_')) {
+                         const parts = content.split('__::');
+                         if (parts.length >= 2) {
+                           const seconds = parseInt(parts[0].replace('__BURN_', ''), 10);
+                           content = parts.slice(1).join('__::');
+                           burnAtNs = msgMs + seconds * 1000;
+                         }
+                       }
                        return {
                           id: m.id,
                           content: content,
+                          burnAtNs,
+                          senderInboxId: m.senderInboxId ?? '',
                           senderAddress: isFromPeer ? peerNow : (address || ''),
-                          sentAtNs: nsToDate(m.sentAtNs ?? m.sentAt).getTime(),
+                          sentAtNs: msgMs,
                           status: 'delivered',
                           conversationId: `dm-${peerNow.toLowerCase()}`
                        };
@@ -4612,15 +4811,19 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     
                     // Exclude system messages from rendering
                     const toAppend = mapped.filter(m => {
-                       if (m.content.startsWith('__REACT__') || m.content.startsWith('__READ__') || m.content.startsWith('__TYPING__') || m.content.startsWith('__VOTE__') || m.content.startsWith('__EDIT__') || m.content.startsWith('__REVOKE__')) {
-                           return false; // Real intercepts are handled by stream
+                       if (m.content.startsWith('__REACT__') || m.content.startsWith('__READ__') || m.content.startsWith('__TYPING__') || m.content.startsWith('__VOTE__') || m.content.startsWith('__EDIT__') || m.content.startsWith('__REVOKE__') || m.content.startsWith('__DELIVERED__') || m.content.startsWith('__PIN__') || m.content.startsWith('__UNPIN__') || m.content.startsWith('__CALL_')) {
+                           return false;
                        }
-                       return true;
+                       return !m.burnAtNs || m.burnAtNs > Date.now();
                     });
                     
                     if (toAppend.length === 0) return prev;
+                    toAppend.forEach(m => { confirmedMsgIds.current.add(m.id); toSaveInDb.push(m); });
                     return [...prev, ...toAppend].sort((a, b) => a.sentAtNs - b.sentAtNs);
                  });
+                 if (toSaveInDb.length > 0) {
+                   chatDB.saveMessages(toSaveInDb).catch(() => {});
+                 }
               }
            } catch (pollErr) {
               console.warn('[Ledger Chat] Active peer fallback poll failed:', pollErr);
@@ -4634,6 +4837,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     };
 
     syncGlobal();
+    // Run immediate sync when network returns or user returns to tab (critical after offline/mobile sleep)
+    const onResumeSync = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      syncGlobal();
+    };
+    window.addEventListener('online', onResumeSync);
+    document.addEventListener('visibilitychange', onResumeSync);
     // A tab in the background polls every 30 s instead of every few seconds.
     // Background tabs are most of the open tabs at any moment, and at the
     // foreground rate each one cost the database the same as an active user.
@@ -4667,6 +4877,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         try {
           if (activeAbortController) activeAbortController.abort();
           activeAbortController = new AbortController();
+          const streamOpenedAtMs = Date.now();
           const gen = streamMessages(client, activeAbortController.signal);
           for await (const msg of gen as any) {
             if (cancelled) { activeAbortController.abort(); break; }
@@ -4765,6 +4976,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             // correct conversation. If not, the message is parked under
             // `dm-unresolved-<convoId>` and a warning is logged so the
             // delivery-report endpoint captures it.
+            const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
             if (!resolvedPeerAddr && fromPeer && msg.senderInboxId) {
               // Fire-and-forget: resolve in background, then re-dispatch
               (async () => {
@@ -4788,28 +5000,51 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   }
                   if (addr && /^0x[a-fA-F0-9]{40}$/.test(addr)) {
                     const resolvedLower = addr.toLowerCase();
+                    // Never resurrect or deliver for blocked peers
+                    if (blockedPeersRef.current.has(resolvedLower)) return;
+                    if (isHidden(resolvedLower, realId)) return;
+                    const lateDelAt = deletedAtMs(resolvedLower, [effectiveAddress, address]);
+                    const lateClearAt = clearedAtMs(resolvedLower, [effectiveAddress, address]);
+                    if (lateClearAt > 0 && !survivesClear(sentAtNs, lateClearAt)) {
+                      if (Date.now() - streamOpenedAtMs > 1500 && lateClearAt - sentAtNs < 180_000 && !isSystemSignal(content)) {
+                        markRescuedMessage(resolvedLower, realId, [effectiveAddress, address]);
+                      } else {
+                        return;
+                      }
+                    }
+                    if (lateDelAt > 0) {
+                      unmarkDeleted(resolvedLower, [effectiveAddress, address]);
+                      if (address) { try { setSynced(address.toLowerCase(), { [`deleted:${resolvedLower}`]: null }); } catch {} }
+                    }
+                    knownPeersRef.current.add(resolvedLower);
                     // Cache it so future messages resolve instantly
                     if (convoId) convIdToPeer.current.set(convoId, resolvedLower);
                     diag('receive_resolved_late', { msg: short(realId), peer: short(resolvedLower) });
                     // Re-inject: update conversation list and persist
-                    setConversations(prev => {
-                      const exists = prev.some(c => c.peerAddress.toLowerCase() === resolvedLower);
-                      if (!exists) {
-                        return [{ peerAddress: resolvedLower, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()), unreadCount: 1 }, ...prev];
-                      }
-                      return prev.map(c =>
-                        c.peerAddress.toLowerCase() === resolvedLower
-                          ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()), unreadCount: (c.unreadCount || 0) + 1 }
-                          : c
-                      );
-                    });
+                    if (!isSystemSignal(content)) {
+                      setConversations(prev => {
+                        const cleaned = prev.filter(c => c.peerAddress.toLowerCase() !== 'unknown');
+                        const exists = cleaned.some(c => c.peerAddress.toLowerCase() === resolvedLower);
+                        const next = !exists
+                          ? [{ peerAddress: resolvedLower, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()), unreadCount: 1 }, ...cleaned]
+                          : cleaned.map(c =>
+                              c.peerAddress.toLowerCase() === resolvedLower
+                                ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()), unreadCount: (c.unreadCount || 0) + 1 }
+                                : c
+                            );
+                        persistToLocal(next);
+                        return next;
+                      });
+                    }
                     // Fix the message's conversationId in state so it shows in the right chat
                     setMessages(prev => prev.map(m =>
                       m.id === realId ? { ...m, conversationId: `dm-${resolvedLower}` } : m
                     ));
                     // Persist to IndexedDB with the correct peer
-                    chatDB.saveMessages([{ id: realId, senderInboxId: msg.senderInboxId ?? '', content, sentAtNs, conversationId: `dm-${resolvedLower}`, status: 'sent' }]).catch(() => {});
-                    chatDB.saveConversation({ peerAddress: resolvedLower, lastAt: sentAtNs }).catch(() => {});
+                    if (!isSystemSignal(content)) {
+                      chatDB.saveMessages([{ id: realId, senderInboxId: msg.senderInboxId ?? '', senderAddress: resolvedLower, content, sentAtNs, conversationId: `dm-${resolvedLower}`, status: 'sent' }]).catch(() => {});
+                      chatDB.saveConversation({ peerAddress: resolvedLower, lastAt: sentAtNs }).catch(() => {});
+                    }
                   }
                 } catch (e) {
                   console.warn('[XMTP] Late peer resolution failed:', e);
@@ -4817,7 +5052,6 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               })();
             }
             const msgConvPeer = resolvedPeerAddr || (convoId && convIdToPeer.current.get(convoId)) || resolvedPeerAddr || 'unknown';
-            const realId = msg.id ?? `real-${sentAtNs}-${Math.random()}`;
             // One event per message received (lib/xmtp/diag.ts): never its content, ids shortened.
             // `kind` is only the protocol marker of a signal (READ, DELIVERED, TYPING, CALL_…) or
             // "chat" for a message a person wrote, so a receipt is never mistaken for a reply.
@@ -4858,11 +5092,25 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             pruneConfirmedIds(); // keep Set bounded to last 2000 IDs
             pruneOptimisticMap(); // prune stale optimistic entries
 
-            // Cleared or deleted on this device: a replay after a reconnect must not bring it back.
-            if (!survivesClear(sentAtNs, clearedAtMs(msgConvPeer, [address])) || isHidden(msgConvPeer, realId)) {
-              const reason = isHidden(msgConvPeer, realId) ? 'deleted on this device' : 'before this chat was cleared';
+            // Cleared or deleted on this device: keep old history hidden, but rescue fresh
+            // post-delete live messages if local clock was ahead of the network clock.
+            const clearCut = clearedAtMs(msgConvPeer, [effectiveAddress, address]);
+            const hiddenHere = isHidden(msgConvPeer, realId) || preClearIdsRef.current.has(realId);
+            let survivedHere = survivesClear(sentAtNs, clearCut) || isRescuedMessage(msgConvPeer, realId, [effectiveAddress, address]);
+            if (!hiddenHere && !survivedHere && fromPeer && firstSight && clearCut > 0) {
+              const preMaxMs = preClearMaxMsgMsRef.current.get(String(msgConvPeer).toLowerCase()) ?? 0;
+              const liveAfterOpen = Date.now() - streamOpenedAtMs > 1500;
+              const withinClockSkew = (clearCut - sentAtNs) >= 0 && (clearCut - sentAtNs) < 180_000;
+              const newerThanPreClear = preMaxMs === 0 || sentAtNs > preMaxMs;
+              if (liveAfterOpen && withinClockSkew && newerThanPreClear && (!isSystemSignal(content) || content.startsWith('__CALL_OFFER__'))) {
+                markRescuedMessage(msgConvPeer, realId, [effectiveAddress, address]);
+                survivedHere = true;
+              }
+            }
+            if (!survivedHere || hiddenHere) {
+              const reason = hiddenHere ? 'deleted on this device' : 'before this chat was cleared';
               diag('drop', { msg: short(realId), reason });
-              if (fromPeer && reason !== 'deleted on this device') reportDelivery('receive_cleared', 'new message older than the clear cut-off');
+              if (fromPeer && !hiddenHere) reportDelivery('receive_cleared', 'new message older than the clear cut-off');
               continue;
             }
 
@@ -5079,7 +5327,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               }
               if (callStateRef.current === 'idle') {
                 // The chat that is open stays open while it rings; answering opens the caller's chat.
-                if (msgConvPeer && msgConvPeer.toLowerCase() !== activePeerRef.current?.toLowerCase()) {
+                if (msgConvPeer && msgConvPeer !== 'unknown' && msgConvPeer.toLowerCase() !== activePeerRef.current?.toLowerCase()) {
+                  unmarkDeleted(msgConvPeer, [effectiveAddress, address]);
+                  if (address) { try { setSynced(address.toLowerCase(), { [`deleted:${msgConvPeer.toLowerCase()}`]: null }); } catch {} }
                   setConversations(prev => {
                     if (!prev.find(c => c.peerAddress.toLowerCase() === msgConvPeer.toLowerCase())) {
                       const newConv = { peerAddress: msgConvPeer, lastMessage: 'Incoming call...', lastAt: new Date() };
@@ -5336,26 +5586,75 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 return [...prev, mappedMsg].sort((a, b) => a.sentAtNs - b.sentAtNs);
               });
 
-              // Update conversation preview
+              // Update conversation preview (and clear any prior delete mark on activity)
               if (!isSystemSignal(content)) {
+                if (currentActivePeer) {
+                  unmarkDeleted(currentActivePeer, [effectiveAddress, address]);
+                  if (address) { try { setSynced(address.toLowerCase(), { [`deleted:${currentActivePeer}`]: null }); } catch {} }
+                }
                 setConversations(prev => {
-                  const updated = prev.map(c =>
-                    c.peerAddress.toLowerCase() === currentActivePeer
-                      ? { ...c, lastMessage: lastMessageOf(content).slice(0, 80), lastAt: new Date(sentAtNs || Date.now()) }
-                      : c
-                  );
+                  const exists = prev.some(c => c.peerAddress.toLowerCase() === currentActivePeer);
+                  const previewLine = lastMessageOf(mappedContent).slice(0, 80);
+                  const updated = exists
+                    ? prev.map(c =>
+                        c.peerAddress.toLowerCase() === currentActivePeer
+                          ? { ...c, lastMessage: previewLine, lastAt: new Date(sentAtNs || Date.now()) }
+                          : c
+                      )
+                    : currentActivePeer
+                      ? [{ peerAddress: currentActivePeer, lastMessage: previewLine, lastAt: new Date(sentAtNs || Date.now()) }, ...prev]
+                      : prev;
                   persistToLocal(updated);
                   return updated;
                 });
               }
             } else {
               // Belongs to a different (background) conversation
+              if (isSystemSignal(content) && !content.startsWith('__CALL_OFFER__')) {
+                continue;
+              }
+              if (!msgConvPeer || msgConvPeer === 'unknown') {
+                // Peer address resolution is running asynchronously in the late-resolver above
+                continue;
+              }
+              const bgPeerLower = msgConvPeer.toLowerCase();
+              if (fromPeer && blockedPeersRef.current.has(bgPeerLower)) {
+                continue;
+              }
+
+              const delAt = deletedAtMs(bgPeerLower, [effectiveAddress, address]);
+              const rescuedBg = isRescuedMessage(bgPeerLower, realId, [effectiveAddress, address]);
+              if (delAt > 0 && sentAtNs <= delAt && !rescuedBg) {
+                continue;
+              }
+              if (delAt > 0) {
+                // Revive deleted conversation permanently so it stays visible and persists across reloads
+                unmarkDeleted(bgPeerLower, [effectiveAddress, address]);
+                if (address) {
+                  try { setSynced(address.toLowerCase(), { [`deleted:${bgPeerLower}`]: null }); } catch {}
+                }
+              }
+              knownPeersRef.current.add(bgPeerLower);
+
+              // CRITICAL FIX: Persist background / revived messages to IndexedDB so opening the chat
+              // shows the message immediately even before XMTP network sync finishes.
+              chatDB.saveMessages([{
+                ...mappedMsg,
+                senderAddress: fromPeer ? bgPeerLower : (address || '').toLowerCase(),
+                conversationId: `dm-${bgPeerLower}`,
+                status: 'delivered',
+              }]).catch(() => {});
+              chatDB.saveConversation({
+                peerAddress: bgPeerLower,
+                lastAt: mappedMsg.sentAtNs,
+              }).catch(() => {});
+
               if (fromPeer && !content.startsWith('__')) {
                 const dnd = (ledgerSettings as any)?.do_not_disturb;
                 const notifEnabled = ledgerSettings?.notifications_private !== false;
-                const mutedPeer = (() => { try { return !!localStorage.getItem('ledger_muted_' + String(msgConvPeer || '').toLowerCase()); } catch { return false; } })();
+                const mutedPeer = (() => { try { return !!localStorage.getItem('ledger_muted_' + bgPeerLower); } catch { return false; } })();
                 if (!dnd && !mutedPeer && notifEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                  const note = messageNotification(ledgerSettings as any, shortAddr(msgConvPeer || 'Unknown'), formatMessagePreview(content));
+                  const note = messageNotification(ledgerSettings as any, shortAddr(msgConvPeer || 'Unknown'), formatMessagePreview(mappedContent));
                   new Notification(note.title, {
                     body: note.body,
                     icon: '/favicon.ico'
@@ -5373,32 +5672,29 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               let needsSync = false;
               // Another device may already have read this chat past this
               // message (its "read" can arrive before the message itself).
-              const readElsewhereTs = address ? Number(getSynced(address, `read:${msgConvPeer}`) || 0) : 0;
+              const readElsewhereTs = address ? Number(getSynced(address, `read:${bgPeerLower}`) || 0) : 0;
               const countsAsUnread = fromPeer && readElsewhereTs < sentAtNs;
+              const previewText = isSystemSignal(content) ? '' : lastMessageOf(mappedContent).slice(0, 80);
               setConversations(prev => {
-                if (!msgConvPeer) return prev;
-                const exists = prev.some(c => c.peerAddress.toLowerCase() === msgConvPeer);
+                const exists = prev.some(c => c.peerAddress.toLowerCase() === bgPeerLower);
                 let updated;
                 // Unread badge: a peer message in a chat that is not open adds
                 // one; our own message from another device means we have seen
                 // the chat there, so it clears.
                 if (exists) {
-                  updated = prev.map(c =>
-                    c.peerAddress.toLowerCase() === msgConvPeer
-                      ? { ...c, ...(isSystemSignal(content) ? {} : { lastMessage: lastMessageOf(content).slice(0, 80) }), lastAt: new Date(sentAtNs || Date.now()), unreadCount: countsAsUnread ? (c.unreadCount || 0) + 1 : (fromPeer ? (c.unreadCount || 0) : 0) }
-                      : c
-                  );
+                  const nextEntry = prev.find(c => c.peerAddress.toLowerCase() === bgPeerLower)!;
+                  const refreshed = {
+                    ...nextEntry,
+                    ...(isSystemSignal(content) ? {} : { lastMessage: previewText }),
+                    lastAt: new Date(sentAtNs || Date.now()),
+                    unreadCount: countsAsUnread ? (nextEntry.unreadCount || 0) + 1 : (fromPeer ? (nextEntry.unreadCount || 0) : 0),
+                  };
+                  updated = [refreshed, ...prev.filter(c => c.peerAddress.toLowerCase() !== bgPeerLower)];
                 } else {
-                  // A deleted chat should only come back if this message was
-                  // sent AFTER the deletion (like other messengers).
-                  const delAt = deletedAtMs(msgConvPeer, [address]);
-                  if (delAt > 0 && sentAtNs <= delAt) {
-                    return prev;
-                  }
                   needsSync = true;
                   updated = [{
                     peerAddress: msgConvPeer,
-                    lastMessage: isSystemSignal(content) ? '' : lastMessageOf(content).slice(0, 80),
+                    lastMessage: previewText,
                     lastAt: new Date(sentAtNs || Date.now()),
                     unreadCount: countsAsUnread ? 1 : 0,
                   }, ...prev];
@@ -5453,6 +5749,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     return () => { 
       cancelled = true; 
       clearInterval(globalPoll); 
+      window.removeEventListener('online', onResumeSync);
+      document.removeEventListener('visibilitychange', onResumeSync);
       if (activeAbortController) activeAbortController.abort();
     };
   }, [client, address]);
@@ -5481,13 +5779,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       try {
         // [1] Load instantly from IndexedDB cache
         const dmId = `dm-${activePeer.toLowerCase()}`;
-        const peerAddrForClearInit = activePeer.toLowerCase();
-        const myAddrForClearInit = (effectiveAddress || address || '').toLowerCase();
-        const clearTsMsInit = Math.max(
-          parseInt(localStorage.getItem(`ledger_cleared_${peerAddrForClearInit}`) || '0', 10),
-          myAddrForClearInit ? parseInt(localStorage.getItem(`ledger_cleared_${myAddrForClearInit}_${peerAddrForClearInit}`) || '0', 10) : 0,
-          address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerAddrForClearInit}`) || '0', 10) : 0
-        );
+        const clearTsMsInit = clearedAtMs(activePeer, [effectiveAddress, address]);
 
         try {
           const rawLocal = await chatDB.getMessagesForConversation(dmId, 100);
@@ -5500,15 +5792,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           const localMsgs = (rawLocal || [])
             .filter((m: any) => !(typeof m.id === 'string' && m.id.startsWith('optimistic-')))
             .filter((m: any) => !isHidden(activePeer, m.id))
-            .map((m: any) => (m.sentAtNs > 1e14 ? { ...m, sentAtNs: Math.floor(m.sentAtNs / 1e6) } : m))
-            .filter((m: any) => clearTsMsInit === 0 || (m.sentAtNs || 0) > clearTsMsInit);
+            .map((m: any) => ({ ...m, sentAtNs: toMs(m.sentAtNs ?? m.sentAt ?? m.sent) }))
+            .filter((m: any) => clearTsMsInit === 0 || survivesClear(m.sentAtNs, clearTsMsInit) || isRescuedMessage(activePeer, m.id, [effectiveAddress, address]));
           if (localMsgs && localMsgs.length > 0 && !cancelled) {
             setMessages(prev => {
               // Re-read the cut-off here. Clear chat can land while this load
               // is in flight, and the filter above still has the old time.
               const cutNow = clearedAtMs(activePeer, [effectiveAddress, address]);
               const existingIds = new Set(prev.map(m => m.id));
-              const newMsgs = localMsgs.filter(m => !existingIds.has(m.id) && survivesClear(m.sentAtNs, cutNow) && !isHidden(activePeer, m.id));
+              const newMsgs = localMsgs.filter(m => !existingIds.has(m.id) && (survivesClear(m.sentAtNs, cutNow) || isRescuedMessage(activePeer, m.id, [effectiveAddress, address])) && !isHidden(activePeer, m.id));
               if (newMsgs.length === 0) return prev;
               return [...prev, ...newMsgs].sort((a, b) => a.sentAtNs - b.sentAtNs);
             });
@@ -5585,21 +5877,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           console.warn('[Ledger Chat] Failed to resolve DM IDs securely:', e);
         }
         
-        const myAddrForClear = (effectiveAddress || address || '').toLowerCase();
-        const peerAddrForClear = activePeer.toLowerCase();
-        const clearTsMs = Math.max(
-          parseInt(localStorage.getItem(`ledger_cleared_${peerAddrForClear}`) || '0', 10),
-          myAddrForClear ? parseInt(localStorage.getItem(`ledger_cleared_${myAddrForClear}_${peerAddrForClear}`) || '0', 10) : 0,
-          address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerAddrForClear}`) || '0', 10) : 0,
-          address ? parseInt(localStorage.getItem(`ledger_cleared_${address}_${peerAddrForClear}`) || '0', 10) : 0
-        );
+        const clearTsMs = clearedAtMs(activePeer, [effectiveAddress, address]);
         if (clearTsMs > 0) {
-          raw = raw.filter((m: any) => {
-            const rawTime = typeof m.sentAtNs === 'number'
-              ? (m.sentAtNs > 1e15 ? m.sentAtNs / 1e6 : m.sentAtNs)
-              : (new Date(m.sent || m.sentAt || 0).getTime());
-            return rawTime > clearTsMs;
-          });
+          raw = raw.filter((m: any) => survivesClear(m.sentAtNs ?? m.sentAt ?? m.sent, clearTsMs) || (m.id && isRescuedMessage(activePeer, String(m.id), [effectiveAddress, address])));
         }
         
         // FETCH PENDING MESSAGES (OFFLINE ROUTING)
@@ -5673,7 +5953,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
         let combined = [...rawMappedMsgs, ...pendingServer].sort((a, b) => a.sentAtNs - b.sentAtNs);
         if (clearTsMs > 0) {
-          combined = combined.filter((m: any) => (m.sentAtNs || 0) > clearTsMs);
+          combined = combined.filter((m: any) => survivesClear(m.sentAtNs, clearTsMs) || (m.id && isRescuedMessage(activePeer, String(m.id), [effectiveAddress, address])));
         }
         const mappedMsgs: any[] = [];
         const reactions: Record<string, Record<string, string[]>> = {};
@@ -5815,21 +6095,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           // [BUG FIX] CLEAR CHAT GUARD FOR RT STREAM
           // Filter out messages older than the user's local clear timestamp,
           // otherwise every poll re-injects the deleted history.
-          const myAddrForClearRt = (effectiveAddress || address || '').toLowerCase();
-          const peerAddrForClearRt = activePeer.toLowerCase();
-          const clearTsMs = Math.max(
-            parseInt(localStorage.getItem(`ledger_cleared_${peerAddrForClearRt}`) || '0', 10),
-            myAddrForClearRt ? parseInt(localStorage.getItem(`ledger_cleared_${myAddrForClearRt}_${peerAddrForClearRt}`) || '0', 10) : 0,
-            address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerAddrForClearRt}`) || '0', 10) : 0,
-            address ? parseInt(localStorage.getItem(`ledger_cleared_${address}_${peerAddrForClearRt}`) || '0', 10) : 0
-          );
-          if (clearTsMs > 0) {
-            newConfirmed = newConfirmed.filter((m: any) => {
-              const rawTime = typeof m.sentAtNs === 'number'
-                ? (m.sentAtNs > 1e15 ? m.sentAtNs / 1e6 : m.sentAtNs)
-                : (new Date(m.sent || m.sentAt || 0).getTime());
-              return rawTime > clearTsMs;
-            });
+          const clearTsMsRt = clearedAtMs(activePeer, [effectiveAddress, address]);
+          if (clearTsMsRt > 0) {
+            newConfirmed = newConfirmed.filter((m: any) => survivesClear(m.sentAtNs ?? m.sentAt ?? m.sent, clearTsMsRt) || (m.id && isRescuedMessage(activePeer, String(m.id), [effectiveAddress, address])));
           }
           
           // ── KEY GUARD ──────────────────────────────────────────────────────
@@ -5884,6 +6152,28 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
           return finalMessages;
         });
+
+        // Keep the sidebar conversation preview synced with the newest surviving message
+        const visibleHistorical = processedMsgs.filter((m: any) => typeof m.content === 'string' && !isSystemSignal(m.content) && !m.id?.startsWith('__calllog_'));
+        if (visibleHistorical.length > 0 && !cancelled) {
+          const newest = visibleHistorical[visibleHistorical.length - 1];
+          const pLower = activePeer.toLowerCase();
+          unmarkDeleted(pLower, [effectiveAddress, address]);
+          setConversations(prev => {
+            const existing = prev.find(c => c.peerAddress.toLowerCase() === pLower);
+            const newestPreview = lastMessageOf(newest.content).slice(0, 80);
+            const newestDate = new Date(newest.sentAtNs || Date.now());
+            const existingMs = existing?.lastAt ? new Date(existing.lastAt).getTime() : 0;
+            if (existing && existing.lastMessage && existing.lastMessage !== ' New message received' && existingMs >= newest.sentAtNs) {
+              return prev;
+            }
+            const next = existing
+              ? prev.map(c => c.peerAddress.toLowerCase() === pLower ? { ...c, lastMessage: newestPreview, lastAt: newestDate } : c)
+              : [{ peerAddress: activePeer, lastMessage: newestPreview, lastAt: newestDate }, ...prev];
+            persistToLocal(next);
+            return next;
+          });
+        }
 
       } catch (e) {
         console.warn('[Chat] load messages failed:', e);
@@ -5996,6 +6286,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             }
         }
 
+        unmarkDeleted(peer.toLowerCase(), [effectiveAddress, address]);
+        if (address) {
+          try { setSynced(address.toLowerCase(), { [`deleted:${peer.toLowerCase()}`]: null }); } catch {}
+        }
         const newConv = { peerAddress: peer, lastMessage: '', lastAt: new Date() };
 
         let needsSync = false;
@@ -6287,7 +6581,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       if (realId && !isReaction && !isSignal) {
         optimisticContentMap.current.delete(finalContent);
         confirmedMsgIds.current.add(realId);
-        const sentAtMs = Date.now();
+        const curClearCut = clearedAtMs(peerAtSend, [effectiveAddress, address]);
+        const sentAtMs = Math.max(Date.now(), curClearCut > 0 ? curClearCut + 1 : 0);
+        unmarkDeleted(peerAtSend.toLowerCase(), [effectiveAddress, address]);
+        if (address) {
+          try { setSynced(address.toLowerCase(), { [`deleted:${peerAtSend.toLowerCase()}`]: null }); } catch {}
+        }
         // The stream echo may already have put the real message in: then our copy is dropped.
         setMessages(prev => confirmOptimistic(prev, optimisticId, realId).map(m => (m.id === realId ? applyEarlyReceipt(m) : m)));
         // Persist the REAL message (never the optimistic id) so it survives reloads.
@@ -6378,6 +6677,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const targetPeer = activePeer || activePeerRef.current || undefined;
     if (isOffline) {
       toast.error(tr("You are offline. Attachments are only sent while connected."));
       resetFileInputs(e);
@@ -6402,7 +6702,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             }
           : {},
       );
-      await executeSend(message);
+      await executeSend(message, targetPeer ? { to: targetPeer } : {});
       if (progressId) toast.success(tr("File sent"), { id: progressId, description: tr("{formatBytes}, end-to-end encrypted", { formatBytes: formatBytes(file.size) }) });
     } catch (err) {
       console.error('[Attachment] send failed:', err instanceof Error ? err.message : err);
@@ -7673,16 +7973,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 );
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;
-                const peerLowerForFilter = activePeer!.toLowerCase();
-                const myLowerForFilter = (effectiveAddress || address || '').toLowerCase();
-                let clearTsMs = 0;
-                try {
-                  clearTsMs = Math.max(
-                    parseInt(localStorage.getItem(`ledger_cleared_${peerLowerForFilter}`) || '0', 10),
-                    myLowerForFilter ? parseInt(localStorage.getItem(`ledger_cleared_${myLowerForFilter}_${peerLowerForFilter}`) || '0', 10) : 0,
-                    address ? parseInt(localStorage.getItem(`ledger_cleared_${address.toLowerCase()}_${peerLowerForFilter}`) || '0', 10) : 0
-                  );
-                } catch {}
+                const clearTsMs = clearedAtMs(activePeer, [effectiveAddress, address]);
 
                 const filteredMsgs = messages.filter(m => {
                   if (isHidden(activePeer, m.id)) return false;
@@ -7690,11 +7981,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   if (m.burnAtNs && m.burnAtNs <= Date.now()) return false;
                   
                   // Hide any message created at or before the chat was cleared
-                  if (clearTsMs > 0) {
-                    const rawTime = typeof m.sentAtNs === 'number'
-                      ? (m.sentAtNs > 1e14 ? Math.floor(m.sentAtNs / 1e6) : m.sentAtNs)
-                      : (m.sentAtNs ? Number(BigInt(String(m.sentAtNs)) / 1_000_000n) : new Date(m.sentAt || m.sent || 0).getTime());
-                    if (rawTime <= clearTsMs) return false;
+                  if (clearTsMs > 0 && !survivesClear(m.sentAtNs ?? m.sentAt ?? m.sent, clearTsMs) && !(m.id && isRescuedMessage(activePeer, String(m.id), [effectiveAddress, address]))) {
+                    return false;
                   }
 
                   const c = typeof m.content === 'string' ? m.content : '';

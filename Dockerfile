@@ -201,8 +201,8 @@ RUN id -u nextjs >/dev/null 2>&1 || (groupadd --system --gid 1001 nodejs 2>/dev/
 # Copy verified production build and necessary runtime assets
 COPY --from=builder /app ./
 
-# Fast permission setup: only .next cache needs write access at runtime, NEVER chown 200,000+ files in node_modules
-RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next/cache 2>/dev/null || true
+# Fast permission setup: only .next cache and local attachment fallback need write access at runtime, NEVER chown 200,000+ files in node_modules
+RUN mkdir -p /app/.next/cache /app/.data/chat-attachments && chown -R nextjs:nodejs /app/.next/cache /app/.data 2>/dev/null || true
 
 # Final integrity checks
 RUN test -f /app/ecosystem.config.json || (echo "FATAL: ecosystem.config.json missing" && exit 1)
