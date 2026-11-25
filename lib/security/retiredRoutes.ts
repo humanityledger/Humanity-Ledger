@@ -395,7 +395,8 @@ export function isRetiredApiRoute(pathname: string): boolean {
 // public Ledger Chat pages (app/protocol, app/security, app/status, listed as public in
 // middleware.ts). They are served again; the landing footer links to them.
 const RETIRED_PAGES: Record<string, string> = {
-  hub: '/chat', terminal: '/chat', dashboard: '/chat', portfolio: '/chat', markets: '/chat', governance: '/chat',
+  // dashboard is served again since 25 Nov 2026 (app/dashboard): the account dashboard, public shell.
+  hub: '/chat', terminal: '/chat', portfolio: '/chat', markets: '/chat', governance: '/chat',
   network: '/chat', qds: '/chat', predictions: '/chat', sequencer: '/chat', forum: '/communities', news: '/chat',
   academy: '/chat', 'cosmic-forge': '/chat', creator: '/chat', vip: '/chat', ticket: '/chat', saved: '/chat',
   bridge: '/chat', ledger: '/chat', ledgerpost: '/chat', passport: '/chat', registry: '/chat', 'gold-registry': '/chat',
