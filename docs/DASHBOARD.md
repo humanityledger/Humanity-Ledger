@@ -95,6 +95,7 @@ The checklist is the operator's list of 25 November 2026. Each line is either im
 | Item | State |
 |---|---|
 | Link from ledgerchat.org | **Dashboard** in the header navigation and the mobile menu (`lib/landing/chapters.ts` NAV) |
+| Entry | Signed out: Sign in, which returns to the dashboard. Signed in: the dashboard opens only with the wallet that owns the Ledger Chat account. Another wallet gets **Switch wallet**, because the private keys derive from that wallet's signature. `/dashboard` was on the retired-pages list, which sent it to `/chat`; it was removed from that list on 25 Nov 2026 |
 | Transition | Same header, footer, fonts and tokens as the landing. Signed out, it offers Sign in (returns to the dashboard) and See an example |
 
 **7. Documentation**

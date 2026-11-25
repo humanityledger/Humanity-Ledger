@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAccount, useSignMessage } from 'wagmi';
+import { useAppKit } from '@reown/appkit/react';
 import {
   AlertTriangle, ArrowDownLeft, ArrowUpRight, Check, Copy, Eye, EyeOff, Layers, Moon, RefreshCw, ShieldCheck, Sun, X,
 } from 'lucide-react';
@@ -767,6 +768,8 @@ export function DashboardApp() {
   );
   const state = exampleState ?? live.state;
   const { open, sameAccount } = live;
+  const { address: connectedAddress } = useAccount();
+  const { open: openAppKit } = useAppKit();
   // The one wallet of this tab (lib/aztec/wallet/client.ts); only touched in the browser.
   const wallet = useMemo(() => (typeof window === 'undefined' || example ? null : getPrivateWallet()), [example]);
   const [tab, setTab] = useState<Tab>('overview');
@@ -899,11 +902,26 @@ export function DashboardApp() {
         <a className={`${s.btn} ${s.btnQuiet}`} href="/dashboard?example=1">{t('See an example')}</a>
       </StateView>
     );
+  } else if (!example && !sameAccount) {
+    // The dashboard opens only with the wallet that owns this Ledger Chat account: the private
+    // keys are derived from its signature, so any other wallet would show another account.
+    body = (
+      <StateView
+        title={t('Connect the wallet of your Ledger Chat account')}
+        text={
+          connectedAddress
+            ? t('The connected wallet is {connected}. Your Ledger Chat account is {account}. Switch to that wallet to continue.', { connected: short(connectedAddress, 4), account: short(session, 4) })
+            : t('Your Ledger Chat account is {account}. Connect that wallet to open your dashboard.', { account: short(session, 4) })
+        }
+      >
+        <button type="button" className={s.btn} onClick={() => void openAppKit()}>{connectedAddress ? t('Switch wallet') : t('Connect wallet')}</button>
+        <a className={`${s.btn} ${s.btnQuiet}`} href="/dashboard?example=1">{t('See an example')}</a>
+      </StateView>
+    );
   } else if (state.phase === 'idle') {
     body = (
       <StateView title={t('Open your private wallet')} text={t('Your wallet signs one message. The keys it derives, your notes and your activity stay in this browser.')}>
-        <button type="button" className={s.btn} onClick={() => void open()} disabled={!sameAccount}>{t('Open private wallet')}</button>
-        {!sameAccount ? <span className={s.muted}>{t('Connect the wallet you signed in with.')}</span> : null}
+        <button type="button" className={s.btn} onClick={() => void open()}>{t('Open private wallet')}</button>
       </StateView>
     );
   } else if (state.phase === 'error') {
