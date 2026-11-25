@@ -5,6 +5,7 @@ import { EXTERNAL_LINKS } from '@/lib/constants/links';
 import { SiteFooter, SiteHeader, Arrow } from '@/components/landing/site/Chrome';
 import s from '@/components/landing/site/site.module.css';
 import { getT } from '@/lib/i18n/server';
+import { translateDeep } from '@/lib/i18n/deep';
 
 /**
  * /trust: what a reviewer asks for (verdict prompt, "Trust centre"): assurance status, the
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
 const REPO = EXTERNAL_LINKS.github.repo;
 const rec = mainnet as { audit: unknown; internalReview?: { report: string; date: string; baseCommit: string } };
 
-const PROVIDERS: { name: string; role: string; sees: string }[] = [
+const PROVIDERS_EN: { name: string; role: string; sees: string }[] = [
   { name: 'Railway', role: 'Hosts the web app and its database', sees: 'What our server stores (listed below)' },
   { name: 'XMTP network', role: 'Carries direct and group messages', sees: 'MLS ciphertext, inbox ids and timing' },
   { name: 'Aztec Network', role: 'Verifies private payments', sees: 'Proofs, note hashes, nullifiers and the public fee payment' },
@@ -36,7 +37,7 @@ const PROVIDERS: { name: string; role: string; sees: string }[] = [
   { name: 'Browser push services', role: 'Deliver notifications (Apple, Google, Mozilla, Microsoft)', sees: 'That a notification was sent to a device' },
 ];
 
-const STORED: { what: string; why: string }[] = [
+const STORED_EN: { what: string; why: string }[] = [
   { what: 'Sign-in sessions', why: 'To keep you signed in, and to rate-limit sign-in attempts' },
   { what: '@usernames', why: 'So people can find you by name; a username is public by design' },
   { what: 'Contacts you save', why: 'To show names instead of addresses, and to choose who sees your Status' },
@@ -48,6 +49,8 @@ const STORED: { what: string; why: string }[] = [
 
 export default async function TrustPage() {
   const t = await getT();
+  const PROVIDERS = translateDeep(PROVIDERS_EN, (x) => t(x));
+  const STORED = translateDeep(STORED_EN, (x) => t(x));
   return (
     <div className={s.site} data-site="public">
       <a href="#main" className={s.skip}>{t("Skip to content")}</a>
