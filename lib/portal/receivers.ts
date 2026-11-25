@@ -45,7 +45,7 @@ export interface ReceiverMaterial {
   rescueSigner: string;
 }
 
-function hexToBytes(hex: string): Uint8Array {
+export function hexToBytes(hex: string): Uint8Array {
   const h = hex.startsWith('0x') ? hex.slice(2) : hex;
   if (h.length % 2 || !/^[0-9a-fA-F]*$/.test(h)) throw new Error('Invalid hex.');
   const out = new Uint8Array(h.length / 2);
