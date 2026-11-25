@@ -6,7 +6,7 @@ export const securityModel: DocPage = {
   label: "Security model",
   summary: "What Ledger Chat protects you from, what it does not, and what you can do yourself.",
   keywords: ["security", "threat model", "safety", "protect", "hack", "breach", "attack", "risk", "trust"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -32,12 +32,12 @@ export const securityModel: DocPage = {
     {
       t: "ul",
       items: [
-        "**Messages sent through the fallback path**, community posts and attachments can be read by our servers. See [Encryption](/docs/cryptography) for the full list.",
+        "**Messages sent through the fallback path** and **posts in communities created before 24 November 2026** can be read by our servers. Attachments are encrypted on your device. See [Who sees what](/docs/data-inventory) for the full list.",
         "**Metadata.** Our servers know who your contacts are, which communities you belong to and when you are online. XMTP nodes can see when encrypted messages are sent.",
         "**Your IP address in calls**, unless you turn on the setting that relays every call.",
         "**Someone using your unlocked browser profile.** The local message history and the private wallet live in your browser. Anyone who can use it while it is unlocked can read the history and open the wallet.",
-        "**The fee payer of a private payment.** Your account pays each network fee publicly, so its transactions can be linked to each other, although amounts and recipients stay private.",
-        "**Contracts without an audit.** No independent firm has audited our contracts yet.",
+        "**The fee payer of a private payment.** Your account pays each network fee publicly, so its transactions can be linked to each other, although amounts and recipients stay private. Paying the fee through a shared private fee contract is written and off by default.",
+        "**Code without an audit.** An external audit begins on 25 November 2026. Until its report is published on the [audits page](/docs/audits), none of our code or contracts has an external audit.",
       ],
     },
     { t: "h2", text: "What no messenger can protect against" },
@@ -70,15 +70,15 @@ export const audits: DocPage = {
   title: "Security audits and open findings",
   summary: "Which reviews have taken place, what they found, what has been fixed and what is still open.",
   keywords: ["audit", "security", "pentest", "penetration test", "review", "findings", "vulnerability", "report", "fixed", "open issues"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     { t: "h2", text: "Independent reviews" },
     {
       t: "status",
       items: [
-        { label: "Smart contract audit", state: "unavailable", text: "No independent firm has reviewed our contracts yet." },
+        { label: "External audit", state: "development", text: "Begins on 25 November 2026. No report yet: until it is published here, nothing is externally audited." },
         { label: "Application penetration test", state: "unavailable", text: "Not carried out yet." },
-        { label: "Internal code review", state: "available", text: "October 2026, and the private wallet and portal in November 2026. Results below." },
+        { label: "Internal code review", state: "available", text: "October 2026, the private wallet and portal in November 2026, and the chat and test suite on 24 November 2026. Results below." },
       ],
     },
     {
@@ -123,6 +123,25 @@ export const audits: DocPage = {
         ["Portal token not checked against the portal", "A token wired to another Ethereum contract would have burned a withdrawal. The wallet now reads the token's portal on your device and refuses a mismatch."],
         ["Look alike tokens in the configuration", "A release could have listed a fake USDC. On Ethereum, every token must now be the official contract with its real decimals, or the portal stays off."],
         ["A withdrawal the wallet could not finish", "Starting a withdrawal needs a second step on Ethereum that the wallet does not send yet. The withdraw form stays off until it does."],
+        ["Attachments stored as uploaded", "Files could be opened by anyone with the link. They are now encrypted in the browser before upload; storage holds only ciphertext."],
+      ],
+    },
+    { t: "h2", text: "Internal review, 24 November 2026" },
+    {
+      t: "p",
+      text: "A pass over the chat, the documentation site and the continuous integration checks that guard every change.",
+    },
+    { t: "h3", text: "Fixed" },
+    {
+      t: "table",
+      head: ["Finding", "Effect before the fix"],
+      strongFirst: true,
+      rows: [
+        ["Replies in chats with an unresolved sender", "When Ledger Chat could not resolve who wrote, the chat was filed under an XMTP identifier and every reply failed with Not sent. Those chats now reach the same conversation, and a failed message can be sent again."],
+        ["Install step of the checks", "The lockfile lacked a package the code required, so the required checks stopped before running. The lockfile is complete and the four required checks run on every change."],
+        ["Stale tests", "Nineteen tests matched comments or older code instead of the guarantee they protect. They now check the code, with the same guarantees."],
+        ["Build settings", "Three public settings, including the switch for private fee payment, never reached the production build. They now do."],
+        ["Documentation pages", "After the translation release, every page under /docs failed to render. A test now walks every server page and fails if one reaches a browser only function."],
       ],
     },
     { t: "h3", text: "Open" },
@@ -132,13 +151,12 @@ export const audits: DocPage = {
       strongFirst: true,
       rows: [
         ["Readable fallback messages", "Messages that fail XMTP delivery are stored readable on our server.", "Labelled in the chat. Server side rejection is ready and waits for client side sealing."],
-        ["Community content", "Posts and channel messages are stored readable on our server.", "Documented. Encryption not started."],
-        ["Attachments", "Files are stored as uploaded and can be opened by anyone with the link.", "Documented. Encryption not started."],
+        ["Community content", "In communities created before 24 November 2026, posts and channel messages are stored readable on our server.", "New communities keep their posts in an end to end encrypted XMTP group. Older ones are not migrated."],
         ["Session cookies", "Two cookie names carry the same session while older code is migrated.", "In progress."],
         ["Dependencies", "Some third party packages have published advisories.", "Being upgraded in order of severity."],
-        ["Public fee payer", "Each private transaction names the account that pays its fee.", "Private fee payment is the next piece of work."],
+        ["Public fee payer", "Each private transaction names the account that pays its fee.", "Payment through the shared PrivateFPC is written and off by default; not tried on Aztec Alpha yet."],
         ["Passkeys on real devices", "Passkey unlock is tested against a simulated authenticator only.", "To be tested on iPhone, Android, Windows and a security key."],
-        ["Contracts not audited", "Escrow, streams, the identity contract and the Ethereum portal have no external audit.", "Escrow, streams and the portal stay off Aztec Alpha and Ethereum until they do."],
+        ["Contracts not audited", "Escrow, streams, the identity contract and the Ethereum portal have no external audit.", "The external audit begins on 25 November 2026. Escrow, streams and the portal stay off Aztec Alpha and Ethereum until there is a recorded deployment after review."],
       ],
     },
     {
@@ -202,7 +220,7 @@ export const dataInventory: DocPage = {
   label: "Who sees what",
   summary: "For each kind of data in Ledger Chat: who can read it, written from the code and kept with it.",
   keywords: ["privacy", "data", "metadata", "server", "who can see", "inventory", "fee payer", "contacts"],
-  updated: "2026-11-24",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -216,7 +234,7 @@ export const dataInventory: DocPage = {
       rows: [
         ["Direct and group messages", "Only the people in the conversation. XMTP nodes store ciphertext."],
         ["Attachments and voice notes", "Only the people in the conversation. Our server stores ciphertext and never has the key."],
-        ["Community posts", "Our server can read them. They are stored as plain text today."],
+        ["Community posts", "Communities created from 24 November 2026: only the members, in an XMTP MLS group. Older communities: our server can read them."],
         ["Presence and typing", "Our server, for a few seconds, and your contacts, unless you turn them off in Settings."],
         ["Your contact list", "Our server stores who you have as a contact."],
         ["Your username", "Our server, linked to your wallet address. People can find you only by your exact username."],
@@ -248,7 +266,7 @@ export const dataInventory: DocPage = {
       t: "hint",
       tone: "info",
       title: "What is still open",
-      text: "Community posts readable by the server, the contact list on the server and the public fee payer on Aztec Alpha are known gaps. Each one has an item in the public plan.",
+      text: "Posts in older communities readable by the server, the contact list on the server and the public fee payer on Aztec Alpha are known gaps. Each one has an item in the public plan.",
     },
   ],
 };

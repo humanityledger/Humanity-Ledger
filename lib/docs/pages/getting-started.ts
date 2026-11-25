@@ -7,7 +7,7 @@ export const overview: DocPage = {
   title: "Humanity Ledger documentation",
   summary: "What Humanity Ledger is, what Ledger Chat does today, and where to read more.",
   keywords: ["intro", "introduction", "start", "what is", "about", "humanity ledger", "ledger chat", "begin"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -36,16 +36,17 @@ export const overview: DocPage = {
       t: "status",
       items: [
         { label: "Sign in with a wallet", state: "available", text: "Any Ethereum wallet that can sign a message, using the Sign in with Ethereum standard." },
-        { label: "Sign in with email", state: "available", text: "A one time code sent to your inbox. Useful before you have a wallet." },
+        { label: "Sign in from your phone", state: "available", text: "On a computer, scan a code with a phone where you are already signed in. No email sign in: it was removed." },
         { label: "Direct messages", state: "available", text: "Encrypted on your device and delivered through the XMTP network." },
         { label: "Fallback delivery", state: "partial", text: "When XMTP delivery fails, a message can travel through our server in readable form. The chat labels these messages." },
-        { label: "Communities", state: "available", text: "Channels, roles, posts and invite links. Community posts are not yet encrypted end to end." },
-        { label: "Voice and video calls", state: "available", text: "Direct browser to browser calls, encrypted by WebRTC. A call rings anywhere in the app, and screen sharing works where the browser can capture." },
+        { label: "Communities", state: "partial", text: "Channels, roles, posts and invite links. Communities created from 24 November 2026 keep their posts in an end to end encrypted XMTP group; older communities are stored on our server in readable form." },
+        { label: "Voice and video calls", state: "available", text: "One to one calls in HD, encrypted by WebRTC, relayed through Cloudflare when a direct route is blocked. A call rings anywhere in the app, and screen sharing works where the browser can capture." },
         { label: "Payments in chat", state: "available", text: "Send tokens from your own wallet to the person you are talking to." },
-        { label: "Private payments on Aztec", state: "partial", text: "Shield, send, receive and unshield on Aztec Alpha with a cap per payment, and on the test network. Each account pays its own network fee. No independent audit yet." },
+        { label: "Private payments on Aztec", state: "partial", text: "Shield, send, receive and unshield on Aztec Alpha with a cap per payment, in cUSDC for members of the closed beta. Each account pays its own network fee, and that account is public. No external audit yet." },
         { label: "Passkeys for the private wallet", state: "partial", text: "Open the wallet with Face ID, Touch ID, Windows Hello or a security key. Not yet tested on every kind of device." },
         { label: "Receiving from Ethereum", state: "development", text: "Receiver addresses and a portal to Aztec are written and tested, not deployed." },
-        { label: "Attachments", state: "partial", text: "Files are uploaded to our storage provider and are not yet encrypted end to end." },
+        { label: "Attachments", state: "available", text: "Encrypted in your browser before upload; our storage holds only data it cannot read." },
+        { label: "Languages", state: "available", text: "English, Spanish, Russian, German and Chinese, for the website and the chat. English is the reference text." },
         { label: "Windows app", state: "partial", text: "An unsigned preview build. The web app is the supported client." },
         { label: "iPhone and Android apps", state: "development", text: "Not yet submitted to the App Store or Google Play." },
       ],
@@ -54,7 +55,7 @@ export const overview: DocPage = {
     {
       t: "defs",
       items: [
-        { term: "Getting started", text: "Accounts, sign in and the PIN screen, which is currently off." },
+        { term: "Getting started", text: "Accounts, sign in and the PIN screen, which is off unless the operator switches it on." },
         { term: "Ledger Chat", text: "Each feature of the messenger, what it does and what it reveals." },
         { term: "Protocol", text: "The architecture, the encryption in use and the whitepaper." },
         { term: "Security", text: "Our security model, the findings that are still open and how to report a new one." },
@@ -76,7 +77,7 @@ export const quickstart: DocPage = {
   label: "Quick start",
   summary: "Go from nothing to your first private conversation in a few minutes.",
   keywords: ["getting started", "setup", "first steps", "how to", "begin", "tutorial", "install", "download"],
-  updated: "2026-10-21",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -87,7 +88,7 @@ export const quickstart: DocPage = {
       t: "ul",
       items: [
         "A recent version of Chrome, Edge, Firefox, Brave or Safari.",
-        "An Ethereum wallet such as MetaMask, Rainbow or Coinbase Wallet. If you do not have one yet, you can sign in with email and add a wallet later.",
+        "An Ethereum wallet such as MetaMask, Rainbow or Coinbase Wallet. Ledger Chat has no email or password sign in: the wallet is your account.",
         "About five minutes.",
       ],
     },
@@ -101,7 +102,7 @@ export const quickstart: DocPage = {
         },
         {
           title: "Connect your wallet",
-          text: "Choose your wallet from the list. Your wallet asks you to connect, then to sign a short message. Signing is free and writes nothing to the blockchain. It only proves that the address is yours.",
+          text: "Choose your wallet from the list. On a phone, the wallet app opens and brings you back to your browser when you have signed. Your wallet asks you to connect, then to sign a short message. Signing is free and writes nothing to the blockchain. It only proves that the address is yours.",
         },
         {
           title: "Allow secure messaging",
@@ -120,6 +121,7 @@ export const quickstart: DocPage = {
         "Read [Messaging](/docs/ledger-chat) to see what is encrypted and how fallback messages are labelled.",
         "Join or create a [community](/docs/communities).",
         "Link a second device from **Settings**, then **Linked devices**. See [Linked devices](/docs/devices).",
+        "Choose your language from the language menu: English, Spanish, Russian, German or Chinese.",
       ],
     },
     {
@@ -137,7 +139,7 @@ export const identity: DocPage = {
   label: "Accounts and sign in",
   summary: "How a wallet becomes your account, how sessions work, and what happens if you lose access.",
   keywords: ["wallet", "login", "log in", "sign in", "account", "recovery", "lost", "seed phrase", "siwe", "metamask", "email", "session", "did", "identity"],
-  updated: "2026-10-21",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -162,14 +164,14 @@ export const identity: DocPage = {
       tone: "info",
       text: "Signing in costs nothing and sends no transaction. If your wallet asks you to approve a transaction or pay a fee at this step, stop: that is not our sign in.",
     },
-    { t: "h2", text: "Signing in with email" },
+    { t: "h2", text: "Signing in from your phone" },
     {
       t: "p",
-      text: "If you do not have a wallet yet, you can sign in with an email address. We send a one time code to that address. Some features, such as payments, need a wallet, and the app asks you to link one when you reach them.",
+      text: "On a computer you can sign in without a browser wallet: choose **Use your phone** on the sign in page and scan the code with a phone where you are already signed in. The code works once and expires after four minutes. See [Linked devices](/docs/devices).",
     },
     {
       t: "p",
-      text: "To limit abuse, a code can be requested a few times every ten minutes per address and per network, and the form is protected by a bot check from Cloudflare.",
+      text: "There is no email or password sign in. Email sign in was removed; its old routes answer 410 Gone.",
     },
     { t: "h2", text: "Sessions" },
     {
@@ -200,11 +202,11 @@ export const pin: DocPage = {
   label: "Your PIN",
   summary: "What the six digit PIN protects, how it is stored, and what to do if you forget it.",
   keywords: ["pin", "enclave", "lock", "passcode", "code", "locked out", "forgot pin", "reset pin", "attempts"],
-  updated: "2026-11-11",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
-      text: "**Since 11 November 2026 Ledger Chat does not ask for the PIN, and does not ask you to create one.** It was stopping people from getting in, and it is only a lock in front of the screen. You still sign in with your wallet. The rest of this page describes the PIN screen for when it returns.",
+      text: "**Since 11 November 2026 Ledger Chat does not ask for the PIN, and does not ask you to create one.** It was stopping people from getting in, and it is only a lock in front of the screen. You still sign in with your wallet. The PIN screen comes back only if the operator switches it on (`NEXT_PUBLIC_ENCLAVE_PIN_LOCK=on`); it is off on ledgerchat.org. The rest of this page describes the PIN screen for when it returns.",
     },
     {
       t: "p",

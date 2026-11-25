@@ -7,7 +7,7 @@ export const developers: DocPage = {
   title: "Developers",
   summary: "Everything you need to read, run and contribute to the Humanity Ledger code.",
   keywords: ["developer", "developers", "api", "sdk", "code", "github", "repository", "run locally", "contribute", "setup", "install", "stack", "env"],
-  updated: "2026-11-17",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -26,11 +26,13 @@ export const developers: DocPage = {
     {
       t: "status",
       items: [
-        { label: "Contract audit", state: "unavailable", text: "No independent review of the contracts yet." },
+        { label: "External audit", state: "development", text: "Begins on 25 November 2026. No report yet." },
         { label: "Penetration test", state: "unavailable", text: "Not carried out yet." },
         { label: "Direct messages", state: "available", text: "XMTP with MLS, encrypted in the browser." },
         { label: "Fallback relay", state: "partial", text: "Stores readable messages when XMTP delivery fails. Labelled in the interface." },
-        { label: "Community content", state: "partial", text: "Stored readable on the server." },
+        { label: "Community content", state: "partial", text: "New communities (from 24 November 2026) on XMTP MLS groups; older ones stored readable on the server." },
+        { label: "Attachments", state: "available", text: "AES-256-GCM in the browser before upload; storage holds ciphertext only." },
+        { label: "Translations", state: "available", text: "English, Spanish, Russian, German and Chinese through lib/i18n; English is the source text." },
         { label: "Mobile apps", state: "development", text: "Not submitted to the stores. The web client is the supported one." },
         { label: "Private wallet on Aztec Alpha", state: "partial", text: "Send, shield and unshield with a cap per payment. Each account pays its own fee." },
         { label: "Passkeys", state: "partial", text: "In code and unit tests. Not yet tested on a real authenticator." },
