@@ -82,5 +82,33 @@ export default function () {
     'csp report returns 204 or 200': (r) => r.status === 204 || r.status === 200,
   });
 
+  // 4. Lightweight RTT Ping Probe (matches liveRtt client budget)
+  const pingRes = http.get(`${BASE_URL}/api/ping?k6=${__VU}_${__ITER}`, params);
+  check(pingRes, {
+    'ping returns 200 or 204': (r) => r.status === 200 || r.status === 204,
+  });
+
+  // 5. Cacheable XMTP Backend JWKS Endpoint
+  const jwksRes = http.get(`${BASE_URL}/api/xmtp/jwks`, params);
+  check(jwksRes, {
+    'jwks returns 200 or unconfigured 404': (r) => r.status === 200 || r.status === 404,
+  });
+
+  // 6. Optional Authenticated Search & Presence Probes when SESSION_COOKIE is provided
+  if (__ENV.SESSION_COOKIE) {
+    const authParams = {
+      headers: {
+        ...params.headers,
+        Cookie: __ENV.SESSION_COOKIE,
+        Origin: BASE_URL,
+      },
+      timeout: '5s',
+    };
+    const searchRes = http.get(`${BASE_URL}/api/chat/users/search?q=alice`, authParams);
+    check(searchRes, {
+      'users search responds without 5xx': (r) => r.status < 500,
+    });
+  }
+
   sleep(1);
 }

@@ -1482,9 +1482,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     };
     loadBlocked();
 
-    // Poll for contact requests count
+    // Poll for contact requests count (visible tabs only, staggered jitter)
     if (address && !isSystemHandshake) {
       const pollRequests = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
         fetch('/api/notifications/inbox', { credentials: 'same-origin' })
           .then(r => r.json())
           .then(data => {
@@ -1494,9 +1495,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           })
           .catch(() => {});
       };
+      const onVis = () => { if (document.visibilityState === 'visible') pollRequests(); };
       pollRequests();
-      const interval = setInterval(pollRequests, 30000); // every 30s
-      return () => clearInterval(interval);
+      document.addEventListener('visibilitychange', onVis);
+      const jitterMs = 30000 + Math.floor(Math.random() * 6000);
+      const interval = setInterval(pollRequests, jitterMs);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVis);
+      };
     }
     // Phase 5: Request push notifications
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
@@ -4851,13 +4858,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     // safety net for a stream that dropped. Every 10 s in the foreground (was
     // 4 s) and every 60 s in the background (was 30 s).
     let lastHiddenSync = 0;
+    const pollJitterMs = 10_000 + Math.floor(Math.random() * 3000);
     const globalPoll = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
         if (Date.now() - lastHiddenSync < 60_000) return;
         lastHiddenSync = Date.now();
       }
       syncGlobal();
-    }, 10_000);
+    }, pollJitterMs);
 
     // ─── GLOBAL XMTP STREAM ────────────────────────────────────────────────────
     // DEDUPLICATION CONTRACT:
@@ -6186,12 +6194,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     fetchHistorical(true);
 
     // Fallback for the open conversation's history. The stream and the global
-    // sync already cover it; this catches anything both missed. 30 s, visible
+    // sync already cover it; this catches anything both missed. 30 s + jitter, visible
     // tabs only (was 12 s, always).
     const pollId = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       fetchHistorical(false);
-    }, 30_000);
+    }, 30_000 + Math.floor(Math.random() * 4000));
 
     const fetchFriendRequests = async () => {
       if (!address) return;
@@ -6205,7 +6213,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       } catch (e) {}
     };
     fetchFriendRequests();
-    const reqPollId = setInterval(fetchFriendRequests, 30_000);
+    const reqPollId = setInterval(fetchFriendRequests, 30_000 + Math.floor(Math.random() * 5000));
 
     return () => {
       cancelled = true;

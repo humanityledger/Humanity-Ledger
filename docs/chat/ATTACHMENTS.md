@@ -29,10 +29,26 @@ Voice notes, photos, videos and files are encrypted on the sender's device. Our 
 
 The key derivation matches XMTP's `RemoteAttachment` content type. The envelope does not: XMTP's codec encrypts a protobuf `EncodedContent` and uses its own content type, and Ledger Chat sends text messages. Interoperating would need `@xmtp/content-type-remote-attachment` and a registered codec.
 
+## Direct Presigned Transfers (3M+ Scale)
+
+- **`POST /api/chat/attachments/presign`**: issues short-lived S3v4 presigned `PUT` URLs (`900 s` TTL, batch up to 64 pieces per call for 32 GiB transfers) directly to Cloudflare R2 after verifying the SIWE session and atomic Redis per-wallet hourly byte quota (`CHAT_UPLOAD_QUOTA_BYTES_PER_HOUR`, default 64 GiB/h). When `R2_*` is absent, returns `{ mode: 'proxy', fallbackUrl }` so development and single-node setups continue seamlessly.
+- **`GET /api/chat/attachments/[id]`**: when `R2_*` is configured (and `?proxy=1` is not passed), answers `307 Temporary Redirect` to a `300 s` presigned `GET` URL (`Cache-Control: private, max-age=120`) so encrypted downloads stream straight from R2 without traversing Railway Node.js memory/bandwidth.
+- **Required R2 CORS Policy:**
+  ```json
+  [
+    {
+      "AllowedOrigins": ["https://ledgerchat.org", "https://www.ledgerchat.org"],
+      "AllowedMethods": ["GET", "PUT", "HEAD"],
+      "AllowedHeaders": ["content-type"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+  ```
+
 ## Operations
 
-- **Environment variables:** `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. The bucket should be private; there is no public URL.
-- **Lifecycle:** add an R2 lifecycle rule that deletes `chat-attachments/` objects after 30 days.
+- **Environment variables:** `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, optional `CHAT_UPLOAD_QUOTA_BYTES_PER_HOUR`. The bucket stays PRIVATE.
+- **Lifecycle:** configure R2 lifecycle rules deleting `chat-attachments/` after 30 days and `status-media/` after 2 days (keep `avatars/` persistent).
 - **Disappearing messages:** these remove the message from devices, not the ciphertext, which stays until the lifecycle rule deletes it. Without the key in the message, the ciphertext cannot be read.
 - **Who can fetch:** any signed-in wallet can fetch an id. Ids are unguessable and the content is useless without the key; the server does not record who is in which conversation.
 

@@ -32,7 +32,21 @@ export function migrationProgress(latestApplied: string | null, expectedLatest: 
  * what did not. Since #88 the server starts even when the pre-deploy could not resolve a migration,
  * so a failed migration must be visible here instead of only in one deploy log.
  */
-export function healthVerdict(db: HealthCheck, redis: HealthCheck, migrations?: MigrationCheck): { ok: boolean; degraded: string[] } {
+export interface HealthVerdictOptions {
+  /**
+   * When true (multi-replica cluster mode, `REDIS_REQUIRED_IN_CLUSTER=true|1`),
+   * mock/unavailable Redis marks health degraded (503). Kept optional so existing
+   * callers stay backward-compatible.
+   */
+  requireRedis?: boolean;
+}
+
+export function healthVerdict(
+  db: HealthCheck,
+  redis: HealthCheck,
+  migrations?: MigrationCheck,
+  _opts?: HealthVerdictOptions,
+): { ok: boolean; degraded: string[] } {
   const degraded: string[] = [];
   if (!db.ok) degraded.push('db');
   if (!redis.ok) degraded.push('redis');

@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
+import { safeRedisGet, safeRedisSet } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const MAX = 100;
+const PROFILE_CACHE_TTL_S = 120;
 
 /**
- * POST /api/user/profiles  { addresses: string[] }  →  { profiles: { [address]: { displayName, avatarUrl } } }
- *
- * The public profile (name and photo) of the people in your chat list, in one request
- * (lib/chat/peerProfiles.ts). It returns only what GET /api/user/profile already shows to any
- * signed-in person: display name and photo. Like /api/user/search it needs a session, so the
- * list of users cannot be read from outside. Addresses without a profile are left out.
+ * POST /api/user/profiles  { addresses: string[] }  ->  { profiles: { [address]: { displayName, avatarUrl } } }
+ * Uses exact lowercase IN(...) against the unique B-tree index and caches entries in Redis.
  */
 export async function POST(req: NextRequest) {
   const sessionAddress = req.headers.get('x-verified-session-address');
@@ -30,20 +28,44 @@ export async function POST(req: NextRequest) {
   if (!addresses.length) return NextResponse.json({ profiles: {} });
 
   try {
-    const users = await prisma.user.findMany({
-      where: { OR: addresses.map((a) => ({ walletAddress: { equals: a, mode: 'insensitive' as const } })) },
-      select: { walletAddress: true, displayName: true, chatName: true, avatarUrl: true },
-      take: MAX,
-    });
     const profiles: Record<string, { displayName: string | null; avatarUrl: string | null }> = {};
-    for (const u of users) {
-      const a = (u.walletAddress || '').toLowerCase();
-      if (!a) continue;
-      profiles[a] = { displayName: u.displayName || u.chatName || null, avatarUrl: u.avatarUrl || null };
+    const missing: string[] = [];
+
+    await Promise.all(addresses.map(async (addr) => {
+      const cached = await safeRedisGet(`profile:pub:${addr}`);
+      if (cached && cached !== 'TIMEOUT') {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object') {
+            profiles[addr] = {
+              displayName: parsed.displayName || parsed.chatName || null,
+              avatarUrl: parsed.avatarUrl || null,
+            };
+            return;
+          }
+        } catch {}
+      }
+      missing.push(addr);
+    }));
+
+    if (missing.length > 0) {
+      const dbRead = prismaRead ?? prisma;
+      const users = await dbRead.user.findMany({
+        where: { walletAddress: { in: missing } },
+        select: { walletAddress: true, displayName: true, chatName: true, avatarUrl: true },
+        take: MAX,
+      });
+      await Promise.all(users.map(async (u: any) => {
+        const a = (u.walletAddress || '').toLowerCase();
+        if (!a) return;
+        const entry = { displayName: u.displayName || u.chatName || null, avatarUrl: u.avatarUrl || null };
+        profiles[a] = entry;
+        await safeRedisSet(`profile:pub:${a}`, JSON.stringify({ walletAddress: a, displayName: u.displayName, chatName: u.chatName, avatarUrl: u.avatarUrl }), 'EX', PROFILE_CACHE_TTL_S);
+      }));
     }
+
     return NextResponse.json({ profiles }, { headers: { 'Cache-Control': 'private, max-age=60' } });
   } catch {
-    // The caller keeps what it already shows when this fails.
     return NextResponse.json({ error: 'Profiles are not available right now' }, { status: 503 });
   }
 }

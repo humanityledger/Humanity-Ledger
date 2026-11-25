@@ -20,7 +20,8 @@
 
 export const GOOD_UNDER_MS = 150;
 export const SLOW_UNDER_MS = 400;
-export const PROBE_INTERVAL_MS = 1500;
+export const PROBE_INTERVAL_MS = 10_000;
+export const MAX_PROBE_BACKOFF_MS = 60_000;
 export const PROBE_TIMEOUT_MS = 8000;
 
 export type LatencyQuality = 'good' | 'mid' | 'bad' | 'unknown';
@@ -149,6 +150,12 @@ let stopTimer: ReturnType<typeof setTimeout> | null = null;
 let running = false;
 let inflight: AbortController | null = null;
 let gen = 0;
+let consecutiveFailures = 0;
+
+function jitteredDelay(baseMs: number): number {
+  const factor = 0.85 + Math.random() * 0.3;
+  return Math.round(baseMs * factor);
+}
 
 function publish(next: LiveRttSample) {
   sample = next;
@@ -157,11 +164,13 @@ function publish(next: LiveRttSample) {
 
 function arm(delay: number, token: number) {
   if (timer) clearTimeout(timer);
-  timer = setTimeout(() => { void tick(token); }, delay);
+  timer = setTimeout(() => { void tick(token); }, jitteredDelay(delay));
 }
 
 function kick() {
   if (!running) return;
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+  consecutiveFailures = 0;
   if (timer) clearTimeout(timer);
   timer = null;
   void tick(gen);
@@ -171,8 +180,9 @@ async function tick(token: number) {
   if (!running || token !== gen || inflight) return;
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    consecutiveFailures = Math.min(4, consecutiveFailures + 1);
     publish({ ms: null, quality: 'bad', offline: true });
-    arm(PROBE_INTERVAL_MS, token);
+    arm(Math.min(MAX_PROBE_BACKOFF_MS, PROBE_INTERVAL_MS * 2 ** (consecutiveFailures - 1)), token);
     return;
   }
   const ctrl = new AbortController();
@@ -182,18 +192,23 @@ async function tick(token: number) {
     const result = await measurePing({ signal: ctrl.signal });
     if (!running || token !== gen) return;
     if (result.ms == null) {
+      consecutiveFailures = Math.min(4, consecutiveFailures + 1);
       // No new reading. Keep the last exact millisecond. Only "offline" clears it.
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         publish({ ms: null, quality: 'bad', offline: true });
       }
     } else {
+      consecutiveFailures = 0;
       publish({ ms: result.ms, quality: qualityForMs(result.ms), offline: false });
     }
   } finally {
     clearTimeout(timeout);
     if (inflight === ctrl) inflight = null;
     if (running && token === gen && (typeof document === 'undefined' || document.visibilityState !== 'hidden')) {
-      arm(PROBE_INTERVAL_MS, token);
+      const nextBase = consecutiveFailures > 0
+        ? Math.min(MAX_PROBE_BACKOFF_MS, PROBE_INTERVAL_MS * 2 ** (consecutiveFailures - 1))
+        : PROBE_INTERVAL_MS;
+      arm(nextBase, token);
     }
   }
 }

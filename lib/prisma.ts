@@ -1,7 +1,10 @@
 import 'server-only';
 import { PrismaClient, Prisma } from '@prisma/client';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
+const globalForPrisma = global as unknown as {
+  prisma: PrismaClient | undefined;
+  prismaRead: PrismaClient | undefined;
+};
 
 // 
 // COSMIC ENTITY TYPE BRIDGE
@@ -158,22 +161,23 @@ const { normalizeDatabaseUrl, describeDatabaseUrl, isTransientDbError } = requir
 };
 
 let dbUrlReported = false;
-function getSanitizedDatabaseUrl(): string {
+function getSanitizedDatabaseUrl(rawEnvValue?: string, varName = 'DATABASE_URL'): string {
     // Paste errors in the Railway variable (quotes, "DATABASE_URL=" in the value, spaces) are repaired;
     // anything else is reported once, without the password (lib/db/url.js).
     const rawUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
-    if (!dbUrlReported && process.env.DATABASE_URL) {
+    const effectiveRawUrl = varName === 'DATABASE_URL' ? rawUrl : normalizeDatabaseUrl(rawEnvValue);
+    if (!dbUrlReported && process.env.DATABASE_URL && varName === 'DATABASE_URL') {
         dbUrlReported = true;
         const d = describeDatabaseUrl(process.env.DATABASE_URL);
         if (!d.ok) console.error(`[db] DATABASE_URL is unusable: ${d.problem}. Set it in Railway to \${{PgBouncer.DATABASE_URL}} (or \${{Postgres.DATABASE_URL}}).`);
         else if (d.repaired) console.warn(`[db] DATABASE_URL had quotes, spaces or its own name in the value; repaired (host ${d.host}). Fix the Railway variable too.`);
     }
-    if (!rawUrl || rawUrl.trim() === '') {
+    if (!effectiveRawUrl || effectiveRawUrl.trim() === '') {
         return 'postgresql://postgres:postgres@localhost:5432/humanity_ledger?schema=public';
     }
 
     try {
-        const urlObj = new URL(rawUrl);
+        const urlObj = new URL(effectiveRawUrl);
         
         // Fallback: If we detect the public proxy domain on Railway and running inside Railway, rewrite to internal domain
         if (process.env.RAILWAY_ENVIRONMENT && urlObj.hostname.includes('proxy.rlwy.net')) {
@@ -188,10 +192,12 @@ function getSanitizedDatabaseUrl(): string {
                 urlObj.searchParams.set('pgbouncer', 'true');
             }
 
-            // Connection limit: keep sane limits to avoid exhausting Neon / Railway serverless pools
-            const maxLimit = process.env.NODE_ENV === 'production' ? '20' : '10';
+            // Connection limit: configurable via PRISMA_CONNECTION_LIMIT for horizontal multi-pod deployments behind PgBouncer
+            const envLimit = Number(process.env.PRISMA_CONNECTION_LIMIT || '');
+            const defaultLimit = process.env.NODE_ENV === 'production' ? 20 : 10;
+            const maxLimit = Number.isFinite(envLimit) && envLimit >= 1 && envLimit <= 100 ? Math.floor(envLimit) : defaultLimit;
             if (!urlObj.searchParams.has('connection_limit')) {
-                urlObj.searchParams.set('connection_limit', maxLimit);
+                urlObj.searchParams.set('connection_limit', String(maxLimit));
             }
 
             // Connection timeout: gives Neon compute 15s to wake from scale-to-zero suspend without socket closure
@@ -201,12 +207,11 @@ function getSanitizedDatabaseUrl(): string {
         }
         return urlObj.toString();
     } catch {
-        return rawUrl;
+        return effectiveRawUrl;
     }
 }
 
-function createPrismaClient(): PrismaClient {
-    const url = getSanitizedDatabaseUrl();
+function createPrismaClient(url = getSanitizedDatabaseUrl()): PrismaClient {
 
     const client = new PrismaClient({
         datasources: url ? { db: { url } } : undefined,
@@ -257,8 +262,27 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = (globalForPrisma.prisma ?? createPrismaClient()) as unknown as SystemPrismaClient;
 
-// Always store the singleton globally, even in production, to prevent Serverless/Edge connection explosions
+const hasDedicatedReadReplica = Boolean(
+  process.env.DATABASE_READ_URL &&
+  process.env.DATABASE_READ_URL.trim() !== '' &&
+  process.env.DATABASE_READ_URL.trim() !== (process.env.DATABASE_URL || '').trim(),
+);
+
+/**
+ * Read-replica Prisma client (DATABASE_READ_URL) for high-volume read endpoints.
+ * Falls back cleanly to the primary singleton when no read replica is configured.
+ */
+export const prismaRead = (
+  hasDedicatedReadReplica
+    ? (globalForPrisma.prismaRead ?? createPrismaClient(getSanitizedDatabaseUrl(process.env.DATABASE_READ_URL, 'DATABASE_READ_URL')))
+    : prisma
+) as unknown as SystemPrismaClient;
+
+// Always store singletons globally, even in production, to prevent connection explosions
 (globalForPrisma as unknown as { prisma: SystemPrismaClient }).prisma = prisma;
+if (hasDedicatedReadReplica) {
+  (globalForPrisma as unknown as { prismaRead: SystemPrismaClient }).prismaRead = prismaRead as unknown as PrismaClient;
+}
 
 /** Named accessor — preferred import for new code (avoids default import ambiguity). */
 export function getPrisma(): SystemPrismaClient {

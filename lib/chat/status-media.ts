@@ -12,6 +12,7 @@
  * so a Status cannot make a viewer's browser contact a third-party server.
  */
 import { decryptAttachment, encryptAttachment, MAX_ATTACHMENT_BYTES } from './remote-attachment';
+import { putToPresignedUrl, requestPresignSlots, shouldAttemptDirectPresign } from './presign-upload';
 
 export const STATUS_VIDEO_MAX_SECONDS = 30;
 export const STATUS_MEDIA_MAX_BYTES = MAX_ATTACHMENT_BYTES;
@@ -92,6 +93,18 @@ export async function uploadStatusMedia(file: File, fetchImpl: typeof fetch = fe
     if (!(secs > 0) || secs > STATUS_VIDEO_MAX_SECONDS + 0.5) throw new StatusMediaError(`Videos can be up to ${STATUS_VIDEO_MAX_SECONDS} seconds.`);
   }
   const enc = await encryptAttachment(new Uint8Array(await file.arrayBuffer()));
+  if (shouldAttemptDirectPresign(fetchImpl)) {
+    const presign = await requestPresignSlots(fetchImpl, [enc.ciphertext.byteLength], 'attachment');
+    if (presign.mode === 'rejected') throw new StatusMediaError(uploadErrorText(presign.status, presign.error));
+    if (presign.mode === 'direct') {
+      const slot = presign.slots[0];
+      const putRes = await putToPresignedUrl(fetchImpl, slot, enc.ciphertext).catch(() => null);
+      if (putRes?.ok) {
+        const media: StatusMedia = { path: slot.url, mime: file.type, contentDigest: enc.contentDigest, secret: enc.secret, salt: enc.salt, nonce: enc.nonce };
+        return { url: encodeStatusMedia(media, window.location.origin), kind: statusKindOf(media) };
+      }
+    }
+  }
   const put = async (path: string) => {
     const res = await fetchImpl(path, {
       method: 'POST',

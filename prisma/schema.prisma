@@ -221,6 +221,8 @@ model User {
   @@index([tier, lastActive(sort: Desc)]) // Consulta de usuarios activos por tier
   @@index([isPro, createdAt(sort: Desc)]) // Funnel de conversión Pro
   @@index([createdAt(sort: Desc)]) // Registro cronológico general
+  @@index([chatName])
+  @@index([displayName])
 }
 
 model CreditLedger {
@@ -370,6 +372,7 @@ model ChatContact {
 
   @@unique([owner, peer])
   @@index([owner])
+  @@index([peer])
 }
 
 // Instagram-style friend request system
@@ -395,6 +398,7 @@ model PendingChatMessage {
 
   @@index([recipient])
   @@index([sender])
+  @@index([createdAt])
 }
 
 model ExchangePosition {
@@ -475,6 +479,8 @@ model SiweNonce {
   nonce     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }
 
 // 
@@ -1614,7 +1620,8 @@ model StatusUpdate {
   createdAt    DateTime @default(now())
   expiresAt    DateTime
 
-  @@index([ownerAddress])
+  @@index([ownerAddress, createdAt])
+  @@index([privacy, expiresAt])
   @@index([expiresAt])
 }
 
@@ -1840,6 +1847,7 @@ model DirectMessage {
   @@index([sender])
   @@index([recipient, createdAt])
   @@index([sender, createdAt])
+  @@index([createdAt])
 }
 
 model Story {

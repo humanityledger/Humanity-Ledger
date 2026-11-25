@@ -36,12 +36,20 @@ export function r2ConfigFromEnv(env: Record<string, string | undefined> = proces
 const sha256Hex = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex');
 const hmac = (key: Buffer | string, data: string) => createHmac('sha256', key).update(data).digest();
 
+function rfc3986(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
 /** RFC 3986 encoding of each path segment, as S3 expects (slashes kept). */
 function encodePath(path: string): string {
-  return path
-    .split('/')
-    .map(seg => encodeURIComponent(seg).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase()))
-    .join('/');
+  return path.split('/').map(rfc3986).join('/');
+}
+
+function deriveSigningKey(secretAccessKey: string, dateStamp: string, region: string, service: string): Buffer {
+  const kDate = hmac('AWS4' + secretAccessKey, dateStamp);
+  const kRegion = hmac(kDate, region);
+  const kService = hmac(kRegion, service);
+  return hmac(kService, 'aws4_request');
 }
 
 export interface SignInput {
@@ -82,16 +90,69 @@ export function signV4(input: SignInput): Record<string, string> {
   ].join('\n');
   const scope = `${dateStamp}/${input.region}/${input.service}/aws4_request`;
   const stringToSign = ['AWS4-HMAC-SHA256', input.amzDate, scope, sha256Hex(canonicalRequest)].join('\n');
-  const kDate = hmac('AWS4' + input.secretAccessKey, dateStamp);
-  const kRegion = hmac(kDate, input.region);
-  const kService = hmac(kRegion, input.service);
-  const kSigning = hmac(kService, 'aws4_request');
+  const kSigning = deriveSigningKey(input.secretAccessKey, dateStamp, input.region, input.service);
   const signature = createHmac('sha256', kSigning).update(stringToSign).digest('hex');
   const { host: _host, ...rest } = all; // fetch sets Host itself
   return {
     ...rest,
     authorization: `AWS4-HMAC-SHA256 Credential=${input.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
   };
+}
+
+export interface PresignInput {
+  method: 'GET' | 'PUT' | 'HEAD' | 'DELETE';
+  host: string;
+  path: string;
+  region: string;
+  service: string;
+  expiresSec: number;
+  headers?: Record<string, string>;
+  amzDate?: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
+/** Generates a standard AWS Signature V4 pre-signed HTTPS URL (query-string auth). */
+export function presignV4(input: PresignInput): string {
+  const amzDate = input.amzDate || amzNow();
+  const dateStamp = amzDate.slice(0, 8);
+  const expires = Math.max(1, Math.min(604800, Math.floor(input.expiresSec)));
+  const scope = `${dateStamp}/${input.region}/${input.service}/aws4_request`;
+
+  const hdrs: Record<string, string> = {
+    ...Object.fromEntries(Object.entries(input.headers ?? {}).map(([k, v]) => [k.toLowerCase(), String(v).trim()])),
+    host: input.host,
+  };
+  const headerNames = Object.keys(hdrs).sort();
+  const canonicalHeaders = headerNames.map(n => `${n}:${hdrs[n]}\n`).join('');
+  const signedHeaders = headerNames.join(';');
+
+  const queryParams: Record<string, string> = {
+    'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Credential': `${input.accessKeyId}/${scope}`,
+    'X-Amz-Date': amzDate,
+    'X-Amz-Expires': String(expires),
+    'X-Amz-SignedHeaders': signedHeaders,
+  };
+  const canonicalQuery = Object.keys(queryParams)
+    .sort()
+    .map(k => `${rfc3986(k)}=${rfc3986(queryParams[k])}`)
+    .join('&');
+
+  const canonicalRequest = [
+    input.method.toUpperCase(),
+    encodePath(input.path),
+    canonicalQuery,
+    canonicalHeaders,
+    signedHeaders,
+    'UNSIGNED-PAYLOAD',
+  ].join('\n');
+
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256Hex(canonicalRequest)].join('\n');
+  const kSigning = deriveSigningKey(input.secretAccessKey, dateStamp, input.region, input.service);
+  const signature = createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+
+  return `https://${input.host}${encodePath(input.path)}?${canonicalQuery}&X-Amz-Signature=${signature}`;
 }
 
 function amzNow(): string {
@@ -102,6 +163,48 @@ function target(cfg: R2Config, key: string) {
   const host = `${cfg.accountId}.r2.cloudflarestorage.com`;
   const path = `/${cfg.bucket}/${key}`;
   return { host, path, url: `https://${host}${encodePath(path)}` };
+}
+
+export function r2PresignPut(cfg: R2Config, key: string, opts: { expiresSec?: number; contentType?: string } = {}): string {
+  const { host, path } = target(cfg, key);
+  const headers = opts.contentType ? { 'content-type': opts.contentType } : undefined;
+  return presignV4({
+    method: 'PUT',
+    host,
+    path,
+    region: 'auto',
+    service: 's3',
+    expiresSec: opts.expiresSec ?? 900,
+    headers,
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+  });
+}
+
+export function r2PresignGet(cfg: R2Config, key: string, opts: { expiresSec?: number } = {}): string {
+  const { host, path } = target(cfg, key);
+  return presignV4({
+    method: 'GET',
+    host,
+    path,
+    region: 'auto',
+    service: 's3',
+    expiresSec: opts.expiresSec ?? 300,
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+  });
+}
+
+export async function r2Head(cfg: R2Config, key: string): Promise<boolean> {
+  const { host, path, url } = target(cfg, key);
+  const headers = signV4({
+    method: 'HEAD', host, path, region: 'auto', service: 's3',
+    payloadHash: sha256Hex(''),
+    amzDate: amzNow(),
+    accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretAccessKey,
+  });
+  const res = await fetch(url, { method: 'HEAD', headers });
+  return res.ok;
 }
 
 export async function r2Put(cfg: R2Config, key: string, body: Uint8Array, contentType = 'application/octet-stream'): Promise<void> {

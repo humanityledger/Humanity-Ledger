@@ -21,6 +21,7 @@
  * previewed, notified or copied as text (remote-attachment.ts, isAttachmentMessage).
  */
 import { fromHex, kindForMime, sha256Hex, toHex, digestsEqual, type AttachmentKind } from './remote-attachment';
+import { putToPresignedUrl, requestPresignSlots, shouldAttemptDirectPresign, type PresignSlot } from './presign-upload';
 
 export const LARGE_FILE_TYPE = 'hl.largefile';
 export const LARGE_FILE_SCHEME = 'aes-256-gcm-hkdf-sha256-pieces';
@@ -159,7 +160,7 @@ async function withRetry<T>(run: () => Promise<Response>, read: (res: Response) 
 export async function sendLargeFile(
   file: Blob,
   meta: { filename: string; mimeType: string },
-  opts: { onProgress?: (p: Progress) => void; signal?: AbortSignal; fetchImpl?: typeof fetch; concurrency?: number } = {},
+  opts: { onProgress?: (p: Progress) => void; signal?: AbortSignal; fetchImpl?: typeof fetch; concurrency?: number; directUpload?: boolean } = {},
 ): Promise<string> {
   if (file.size === 0) throw new LargeFileError('The file is empty');
   if (file.size > MAX_LARGE_FILE_BYTES) throw new LargeFileError('Files can be up to 32 GB');
@@ -173,6 +174,52 @@ export async function sendLargeFile(
   let done = 0;
   let next = 0;
   let failed = false;
+  let useDirect = shouldAttemptDirectPresign(f, opts.directUpload);
+  const presignedSlots = new Map<number, PresignSlot>();
+  let presignInflights: Promise<void> | null = null;
+  const BATCH_PRESIGN = 32;
+
+  const ensureSlot = async (pieceIndex: number): Promise<PresignSlot | null> => {
+    if (!useDirect) return null;
+    const cached = presignedSlots.get(pieceIndex);
+    if (cached) {
+      presignedSlots.delete(pieceIndex);
+      return cached;
+    }
+    while (useDirect && !presignedSlots.has(pieceIndex)) {
+      if (!presignInflights) {
+        const batchStart = Math.floor(pieceIndex / BATCH_PRESIGN) * BATCH_PRESIGN;
+        const batchEnd = Math.min(total, batchStart + BATCH_PRESIGN);
+        const sizes: number[] = [];
+        for (let idx = batchStart; idx < batchEnd; idx++) {
+          const s = idx * PIECE_BYTES;
+          const plainLen = Math.min(file.size, s + PIECE_BYTES) - s;
+          sizes.push(plainLen + 16);
+        }
+        presignInflights = (async () => {
+          const res = await requestPresignSlots(f, sizes, 'attachment', opts.signal);
+          if (res.mode === 'rejected') {
+            throw new LargeFileError(res.status === 429 ? 'Hourly upload quota exceeded or rate limited. Wait a moment.' : res.error);
+          }
+          if (res.mode === 'proxy') {
+            useDirect = false;
+            return;
+          }
+          for (let j = 0; j < res.slots.length; j++) {
+            const targetIdx = batchStart + j;
+            if (!presignedSlots.has(targetIdx)) {
+              presignedSlots.set(targetIdx, res.slots[j]);
+            }
+          }
+        })().finally(() => { presignInflights = null; });
+      }
+      await presignInflights;
+    }
+    const slot = presignedSlots.get(pieceIndex) ?? null;
+    if (slot) presignedSlots.delete(pieceIndex);
+    return slot;
+  };
+
   opts.onProgress?.({ done: 0, total: file.size, phase: 'encrypting' });
 
   const worker = async () => {
@@ -194,14 +241,32 @@ export async function sendLargeFile(
         await subtle().encrypt({ name: 'AES-GCM', iv: bs(pieceNonce(prefix, i)), additionalData: bs(aad(i, total)) }, key, bs(plain)),
       );
       const digest = await sha256Hex(cipher);
-      const up = await withRetry(
-        () => f('/api/chat/attachments', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: cipher as BodyInit, credentials: 'same-origin', signal: opts.signal }),
-        (res) => res.json() as Promise<{ url?: string; contentDigest?: string }>,
-        opts.signal,
-      );
-      const id = String(up.url ?? '').split('/').pop() ?? '';
-      if (!ID_RE.test(id) || !up.contentDigest || !digestsEqual(up.contentDigest, digest)) {
-        throw new LargeFileError('The server stored something other than what was sent');
+      const slot = await ensureSlot(i);
+      let id = '';
+      if (slot) {
+        try {
+          await withRetry(
+            () => putToPresignedUrl(f, slot, cipher, opts.signal),
+            async () => true,
+            opts.signal,
+          );
+          id = slot.id;
+        } catch (err) {
+          if (err instanceof LargeFileError && err.message === 'Cancelled') throw err;
+          // Direct R2 PUT failed (e.g. bucket CORS not set); fall back cleanly to same-origin proxy
+          useDirect = false;
+        }
+      }
+      if (!id) {
+        const up = await withRetry(
+          () => f('/api/chat/attachments', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: cipher as BodyInit, credentials: 'same-origin', signal: opts.signal }),
+          (res) => res.json() as Promise<{ url?: string; contentDigest?: string }>,
+          opts.signal,
+        );
+        id = String(up.url ?? '').split('/').pop() ?? '';
+        if (!ID_RE.test(id) || !up.contentDigest || !digestsEqual(up.contentDigest, digest)) {
+          throw new LargeFileError('The server stored something other than what was sent');
+        }
       }
       pieces[i] = `${id}.${digest}`;
       done += plain.byteLength;

@@ -27,3 +27,28 @@ export function currentDeviceHints(): DeviceHints {
 
 export const PROVING_MEMORY_WARNING =
   'Proving needs about 1.8 GB of memory. On this device it may fail or reload the page; if it does, nothing is sent. A computer is more reliable for this step.';
+
+export interface ProvingRuntimeCapabilities {
+  multiThreaded: boolean;
+  hasSharedArrayBuffer: boolean;
+  hardwareConcurrency: number;
+  provingMemoryAtRisk: boolean;
+}
+
+/**
+ * Inspects whether multi-threaded Barretenberg WASM proving is active (enabled on /prove via
+ * COOP/COEP headers) vs single-threaded (on /chat to keep wallet popups intact).
+ */
+export function provingRuntimeInfo(): ProvingRuntimeCapabilities {
+  const crossOriginIsolated = typeof globalThis !== 'undefined' && Boolean((globalThis as any).crossOriginIsolated);
+  const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+  const hw = typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number'
+    ? navigator.hardwareConcurrency
+    : 1;
+  return {
+    multiThreaded: crossOriginIsolated && hasSharedArrayBuffer && hw > 1,
+    hasSharedArrayBuffer,
+    hardwareConcurrency: hw,
+    provingMemoryAtRisk: provingMemoryAtRisk(currentDeviceHints()),
+  };
+}

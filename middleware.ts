@@ -37,6 +37,8 @@ import { jwtVerify } from 'jose/jwt/verify';
 import { APP_FRAME_CSP, isAppFramePath } from './lib/community-apps/framePolicy';
 import { isRetiredApiRoute, retiredPageTarget } from './lib/security/retiredRoutes';
 import { isSessionPayload } from './lib/security/sessionClaims';
+import { BoundedEdgeRateLimiter, buildCgnatClientKey, checkUpstashEdgeLimit } from './lib/security/edgeRateLimit';
+import { resolveRestrictedCountries } from './lib/security/geoPolicy';
 
 import { isPhoneRequest, LANDING_ACCEPT_CH, LANDING_TREE_HEADER, LANDING_VARY } from './lib/landing/device';
 
@@ -226,36 +228,16 @@ export function checkCsrf(req: NextRequest): NextResponse | null {
   );
 }
 
-// ── Rate Limiting (Edge Memory) ──────────────────────────────────────────────
-const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
+// ── Rate Limiting (Edge Bounded LRU Memory) ──────────────────────────────────
+const edgeRateLimiter = new BoundedEdgeRateLimiter();
 function applyRateLimit(key: string, LIMIT: number): NextResponse | null {
-  // Allow 150 requests per minute per IP for API routes
-  const WINDOW_MS = 60 * 1000;
-  
-  const now = Date.now();
-
-  let record = rateLimitMap.get(key);
-  if (!record || now > record.resetTime) {
-    record = { count: 1, resetTime: now + WINDOW_MS };
-    rateLimitMap.set(key, record);
-  } else {
-    record.count++;
-  }
-
-  // Optional cleanup to prevent memory leak in long-running edge isolate
-  if (Math.random() < 0.01) {
-    for (const [k, v] of rateLimitMap.entries()) {
-      if (now > v.resetTime) rateLimitMap.delete(k);
-    }
-  }
-
-  if (record.count > LIMIT) {
+  const res = edgeRateLimiter.check(key, LIMIT);
+  if (!res.allowed) {
     return NextResponse.json({
       error: 'Too Many Requests',
-      message: 'Rate limit exceeded. Please try again later.'
-    }, { status: 429, headers: { 'Retry-After': String(Math.ceil((record.resetTime - now) / 1000)) } });
+      message: 'Rate limit exceeded. Please try again later.',
+    }, { status: 429, headers: { 'Retry-After': String(res.retryAfterSec) } });
   }
-
   return null;
 }
 
@@ -435,10 +417,42 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
         // give each its own bucket so neither starves normal chat requests or gets throttled mid-transfer.
         const relay = pathname === '/api/aztec/node';
         const att = pathname === '/api/chat/attachments' || pathname.startsWith('/api/chat/attachments/');
-        const rateLimitRes = earlySession
-          ? applyRateLimit((att ? 'att:' : relay ? 'relay:' : 'u:') + earlySession, att ? 3000 : relay ? 1200 : 600)
-          : applyRateLimit((relay ? 'relay-ip:' : 'ip:') + clientIp, relay ? 60 : 150);
+        const cgnatKey = buildCgnatClientKey(
+          clientIp,
+          req.headers.get('user-agent'),
+          req.headers.get('accept-language'),
+        );
+        let rateLimitRes: NextResponse | null = null;
+        if (earlySession) {
+          rateLimitRes = applyRateLimit((att ? 'att:' : relay ? 'relay:' : 'u:') + earlySession, att ? 3000 : relay ? 1200 : 600);
+        } else {
+          // Device+IP bucket prevents single-user abuse on mobile CGNAT without starving carrier neighbors;
+          // broad IP ceiling blocks UA-rotating floods from a single origin.
+          rateLimitRes =
+            applyRateLimit((relay ? 'relay-dev:' : 'dev:') + cgnatKey, relay ? 60 : 150) ??
+            (cgnatKey !== clientIp
+              ? applyRateLimit((relay ? 'relay-ip:' : 'ip:') + clientIp, relay ? 360 : 900)
+              : null);
+        }
         if (rateLimitRes) return rateLimitRes;
+
+        // Distributed Edge Redis check (no-op if UPSTASH_REDIS_REST_* env vars are absent)
+        if (
+          pathname.startsWith('/api/siwe/') ||
+          pathname === '/api/chat/attachments/presign' ||
+          pathname === '/api/chat/users/search' ||
+          relay
+        ) {
+          const distKey = earlySession ? `${pathname}:${earlySession}` : `${pathname}:${cgnatKey}`;
+          const distLimit = pathname.startsWith('/api/siwe/') ? 30 : relay ? 600 : 180;
+          const distRes = await checkUpstashEdgeLimit(distKey, distLimit, 60);
+          if (!distRes.ok) {
+            return NextResponse.json(
+              { error: 'Too Many Requests', message: 'Distributed edge rate limit exceeded.' },
+              { status: 429, headers: { 'Retry-After': '60' } },
+            );
+          }
+        }
         // TURN credentials: a call needs one, a refresh every few hours. Its own small bucket, so a
         // script cannot drain the relay quota through the general one.
         if (pathname === '/api/calls/ice') {
@@ -494,7 +508,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // [FASE 18: OFAC / Restricted Jurisdiction Geofencing]
   // Blocks IP addresses from the US and OFAC-sanctioned countries at the edge for PROTECTED app routes.
   const country = req.headers.get('x-vercel-ip-country') || req.headers.get('cf-ipcountry') || '';
-  const RESTRICTED_COUNTRIES = ['US', 'CU', 'IR', 'KP', 'SY', 'RU', 'BY'];
+  const RESTRICTED_COUNTRIES = resolveRestrictedCountries();
   
   if (country && RESTRICTED_COUNTRIES.includes(country.toUpperCase())) {
     return new NextResponse(

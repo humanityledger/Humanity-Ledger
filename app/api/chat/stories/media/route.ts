@@ -14,6 +14,7 @@ import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { GCM_TAG_BYTES, MAX_ATTACHMENT_BYTES } from '@/lib/chat/remote-attachment';
 import { looksLikePlaintextFile } from '@/lib/chat/file-sniff';
+import { isR2Enabled, putStatusMediaObject } from '@/lib/storage/chat-attachment-store';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -47,9 +48,13 @@ export async function POST(req: Request) {
     if (looksLikePlaintextFile(body)) return NextResponse.json({ error: 'plaintext_suspected' }, { status: 422 });
 
     const id = crypto.randomBytes(16).toString('hex');
-    await prisma.statusMedia.create({
-      data: { id, authorAddress: me, bytes: Buffer.from(body), size: body.byteLength, expiresAt: new Date(now.getTime() + TTL_MS) },
-    });
+    if (isR2Enabled()) {
+      await putStatusMediaObject(id, body);
+    } else {
+      await prisma.statusMedia.create({
+        data: { id, authorAddress: me, bytes: Buffer.from(body), size: body.byteLength, expiresAt: new Date(now.getTime() + TTL_MS) },
+      });
+    }
     const contentDigest = crypto.createHash('sha256').update(body).digest('hex');
     return NextResponse.json({ url: `/api/chat/stories/media/${id}`, contentDigest, size: body.byteLength });
   } catch (error) {

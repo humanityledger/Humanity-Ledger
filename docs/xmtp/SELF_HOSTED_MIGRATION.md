@@ -118,3 +118,12 @@ If stable releases are late, staging stays ready and the cutover waits. We do no
 - [XMTP: deployment overview](https://xmtp.org/deploy/overview/)
 - [XMTP: abridged developer docs](https://xmtp.org/llms-small.txt)
 - [KuCoin / ChainCatcher: the Labs network shuts down in early 2027](https://www.kucoin.com/news/flash/xmtp-to-transition-to-self-hosted-open-source-stack-labs-network-to-shut-down-in-early-2027)
+
+## 9. Multi-Node Scale Topology (3M+ MAU)
+
+When scaling past staging on `xmtp.ledgerchat.org` to 3M+ MAU / 300k+ concurrent devices:
+
+1. **Compute (`ghcr.io/xmtp/backend`):** Deploy stateless backend pods on **Fly.io**, **AWS ECS (Fargate)**, or **Kubernetes** behind native HTTP/2 + gRPC TLS load balancing (ALB/Envoy/Fly Proxy) — never behind an HTTP-only edge proxy that strips gRPC trailers.
+2. **Database (PostgreSQL 17+):** Use dedicated primary + read replica sizing with `max_connections` front-ended by PgBouncer (transaction mode for read queries, session mode where prepared statements require), SSD NVMe storage, and daily PITR backups before schema/image upgrades.
+3. **Auth & JWKS CDN Offloading:** `/api/xmtp/jwks` serves `Cache-Control: public, max-age=300, s-maxage=3600, stale-while-revalidate=86400` + weak `ETag` so CDN edge shields Origin during cluster restarts. `/api/xmtp/token` performs zero database reads (stateless HMAC `sub` + ES256 signing + Redis sliding rate limit).
+4. **Browser Client Budget:** Set `maxDms` (default 250 recent DMs) and persistent IndexedDB `inboxId -> Ethereum address` LRU cache (`hl_xmtp_inbox_cache_v1`) with batch `inboxStateFromInboxIds` resolution before streaming.

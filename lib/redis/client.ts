@@ -131,6 +131,11 @@ export function createRedisClient(config: { name?: string; isSubscriber?: boolea
     return client;
 }
 
+export function isRedisRequiredInCluster(): boolean {
+    const raw = (process.env.REDIS_REQUIRED_IN_CLUSTER || '').trim().toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'yes';
+}
+
 let redisClient: any;
 try {
     if (REDIS_URL && !IS_EDGE && !IS_BUILDING) {
@@ -173,7 +178,11 @@ try {
         // [RESILIENCE] Never throw  a missing REDIS_URL must not kill the server process.
         // Features requiring Redis (rate-limiting, caching) will degrade gracefully.
         if (process.env.NODE_ENV === 'production') {
-            console.info('[Redis:Initialization] System In-Memory Mock Mode Activated. Operating safely without Redis.');
+            if (isRedisRequiredInCluster()) {
+                console.error('[Redis:Initialization] CRITICAL: REDIS_REQUIRED_IN_CLUSTER is enabled but REDIS_URL is missing. Multi-replica rate limiting and SSE fan-out are degraded.');
+            } else {
+                console.info('[Redis:Initialization] System In-Memory Mock Mode Activated. Operating safely without Redis.');
+            }
         }
         redisClient = createMockRedis('FinalFallback');
     }
@@ -276,17 +285,18 @@ export async function safeRedisSMembers(key: string): Promise<string[]> {
 /**
  * Health check  use in /api/health-check to verify Redis connectivity
  */
-export async function checkRedisHealth(): Promise<{ ok: boolean; latencyMs?: number; mode: 'real' | 'mock' }> {
+export async function checkRedisHealth(): Promise<{ ok: boolean; latencyMs?: number; mode: 'real' | 'mock'; requiredInCluster?: boolean }> {
+    const requiredInCluster = isRedisRequiredInCluster();
     if ((redisClient as any).__isMock) {
-        return { ok: false, mode: 'mock' };
+        return { ok: false, mode: 'mock', requiredInCluster };
     }
     const start = Date.now();
     try {
         await redisClient.set('__health_check', '1', 'EX', 10);
         const val = await redisClient.get('__health_check');
-        return { ok: val === '1', latencyMs: Date.now() - start, mode: 'real' };
+        return { ok: val === '1', latencyMs: Date.now() - start, mode: 'real', requiredInCluster };
     } catch {
-        return { ok: false, latencyMs: Date.now() - start, mode: 'real' };
+        return { ok: false, latencyMs: Date.now() - start, mode: 'real', requiredInCluster };
     }
 }
 

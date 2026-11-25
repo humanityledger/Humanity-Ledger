@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { z } from 'zod';
 import { validateSecureRequest } from '@/lib/security/premium-security';
+import { safeRedisGet, safeRedisSet } from '@/lib/redis';
+import { isR2Enabled, parseAvatarDataUrl, putAvatarObject } from '@/lib/storage/chat-attachment-store';
+
+const PROFILE_CACHE_TTL_S = 120;
+function publicProfileKey(addr: string) {
+  return `profile:pub:${addr.toLowerCase()}`;
+}
+
+async function resolveStoredAvatarUrl(avatarUrl: string | undefined): Promise<string | undefined> {
+  if (avatarUrl === undefined || avatarUrl === '') return avatarUrl;
+  if (avatarUrl.startsWith('/') || !isR2Enabled()) return avatarUrl;
+  const parsed = parseAvatarDataUrl(avatarUrl);
+  if (!parsed) return avatarUrl;
+  const id = crypto.randomBytes(16).toString('hex');
+  await putAvatarObject(id, parsed.bytes, parsed.mime);
+  return `/api/chat/avatars/${id}`;
+}
 
 const updateProfileSchema = z.object({
   walletAddress: z.string().min(10),
@@ -30,12 +48,26 @@ export async function GET(req: NextRequest) {
     const walletAddress = searchParams.get('walletAddress');
     if (!walletAddress) return NextResponse.json({ error: 'walletAddress required' }, { status: 400 });
 
-    const isOwner = validation.valid && validation.userId?.toLowerCase() === walletAddress.toLowerCase();
+    const addrLower = walletAddress.trim().toLowerCase();
+    const isOwner = validation.valid && validation.userId?.toLowerCase() === addrLower;
 
-    // Try extended schema first, fall back to base columns
+    if (!isOwner) {
+      const cached = await safeRedisGet(publicProfileKey(addrLower));
+      if (cached && cached !== 'TIMEOUT') {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object') {
+            return NextResponse.json({ success: true, data: parsed }, { headers: { 'Cache-Control': 'private, max-age=60' } });
+          }
+        } catch {}
+      }
+    }
+
+    const dbRead = prismaRead ?? prisma;
+    // Exact lowercase match uses the unique B-tree index on User.walletAddress.
     let user: any = null;
     try {
-      user = await (prisma as any).user.findFirst({ where: { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
+      user = await (dbRead as any).user.findUnique({ where: { walletAddress: addrLower },
         select: { 
           id: true, walletAddress: true, displayName: true, chatName: true, avatarUrl: true, bio: true, isPro: true, tier: true,
           theme: true, currency: true, language: true, displayUnit: true, gasPreset: true, mevProtection: true, stealthMode: true,
@@ -44,14 +76,13 @@ export async function GET(req: NextRequest) {
       });
     } catch {
       try {
-        // Extended columns not yet in DB  use base
-        user = await prisma.user.findFirst({ where: { walletAddress: { equals: walletAddress, mode: 'insensitive' } },
+        user = await dbRead.user.findUnique({ where: { walletAddress: addrLower },
           select: { id: true, walletAddress: true }
         });
         if (user) user = { ...user, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
-      } catch (dbErr) {
+      } catch {
         console.warn('[API] GET User Profile: Database unavailable, returning ephemeral profile.');
-        user = { id: walletAddress, walletAddress, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
+        user = { id: addrLower, walletAddress: addrLower, displayName: null, chatName: null, avatarUrl: null, bio: null, isPro: false, tier: 'basic' };
       }
     }
 
@@ -59,8 +90,6 @@ export async function GET(req: NextRequest) {
 
     // Strip private fields if not owner
     if (!isOwner) {
-        // Anyone can read the public profile (name, photo, bio). Balances,
-        // plan and preferences stay private to the owner.
         delete user.id;
         delete user.creditsBalance;
         delete user.isPro;
@@ -73,9 +102,10 @@ export async function GET(req: NextRequest) {
         delete user.gasPreset;
         delete user.mevProtection;
         delete user.stealthMode;
+        await safeRedisSet(publicProfileKey(addrLower), JSON.stringify(user), 'EX', PROFILE_CACHE_TTL_S);
     }
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({ success: true, data: user }, !isOwner ? { headers: { 'Cache-Control': 'private, max-age=60' } } : undefined);
   } catch (error: any) {
     console.warn('[API] GET User Profile Error (fallback):', error?.message || error);
     return NextResponse.json({ success: true, data: { walletAddress: null, tier: 'basic' } });
@@ -108,14 +138,17 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    if (authorizedUserId !== walletAddress.toLowerCase()) {
+    const addrLower = walletAddress.trim().toLowerCase();
+    if (authorizedUserId !== addrLower) {
         return NextResponse.json({ error: 'Forbidden: You can only modify your own profile.' }, { status: 403 });
     }
+
+    const storedAvatarUrl = await resolveStoredAvatarUrl(avatarUrl);
 
     // Usernames are unique, case-insensitively (see /api/user/register).
     if (chatName) {
       const taken = await (prisma as any).user.findFirst({
-        where: { chatName: { equals: chatName, mode: 'insensitive' }, NOT: { walletAddress: { equals: walletAddress, mode: 'insensitive' } } },
+        where: { chatName: { equals: chatName, mode: 'insensitive' }, NOT: { walletAddress: addrLower } },
         select: { id: true },
       }).catch(() => null);
       if (taken) return NextResponse.json({ error: 'That username is taken.' }, { status: 409 });
@@ -124,11 +157,11 @@ export async function PUT(req: NextRequest) {
     // Try full upsert with all profile columns
     try {
       const user = await (prisma as any).user.upsert({
-        where:  { walletAddress: walletAddress.toLowerCase() },
+        where:  { walletAddress: addrLower },
         update: {
           ...(displayName !== undefined && { displayName }),
           ...(chatName !== undefined && { chatName }),
-          ...(avatarUrl !== undefined && { avatarUrl: avatarUrl === '' ? null : avatarUrl }),
+          ...(storedAvatarUrl !== undefined && { avatarUrl: storedAvatarUrl === '' ? null : storedAvatarUrl }),
           ...(bio !== undefined && { bio: bio === '' ? null : bio }),
           ...(theme !== undefined && { theme }),
           ...(currency !== undefined && { currency }),
@@ -139,10 +172,10 @@ export async function PUT(req: NextRequest) {
           ...(stealthMode !== undefined && { stealthMode }),
         },
         create: {
-          walletAddress: walletAddress.toLowerCase(),
+          walletAddress: addrLower,
           displayName: displayName || null,
           chatName: chatName || null,
-          avatarUrl: avatarUrl === '' ? null : (avatarUrl || null),
+          avatarUrl: storedAvatarUrl === '' ? null : (storedAvatarUrl || null),
           bio: bio === '' ? null : (bio || null),
           theme: theme || "light",
           currency: currency || "USD",
@@ -154,32 +187,30 @@ export async function PUT(req: NextRequest) {
           creditsBalance: 0, // No welcome bonus
         }
       });
+      await safeRedisSet(publicProfileKey(addrLower), '', 'EX', 1);
       return NextResponse.json({ success: true, data: user });
     } catch {
-      // A preference column may be missing in this database: save the public profile (name,
-      // username, photo, bio) on its own before giving up on it. 21 November 2026: the photo was
-      // dropped silently here, and the person was told it was saved.
       try {
         const publicOnly = {
           ...(displayName !== undefined && { displayName }),
           ...(chatName !== undefined && { chatName }),
-          ...(avatarUrl !== undefined && { avatarUrl: avatarUrl === '' ? null : avatarUrl }),
+          ...(storedAvatarUrl !== undefined && { avatarUrl: storedAvatarUrl === '' ? null : storedAvatarUrl }),
           ...(bio !== undefined && { bio: bio === '' ? null : bio }),
         };
         const user = await (prisma as any).user.upsert({
-          where: { walletAddress: walletAddress.toLowerCase() },
+          where: { walletAddress: addrLower },
           update: publicOnly,
-          create: { walletAddress: walletAddress.toLowerCase(), ...publicOnly },
+          create: { walletAddress: addrLower, ...publicOnly },
           select: { walletAddress: true, displayName: true, chatName: true, avatarUrl: true, bio: true },
         });
+        await safeRedisSet(publicProfileKey(addrLower), '', 'EX', 1);
         return NextResponse.json({ success: true, data: user, warning: 'Preferences were not saved: their columns are missing in this database.' });
       } catch { /* fall through */ }
       const askedPublic = displayName !== undefined || chatName !== undefined || avatarUrl !== undefined || bio !== undefined;
-      // Extended columns don't exist yet  minimal fallback (walletAddress only)
       const fallbackUser = await prisma.user.upsert({
-        where:  { walletAddress: walletAddress.toLowerCase() },
+        where:  { walletAddress: addrLower },
         update: {},
-        create: { walletAddress: walletAddress.toLowerCase() }
+        create: { walletAddress: addrLower }
       });
       if (askedPublic) {
         // Nothing the person asked for was saved: say so, so the app does not claim others can see it.

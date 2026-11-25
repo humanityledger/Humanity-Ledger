@@ -16,6 +16,8 @@
  */
 import { isCompressiblePhoto, shrinkPhoto } from './compress-image';
 import { LargeFileError, MAX_LARGE_FILE_BYTES, sendLargeFile, type Progress } from './large-file';
+import { putToPresignedUrl, requestPresignSlots, shouldAttemptDirectPresign } from './presign-upload';
+import { looksLikePlaintextFile } from './file-sniff';
 import {
   MAX_ATTACHMENT_BYTES,
   encodeAttachmentMessage,
@@ -90,11 +92,46 @@ async function upload(ciphertext: Uint8Array, fetchImpl: typeof fetch): Promise<
   return { ok: false, reason: 'error', message: typeof data.error === 'string' ? data.error : `Upload failed (${res.status})` };
 }
 
+async function uploadDirectOrProxy(
+  ciphertext: Uint8Array,
+  contentDigest: string,
+  fetchImpl: typeof fetch,
+  directUpload?: boolean,
+  signal?: AbortSignal,
+): Promise<Upload> {
+  if (shouldAttemptDirectPresign(fetchImpl, directUpload)) {
+    const presign = await requestPresignSlots(fetchImpl, [ciphertext.byteLength], 'attachment', signal);
+    if (presign.mode === 'rejected') {
+      return { ok: false, reason: 'error', message: presign.error };
+    }
+    if (presign.mode === 'direct') {
+      const slot = presign.slots[0];
+      let putRes: Response | null = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          putRes = await putToPresignedUrl(fetchImpl, slot, ciphertext, signal);
+        } catch {
+          putRes = null;
+        }
+        if (putRes?.ok) {
+          return { ok: true, url: slot.url, contentDigest };
+        }
+        if (putRes && putRes.status >= 400 && putRes.status < 500 && putRes.status !== 429) {
+          break;
+        }
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 250));
+      }
+      // Fall back to same-origin proxy upload if direct R2 PUT hit CORS or transient object-store error
+    }
+  }
+  return upload(ciphertext, fetchImpl);
+}
+
 export async function prepareAttachmentMessage(
   original: Blob,
   originalInput: AttachmentInput,
   fetchImpl: typeof fetch = fetch,
-  opts: { onProgress?: (p: Progress) => void; signal?: AbortSignal } = {},
+  opts: { onProgress?: (p: Progress) => void; signal?: AbortSignal; directUpload?: boolean } = {},
 ): Promise<PreparedAttachment> {
   if (original.size === 0) throw new AttachmentError('The file is empty');
 
@@ -131,7 +168,8 @@ export async function prepareAttachmentMessage(
   // (~2^-23) chance that random bytes look like a plain file to the server.
   for (let attempt = 0; attempt < 2; attempt++) {
     const enc = await encryptAttachment(bytes);
-    const up = await upload(enc.ciphertext, fetchImpl);
+    if (looksLikePlaintextFile(enc.ciphertext) && attempt === 0) continue;
+    const up = await uploadDirectOrProxy(enc.ciphertext, enc.contentDigest, fetchImpl, opts.directUpload, opts.signal);
     if (up.ok) {
       if (!URL_RE.test(up.url) || up.contentDigest !== enc.contentDigest) {
         throw new AttachmentError('The server stored something other than what was sent');

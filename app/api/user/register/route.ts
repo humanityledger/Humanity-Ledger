@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { safeRedisSet } from '@/lib/redis';
+import { isR2Enabled, parseAvatarDataUrl, putAvatarObject } from '@/lib/storage/chat-attachment-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +50,18 @@ export async function POST(req: NextRequest) {
       const inline = avatarUrl.length < AVATAR_MAX && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(avatarUrl);
       const ours = /^\/(?!\/)[\w\-./]{1,300}$/.test(avatarUrl);
       if (!inline && !ours) return NextResponse.json({ error: 'The avatar must be an uploaded image.' }, { status: 400 });
-      safeAvatarUrl = avatarUrl;
+      if (inline && isR2Enabled()) {
+        const parsed = parseAvatarDataUrl(avatarUrl);
+        if (parsed) {
+          const avatarId = crypto.randomBytes(16).toString('hex');
+          await putAvatarObject(avatarId, parsed.bytes, parsed.mime);
+          safeAvatarUrl = `/api/chat/avatars/${avatarId}`;
+        } else {
+          safeAvatarUrl = avatarUrl;
+        }
+      } else {
+        safeAvatarUrl = avatarUrl;
+      }
     }
 
     if (safeChatName) {
@@ -80,6 +94,7 @@ export async function POST(req: NextRequest) {
       select: { walletAddress: true, displayName: true, chatName: true, bio: true, avatarUrl: true },
     });
 
+    await safeRedisSet(`profile:pub:${caller.toLowerCase()}`, '', 'EX', 1);
     return NextResponse.json({ success: true, data: user });
   } catch (error: any) {
     console.error('[user/register] Error:', error?.message);

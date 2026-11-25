@@ -13,7 +13,7 @@ import { NextResponse } from 'next/server';
 
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
-import { getChatAttachment } from '@/lib/storage/chat-attachment-store';
+import { getChatAttachment, isR2Enabled, presignObjectGet } from '@/lib/storage/chat-attachment-store';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -32,6 +32,21 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!limit.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   try {
+    const forceProxy = new URL(req.url).searchParams.get('proxy') === '1';
+    if (!forceProxy && isR2Enabled()) {
+      const directUrl = presignObjectGet('attachment', id, 300);
+      if (directUrl) {
+        return NextResponse.redirect(directUrl, {
+          status: 307,
+          headers: {
+            'X-Content-Type-Options': 'nosniff',
+            // Keep browser cache shorter than presign TTL (300 s) so redirects never serve an expired signature.
+            'Cache-Control': 'private, max-age=120',
+          },
+        });
+      }
+    }
+
     const body = await getChatAttachment(id);
     if (!body) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

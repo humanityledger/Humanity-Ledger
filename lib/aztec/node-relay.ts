@@ -9,6 +9,11 @@
  *   - only JSON-RPC calls in the public `aztec_` node namespace pass (no admin or debug namespaces);
  *   - batches and bodies are bounded, and the route needs a signed-in session (middleware);
  *   - no cookie, authorization or client header is forwarded upstream.
+ *
+ * Scale hardening (3M+ users):
+ *   - Per-upstream circuit breaker automatically isolates unhealthy/429 endpoints across fallback pools.
+ *   - Strict read-only public method allowlist for short-TTL shared caching and single-flight coalescing;
+ *     private queries, proofs, and tx submissions are NEVER cached.
  */
 import { AZTEC_NETWORKS } from './sequencer/networks';
 
@@ -77,4 +82,124 @@ export function relayResponseHeaders(upstream: Headers): Headers {
     if (/^x-aztec-/i.test(key)) out.set(key, value);
   });
   return out;
+}
+
+// ── Circuit Breaker per Upstream ─────────────────────────────────────────────
+
+const CIRCUIT_FAILURE_THRESHOLD = 3;
+const CIRCUIT_OPEN_MS = 30_000;
+
+interface CircuitState {
+  failures: number;
+  openUntil: number;
+}
+
+const upstreamCircuits = new Map<string, CircuitState>();
+
+export function recordUpstreamSuccess(upstream: string): void {
+  upstreamCircuits.delete(upstream);
+}
+
+export function recordUpstreamFailure(upstream: string, now: number = Date.now()): void {
+  const cur = upstreamCircuits.get(upstream) ?? { failures: 0, openUntil: 0 };
+  cur.failures += 1;
+  if (cur.failures >= CIRCUIT_FAILURE_THRESHOLD) {
+    cur.openUntil = now + CIRCUIT_OPEN_MS;
+  }
+  upstreamCircuits.set(upstream, cur);
+}
+
+export function selectHealthyUpstreams(upstreams: string[], now: number = Date.now()): string[] {
+  const healthy: string[] = [];
+  const open: string[] = [];
+  for (const u of upstreams) {
+    const state = upstreamCircuits.get(u);
+    if (!state || now >= state.openUntil) {
+      healthy.push(u);
+    } else {
+      open.push(u);
+    }
+  }
+  return healthy.length > 0 ? [...healthy, ...open] : open;
+}
+
+export function getUpstreamCircuitState(upstream: string): CircuitState | undefined {
+  return upstreamCircuits.get(upstream);
+}
+
+export function _resetRelayCircuitForTests(): void {
+  upstreamCircuits.clear();
+}
+
+// ── Public Read-Only Cache & Single-Flight Policy ────────────────────────────
+
+export const AZTEC_PUBLIC_CACHE_TTL_MS: Readonly<Record<string, number>> = {
+  aztec_getNodeInfo: 15_000,
+  aztec_getL1ContractAddresses: 30_000,
+  aztec_getProtocolContractAddresses: 30_000,
+  aztec_getCurrentBaseFees: 4_000,
+  aztec_getBlockNumber: 2_000,
+  aztec_getProvenBlockNumber: 3_000,
+  aztec_getTips: 2_000,
+  aztec_getBlock: 30_000,
+  aztec_getBlockHeader: 30_000,
+};
+
+export interface PublicRelayCacheSpec {
+  cacheKey: string;
+  method: string;
+  reqId: string | number | null;
+  ttlMs: number;
+}
+
+/**
+ * Returns cache specification ONLY for single, public, immutable/chain-global read calls.
+ * Never matches batches, transaction submissions, simulations, or private note/nullifier calls.
+ */
+export function getPublicRelayCacheSpec(rawBody: string): PublicRelayCacheSpec | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const call = parsed as Record<string, unknown>;
+  const method = typeof call.method === 'string' ? call.method : '';
+  const ttlMs = AZTEC_PUBLIC_CACHE_TTL_MS[method];
+  if (!ttlMs) return null;
+
+  // For block/header queries, only cache explicit integer block queries (never 'latest')
+  if (method === 'aztec_getBlock' || method === 'aztec_getBlockHeader') {
+    const params = Array.isArray(call.params) ? call.params : [];
+    const blockArg = params[0];
+    if (typeof blockArg !== 'number' && !/^\d+$/.test(String(blockArg ?? ''))) {
+      return null;
+    }
+  }
+
+  const paramsJson = JSON.stringify(call.params ?? []);
+  const reqId = (typeof call.id === 'number' || typeof call.id === 'string' || call.id === null)
+    ? call.id
+    : null;
+
+  return {
+    cacheKey: `${method}:${paramsJson}`,
+    method,
+    reqId,
+    ttlMs,
+  };
+}
+
+/**
+ * Stamps caller's JSON-RPC `id` onto a cached/coalesced JSON-RPC response body.
+ */
+export function rewireJsonRpcId(bodyText: string, reqId: string | number | null): string {
+  try {
+    const parsed = JSON.parse(bodyText) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return bodyText;
+    return JSON.stringify({ ...parsed, id: reqId });
+  } catch {
+    return bodyText;
+  }
 }

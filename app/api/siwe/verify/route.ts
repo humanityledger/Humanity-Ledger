@@ -6,6 +6,7 @@ import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 import { openNonce, resolveSiweDomainForVerification, consumeNonceLocally, NONCE_TTL_SEC } from '@/lib/security/siweNonce';
 import { verifyContractWalletSiwe } from '@/lib/security/siweContractWallet';
+import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
 
 // Normalizes Secp256k1 malleable (non-canonical) signatures from various wallets (MetaMask, Rabby, Ledger)
 function normalizeSignature(sig: string): string {
@@ -37,6 +38,14 @@ function normalizeSignature(sig: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const clientIp = getClientIP(req);
+    const rl = await checkRateLimit(clientIp, { max: 30, windowSec: 60, prefix: 'rl:siwe_verify' });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { ok: false, error: 'Too many sign-in attempts. Please wait and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.max(1, rl.resetAt - Math.floor(Date.now() / 1000))) } },
+      );
+    }
     const { message, signature } = await req.json();
     // The cookie is MAC-sealed by /api/siwe/nonce (lib/security/siweNonce.ts),
     // so a client cannot choose the nonce it is checked against.

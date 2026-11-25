@@ -49,19 +49,90 @@ const clientRegistry = new Map<string, Client>();
 /** Local database keys for this tab only (lib/xmtp/db-key.ts): memory, never storage. */
 const dbKeyCache = new Map<string, Uint8Array>();
 
-// InboxId → Ethereum address cache (populated during message stream/fetch)
-// [AUDIT FIX] Bounded to 1000 entries to prevent unbounded memory growth in long sessions.
+// InboxId → Ethereum address cache (bounded 2000-entry LRU backed asynchronously by IndexedDB).
+const INBOX_IDB_NAME = 'hl_xmtp_inbox_cache_v1';
+const INBOX_IDB_KEY = 'lru_entries';
+const INBOX_CACHE_MAX = 2000;
 const inboxIdToAddressCache = new Map<string, string>();
-function cacheInboxId(inboxId: string, address: string) {
-  if (inboxIdToAddressCache.size >= 1000) {
-    // Evict the oldest 100 entries (Map preserves insertion order)
-    let evicted = 0;
-    for (const key of inboxIdToAddressCache.keys()) {
-      inboxIdToAddressCache.delete(key);
-      if (++evicted >= 100) break;
+let inboxIdbHydrated = false;
+let inboxIdbFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleInboxIdbFlush() {
+  if (typeof indexedDB === 'undefined' || inboxIdbFlushTimer) return;
+  inboxIdbFlushTimer = setTimeout(() => {
+    inboxIdbFlushTimer = null;
+    try {
+      const req = indexedDB.open(INBOX_IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains('kv')) {
+          req.result.createObjectStore('kv');
+        }
+      };
+      req.onsuccess = () => {
+        try {
+          const db = req.result;
+          const tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(Array.from(inboxIdToAddressCache.entries()), INBOX_IDB_KEY);
+          tx.oncomplete = () => db.close();
+        } catch {}
+      };
+    } catch {}
+  }, 1500);
+}
+
+export async function hydrateInboxIdCacheFromIdb(): Promise<void> {
+  if (inboxIdbHydrated || typeof indexedDB === 'undefined') return;
+  inboxIdbHydrated = true;
+  await new Promise<void>((resolve) => {
+    try {
+      const req = indexedDB.open(INBOX_IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains('kv')) {
+          req.result.createObjectStore('kv');
+        }
+      };
+      req.onerror = () => resolve();
+      req.onsuccess = () => {
+        try {
+          const db = req.result;
+          const tx = db.transaction('kv', 'readonly');
+          const getReq = tx.objectStore('kv').get(INBOX_IDB_KEY);
+          getReq.onsuccess = () => {
+            const entries = getReq.result;
+            if (Array.isArray(entries)) {
+              for (const pair of entries) {
+                if (Array.isArray(pair) && typeof pair[0] === 'string' && typeof pair[1] === 'string') {
+                  if (!inboxIdToAddressCache.has(pair[0]) && inboxIdToAddressCache.size < INBOX_CACHE_MAX) {
+                    inboxIdToAddressCache.set(pair[0], pair[1]);
+                  }
+                }
+              }
+            }
+            db.close();
+            resolve();
+          };
+          getReq.onerror = () => { db.close(); resolve(); };
+        } catch {
+          resolve();
+        }
+      };
+    } catch {
+      resolve();
     }
+  });
+}
+
+function cacheInboxId(inboxId: string, address: string) {
+  const key = inboxId.toLowerCase();
+  const val = address.toLowerCase();
+  if (inboxIdToAddressCache.has(key)) {
+    inboxIdToAddressCache.delete(key);
+  } else if (inboxIdToAddressCache.size >= INBOX_CACHE_MAX) {
+    const oldest = inboxIdToAddressCache.keys().next().value;
+    if (oldest !== undefined) inboxIdToAddressCache.delete(oldest);
   }
-  inboxIdToAddressCache.set(inboxId, address);
+  inboxIdToAddressCache.set(key, val);
+  scheduleInboxIdbFlush();
 }
 
 //  Hex string → Uint8Array 
@@ -1238,9 +1309,11 @@ export async function scanDmsForActivity(
     visiblePeers: Set<string>;
     blockedPeers?: Set<string>;
     fullSync?: boolean;
+    maxDms?: number;
   },
 ): Promise<DmScanEntry[]> {
   try {
+    await hydrateInboxIdCacheFromIdb().catch(() => {});
     const selfInboxId = (client as any).inboxId ?? '';
     const selfNorm = selfAddress.toLowerCase();
     const convs = client.conversations as any;
@@ -1251,49 +1324,100 @@ export async function scanDmsForActivity(
       await convs.sync().catch(() => {});
     }
 
-    const dms: any[] = (await convs.listDms?.()) || [];
+    let dms: any[] = (await convs.listDms?.()) || [];
+    if (dms.length > 1) {
+      // Prioritize recently active DMs first when timestamps exist so massive accounts surface latest activity fastest.
+      dms = [...dms].sort((a, b) => {
+        const ta = Number(a?.lastMessage?.sentAtNs ?? a?.createdAtNs ?? 0);
+        const tb = Number(b?.lastMessage?.sentAtNs ?? b?.createdAtNs ?? 0);
+        return tb - ta;
+      });
+    }
+    const maxDms = options.maxDms && options.maxDms > 0 ? options.maxDms : 250;
+    if (dms.length > maxDms) {
+      dms = dms.slice(0, maxDms);
+    }
+
     let byId = dmIdToPeerCache.get(selfInboxId);
     if (!byId) { byId = new Map(); dmIdToPeerCache.set(selfInboxId, byId); }
 
-    const entries: DmScanEntry[] = [];
+    // Batch-resolve missing peer inboxIds in a single preferences call when supported
+    const unresolvedInboxIds = new Set<string>();
     for (const dm of dms) {
-      if (!dm) continue;
-      try {
-        let peerLower = dm.id ? byId.get(dm.id) : undefined;
-        if (!peerLower) {
-          const resolved = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress || selfAddress, client);
-          if (resolved && /^0x[a-fA-F0-9]{40}$/i.test(resolved)) {
-            peerLower = resolved.toLowerCase();
-            if (dm.id) byId.set(dm.id, peerLower);
-          }
-        }
-        if (!peerLower || peerLower === selfNorm) continue;
-        if (options.blockedPeers?.has(peerLower)) continue;
-
-        const isVisible = options.visiblePeers.has(peerLower);
-        if (!isVisible) {
-          // Hidden/deleted or brand-new conversation: sync it explicitly so post-delete messages arrive.
-          if (typeof dm.sync === 'function') {
-            await dm.sync().catch(() => {});
-          }
-          const msgs: any[] = typeof dm.messages === 'function'
-            ? ((await dm.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !_isXmtpSystemMsg(m))
-            : [];
-          const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-          entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: msgs, lastMessage: last });
-        } else {
-          // Visible chat: lightweight local read after sync/syncAll to catch missed previews.
-          let last: any = null;
-          if (typeof dm.lastMessage === 'function') {
-            const candidate = await dm.lastMessage().catch(() => null);
-            if (candidate && !_isXmtpSystemMsg(candidate)) last = candidate;
-          }
-          if (last) {
-            entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: [], lastMessage: last });
-          }
-        }
-      } catch { /* ignore per-dm resolution failure */ }
+      if (!dm || (dm.id && byId.has(dm.id))) continue;
+      const peerInboxId = typeof dm.peerInboxId === 'string'
+        ? dm.peerInboxId
+        : (typeof dm.peerInboxId === 'function' ? await dm.peerInboxId().catch(() => null) : null);
+      if (typeof peerInboxId === 'string' && peerInboxId && !inboxIdToAddressCache.has(peerInboxId.toLowerCase())) {
+        unresolvedInboxIds.add(peerInboxId);
+      }
     }
+    if (unresolvedInboxIds.size > 0 && (client as any)?.preferences?.inboxStateFromInboxIds) {
+      try {
+        const states = await (client as any).preferences.inboxStateFromInboxIds(Array.from(unresolvedInboxIds), true);
+        if (Array.isArray(states)) {
+          for (const st of states) {
+            const iid = st?.inboxId;
+            if (!iid) continue;
+            const ids: any[] = st.identifiers ?? st.accountIdentifiers ?? [];
+            const eth = ids.find((x) => x?.identifierKind === 'Ethereum' && x?.identifier)?.identifier
+              ?? st.accountAddresses?.[0]
+              ?? st.addresses?.[0];
+            if (typeof eth === 'string' && /^0x[a-fA-F0-9]{40}$/i.test(eth)) {
+              cacheInboxId(iid, eth);
+            }
+          }
+        }
+      } catch {}
+    }
+
+    const entries: DmScanEntry[] = [];
+    const CONCURRENCY = 6;
+    let cursor = 0;
+
+    async function worker() {
+      while (cursor < dms.length) {
+        const dm = dms[cursor++];
+        if (!dm) continue;
+        try {
+          let peerLower = dm.id ? byId!.get(dm.id) : undefined;
+          if (!peerLower) {
+            const resolved = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress || selfAddress, client);
+            if (resolved && /^0x[a-fA-F0-9]{40}$/i.test(resolved)) {
+              peerLower = resolved.toLowerCase();
+              if (dm.id) byId!.set(dm.id, peerLower);
+            }
+          }
+          if (!peerLower || peerLower === selfNorm) continue;
+          if (options.blockedPeers?.has(peerLower)) continue;
+
+          const isVisible = options.visiblePeers.has(peerLower);
+          if (!isVisible) {
+            // Hidden/deleted or brand-new conversation: sync it explicitly so post-delete messages arrive.
+            if (typeof dm.sync === 'function') {
+              await dm.sync().catch(() => {});
+            }
+            const msgs: any[] = typeof dm.messages === 'function'
+              ? ((await dm.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !_isXmtpSystemMsg(m))
+              : [];
+            const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+            entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: msgs, lastMessage: last });
+          } else {
+            // Visible chat: lightweight local read after sync/syncAll to catch missed previews.
+            let last: any = null;
+            if (typeof dm.lastMessage === 'function') {
+              const candidate = await dm.lastMessage().catch(() => null);
+              if (candidate && !_isXmtpSystemMsg(candidate)) last = candidate;
+            }
+            if (last) {
+              entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: [], lastMessage: last });
+            }
+          }
+        } catch { /* ignore per-dm resolution failure */ }
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, dms.length) }, () => worker()));
     return entries;
   } catch (e) {
     console.warn('[XMTP] scanDmsForActivity failed:', e);

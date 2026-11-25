@@ -83,7 +83,11 @@ if (!process.env.MORALIS_API_KEY) {
 /** @type {import('next').NextConfig} */
 // Force deployment trigger [SOVEREIGN SYNC]: 2026-04-21T04:15:00Z
 const nextConfig = {
-    ...(process.env.IPFS_BUILD === 'true' ? { output: 'export' } : {}),
+    ...(process.env.IPFS_BUILD === 'true'
+        ? { output: 'export' }
+        : process.env.NEXT_OUTPUT_STANDALONE === 'true'
+            ? { output: 'standalone' }
+            : {}),
     eslint: {
         ignoreDuringBuilds: true,
     },
@@ -570,9 +574,26 @@ const nextConfig = {
                     { key: 'Cache-Control', value: 'public, max-age=604800, immutable' },
                 ],
             },
-            // 3D model textures
+            // 3D model textures & globe assets
             {
                 source: '/textures/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            {
+                source: '/globe/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            // Fonts & hashed Next.js static bundles (includes @aztec/bb.js and @xmtp/wasm-bindings assets)
+            {
+                source: '/fonts/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            {
+                source: '/_next/static/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            {
+                source: '/(.*)\\.wasm',
                 headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
             },
         ];

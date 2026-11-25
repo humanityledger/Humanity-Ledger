@@ -1,35 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { canonicalUsername, usernameProblem } from '@/lib/chat/usernames';
+import { safeRedisGet, safeRedisSet } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
+const SEARCH_CACHE_TTL_S = 30;
+
+function prefixVariants(q: string): string[] {
+  const lower = q.toLowerCase();
+  const cap = lower.charAt(0).toUpperCase() + lower.slice(1);
+  return Array.from(new Set([q, lower, cap])).filter(Boolean);
+}
+
 /**
  * GET /api/chat/users/search?q=@nickname_or_0xaddress
- * Searches registered users by walletAddress, chatName, or displayName.
- * Used by LedgerChatUserSearch to show real results.
+ * Index-backed user search (exact wallet/username + B-Tree prefix matching) with Redis cache.
+ * Never performs leading-wildcard ILIKE '%q%' sequential scans.
  */
 export async function GET(req: NextRequest) {
-  // Signed-in only (it was public), and limited: the directory could be
-  // walked one letter at a time by anyone.
   const caller = await getVerifiedCaller(req);
   if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const rl = await checkRateLimit(caller, { max: 60, windowSec: 60, prefix: 'rl:user-search' });
   if (!rl.allowed) return NextResponse.json({ users: [], error: 'Too many searches' }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
   const raw = searchParams.get('q')?.trim() ?? '';
-
-  // Strip leading @ if present
   const q = raw.startsWith('@') ? raw.slice(1) : raw;
 
   if (!q || q.length > 64 || (!raw.startsWith('0x') && q.length < 2)) {
     return NextResponse.json({ users: [] });
   }
 
-  // "@" is shown only for a real username (unique, lib/chat/usernames.ts). A display name is not
-  // unique, so it is never dressed up as a handle: two people can both be called "Stefan".
+  const dbRead = prismaRead ?? prisma;
+  const cacheKey = `search:users:v2:${raw.toLowerCase()}`;
+  const cached = await safeRedisGet(cacheKey);
+  if (cached && cached !== 'TIMEOUT') {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed?.users)) return NextResponse.json(parsed);
+    } catch {}
+  }
+
   const usernames = new Map<string, string>();
   const formatUser = (u: any, exact = false) => {
     const resolvedName =
@@ -50,7 +64,7 @@ export async function GET(req: NextRequest) {
   };
   const loadUsernames = async (addresses: string[]) => {
     if (!addresses.length) return;
-    const rows = await (prisma as any).chatUsername.findMany({ where: { walletAddress: { in: addresses.map((a) => a.toLowerCase()) } } });
+    const rows = await (dbRead as any).chatUsername.findMany({ where: { walletAddress: { in: addresses.map((a) => a.toLowerCase()) } } });
     for (const r of rows) usernames.set(r.walletAddress, r.username);
   };
 
@@ -65,42 +79,72 @@ export async function GET(req: NextRequest) {
   try {
     // Exact 0x address lookup
     if (raw.startsWith('0x') && raw.length === 42) {
-      const user = await (prisma as any).user.findUnique({
+      const user = await (dbRead as any).user.findUnique({
         where: { walletAddress: raw.toLowerCase() },
         select: SELECT,
       });
       if (user) await loadUsernames([user.walletAddress]);
-      return NextResponse.json({ users: user ? [formatUser(user, true)] : [] });
+      const payload = { users: user ? [formatUser(user, true)] : [] };
+      await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', SEARCH_CACHE_TTL_S);
+      return NextResponse.json(payload);
     }
 
-    // Exact username first: the one result that is certainly the person the name belongs to.
+    // Hex address prefix lookup (uses User.walletAddress unique B-Tree index)
+    if (raw.startsWith('0x') && /^0x[0-9a-fA-F]{2,39}$/.test(raw)) {
+      const hexPrefix = raw.toLowerCase();
+      const users = await (dbRead as any).user.findMany({
+        where: { walletAddress: { startsWith: hexPrefix } },
+        select: SELECT,
+        take: 20,
+      });
+      await loadUsernames(users.map((u: any) => u.walletAddress));
+      const payload = { users: users.map((u: any) => formatUser(u)) };
+      await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', SEARCH_CACHE_TTL_S);
+      return NextResponse.json(payload);
+    }
+
+    // Exact canonical @username lookup first (unique B-Tree index)
     let exact: any = null;
+    const canon = canonicalUsername(q);
     if (!usernameProblem(q)) {
-      const hit = await (prisma as any).chatUsername.findUnique({ where: { username: canonicalUsername(q) } });
+      const hit = await (dbRead as any).chatUsername.findUnique({ where: { username: canon } });
       if (hit) {
         usernames.set(hit.walletAddress, hit.username);
-        exact = (await (prisma as any).user.findUnique({ where: { walletAddress: hit.walletAddress }, select: SELECT })) ?? {
+        exact = (await (dbRead as any).user.findUnique({ where: { walletAddress: hit.walletAddress }, select: SELECT })) ?? {
           walletAddress: hit.walletAddress, chatName: null, displayName: null, isZkVerified: false, tier: 'FREE',
         };
       }
     }
 
-    // Partial match on chatName, displayName, or walletAddress
-    const users = await (prisma as any).user.findMany({
-      where: {
-        OR: [
-          { chatName:     { contains: q, mode: 'insensitive' } },
-          { displayName:  { contains: q, mode: 'insensitive' } },
-          { walletAddress:{ contains: q, mode: 'insensitive' } },
-        ],
-      },
+    // Prefix match on unique usernames + B-Tree indexed prefix match on chatName/displayName
+    const prefixHandles = await (dbRead as any).chatUsername.findMany({
+      where: { username: { startsWith: q.toLowerCase() } },
+      take: 15,
+    }).catch(() => []);
+    for (const h of prefixHandles) usernames.set(h.walletAddress, h.username);
+
+    const handleAddrs = prefixHandles
+      .map((h: any) => String(h.walletAddress).toLowerCase())
+      .filter((a: string) => !exact || a !== String(exact.walletAddress).toLowerCase());
+
+    const variants = prefixVariants(q);
+    const orClauses: any[] = [
+      ...variants.map((v) => ({ chatName: { startsWith: v } })),
+      ...variants.map((v) => ({ displayName: { startsWith: v } })),
+      ...(handleAddrs.length ? [{ walletAddress: { in: handleAddrs } }] : []),
+    ];
+
+    const users = await (dbRead as any).user.findMany({
+      where: { OR: orClauses },
       select: SELECT,
       take: 20,
     });
 
     await loadUsernames(users.map((u: any) => u.walletAddress));
     const rest = users.filter((u: any) => !exact || String(u.walletAddress).toLowerCase() !== String(exact.walletAddress).toLowerCase());
-    return NextResponse.json({ users: [...(exact ? [formatUser(exact, true)] : []), ...rest.map((u: any) => formatUser(u))] });
+    const payload = { users: [...(exact ? [formatUser(exact, true)] : []), ...rest.map((u: any) => formatUser(u))] };
+    await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', SEARCH_CACHE_TTL_S);
+    return NextResponse.json(payload);
   } catch (err: any) {
     console.error('[chat/users/search]', err);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });

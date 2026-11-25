@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkMessageEnvelope } from '@/lib/security/messageEnvelope';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import { chatStreamHub } from '@/lib/sse/chatStreamHub';
 
 //  Lazy Upstash client  only created when env vars are present 
 // Previously: `new Redis({url: process.env.UPSTASH_REDIS_REST_URL!, token: ...})`
@@ -97,11 +98,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Always update shared in-memory store (fallback + local consistency)
+    // Always update shared in-memory store and notify local multiplexed SSE listeners immediately
     if (!memoryStore.has(channelId)) memoryStore.set(channelId, []);
     const msgs = memoryStore.get(channelId)!;
-    msgs.push({ ...message, _score: Date.now() });
+    const stamped = { ...message, _score: Date.now() };
+    msgs.push(stamped);
     if (msgs.length > 100) msgs.shift();
+    chatStreamHub.publishLocal(channelId, stamped);
 
     // Persist to Prisma DB for offline routing
     try {

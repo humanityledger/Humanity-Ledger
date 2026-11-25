@@ -144,3 +144,16 @@ jobs:
 - Load testing ZK proof generation (client-side, not server-side)
 - Load testing L1 contract calls (Ethereum network constraint, not app server)
 - Load testing XMTP internals (third-party network)
+
+---
+
+## 8. Modular k6 Suites (3M+ Scale Targets)
+
+Dedicated per-subsystem scripts under `scripts/load-tests/`:
+
+| Script | Target Endpoints | Primary Thresholds |
+|---|---|---|
+| `scripts/load-tests/health-and-auth.js` | `/api/health`, `/api/ping`, `/api/xmtp/jwks` | `health p95 < 150ms`, `ping p95 < 80ms`, failure rate `< 1%` |
+| `scripts/load-tests/sse-fanout.js` | `/api/ledger-stream` (up to 400 concurrent streams per target pod) | Check rate `> 98%`, graceful `503` backpressure above `MAX_CONCURRENT_SSE` |
+| `scripts/load-tests/chat-hot-paths.js` | `/api/chat/users/search`, `/api/chat/stories`, `/api/chat/presence` | `users-search p95 < 200ms`, `stories p95 < 250ms` |
+| `scripts/load-tests/aztec-relay-and-r2.js` | `/api/aztec/node`, `/api/chat/attachments/presign` | `aztec-node p95 < 300ms`, `presign p95 < 200ms` |

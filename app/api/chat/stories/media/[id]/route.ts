@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { isR2Enabled, presignObjectGet } from '@/lib/storage/chat-attachment-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,19 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!limit.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   try {
+    if (isR2Enabled()) {
+      const signed = presignObjectGet('status', id, 300);
+      if (signed) {
+        return NextResponse.redirect(signed, {
+          status: 307,
+          headers: {
+            'X-Content-Type-Options': 'nosniff',
+            'Cache-Control': 'private, max-age=120',
+          },
+        });
+      }
+    }
+
     const row = await prisma.statusMedia.findUnique({ where: { id }, select: { bytes: true, expiresAt: true } });
     if (!row || row.expiresAt.getTime() <= Date.now()) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const body = new Uint8Array(row.bytes);

@@ -80,18 +80,40 @@ export async function checkRateLimit(
 }
 
 let warnedNoRedis = false;
+const MAX_LOCAL_WINDOWS = 50_000;
 const localWindows = new Map<string, number[]>();
 
+export function getLocalRateLimitWindowCount(): number {
+  return localWindows.size;
+}
+
+export function _clearLocalRateLimitWindowsForTests(): void {
+  localWindows.clear();
+}
+
 function localLimit(key: string, max: number, windowMs: number, now: number): RateLimitResult {
-  const hits = (localWindows.get(key) ?? []).filter(t => now - t < windowMs);
+  const existing = localWindows.get(key);
+  const hits = (existing ?? []).filter((t) => now - t < windowMs);
   const allowed = hits.length < max;
   if (allowed) hits.push(now);
-  localWindows.set(key, hits);
-  if (localWindows.size > 50_000) {
+
+  // Move accessed/updated key to MRU position and enforce strict bounded LRU capacity.
+  if (existing !== undefined) {
+    localWindows.delete(key);
+  }
+  if (localWindows.size >= MAX_LOCAL_WINDOWS) {
     for (const [k, v] of localWindows) {
-      if (!v.length || now - v[v.length - 1] > windowMs) localWindows.delete(k);
+      if (!v.length || now - v[v.length - 1] >= windowMs) {
+        localWindows.delete(k);
+      }
+    }
+    while (localWindows.size >= MAX_LOCAL_WINDOWS) {
+      const oldestKey = localWindows.keys().next().value;
+      if (oldestKey === undefined) break;
+      localWindows.delete(oldestKey);
     }
   }
+  localWindows.set(key, hits);
   return { allowed, remaining: Math.max(0, max - hits.length), resetAt: Math.floor((now + windowMs) / 1000) };
 }
 

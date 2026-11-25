@@ -50,7 +50,8 @@ export function WalletConnectionBridge() {
         try { pendingSession = sessionStorage.getItem('pending_qr_session'); } catch {}
         if (!pendingSession) return; // No QR in flight  skip SSE entirely
 
-        const eventSource = new EventSource('/api/ledger-stream');
+        const sseGateway = (process.env.NEXT_PUBLIC_SSE_GATEWAY_URL || '').replace(/\/+$/, '');
+        const eventSource = new EventSource(`${sseGateway}/api/ledger-stream`);
         
         eventSource.addEventListener('auth-complete', (e: any) => {
             try {

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
-
-const resolveCaller = (req: NextRequest) => getVerifiedCaller(req);
 
 const ALLOWED_PRIVACY = new Set(['everyone', 'contacts', 'nobody']);
 
@@ -13,36 +11,28 @@ export async function GET(req: NextRequest) {
   try {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const me = caller.toLowerCase();
+    const dbRead = prismaRead ?? prisma;
 
-    // DDL_CREATE_STATUS is a static constant with no user input — safe to use $executeRaw
-    await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "StatusUpdate" (
-      "id" TEXT NOT NULL,
-      "ownerAddress" TEXT NOT NULL,
-      "text" TEXT NOT NULL,
-      "emoji" TEXT,
-      "privacy" TEXT NOT NULL DEFAULT 'contacts',
-      "expiresAt" TIMESTAMP(3) NOT NULL,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "StatusUpdate_pkey" PRIMARY KEY ("id")
-    )`.catch(() => {});
-
-    const contacts = await (prisma as any).chatContact.findMany({
-      where: { owner: caller },
-      select: { peer: true }
+    const contacts = await dbRead.chatContact.findMany({
+      where: { owner: me },
+      select: { peer: true },
+      take: 1000,
     });
-    const contactAddresses: string[] = contacts.map((c: any) => c.peer as string);
+    const contactAddresses = contacts.map((c: { peer: string }) => c.peer.toLowerCase());
 
-    const updates = await (prisma as any).statusUpdate.findMany({
+    const now = new Date();
+    const updates = await dbRead.statusUpdate.findMany({
       where: {
-        expiresAt: { gt: new Date() },
+        expiresAt: { gt: now },
         OR: [
-          { ownerAddress: caller },
-          { ownerAddress: { in: contactAddresses }, privacy: { in: ['everyone', 'contacts'] } },
-          { privacy: 'everyone' }
-        ]
+          { ownerAddress: me },
+          ...(contactAddresses.length ? [{ ownerAddress: { in: contactAddresses }, privacy: { in: ['everyone', 'contacts'] } }] : []),
+          { privacy: 'everyone' },
+        ],
       },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: 50,
     });
 
     return NextResponse.json({ updates });
@@ -52,10 +42,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
+function resolveCaller(req: NextRequest) {
+  return getVerifiedCaller(req);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const me = caller.toLowerCase();
 
     const { text, emoji, privacy } = await req.json();
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -66,38 +61,32 @@ export async function POST(req: NextRequest) {
     }
 
     const privacySanitized = ALLOWED_PRIVACY.has(privacy) ? privacy : 'contacts';
-
-    // DDL_CREATE_STATUS is a static constant with no user input — safe to use $executeRaw
-    await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS "StatusUpdate" (
-      "id" TEXT NOT NULL,
-      "ownerAddress" TEXT NOT NULL,
-      "text" TEXT NOT NULL,
-      "emoji" TEXT,
-      "privacy" TEXT NOT NULL DEFAULT 'contacts',
-      "expiresAt" TIMESTAMP(3) NOT NULL,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "StatusUpdate_pkey" PRIMARY KEY ("id")
-    )`.catch(() => {});
-
     const id = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const now = new Date();
 
-    // [SECURITY FIX] Replaced $executeRawUnsafe + string interpolation (SQL Injection)
-    // with Prisma ORM create or parameterized $executeRaw template literal.
-    await prisma.$executeRaw`
-      INSERT INTO "StatusUpdate" ("id", "ownerAddress", "text", "emoji", "privacy", "expiresAt", "createdAt")
-      VALUES (${id}, ${caller}, ${text.trim()}, ${emoji ?? null}, ${privacySanitized}, ${expiresAt}, ${now})
-    `;
+    const created = await prisma.statusUpdate.create({
+      data: {
+        id,
+        ownerAddress: me,
+        text: text.trim(),
+        emoji: typeof emoji === 'string' && emoji.length <= 16 ? emoji : null,
+        privacy: privacySanitized,
+        expiresAt,
+        createdAt: now,
+      },
+    });
 
     return NextResponse.json({
       update: {
-        id, ownerAddress: caller,
-        text: text.trim(), emoji: emoji ?? null,
-        privacy: privacySanitized,
-        expiresAt: expiresAt.toISOString(),
-        createdAt: now.toISOString()
-      }
+        id: created.id,
+        ownerAddress: created.ownerAddress,
+        text: created.text,
+        emoji: created.emoji,
+        privacy: created.privacy,
+        expiresAt: created.expiresAt.toISOString(),
+        createdAt: created.createdAt.toISOString(),
+      },
     });
   } catch (error: any) {
     console.error('[Updates POST]', error);

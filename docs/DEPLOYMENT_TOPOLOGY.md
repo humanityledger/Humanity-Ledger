@@ -158,3 +158,24 @@ See `docs/OBSERVABILITY.md` for the full metrics list. Critical deployment healt
 - `hl_active_connections` > 8,000 → scale-out trigger
 - `hl_http_errors_total{status="5xx"}` > 1% → alert
 - `pg_stat_activity_count` > 90 → connection pool alert
+
+---
+
+## 7. 3M+ MAU Production Architecture & Environment Variables
+
+To sustain **3,000,000+ MAU / 300k–1M concurrent sessions** without overloading Railway web pods, PostgreSQL, or Redis:
+
+| Layer | Scaling Control | Key Env Vars |
+|---|---|---|
+| **Object Storage (up to 32 GiB files, avatars, story media)** | Direct S3v4 presigned PUT/GET URLs via Cloudflare R2 + Redis hourly upload quota | `R2_ENDPOINT` (or `R2_ACCOUNT_ID`), `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `CHAT_UPLOAD_QUOTA_BYTES_PER_HOUR` |
+| **PostgreSQL + Read Replicas** | PgBouncer pool limit per pod + dedicated read replica (`prismaRead`) + B-tree prefix search indexes + batch retention cleanup | `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `DATABASE_READ_URL`, `PRISMA_CONNECTION_LIMIT` |
+| **Multi-Replica Rate Limits & Shared State** | Bounded L1 Edge LRU + Upstash Edge REST + L2 Redis ZSET/Lua + shared Cloudflare TURN credential cache (`calls:cf_ice_cache:v1`) | `REDIS_URL`, `REDIS_REQUIRED_IN_CLUSTER`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `GEOBLOCK_RESTRICTED_COUNTRIES` |
+| **SSE Multiplexing & Dedicated Gateway** | Single pod-level Redis subscriber + shared `XREAD` loop + 10s Redis catch-up cache; optional dedicated SSE gateway origin | `MAX_CONCURRENT_SSE`, `NEXT_PUBLIC_SSE_GATEWAY_URL` |
+| **Aztec RPC Relay & XMTP Self-Hosted** | Multi-upstream circuit breaker + single-flight public RPC coalescing/caching; CDN-cached JWKS + stateless `/api/xmtp/token` | `AZTEC_NODE_RELAY_UPSTREAMS`, `NEXT_PUBLIC_XMTP_SELF_HOSTED`, `NEXT_PUBLIC_XMTP_BACKEND_URL`, `XMTP_BACKEND_JWT_PRIVATE_JWK`, `XMTP_BACKEND_SUB_PEPPER` |
+| **CDN & Build Mode** | Immutable 1-year `Cache-Control` for `/_next/static`, `/globe`, `/fonts`, and `.wasm`; optional standalone output for workerless web pods | `NEXT_OUTPUT_STANDALONE` |
+
+---
+
+## 8. Scheduled Maintenance Worker
+
+Run `node scripts/db-maintenance.mjs` as a cron job (e.g., hourly via Railway Cron) rather than blocking user API requests with inline `DELETE` queries. It prunes expired `SiweNonce`, old `PendingChatMessage`, expired `Story`/`StatusMedia`/`StatusUpdate` rows, and stale `LoginGeoEvent` records in small bounded batches (`500` rows per batch).

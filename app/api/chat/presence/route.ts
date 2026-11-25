@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import * as prismaModule from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+
+function getPresenceReadDb() {
+  return Object.prototype.hasOwnProperty.call(prismaModule, 'prismaRead')
+    ? (prismaModule as { prismaRead?: typeof prismaModule.prisma }).prismaRead ?? prismaModule.prisma
+    : prismaModule.prisma;
+}
 import { safeRedisGet, safeRedisSet } from '@/lib/redis';
 import { normalizeAudience, encodePresence, visiblePresence, PRESENCE_TTL_S } from '@/lib/chat/presencePolicy';
 
@@ -51,7 +57,7 @@ export async function POST(req: NextRequest) {
       if (cached === '1' || cached === '0') {
         isMutual = cached === '1';
       } else {
-        const mutual = await prisma.chatContact.count({
+        const mutual = await getPresenceReadDb().chatContact.count({
           where: {
             OR: [
               { owner: callerAddress, peer: normalizedPeer },

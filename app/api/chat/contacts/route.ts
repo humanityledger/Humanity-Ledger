@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { safeRedisGet, safeRedisSet } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
+
+const CONTACTS_CACHE_TTL_S = 60;
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireWallet(req);
     if (auth.errorResponse) return auth.errorResponse;
-    const callerAddress = auth.walletAddress;
+    const callerAddress = auth.walletAddress.toLowerCase();
 
     const { searchParams } = new URL(req.url);
     const queryAddress = searchParams.get('address')?.toLowerCase();
@@ -16,12 +19,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden: Cannot access contacts for another address' }, { status: 403 });
     }
 
+    const rawLimit = Number(searchParams.get('limit') || '500');
+    const take = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(1000, Math.floor(rawLimit)) : 500;
+    const cacheKey = `contacts:peers:${callerAddress}:${take}`;
+    const cached = await safeRedisGet(cacheKey);
+    if (cached && cached !== 'TIMEOUT') {
+      try {
+        const peers = JSON.parse(cached);
+        if (Array.isArray(peers)) return NextResponse.json({ peers });
+      } catch {}
+    }
+
     try {
-      const contacts = await prisma.chatContact.findMany({
+      const dbRead = prismaRead ?? prisma;
+      const contacts = await dbRead.chatContact.findMany({
         where: { owner: callerAddress },
         orderBy: { updatedAt: 'desc' },
+        select: { peer: true },
+        take,
       });
-      return NextResponse.json({ peers: contacts.map(c => c.peer) });
+      const peers = contacts.map((c: { peer: string }) => c.peer.toLowerCase());
+      await safeRedisSet(cacheKey, JSON.stringify(peers), 'EX', CONTACTS_CACHE_TTL_S);
+      return NextResponse.json({ peers });
     } catch (dbError: any) {
       console.warn('[Chat Contacts] Database offline or unavailable, returning empty contacts list.');
       return NextResponse.json({ peers: [] });
@@ -70,9 +89,10 @@ export async function POST(req: NextRequest) {
       // One INSERT … ON CONFLICT DO NOTHING instead of up to 200 upserts in a transaction: the
       // client posts its whole list, and nearly every row already exists.
       await prisma.chatContact.createMany({
-        data: clean.map((peer: string) => ({ owner, peer })),
+        data: clean.map((peer: string) => ({ owner: owner.toLowerCase(), peer })),
         skipDuplicates: true,
       });
+      await safeRedisSet(`contacts:peers:${owner.toLowerCase()}:500`, '', 'EX', 1);
     } catch (dbError: any) {
       console.warn('[Chat Contacts] Database offline, contact saved to client storage.');
     }

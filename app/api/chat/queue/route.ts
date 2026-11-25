@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 
 export const dynamic = 'force-dynamic';
@@ -16,17 +16,22 @@ export async function GET(req: NextRequest) {
     const normalized = address.toLowerCase();
     let messages: any[] = [];
     try {
-      messages = await prisma.pendingChatMessage.findMany({
+      messages = await prismaRead.pendingChatMessage.findMany({
         where: { recipient: normalized },
         orderBy: { createdAt: 'asc' },
         take: 200, // Safety cap
       });
 
-      // Auto-clean messages older than 7 days (stale, recipient never came online)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      await prisma.pendingChatMessage.deleteMany({
-        where: { recipient: normalized, createdAt: { lt: sevenDaysAgo } },
-      }).catch(() => {});
+      // Bulk retention sweeps are handled asynchronously by scripts/db-maintenance.mjs;
+      // only run a rare non-blocking opportunistic clean (0.5%) so reads never queue behind deletes.
+      if (Math.random() < 0.005) {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        void prisma.pendingChatMessage
+          .deleteMany({
+            where: { recipient: normalized, createdAt: { lt: sevenDaysAgo } },
+          })
+          .catch(() => {});
+      }
     } catch (dbErr: any) {
       console.warn('[queue GET] Database unavailable, returning empty queue.');
       return NextResponse.json({ messages: [] });

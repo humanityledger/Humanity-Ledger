@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createHmac } from 'node:crypto';
 import { shapeIceServers } from '@/lib/calls/ice';
+import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -26,16 +27,49 @@ const TTL_SECONDS = 6 * 60 * 60;
  * misses share one request; a failed refresh keeps serving the last good set while it is valid.
  */
 type IceServers = ReturnType<typeof shapeIceServers>;
-let cfCache: { iceServers: IceServers; expiresAt: number; validUntil: number } | null = null;
+interface CachedCfIce {
+  iceServers: IceServers;
+  expiresAt: number;
+  validUntil: number;
+}
+const CF_ICE_REDIS_KEY = 'calls:cf_ice_cache:v1';
+let cfCache: CachedCfIce | null = null;
 let cfInFlight: Promise<IceServers | null> | null = null;
+
+async function readSharedCfCache(now: number): Promise<CachedCfIce | null> {
+  try {
+    const raw = await safeRedisGet(CF_ICE_REDIS_KEY);
+    if (!raw || raw === 'TIMEOUT') return null;
+    const parsed = JSON.parse(raw) as CachedCfIce;
+    if (!parsed || !Array.isArray(parsed.iceServers) || !parsed.iceServers.length) return null;
+    if (typeof parsed.expiresAt !== 'number' || typeof parsed.validUntil !== 'number') return null;
+    if (now >= parsed.validUntil) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSharedCfCache(entry: CachedCfIce): Promise<void> {
+  const ttlSec = Math.max(60, Math.floor((entry.expiresAt - Date.now()) / 1000));
+  await safeRedisSet(CF_ICE_REDIS_KEY, JSON.stringify(entry), 'EX', ttlSec).catch(() => {});
+}
 
 async function cloudflareIce(cfId: string, cfToken: string): Promise<IceServers | null> {
   const now = Date.now();
   if (cfCache && now < cfCache.expiresAt) return cfCache.iceServers;
   if (cfInFlight) return cfInFlight;
+
   const stale = cfCache && now < cfCache.validUntil - 30 * 60_000 ? cfCache.iceServers : null;
   cfInFlight = (async () => {
     try {
+      // Check Redis L2 cache first so multiple replicas share one TURN credential generation per window.
+      const shared = await readSharedCfCache(now);
+      if (shared && now < shared.expiresAt) {
+        cfCache = shared;
+        return shared.iceServers;
+      }
+
       const res = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${cfId}/credentials/generate-ice-servers`, {
         method: 'POST',
         headers: { authorization: `Bearer ${cfToken}`, 'content-type': 'application/json' },
@@ -43,14 +77,20 @@ async function cloudflareIce(cfId: string, cfToken: string): Promise<IceServers 
         cache: 'no-store',
         signal: AbortSignal.timeout(5_000),
       });
-      if (!res.ok) return stale;
+      if (!res.ok) return stale ?? shared?.iceServers ?? null;
       const data = await res.json();
       // Cloudflare lists ~8 URLs (anycast, so already the nearest location). Trimmed to STUN plus
       // one TURN URL per transport: each extra URL is one more allocation before the call connects.
       const iceServers = shapeIceServers(data?.iceServers);
-      if (!iceServers.length) return stale;
+      if (!iceServers.length) return stale ?? shared?.iceServers ?? null;
       const at = Date.now();
-      cfCache = { iceServers, expiresAt: at + (TTL_SECONDS * 1000) / 2, validUntil: at + TTL_SECONDS * 1000 };
+      const entry: CachedCfIce = {
+        iceServers,
+        expiresAt: at + (TTL_SECONDS * 1000) / 2,
+        validUntil: at + TTL_SECONDS * 1000,
+      };
+      cfCache = entry;
+      void writeSharedCfCache(entry);
       return iceServers;
     } catch {
       return stale;

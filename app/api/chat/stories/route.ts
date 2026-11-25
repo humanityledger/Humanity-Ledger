@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 import crypto from 'crypto';
 import { audienceAllows, normalizeAudience, parseStatusMedia, statusKindOf } from '@/lib/chat/status-media';
@@ -47,15 +47,16 @@ export async function GET(req: NextRequest) {
   let authors = new Set<string>([me]);
 
   try {
-    const audienceOf = await prisma.chatContact.findMany({
-      where: { peer: { equals: caller, mode: 'insensitive' } },
+    const dbRead = prismaRead ?? prisma;
+    const audienceOf = await dbRead.chatContact.findMany({
+      where: { peer: me },
       select: { owner: true },
       take: 5000,
     }).catch(() => []);
 
-    authors = new Set([me, ...audienceOf.map(c => c.owner.toLowerCase())]);
+    authors = new Set([me, ...audienceOf.map((c: { owner: string }) => c.owner.toLowerCase())]);
 
-    dbStories = await prisma.story.findMany({
+    dbStories = await dbRead.story.findMany({
       where: { expiresAt: { gt: now }, authorAddress: { in: Array.from(authors) } },
       orderBy: { createdAt: 'desc' },
       take: 200,

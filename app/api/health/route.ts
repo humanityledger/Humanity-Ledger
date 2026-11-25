@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkRedisHealth } from '@/lib/redis/client';
+import { checkRedisHealth, isRedisRequiredInCluster } from '@/lib/redis/client';
+import { isR2Enabled } from '@/lib/storage/chat-attachment-store';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { healthVerdict, latestMigrationName, migrationProgress, type HealthCheck as Check, type MigrationCheck } from '@/lib/health';
@@ -51,14 +52,14 @@ async function checkDatabase(): Promise<Check> {
   }
 }
 
-async function checkRedis(): Promise<Check> {
-  if (!process.env.REDIS_URL) return { ok: false, status: 'NOT_CONFIGURED', latencyMs: null };
+async function checkRedis(): Promise<Check & { mode?: 'real' | 'mock' }> {
+  if (!process.env.REDIS_URL) return { ok: false, status: 'NOT_CONFIGURED', latencyMs: null, mode: 'mock' };
   try {
     const r = await withTimeout(checkRedisHealth(), CHECK_TIMEOUT_MS);
-    if (r.mode !== 'real' || !r.ok) return { ok: false, status: 'UNAVAILABLE', latencyMs: r.latencyMs ?? null };
-    return { ok: true, status: 'OK', latencyMs: r.latencyMs ?? null };
+    if (r.mode !== 'real' || !r.ok) return { ok: false, status: 'UNAVAILABLE', latencyMs: r.latencyMs ?? null, mode: r.mode };
+    return { ok: true, status: 'OK', latencyMs: r.latencyMs ?? null, mode: 'real' };
   } catch {
-    return { ok: false, status: 'UNAVAILABLE', latencyMs: null };
+    return { ok: false, status: 'UNAVAILABLE', latencyMs: null, mode: 'real' };
   }
 }
 
@@ -88,7 +89,9 @@ async function checkMigrations(): Promise<MigrationCheck> {
 
 export async function GET() {
   const [database, redis, migrations] = await Promise.all([checkDatabase(), checkRedis(), checkMigrations()]);
-  const { ok, degraded } = healthVerdict(database, redis, migrations);
+  const redisRequired = isRedisRequiredInCluster();
+  const { ok, degraded } = healthVerdict(database, redis, migrations, { requireRedis: redisRequired });
+  const r2Configured = isR2Enabled();
 
   return NextResponse.json(
     {
@@ -99,9 +102,19 @@ export async function GET() {
       environment: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'unknown',
       replicaId: process.env.RAILWAY_REPLICA_ID || 'local',
       uptimeSeconds: Math.round(process.uptime()),
+      cluster: {
+        redisRequired,
+        multiReplicaWarning: redisRequired && !redis.ok,
+      },
       // The commit this replica runs (Railway sets it on Git deploys): which code answers.
       version: { commit: (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 12) || null },
-      services: { web: { ok: true, status: 'OK' }, database, redis, migrations },
+      services: {
+        web: { ok: true, status: 'OK' },
+        database,
+        redis,
+        migrations,
+        storage: { ok: true, status: 'OK', mode: r2Configured ? 'r2' : 'local' },
+      },
     },
     {
       status: 200,
