@@ -15,6 +15,7 @@ interface Step { title: string; text: string }
 const AMOUNT = '25.00';
 
 function Vis({ i }: { i: number }) {
+  const t = useT();
   if (i === 0) {
     return (
       <svg viewBox="0 0 220 120" aria-hidden="true" className={`${s.pv} ${s.pv1}`}>
@@ -60,7 +61,7 @@ function Vis({ i }: { i: number }) {
   return (
     <svg viewBox="0 0 220 120" aria-hidden="true" className={`${s.pv} ${s.pv4}`}>
       <rect x="30" y="34" width="160" height="52" rx="8" fill="#fff" stroke="#c9ced8" />
-      <text x="46" y="56" fontSize="11" fill="#5f6673">Received, private</text>
+      <text x="46" y="56" fontSize="11" fill="#5f6673">{t("Received, private")}</text>
       <text x="46" y="76" style={{ fontFamily: 'var(--mono)' }} fontSize="18" fill="#15171c">{AMOUNT}</text>
       <path d="M166 52.5V49a5 5 0 0 1 10 0v3.5M164 52.5h14v11h-14z" fill="none" stroke="#15171c" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>

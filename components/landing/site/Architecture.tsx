@@ -85,17 +85,17 @@ export function Architecture({
         <svg className={s.archSvg} viewBox="0 0 960 460" role="img" aria-label={summary}>
           {/* Edges shared by both states */}
           <path className={`${s.edge} ${s.edgeStrong}`} d="M500 192 C552 192 548 67 600 67" />
-          <text className={s.edgeLabel} x="546" y="104" textAnchor="end">MLS ciphertext</text>
+          <text className={s.edgeLabel} x="546" y="104" textAnchor="end">{tr("MLS ciphertext")}</text>
           <path className={s.edge} d="M780 67 C846 67 878 118 878 204" />
           <path className={`${s.edge} ${s.edgeDash}`} d="M500 236 L600 236" />
           <path className={`${s.edge} ${s.edgeDash}`} d="M780 236 L816 236" />
-          <text className={s.edgeLabel} x="508" y="227">when blocked</text>
+          <text className={s.edgeLabel} x="508" y="227">{tr("when blocked")}</text>
           <path className={`${s.edge} ${s.edgeStrong}`} d="M500 282 C612 338 792 338 878 268" />
-          <text className={s.edgeLabel} x="689" y="350" textAnchor="middle">direct, DTLS-SRTP</text>
+          <text className={s.edgeLabel} x="689" y="350" textAnchor="middle">{tr("direct, DTLS-SRTP")}</text>
           <path className={`${s.edge} ${s.edgeStrong}`} d="M500 300 C556 300 548 403 600 403" />
-          <text className={s.edgeLabel} x="534" y="362">proof</text>
+          <text className={s.edgeLabel} x="534" y="362">{tr("proof")}</text>
           <path className={s.edge} d="M780 403 L846 403" />
-          <text className={s.edgeLabel} x="813" y="394" textAnchor="middle">settles</text>
+          <text className={s.edgeLabel} x="813" y="394" textAnchor="middle">{tr("settles")}</text>
 
           {/* Nodes shared by both states */}
           <Box id="device" kind="device" x={290} y={160} w={210} h={150} name={nodes.device.name} sub={['App, keys, prover', 'Decrypts and proves here']} active={current} onPick={setActive} />

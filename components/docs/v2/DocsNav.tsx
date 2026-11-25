@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { NAV } from "@/lib/docs/registry";
+import { useT } from "@/lib/i18n/client";
 import s from "./Docs.module.css";
 
 /**
@@ -8,11 +11,12 @@ import s from "./Docs.module.css";
  * narrow screens, so it has no state of its own: the current page is passed in.
  */
 export function DocsNav({ current, onNavigate }: { current: string; onNavigate?: () => void }) {
+  const t = useT();
   return (
-    <nav className={s.nav} aria-label="Documentation">
+    <nav className={s.nav} aria-label={t("Documentation")}>
       {NAV.map((group) => (
         <div key={group.title} className={s.navGroup}>
-          <p className={s.navTitle}>{group.title}</p>
+          <p className={s.navTitle}>{t(group.title)}</p>
           <ul className={s.navList}>
             {group.pages.map((page) => {
               const active = page.href === current;
@@ -24,7 +28,7 @@ export function DocsNav({ current, onNavigate }: { current: string; onNavigate?:
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
                   >
-                    {page.label}
+                    {t(page.label)}
                   </Link>
                 </li>
               );
