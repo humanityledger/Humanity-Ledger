@@ -95,7 +95,7 @@ The caps, the 2-day timelock on relaxations and the bounded withdrawal pause are
 ## 7. Before any deployment
 
 1. External audit of `HLPortal`, `HLReceiver`, `HLReceiverFactory` and `PortalToken`. `deployments/aztec-mainnet.json` keeps `"audit": null` until then.
-2. A test-network deployment (Sepolia and the Aztec test network), then a two-account run:
+2. A test-network deployment (Sepolia and the Aztec test network): `scripts/portal/deploy-testnet.mjs deploy`, then `bind` once the 2-day timelock has passed. The script refuses any network other than Sepolia and the Aztec test network, and it prints the `NEXT_PUBLIC_HL_PORTAL_*` lines. Then a two-account run:
    - receiver;
    - forward by a third party;
    - claim after the delay;
