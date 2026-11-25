@@ -4,6 +4,6 @@ export async function getRedisClient() {
   return redisClient;
 }
 
-export { redisClient as default, createRedisClient, createSubClient, checkRedisHealth, safeRedisGet, safeRedisSet } from './client';
+export { redisClient as default, createRedisClient, createSubClient, checkRedisHealth, safeRedisGet, safeRedisSet, safeRedisMGet, safeRedisSetMany, safeRedisDel } from './client';
 
 

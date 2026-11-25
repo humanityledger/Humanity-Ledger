@@ -95,12 +95,15 @@ export default function () {
   });
 
   // 6. Optional Authenticated Search & Presence Probes when SESSION_COOKIE is provided
-  if (__ENV.SESSION_COOKIE) {
+  const rawCookie = (__ENV.SESSION_COOKIE || '').trim();
+  if (rawCookie) {
+    const normalizedCookie = rawCookie.includes('=') ? rawCookie : `hl_session=${rawCookie}`;
     const authParams = {
       headers: {
         ...params.headers,
-        Cookie: __ENV.SESSION_COOKIE,
+        Cookie: normalizedCookie,
         Origin: BASE_URL,
+        'Sec-Fetch-Site': 'same-origin',
       },
       timeout: '5s',
     };

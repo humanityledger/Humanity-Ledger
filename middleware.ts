@@ -183,7 +183,14 @@ export function checkCsrf(req: NextRequest): NextResponse | null {
     const allowed = new Set(['capacitor://localhost', 'ionic://localhost']);
     if (appUrl) {
       try {
-        allowed.add(new URL(appUrl).origin);
+        const parsed = new URL(appUrl);
+        allowed.add(parsed.origin);
+        // Support exact apex <-> www sibling of NEXT_PUBLIC_APP_URL (same scheme and port only).
+        if (parsed.hostname.startsWith('www.')) {
+          allowed.add(`${parsed.protocol}//${parsed.hostname.slice(4)}${parsed.port ? `:${parsed.port}` : ''}`);
+        } else {
+          allowed.add(`${parsed.protocol}//www.${parsed.hostname}${parsed.port ? `:${parsed.port}` : ''}`);
+        }
       } catch {
         allowed.add(appUrl);
       }
@@ -241,7 +248,12 @@ function applyRateLimit(key: string, LIMIT: number): NextResponse | null {
   return null;
 }
 
-// ── JWT Secret (Edge-compatible — TextEncoder only) ─────────────────────────
+// ── JWT Secret & Key Caches (Edge-compatible) ────────────────────────────────
+let cachedEdgeSecretRaw: string | null = null;
+let cachedEdgeSecretBytes: Uint8Array | null = null;
+let cachedEdgePubJwkRaw: string | null = null;
+let cachedEdgePubKey: any = null;
+
 function getEdgeSecret(): Uint8Array {
   // We can't import requireSecret easily in edge middleware without messing up bundle,
   // so we inline the fail closed logic.
@@ -249,7 +261,28 @@ function getEdgeSecret(): Uint8Array {
   if (!secret) {
     throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET is not defined.');
   }
-  return new TextEncoder().encode(secret);
+  if (cachedEdgeSecretRaw !== secret || !cachedEdgeSecretBytes) {
+    cachedEdgeSecretRaw = secret;
+    cachedEdgeSecretBytes = new TextEncoder().encode(secret);
+  }
+  return cachedEdgeSecretBytes;
+}
+
+async function getEdgeEdDsaPublicKey(): Promise<any | null> {
+  const privRaw = process.env.JWT_EDDSA_PRIVATE_JWK;
+  const pubRaw = process.env.JWT_EDDSA_PUBLIC_JWK;
+  if (!privRaw || !pubRaw) return null;
+  if (cachedEdgePubJwkRaw === pubRaw && cachedEdgePubKey) return cachedEdgePubKey;
+  try {
+    JSON.parse(privRaw);
+    const pubJwk = JSON.parse(pubRaw);
+    const { importJWK } = await import('jose');
+    cachedEdgePubKey = await importJWK(pubJwk, 'EdDSA');
+    cachedEdgePubJwkRaw = pubRaw;
+    return cachedEdgePubKey;
+  } catch {
+    return null;
+  }
 }
 
 // ── Extract session JWT from cookies ─────────────────────────────────────────
@@ -269,44 +302,28 @@ async function extractSessionAddress(req: NextRequest): Promise<string | null> {
   //
   // Same key choice as lib/jwt.ts: EdDSA only when BOTH keys are configured and parse, otherwise HS256.
   // With only the public key set, the server minted HS256 tokens the perimeter refused.
-  let useEdDSA = false;
-  if (process.env.JWT_EDDSA_PRIVATE_JWK && process.env.JWT_EDDSA_PUBLIC_JWK) {
-    try {
-      JSON.parse(process.env.JWT_EDDSA_PRIVATE_JWK);
-      JSON.parse(process.env.JWT_EDDSA_PUBLIC_JWK);
-      useEdDSA = true;
-    } catch {
-      useEdDSA = false;
-    }
-  }
   const sessionCookies = ['hl_session', 'humanity_session', 'ledger_session', 'human_session']
     .map((name) => req.cookies.get(name)?.value)
     .filter((v): v is string => typeof v === 'string' && v.length > 0);
 
-  for (const ledgerCookie of sessionCookies) {
-    try {
-      const isEdDSA = useEdDSA;
-      let payload;
+  if (sessionCookies.length > 0) {
+    const eddsaKey = await getEdgeEdDsaPublicKey();
+    for (const ledgerCookie of sessionCookies) {
+      try {
+        const result = eddsaKey
+          ? await jwtVerify(ledgerCookie, eddsaKey, { algorithms: ['EdDSA'] })
+          : await jwtVerify(ledgerCookie, getEdgeSecret(), { algorithms: ['HS256'] });
+        const payload = result.payload;
 
-      if (isEdDSA) {
-        const { importJWK } = await import('jose');
-        const pubJwk = JSON.parse(process.env.JWT_EDDSA_PUBLIC_JWK!);
-        const publicKey = await importJWK(pubJwk, 'EdDSA');
-        const result = await jwtVerify(ledgerCookie, publicKey, { algorithms: ['EdDSA'] });
-        payload = result.payload;
-      } else {
-        const result = await jwtVerify(ledgerCookie, getEdgeSecret(), { algorithms: ['HS256'] });
-        payload = result.payload;
+        // A token that verifies is not automatically a sign-in (refresh tokens,
+        // retired webauthn tokens): lib/security/sessionClaims.ts.
+        // Same claim order as lib/session.ts getSession.
+        const p = payload as any;
+        const addr = isSessionPayload(payload) ? (p.walletAddress || p.address || p.userId || p.sub) : null;
+        if (addr && typeof addr === 'string') return addr.toLowerCase();
+      } catch {
+        // Expired or invalid JWT — fall through
       }
-      
-      // A token that verifies is not automatically a sign-in (refresh tokens,
-      // retired webauthn tokens): lib/security/sessionClaims.ts.
-      // Same claim order as lib/session.ts getSession.
-      const p = payload as any;
-      const addr = isSessionPayload(payload) ? (p.walletAddress || p.address || p.userId || p.sub) : null;
-      if (addr && typeof addr === 'string') return addr.toLowerCase();
-    } catch {
-      // Expired or invalid JWT — fall through
     }
   }
 

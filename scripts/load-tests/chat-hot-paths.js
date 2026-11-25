@@ -9,34 +9,51 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const BASE = (__ENV.BASE_URL || 'https://ledgerchat.org').replace(/\/+$/, '');
-const COOKIE = __ENV.SESSION_COOKIE || '';
+const RAW_COOKIE = (__ENV.SESSION_COOKIE || '').trim();
+const COOKIE = RAW_COOKIE ? (RAW_COOKIE.includes('=') ? RAW_COOKIE : `hl_session=${RAW_COOKIE}`) : '';
 const QUERIES = ['alice', 'bob', 'ledger', '0x0000', 'crypto'];
 
-export const options = {
-  scenarios: {
-    chat_api_hot_paths: {
-      executor: 'ramping-arrival-rate',
-      startRate: 20,
-      timeUnit: '1s',
-      preAllocatedVUs: 50,
-      maxVUs: 500,
-      stages: [
-        { target: 150, duration: '30s' },
-        { target: 300, duration: '1m' },
-        { target: 50, duration: '20s' },
-      ],
-    },
-  },
-  thresholds: {
-    'http_req_duration{endpoint:users-search}': ['p(95)<200', 'p(99)<500'],
-    'http_req_duration{endpoint:stories}': ['p(95)<250'],
-  },
-};
+if (!COOKIE) {
+  http.setResponseCallback(http.expectedStatuses({ min: 200, max: 399 }, 401));
+}
+
+export const options = __ENV.SMOKE === '1'
+  ? {
+      vus: 2,
+      duration: '15s',
+      thresholds: {
+        'http_req_duration{endpoint:users-search}': ['p(95)<200', 'p(99)<500'],
+        'http_req_duration{endpoint:stories}': ['p(95)<250'],
+      },
+    }
+  : {
+      scenarios: {
+        chat_api_hot_paths: {
+          executor: 'ramping-arrival-rate',
+          startRate: 20,
+          timeUnit: '1s',
+          preAllocatedVUs: 50,
+          maxVUs: 500,
+          stages: [
+            { target: 150, duration: '30s' },
+            { target: 300, duration: '1m' },
+            { target: 50, duration: '20s' },
+          ],
+        },
+      },
+      thresholds: {
+        'http_req_duration{endpoint:users-search}': ['p(95)<200', 'p(99)<500'],
+        'http_req_duration{endpoint:stories}': ['p(95)<250'],
+      },
+    };
 
 export default function () {
-  const headers = COOKIE
-    ? { Cookie: COOKIE, Origin: BASE, 'Content-Type': 'application/json' }
-    : { Origin: BASE, 'Content-Type': 'application/json' };
+  const headers = {
+    ...(COOKIE ? { Cookie: COOKIE } : {}),
+    Origin: BASE,
+    'Sec-Fetch-Site': 'same-origin',
+    'Content-Type': 'application/json',
+  };
 
   const q = QUERIES[(__VU + __ITER) % QUERIES.length];
   const search = http.get(`${BASE}/api/chat/users/search?q=${encodeURIComponent(q)}`, {

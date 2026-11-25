@@ -533,15 +533,9 @@ document.addEventListener('focusout',off,true);
     // Non-chunk errors: log to console only — do NOT show visible red divs in production
   }, true);
 
-  // ?????? Nuclear Service Worker Purge ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
-  // If the user is stuck with a broken SW returning HTML for CSS (un-styled page)
-
-  // or an old cached HTML, we force an unregister ONCE per session.
-
-  // MOBILE FIX: Do NOT auto-reload on mobile as it creates infinite refresh loops
-
-  // on iOS Safari where sessionStorage persists across same-domain navigations.
-
+  // Clean up only the retired /ledger-sw.js worker if still lingering, without wiping /sw.js
+  // or forcing a hard reload on every new tab (ChunkLoadError recovery above already handles
+  // stale deployment chunks safely if one ever misses).
   if (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(regs) {
@@ -558,53 +552,16 @@ document.addEventListener('focusout',off,true);
         }
       });
     }
+  } else if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      for (var i = 0; i < regs.length; i++) {
+        var url = (regs[i].active && regs[i].active.scriptURL) || '';
+        if (url.endsWith('/ledger-sw.js')) {
+          regs[i].unregister().catch(function(){});
+        }
+      }
+    }).catch(function(){});
   }
-
-  var NUCLEAR_KEY = 'sw_nuclear_purge_v7';
-
-  var isMobileSW = /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
-
-  if (!sessionStorage.getItem(NUCLEAR_KEY)) {
-
-    sessionStorage.setItem(NUCLEAR_KEY, '1');
-
-    if ('serviceWorker' in navigator && !isMobileSW) {
-
-      navigator.serviceWorker.getRegistrations().then(function(regs) {
-
-        if (!regs || regs.length === 0) return; // no SW ??? nothing to do, skip reload
-
-        var unregs = regs.map(function(r) { return r.unregister(); });
-
-        Promise.all(unregs).then(function() {
-
-          if (window.caches) {
-
-            window.caches.keys().then(function(keys) {
-
-              Promise.all(keys.map(function(k) { return window.caches.delete(k); }))
-
-                .then(function() { window.location.reload(true); })
-
-                .catch(function() { window.location.reload(true); });
-
-            });
-
-          } else {
-
-            window.location.reload(true);
-
-          }
-
-        });
-
-      });
-
-    }
-
-  }
-
-
 
 })();` }} />
 

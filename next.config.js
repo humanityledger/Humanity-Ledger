@@ -447,6 +447,13 @@ const nextConfig = {
 
     experimental: {
         cpus: 1,
+        optimizePackageImports: [
+            'lucide-react',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-tabs',
+            'date-fns',
+        ],
         // The JS/WASM served to the browser is part of the trusted computing base (it builds proofs and
         // holds keys). Subresource Integrity pins every script chunk to its build-time sha256 hash, so a
         // chunk altered on its way (CDN, proxy, cache) is refused by the browser instead of executed.
@@ -577,24 +584,39 @@ const nextConfig = {
             // 3D model textures & globe assets
             {
                 source: '/textures/(.*)',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                    { key: 'CDN-Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
             },
             {
                 source: '/globe/(.*)',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                    { key: 'CDN-Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
             },
             // Fonts & hashed Next.js static bundles (includes @aztec/bb.js and @xmtp/wasm-bindings assets)
             {
                 source: '/fonts/(.*)',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                    { key: 'CDN-Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
             },
             {
                 source: '/_next/static/(.*)',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                    { key: 'CDN-Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
             },
             {
                 source: '/(.*)\\.wasm',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                    { key: 'CDN-Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
             },
         ];
     }

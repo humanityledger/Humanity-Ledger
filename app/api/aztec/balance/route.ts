@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaRead } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { isOwner } from '@/lib/aztec/zk-identity';
 
@@ -47,20 +47,25 @@ export async function GET(req: Request) {
   }
 
   try {
-    // AUTO-UPSERT: Ensure the User row exists with the default 2500 QD genesis balance.
-    // This is the AUTHORITATIVE balance column — the transfer route atomically writes to it.
-    // If the user is new (no row yet), we create it here so they see 2500 QD immediately.
-    const user = await prisma.user.upsert({
+    const dbRead = prismaRead ?? prisma;
+    // Read-first from replica; only upsert if the user row doesn't exist yet (eliminates primary DB writes/locks on every GET).
+    let user = await dbRead.user.findUnique({
       where: { walletAddress: normalizedAddress },
-      update: {}, // No-op update — just return the existing row unchanged
-      create: {
-        walletAddress: normalizedAddress,
-        creditsBalance: 2500, // Default genesis balance per schema @default(2500)
-        tier: 'FREE',
-        humanityScore: 0,
-      },
-      select: { creditsBalance: true }
+      select: { creditsBalance: true },
     });
+    if (!user) {
+      user = await prisma.user.upsert({
+        where: { walletAddress: normalizedAddress },
+        update: {},
+        create: {
+          walletAddress: normalizedAddress,
+          creditsBalance: 2500, // Default genesis balance per schema @default(2500)
+          tier: 'FREE',
+          humanityScore: 0,
+        },
+        select: { creditsBalance: true },
+      });
+    }
 
     const finalBalance = Math.max(0, user.creditsBalance);
     const rawBaseUnits = Math.round(finalBalance * 1e8);

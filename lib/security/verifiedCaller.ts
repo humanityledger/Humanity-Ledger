@@ -23,6 +23,18 @@ import { isSessionTokenRevoked } from '@/lib/security/sessionRevocation';
 
 const WALLET_COOKIES = ['hl_session', 'humanity_session', 'ledger_session', 'human_session'];
 const EMAIL_COOKIE = 'human.access-token';
+let cachedCallerSecretRaw: string | null = null;
+let cachedCallerSecretBytes: Uint8Array | null = null;
+
+function getCallerSecretBytes(): Uint8Array | null {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return null;
+  if (cachedCallerSecretRaw !== secret || !cachedCallerSecretBytes) {
+    cachedCallerSecretRaw = secret;
+    cachedCallerSecretBytes = new TextEncoder().encode(secret);
+  }
+  return cachedCallerSecretBytes;
+}
 
 export async function getVerifiedCaller(req: Request): Promise<string | null> {
   const session = await getSession();
@@ -44,9 +56,9 @@ export async function getVerifiedCaller(req: Request): Promise<string | null> {
   // client sent, and any cookie value would have unlocked it.
   let tokenUser: string | null = null;
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) return null;
-    const { payload } = await jwtVerify(emailToken, new TextEncoder().encode(secret), { algorithms: ['HS256'] });
+    const secretBytes = getCallerSecretBytes();
+    if (!secretBytes) return null;
+    const { payload } = await jwtVerify(emailToken, secretBytes, { algorithms: ['HS256'] });
     const uid = isSessionPayload(payload) ? (payload as Record<string, unknown>).userId : undefined;
     if (typeof uid === 'string' && uid) tokenUser = uid.toLowerCase();
   } catch { return null; }

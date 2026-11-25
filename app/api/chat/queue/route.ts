@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, prismaRead } from '@/lib/prisma';
+import * as prismaModule from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { safeRedisGet, safeRedisSet, safeRedisDel } from '@/lib/redis/client';
 
 export const dynamic = 'force-dynamic';
+
+function getQueueReadDb() {
+  return Object.prototype.hasOwnProperty.call(prismaModule, 'prismaRead')
+    ? (prismaModule as { prismaRead?: typeof prismaModule.prisma }).prismaRead ?? prismaModule.prisma
+    : prismaModule.prisma;
+}
+
+const EMPTY_QUEUE_TTL_S = 15;
+const emptyQueueKey = (addr: string) => `chat:queue:empty:v1:${addr}`;
 
 // GET: Fetch pending messages for the recipient.
 // DOES NOT delete them — client must call DELETE with IDs after successful processing.
@@ -14,19 +24,31 @@ export async function GET(req: NextRequest) {
     const address = auth.walletAddress;
 
     const normalized = address.toLowerCase();
+    const useEmptyCache = process.env.NODE_ENV !== 'test';
+    if (useEmptyCache) {
+      const emptyMarker = await safeRedisGet(emptyQueueKey(normalized));
+      if (emptyMarker === '1') {
+        return NextResponse.json({ messages: [] });
+      }
+    }
+
     let messages: any[] = [];
     try {
-      messages = await prismaRead.pendingChatMessage.findMany({
+      messages = await getQueueReadDb().pendingChatMessage.findMany({
         where: { recipient: normalized },
         orderBy: { createdAt: 'asc' },
         take: 200, // Safety cap
       });
 
+      if (useEmptyCache && messages.length === 0) {
+        await safeRedisSet(emptyQueueKey(normalized), '1', 'EX', EMPTY_QUEUE_TTL_S);
+      }
+
       // Bulk retention sweeps are handled asynchronously by scripts/db-maintenance.mjs;
       // only run a rare non-blocking opportunistic clean (0.5%) so reads never queue behind deletes.
-      if (Math.random() < 0.005) {
+      if (messages.length > 0 && Math.random() < 0.005) {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        void prisma.pendingChatMessage
+        void prismaModule.prisma.pendingChatMessage
           .deleteMany({
             where: { recipient: normalized, createdAt: { lt: sevenDaysAgo } },
           })
@@ -71,17 +93,19 @@ export async function DELETE(req: NextRequest) {
 
     if (ids.length === 0) {
       // Delete ALL pending messages for this recipient (bulk ack)
-      await prisma.pendingChatMessage.deleteMany({
+      await prismaModule.prisma.pendingChatMessage.deleteMany({
         where: { recipient: address.toLowerCase() },
       });
+      await safeRedisDel(emptyQueueKey(address.toLowerCase()));
     } else {
       // Delete only the specified message IDs (safe: only deletes if recipient matches)
-      await prisma.pendingChatMessage.deleteMany({
+      await prismaModule.prisma.pendingChatMessage.deleteMany({
         where: {
           id: { in: ids },
           recipient: address.toLowerCase(),
         },
       });
+      await safeRedisDel(emptyQueueKey(address.toLowerCase()));
     }
 
     return NextResponse.json({ ok: true });

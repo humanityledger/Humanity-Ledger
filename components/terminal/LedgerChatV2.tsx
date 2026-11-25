@@ -847,10 +847,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
     fetch(`/api/user/profile?walletAddress=${encodeURIComponent(lower)}`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
+      .then(raw => {
+        const data = raw?.data && typeof raw.data === 'object' ? raw.data : raw;
         // The same answer feeds every avatar of this person (lib/chat/peerProfiles.ts).
         if (data && typeof data === 'object' && !data.error) setPeerProfile(lower, { avatarUrl: data.avatarUrl, displayName: data.displayName || data.chatName });
-        const name = data?.displayName || data?.nickname || data?.name || data?.username;
+        const name = data?.displayName || data?.chatName || data?.nickname || data?.name || data?.username;
         if (name && !name.startsWith('0x')) {
           setProfileNames(prev => {
             const next = { ...prev, [lower]: name };
@@ -4089,12 +4090,29 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         const parsed = JSON.parse(stored);
         if (parsed.conversations) merged = parsed.conversations;
       }
+
+      // Paint cached conversations immediately on first frame while server sync runs in parallel.
+      if (merged.length > 0) {
+        const quick = merged
+          .filter(c => !blockedPeersRef.current.has((c.peerAddress || '').toLowerCase()))
+          .map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [effectiveAddress, address])))
+          .filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [effectiveAddress, address])))
+          .sort((a, b) => (b.lastAt ? new Date(b.lastAt).getTime() : 0) - (a.lastAt ? new Date(a.lastAt).getTime() : 0));
+        setConversations(quick);
+      }
       
-      // Sync from server (contacts + pending offline messages)
+      // Sync from server (contacts + pending offline messages in parallel)
       if (address) {
         const authHeader = { 'x-web3-address': address };
         try {
-          const res = await fetch(`/api/chat/contacts?address=${address}`, { headers: authHeader, cache: 'no-store' });
+          const [res, pRes] = await Promise.all([
+            fetch(`/api/chat/contacts?address=${address}`, { headers: authHeader, cache: 'no-store' }),
+            fetch(`/api/chat/queue?address=${encodeURIComponent(address)}`, {
+              headers: authHeader,
+              credentials: 'include',
+              cache: 'no-store',
+            }),
+          ]);
           if (res.ok) {
             const data = await res.json();
             if (data.peers && Array.isArray(data.peers)) {
@@ -4110,15 +4128,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             }
           }
           
-          // FETCH PENDING MESSAGES (OFFLINE ROUTING) — works for both HL and WalletConnect users
-          // [BUG FIX] Route is /api/chat/queue (not /api/chat/pending).
-          // Auth via x-web3-address header. Response shape: { messages: [...] } not { pending: [...] }.
-          // Timestamp field is createdAt (PendingChatMessage schema), not timestamp.
-          const pRes = await fetch(`/api/chat/queue?address=${encodeURIComponent(address)}`, { 
-            headers: authHeader, 
-            credentials: 'include',
-            cache: 'no-store' 
-          });
+          // Process any offline queued messages in parallel response
           if (pRes.ok) {
              const pData = await pRes.json();
              if (pData.messages && Array.isArray(pData.messages) && pData.messages.length > 0) {
@@ -4311,10 +4321,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
         //  Step 1: Use standard wagmi signer (defined above, outside try)
 
-        //  Step 2: Initialize client (Direct Execution) 
+        //  Step 2: Initialize XMTP client + load cached/server conversations in parallel
         // Messages not yet confirmed by the network are published again when the connection
         // returns or the page comes back (Safari restores tabs without reloading them).
         installPublishFlushListeners();
+        const convPromise = attempts === 0 ? loadConversations() : Promise.resolve();
         const realClient = await getXMTPClient(wagmiSigner, {
           onDbKeyRequest: () =>
             toast.message(tr("Unlock your messages on this device"), {
@@ -4342,7 +4353,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 }).catch(() => {});
             }
         }
-        await loadConversations();
+        await convPromise;
         
         // Sync Offline Queue and inject into local stream
         try {

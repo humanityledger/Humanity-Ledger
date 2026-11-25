@@ -83,7 +83,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         .register('/sw.js', { scope: '/' })
         .then((reg) => {
           console.info('[SW] Registered:', reg.scope);
-          // Check for waiting updates
           if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
           reg.addEventListener('updatefound', () => {
             const newSW = reg.installing;
@@ -91,12 +90,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             newSW.addEventListener('statechange', () => {
               if (newSW.state === 'installed') newSW.postMessage({ type: 'SKIP_WAITING' });
             });
-          });
-          let reloaded = false;
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (reloaded) return;
-            reloaded = true;
-            window.location.reload();
           });
         })
         .catch((err) => console.warn('[SW] Registration failed:', err));

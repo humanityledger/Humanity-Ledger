@@ -93,6 +93,9 @@ export async function POST(req: NextRequest) {
         skipDuplicates: true,
       });
       await safeRedisSet(`contacts:peers:${owner.toLowerCase()}:500`, '', 'EX', 1);
+      await safeRedisSet(`updates:contacts:v1:${owner.toLowerCase()}`, '', 'EX', 1);
+      await safeRedisSet(`updates:feed:v1:${owner.toLowerCase()}`, '', 'EX', 1);
+      await Promise.all(clean.slice(0, 50).map((peer) => safeRedisSet(`stories:authors:v1:${peer}`, '', 'EX', 1)));
     } catch (dbError: any) {
       console.warn('[Chat Contacts] Database offline, contact saved to client storage.');
     }

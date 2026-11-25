@@ -6,27 +6,47 @@
  *        body: { ids: string[] }  or  { all: true }
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import * as prismaModule from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { safeRedisGet, safeRedisSet, safeRedisDel } from '@/lib/redis/client';
 
 export const dynamic = 'force-dynamic';
 
+const INBOX_CACHE_TTL_S = 15;
 const resolveUserId = (req: NextRequest) => getVerifiedCaller(req);
+
+function getInboxReadDb() {
+  return Object.prototype.hasOwnProperty.call(prismaModule, 'prismaRead')
+    ? (prismaModule as { prismaRead?: typeof prismaModule.prisma }).prismaRead ?? prismaModule.prisma
+    : prismaModule.prisma;
+}
 
 export async function GET(req: NextRequest) {
   try {
     const address = await resolveUserId(req);
     if (!address) return NextResponse.json({ notifications: [], unreadCount: 0 });
 
+    const cacheKey = `notif:inbox:v1:${address}`;
+    const cached = await safeRedisGet(cacheKey);
+    if (cached && cached !== 'TIMEOUT') {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.notifications)) {
+          return NextResponse.json(parsed);
+        }
+      } catch {}
+    }
+
+    const dbRead = getInboxReadDb();
     // Find the User row to get its UUID (Notification table uses User.id not address)
-    const user = await prisma.user.findFirst({
+    const user = await dbRead.user.findFirst({
       where: { walletAddress: address },
       select: { id: true },
     }).catch(() => null);
 
     if (!user) return NextResponse.json({ notifications: [], unreadCount: 0 });
 
-    const notifications = await prisma.notification.findMany({
+    const notifications = await dbRead.notification.findMany({
       where: {
         OR: [
           { userId: user.id },
@@ -38,8 +58,10 @@ export async function GET(req: NextRequest) {
     });
 
     const unreadCount = notifications.filter(n => !n.read).length;
+    const payload = { notifications, unreadCount };
+    await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', INBOX_CACHE_TTL_S);
 
-    return NextResponse.json({ notifications, unreadCount });
+    return NextResponse.json(payload);
   } catch (err) {
     console.error('[Notifications] GET error:', err);
     return NextResponse.json({ notifications: [], unreadCount: 0 });
@@ -51,7 +73,7 @@ export async function POST(req: NextRequest) {
     const address = await resolveUserId(req);
     if (!address) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const user = await prisma.user.findFirst({
+    const user = await prismaModule.prisma.user.findFirst({
       where: { walletAddress: address },
       select: { id: true },
     }).catch(() => null);
@@ -60,19 +82,20 @@ export async function POST(req: NextRequest) {
     const { ids, all } = await req.json();
 
     if (all === true) {
-      await prisma.notification.updateMany({
+      await prismaModule.prisma.notification.updateMany({
         where: { userId: user.id, read: false },
         data: { read: true },
       });
     } else if (Array.isArray(ids) && ids.length > 0) {
       const clean = ids.filter((x: unknown): x is string => typeof x === 'string' && x.length <= 64).slice(0, 200);
       if (!clean.length) return NextResponse.json({ ok: true });
-      await prisma.notification.updateMany({
+      await prismaModule.prisma.notification.updateMany({
         where: { userId: user.id, id: { in: clean } },
         data: { read: true },
       });
     }
 
+    await safeRedisDel(`notif:inbox:v1:${address}`);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[Notifications] POST error:', err);

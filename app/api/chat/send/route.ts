@@ -11,6 +11,7 @@ import { checkMessageEnvelope } from '@/lib/security/messageEnvelope';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { chatStreamHub } from '@/lib/sse/chatStreamHub';
+import { safeRedisDel } from '@/lib/redis/client';
 
 //  Lazy Upstash client  only created when env vars are present 
 // Previously: `new Redis({url: process.env.UPSTASH_REDIS_REST_URL!, token: ...})`
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
       await prisma.pendingChatMessage.create({
         data: { sender: message.sender, recipient: channelId, content: message.content }
       });
+      await safeRedisDel(`chat:queue:empty:v1:${channelId.toLowerCase()}`);
     } catch (dbErr) {
       console.warn('[Ledger Chat] Prisma DB write failed:', dbErr);
     }

@@ -112,4 +112,10 @@ describe('checkCsrf — fails closed on state-changing API calls', () => {
   it('allows the Capacitor WebView origin', () => {
     expect(checkCsrf(mutation({ origin: 'capacitor://localhost' }))).toBeNull();
   });
+
+  it('allows the exact www sibling of NEXT_PUBLIC_APP_URL while still rejecting other subdomains or wrong scheme', () => {
+    expect(checkCsrf(mutation({ origin: 'https://www.ledger.example' }, 'https://www.ledger.example/api/chat/presence'))).toBeNull();
+    expect(checkCsrf(mutation({ origin: 'https://evil.ledger.example' }))?.status).toBe(403);
+    expect(checkCsrf(mutation({ origin: 'http://www.ledger.example' }))?.status).toBe(403);
+  });
 });

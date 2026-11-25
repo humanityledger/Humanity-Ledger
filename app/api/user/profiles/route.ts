@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, prismaRead } from '@/lib/prisma';
-import { safeRedisGet, safeRedisSet } from '@/lib/redis';
+import * as redisModule from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +8,23 @@ const ADDRESS = /^0x[0-9a-f]{40}$/;
 const MAX = 100;
 const PROFILE_CACHE_TTL_S = 120;
 
+async function batchGetProfiles(keys: string[]) {
+  if (Object.prototype.hasOwnProperty.call(redisModule, 'safeRedisMGet') && typeof redisModule.safeRedisMGet === 'function') {
+    return redisModule.safeRedisMGet(keys);
+  }
+  return Promise.all(keys.map((k) => redisModule.safeRedisGet(k)));
+}
+
+async function batchSetProfiles(entries: Array<{ key: string; value: string; ttlSec: number }>) {
+  if (Object.prototype.hasOwnProperty.call(redisModule, 'safeRedisSetMany') && typeof redisModule.safeRedisSetMany === 'function') {
+    return redisModule.safeRedisSetMany(entries);
+  }
+  await Promise.all(entries.map((e) => redisModule.safeRedisSet(e.key, e.value, 'EX', e.ttlSec)));
+}
+
 /**
  * POST /api/user/profiles  { addresses: string[] }  ->  { profiles: { [address]: { displayName, avatarUrl } } }
- * Uses exact lowercase IN(...) against the unique B-tree index and caches entries in Redis.
+ * Uses single-round-trip Redis MGET + pipeline SET and exact lowercase IN(...) against the unique B-tree index.
  */
 export async function POST(req: NextRequest) {
   const sessionAddress = req.headers.get('x-verified-session-address');
@@ -30,9 +44,11 @@ export async function POST(req: NextRequest) {
   try {
     const profiles: Record<string, { displayName: string | null; avatarUrl: string | null }> = {};
     const missing: string[] = [];
+    const cacheKeys = addresses.map((addr) => `profile:pub:${addr}`);
+    const cachedValues = await batchGetProfiles(cacheKeys);
 
-    await Promise.all(addresses.map(async (addr) => {
-      const cached = await safeRedisGet(`profile:pub:${addr}`);
+    addresses.forEach((addr, idx) => {
+      const cached = cachedValues[idx];
       if (cached && cached !== 'TIMEOUT') {
         try {
           const parsed = JSON.parse(cached);
@@ -46,7 +62,7 @@ export async function POST(req: NextRequest) {
         } catch {}
       }
       missing.push(addr);
-    }));
+    });
 
     if (missing.length > 0) {
       const dbRead = prismaRead ?? prisma;
@@ -55,13 +71,18 @@ export async function POST(req: NextRequest) {
         select: { walletAddress: true, displayName: true, chatName: true, avatarUrl: true },
         take: MAX,
       });
-      await Promise.all(users.map(async (u: any) => {
+      const toCache: Array<{ key: string; value: string; ttlSec: number }> = [];
+      for (const u of users as any[]) {
         const a = (u.walletAddress || '').toLowerCase();
-        if (!a) return;
-        const entry = { displayName: u.displayName || u.chatName || null, avatarUrl: u.avatarUrl || null };
-        profiles[a] = entry;
-        await safeRedisSet(`profile:pub:${a}`, JSON.stringify({ walletAddress: a, displayName: u.displayName, chatName: u.chatName, avatarUrl: u.avatarUrl }), 'EX', PROFILE_CACHE_TTL_S);
-      }));
+        if (!a) continue;
+        profiles[a] = { displayName: u.displayName || u.chatName || null, avatarUrl: u.avatarUrl || null };
+        toCache.push({
+          key: `profile:pub:${a}`,
+          value: JSON.stringify({ walletAddress: a, displayName: u.displayName, chatName: u.chatName, avatarUrl: u.avatarUrl }),
+          ttlSec: PROFILE_CACHE_TTL_S,
+        });
+      }
+      await batchSetProfiles(toCache);
     }
 
     return NextResponse.json({ profiles }, { headers: { 'Cache-Control': 'private, max-age=60' } });

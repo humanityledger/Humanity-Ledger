@@ -10,27 +10,37 @@ import { check, sleep } from 'k6';
 
 const BASE = (__ENV.BASE_URL || 'https://ledgerchat.org').replace(/\/+$/, '');
 
-export const options = {
-  scenarios: {
-    health_and_ping_steady: {
-      executor: 'ramping-arrival-rate',
-      startRate: 50,
-      timeUnit: '1s',
-      preAllocatedVUs: 100,
-      maxVUs: 1500,
-      stages: [
-        { target: 200, duration: '30s' },
-        { target: 600, duration: '1m' },
-        { target: 200, duration: '30s' },
-      ],
-    },
-  },
-  thresholds: {
-    http_req_failed: ['rate<0.01'],
-    'http_req_duration{endpoint:health}': ['p(95)<150', 'p(99)<350'],
-    'http_req_duration{endpoint:ping}': ['p(95)<80', 'p(99)<200'],
-  },
-};
+export const options = __ENV.SMOKE === '1'
+  ? {
+      vus: 1,
+      iterations: 10,
+      thresholds: {
+        http_req_failed: ['rate<0.01'],
+        'http_req_duration{endpoint:health}': ['p(95)<250', 'p(99)<400'],
+        'http_req_duration{endpoint:ping}': ['p(95)<150', 'p(99)<250'],
+      },
+    }
+  : {
+      scenarios: {
+        health_and_ping_steady: {
+          executor: 'ramping-arrival-rate',
+          startRate: 50,
+          timeUnit: '1s',
+          preAllocatedVUs: 100,
+          maxVUs: 1500,
+          stages: [
+            { target: 200, duration: '30s' },
+            { target: 600, duration: '1m' },
+            { target: 200, duration: '30s' },
+          ],
+        },
+      },
+      thresholds: {
+        http_req_failed: ['rate<0.01'],
+        'http_req_duration{endpoint:health}': ['p(95)<150', 'p(99)<350'],
+        'http_req_duration{endpoint:ping}': ['p(95)<80', 'p(99)<200'],
+      },
+    };
 
 export default function () {
   const h = http.get(`${BASE}/api/health`, { tags: { endpoint: 'health' } });

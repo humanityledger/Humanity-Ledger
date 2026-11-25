@@ -10,6 +10,7 @@
  */
 
 import { getPrisma } from '@/lib/prisma';
+import { safeRedisDel } from '@/lib/redis/client';
 
 const seen = new Map<string, number>();
 const NONCE_TTL_MS = 10 * 60 * 1000;
@@ -38,6 +39,7 @@ export async function enqueueOnionDelivery(input: { destination?: unknown; paylo
     await getPrisma().pendingChatMessage.create({
       data: { sender: 'onion-relay', recipient: destination, content },
     });
+    await safeRedisDel(`chat:queue:empty:v1:${destination}`);
     return { ok: true };
   } catch (err: any) {
     console.error('[OnionQueue] DB write failed:', err?.message);

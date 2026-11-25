@@ -7,29 +7,44 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const BASE = (__ENV.BASE_URL || 'https://ledgerchat.org').replace(/\/+$/, '');
-const COOKIE = __ENV.SESSION_COOKIE || '';
+const RAW_COOKIE = (__ENV.SESSION_COOKIE || '').trim();
+const COOKIE = RAW_COOKIE ? (RAW_COOKIE.includes('=') ? RAW_COOKIE : `hl_session=${RAW_COOKIE}`) : '';
 
-export const options = {
-  scenarios: {
-    aztec_and_presign: {
-      executor: 'constant-arrival-rate',
-      rate: 100,
-      timeUnit: '1s',
-      duration: '1m',
-      preAllocatedVUs: 50,
-      maxVUs: 400,
-    },
-  },
-  thresholds: {
-    'http_req_duration{endpoint:aztec-node}': ['p(95)<300'],
-    'http_req_duration{endpoint:presign}': ['p(95)<200'],
-  },
-};
+if (!COOKIE) {
+  http.setResponseCallback(http.expectedStatuses({ min: 200, max: 399 }, 401, 503));
+}
+
+export const options = __ENV.SMOKE === '1'
+  ? {
+      vus: 2,
+      duration: '15s',
+      thresholds: {
+        'http_req_duration{endpoint:aztec-node}': ['p(95)<300'],
+        'http_req_duration{endpoint:presign}': ['p(95)<200'],
+      },
+    }
+  : {
+      scenarios: {
+        aztec_and_presign: {
+          executor: 'constant-arrival-rate',
+          rate: 100,
+          timeUnit: '1s',
+          duration: '1m',
+          preAllocatedVUs: 50,
+          maxVUs: 400,
+        },
+      },
+      thresholds: {
+        'http_req_duration{endpoint:aztec-node}': ['p(95)<300'],
+        'http_req_duration{endpoint:presign}': ['p(95)<200'],
+      },
+    };
 
 export default function () {
   const headers = {
     ...(COOKIE ? { Cookie: COOKIE } : {}),
     Origin: BASE,
+    'Sec-Fetch-Site': 'same-origin',
     'Content-Type': 'application/json',
   };
 

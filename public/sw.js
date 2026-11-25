@@ -23,18 +23,28 @@ if (typeof self !== 'undefined' && (self.location.hostname === 'localhost' || se
 // cached shell only when offline); hashed build assets are cache-first; the
 // API and anything that is not a same-origin GET is never touched.
 
-const VERSION = 'hl-2026-11-19-seal';
+const VERSION = 'hl-2026-11-26-fast';
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
-const SHELL = ['/', '/chat', '/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png', '/apple-icon.png'];
+const SHELL = ['/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png', '/apple-icon.png', '/boot-mark.webp'];
 const ICON = '/icon-192.png';
 const BADGE = '/favicon-32x32.png';
 
+function isImmutableStaticAsset(pathname) {
+  return (
+    pathname.startsWith('/_next/static/') ||
+    pathname.startsWith('/fonts/') ||
+    pathname.startsWith('/globe/') ||
+    pathname.startsWith('/textures/') ||
+    pathname.endsWith('.wasm')
+  );
+}
+
 self.addEventListener('install', (event) => {
-  // One missing file must never fail the install, so add them one by one.
+  // Pre-cache lightweight static shell icons only (never hit SSR HTML on install across 3M users).
   event.waitUntil(
     caches.open(SHELL_CACHE).then((cache) =>
-      Promise.all(SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch(() => {}))),
+      Promise.all(SHELL.map((url) => cache.add(new Request(url)).catch(() => {}))),
     ),
   );
   self.skipWaiting();
@@ -49,7 +59,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  } else if (event.data && event.data.type === 'CLEAR_ALL_CACHES') {
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => {
+        if (event.ports && event.ports[0]) event.ports[0].postMessage({ cleared: true });
+      })
+      .catch(() => {
+        if (event.ports && event.ports[0]) event.ports[0].postMessage({ cleared: false });
+      });
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -60,8 +81,8 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) return;
   if (url.pathname.startsWith('/_next/webpack-hmr') || url.pathname.includes('hot-update')) return;
 
-  // Hashed, immutable build output: cache-first.
-  if (url.pathname.startsWith('/_next/static/')) {
+  // Hashed build chunks, fonts, globe data, and WASM prover bundles: cache-first.
+  if (isImmutableStaticAsset(url.pathname)) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
         const hit = await cache.match(req);
@@ -74,13 +95,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Pages: always ask the network first; fall back to the cached shell offline.
+  // Pages: always ask the network first (fresh CSP nonce HTML after deploy); offline fallback only.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req, { cache: 'no-store' }).catch(async () => (await caches.match(req)) || (await caches.match('/')) || Response.error()),
+      fetch(req, { cache: 'no-store' })
+        .then((res) => {
+          if (res.ok && res.headers.get('content-type')?.includes('text/html')) {
+            const copy = res.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy).catch(() => {}));
+          }
+          return res;
+        })
+        .catch(async () => (await caches.match(req)) || (await caches.match('/')) || Response.error()),
     );
   }
-  // Everything else goes straight to the network (browser cache rules apply).
 });
 
 // ── Push notifications ──────────────────────────────────────────────────────

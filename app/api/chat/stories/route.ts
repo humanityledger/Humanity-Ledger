@@ -3,6 +3,7 @@ import { prisma, prismaRead } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 import crypto from 'crypto';
 import { audienceAllows, normalizeAudience, parseStatusMedia, statusKindOf } from '@/lib/chat/status-media';
+import { safeRedisGet, safeRedisSet, safeRedisMGet, safeRedisSetMany, safeRedisDel } from '@/lib/redis/client';
 
 /**
  * Status updates ("Updates" tab in Ledger Chat).
@@ -20,6 +21,9 @@ export const dynamic = 'force-dynamic';
 const MAX_TEXT = 700;
 const TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_ACTIVE = 30;
+const REVERSE_AUTHORS_TTL_S = 30;
+const AUTHOR_STORIES_TTL_S = 45;
+const AUTHOR_STORIES_BATCH = 200;
 
 interface MemoryStory {
   id: string;
@@ -33,34 +37,117 @@ interface MemoryStory {
 
 // In-memory stories registry for zero-config standalone production
 const inMemoryStories: MemoryStory[] = [];
+const inFlightAuthorsLookup = new Map<string, Promise<string[]>>();
+
+function authorStoriesKey(author: string) {
+  return `stories:by_author:v1:${author}`;
+}
+
+function reverseAuthorsKey(me: string) {
+  return `stories:authors:v1:${me}`;
+}
+
+async function getReverseContactOwners(me: string): Promise<string[]> {
+  const key = reverseAuthorsKey(me);
+  const cached = await safeRedisGet(key);
+  if (cached && cached !== 'TIMEOUT') {
+    try {
+      const arr = JSON.parse(cached);
+      if (Array.isArray(arr)) return arr;
+    } catch {}
+  }
+
+  let pending = inFlightAuthorsLookup.get(me);
+  if (!pending) {
+    pending = (async () => {
+      try {
+        const dbRead = prismaRead ?? prisma;
+        const audienceOf = await dbRead.chatContact.findMany({
+          where: { peer: me },
+          select: { owner: true },
+          take: 5000,
+        }).catch(() => []);
+        const list = audienceOf.map((c: { owner: string }) => c.owner.toLowerCase());
+        await safeRedisSet(key, JSON.stringify(list), 'EX', REVERSE_AUTHORS_TTL_S);
+        return list;
+      } finally {
+        inFlightAuthorsLookup.delete(me);
+      }
+    })();
+    inFlightAuthorsLookup.set(me, pending);
+  }
+  return pending;
+}
 
 export async function GET(req: NextRequest) {
   const caller = await resolveVerifiedCaller(req);
   if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const now = new Date();
+  const nowMs = now.getTime();
   const me = caller.toLowerCase();
   let dbStories: any[] = [];
   // Authors the caller may see: the caller and everyone who saved the caller as a contact.
-  // Without the database only the caller's own statuses are visible (the in-memory store used to
-  // return every author's statuses to any signed-in wallet).
   let authors = new Set<string>([me]);
 
   try {
     const dbRead = prismaRead ?? prisma;
-    const audienceOf = await dbRead.chatContact.findMany({
-      where: { peer: me },
-      select: { owner: true },
-      take: 5000,
-    }).catch(() => []);
+    const owners = await getReverseContactOwners(me);
+    authors = new Set([me, ...owners]);
+    const authorList = Array.from(authors);
 
-    authors = new Set([me, ...audienceOf.map((c: { owner: string }) => c.owner.toLowerCase())]);
+    if (authorList.length <= 500) {
+      const missingAuthors: string[] = [];
+      for (let i = 0; i < authorList.length; i += AUTHOR_STORIES_BATCH) {
+        const chunk = authorList.slice(i, i + AUTHOR_STORIES_BATCH);
+        const vals = await safeRedisMGet(chunk.map(authorStoriesKey));
+        chunk.forEach((author, idx) => {
+          const raw = vals[idx];
+          if (raw && raw !== 'TIMEOUT') {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                for (const item of parsed) {
+                  if (new Date(item.expiresAt).getTime() > nowMs) dbStories.push(item);
+                }
+                return;
+              }
+            } catch {}
+          }
+          missingAuthors.push(author);
+        });
+      }
 
-    dbStories = await dbRead.story.findMany({
-      where: { expiresAt: { gt: now }, authorAddress: { in: Array.from(authors) } },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    }).catch(() => []);
+      if (missingAuthors.length > 0) {
+        const fresh = await dbRead.story.findMany({
+          where: { expiresAt: { gt: now }, authorAddress: { in: missingAuthors } },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        }).catch(() => null);
+
+        if (Array.isArray(fresh)) {
+          const byAuthor = new Map<string, any[]>();
+          for (const a of missingAuthors) byAuthor.set(a, []);
+          for (const s of fresh) {
+            const a = String(s.authorAddress).toLowerCase();
+            byAuthor.get(a)?.push(s);
+            dbStories.push(s);
+          }
+          const writes = Array.from(byAuthor.entries()).map(([a, rows]) => ({
+            key: authorStoriesKey(a),
+            value: JSON.stringify(rows),
+            ttlSec: AUTHOR_STORIES_TTL_S,
+          }));
+          await safeRedisSetMany(writes);
+        }
+      }
+    } else {
+      dbStories = await dbRead.story.findMany({
+        where: { expiresAt: { gt: now }, authorAddress: { in: authorList } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }).catch(() => []);
+    }
   } catch {}
 
   // Active in-memory stories (within 24h), from the same authors only.
@@ -133,6 +220,9 @@ export async function POST(req: NextRequest) {
   inMemoryStories.unshift(newStory);
   if (inMemoryStories.length > 1000) inMemoryStories.pop();
 
+  // Invalidate per-author story cache immediately
+  await safeRedisDel(authorStoriesKey(me));
+
   // Also attempt database save if configured
   try {
     const dbStory = await prisma.story.create({
@@ -161,18 +251,21 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
+  const me = caller.toLowerCase();
   // Remove from memory store
-  const idx = inMemoryStories.findIndex(s => s.id === id && s.authorAddress === caller.toLowerCase());
+  const idx = inMemoryStories.findIndex(s => s.id === id && s.authorAddress === me);
   if (idx !== -1) inMemoryStories.splice(idx, 1);
 
   try {
     // A photo or video kept in Postgres goes with its status.
-    const story = await prisma.story.findFirst({ where: { id, authorAddress: caller.toLowerCase() }, select: { contentUrl: true } }).catch(() => null);
+    const story = await prisma.story.findFirst({ where: { id, authorAddress: me }, select: { contentUrl: true } }).catch(() => null);
     const mediaId = story ? /\/api\/chat\/stories\/media\/([0-9a-f]{32})(?:#|$)/.exec(story.contentUrl)?.[1] : undefined;
-    if (mediaId) await prisma.statusMedia.deleteMany({ where: { id: mediaId, authorAddress: caller.toLowerCase() } }).catch(() => {});
-    const { count } = await prisma.story.deleteMany({ where: { id, authorAddress: caller.toLowerCase() } });
+    if (mediaId) await prisma.statusMedia.deleteMany({ where: { id: mediaId, authorAddress: me } }).catch(() => {});
+    const { count } = await prisma.story.deleteMany({ where: { id, authorAddress: me } });
+    await safeRedisDel(authorStoriesKey(me));
     return NextResponse.json({ deleted: count || (idx !== -1 ? 1 : 0) });
   } catch {
+    await safeRedisDel(authorStoriesKey(me));
     return NextResponse.json({ deleted: idx !== -1 ? 1 : 0 }, { status: 200 });
   }
 }

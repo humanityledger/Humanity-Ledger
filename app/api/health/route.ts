@@ -87,38 +87,64 @@ async function checkMigrations(): Promise<MigrationCheck> {
   }
 }
 
-export async function GET() {
+const HEALTH_CACHE_TTL_MS = 2_000;
+let cachedHealth: { expiresAt: number; payload: any } | null = null;
+let inFlightHealth: Promise<any> | null = null;
+
+async function computeHealthPayload() {
   const [database, redis, migrations] = await Promise.all([checkDatabase(), checkRedis(), checkMigrations()]);
   const redisRequired = isRedisRequiredInCluster();
   const { ok, degraded } = healthVerdict(database, redis, migrations, { requireRedis: redisRequired });
   const r2Configured = isR2Enabled();
 
-  return NextResponse.json(
-    {
-      ok,
-      degraded,
-      status: ok ? 'operational' : 'degraded',
-      timestamp: new Date().toISOString(),
-      environment: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'unknown',
-      replicaId: process.env.RAILWAY_REPLICA_ID || 'local',
-      uptimeSeconds: Math.round(process.uptime()),
-      cluster: {
-        redisRequired,
-        multiReplicaWarning: redisRequired && !redis.ok,
-      },
-      // The commit this replica runs (Railway sets it on Git deploys): which code answers.
-      version: { commit: (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 12) || null },
-      services: {
-        web: { ok: true, status: 'OK' },
-        database,
-        redis,
-        migrations,
-        storage: { ok: true, status: 'OK', mode: r2Configured ? 'r2' : 'local' },
-      },
+  return {
+    ok,
+    degraded,
+    status: ok ? 'operational' : 'degraded',
+    timestamp: new Date().toISOString(),
+    environment: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'unknown',
+    replicaId: process.env.RAILWAY_REPLICA_ID || 'local',
+    uptimeSeconds: Math.round(process.uptime()),
+    cluster: {
+      redisRequired,
+      multiReplicaWarning: redisRequired && !redis.ok,
     },
+    // The commit this replica runs (Railway sets it on Git deploys): which code answers.
+    version: { commit: (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 12) || null },
+    services: {
+      web: { ok: true, status: 'OK' },
+      database,
+      redis,
+      migrations,
+      storage: { ok: true, status: 'OK', mode: r2Configured ? 'r2' : 'local' },
+    },
+  };
+}
+
+export async function GET() {
+  const bypassCache = process.env.NODE_ENV === 'test';
+  const now = Date.now();
+  let body: any;
+
+  if (!bypassCache && cachedHealth && now < cachedHealth.expiresAt) {
+    body = { ...cachedHealth.payload, timestamp: new Date(now).toISOString(), uptimeSeconds: Math.round(process.uptime()) };
+  } else {
+    if (!inFlightHealth || bypassCache) {
+      inFlightHealth = computeHealthPayload().then((res) => {
+        if (!bypassCache) cachedHealth = { expiresAt: Date.now() + HEALTH_CACHE_TTL_MS, payload: res };
+        return res;
+      }).finally(() => {
+        inFlightHealth = null;
+      });
+    }
+    body = await inFlightHealth;
+  }
+
+  return NextResponse.json(
+    body,
     {
       status: 200,
-      headers: { 'Cache-Control': 'no-store', 'X-System-Status': ok ? 'operational' : 'degraded' },
+      headers: { 'Cache-Control': 'no-store', 'X-System-Status': body.ok ? 'operational' : 'degraded' },
     },
   );
 }

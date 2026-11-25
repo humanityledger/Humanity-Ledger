@@ -18,6 +18,7 @@ function createMockRedis(name?: string) {
     return {
         on: () => {},
         get: async (k: string) => memoryStore.get(k) ?? null,
+        mget: async (...keys: string[]) => keys.map((k) => memoryStore.get(k) ?? null),
         // Honours NX and EX like Redis, so single-use markers (SET key 1 EX ttl NX)
         // behave the same with or without a real server.
         set: async (k: string, v: any, ...args: any[]) => {
@@ -252,6 +253,60 @@ export async function safeRedisSet(key: string, value: string, ...args: any[]): 
     } catch {
         // Silently ignore  cache is an optimization, not a requirement
     }
+}
+
+export async function safeRedisMGet(keys: string[]): Promise<Array<string | null | 'TIMEOUT'>> {
+    if (keys.length === 0) return [];
+    try {
+        if ((redisClient as any).__isMock || (redisClient as any).__isBuildMock) {
+            if (typeof (redisClient as any).mget === 'function') {
+                return await (redisClient as any).mget(...keys);
+            }
+            return await Promise.all(keys.map((k) => (redisClient as any).get(k)));
+        }
+        return await Promise.race([
+            redisClient.mget(...keys),
+            new Promise<Array<'TIMEOUT'>>((resolve) => setTimeout(() => resolve(keys.map(() => 'TIMEOUT')), 1500))
+        ]);
+    } catch {
+        return keys.map(() => 'TIMEOUT');
+    }
+}
+
+export async function safeRedisSetMany(entries: Array<{ key: string; value: string; ttlSec?: number }>): Promise<void> {
+    if (entries.length === 0) return;
+    try {
+        if ((redisClient as any).__isMock || (redisClient as any).__isBuildMock || typeof redisClient.pipeline !== 'function') {
+            await Promise.all(entries.map((e) => safeRedisSet(e.key, e.value, ...(e.ttlSec ? ['EX', e.ttlSec] : []))));
+            return;
+        }
+        const pipe = redisClient.pipeline();
+        for (const e of entries) {
+            if (e.ttlSec && e.ttlSec > 0) pipe.set(e.key, e.value, 'EX', e.ttlSec);
+            else pipe.set(e.key, e.value);
+        }
+        await Promise.race([
+            pipe.exec(),
+            new Promise<void>((resolve) => setTimeout(resolve, 2500))
+        ]);
+    } catch {
+        // Cache writes are best-effort optimizations
+    }
+}
+
+export async function safeRedisDel(...keys: string[]): Promise<void> {
+    const clean = keys.filter(Boolean);
+    if (clean.length === 0) return;
+    try {
+        if ((redisClient as any).__isMock || (redisClient as any).__isBuildMock) {
+            await Promise.all(clean.map((k) => (redisClient as any).del?.(k)));
+            return;
+        }
+        await Promise.race([
+            redisClient.del(...clean),
+            new Promise<void>((resolve) => setTimeout(resolve, 1500))
+        ]);
+    } catch {}
 }
 
 export async function safeRedisSAdd(key: string, member: string): Promise<void> {

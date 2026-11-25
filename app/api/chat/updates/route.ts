@@ -1,40 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, prismaRead } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { safeRedisGet, safeRedisSet, safeRedisDel } from '@/lib/redis/client';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
 const ALLOWED_PRIVACY = new Set(['everyone', 'contacts', 'nobody']);
+const UPDATES_FEED_TTL_S = 15;
+const UPDATES_CONTACTS_TTL_S = 30;
+const inFlightUpdatesFeed = new Map<string, Promise<any[]>>();
 
 export async function GET(req: NextRequest) {
   try {
     const caller = await resolveCaller(req);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const me = caller.toLowerCase();
-    const dbRead = prismaRead ?? prisma;
+    const feedKey = `updates:feed:v1:${me}`;
 
-    const contacts = await dbRead.chatContact.findMany({
-      where: { owner: me },
-      select: { peer: true },
-      take: 1000,
-    });
-    const contactAddresses = contacts.map((c: { peer: string }) => c.peer.toLowerCase());
+    const cachedFeed = await safeRedisGet(feedKey);
+    if (cachedFeed && cachedFeed !== 'TIMEOUT') {
+      try {
+        const updates = JSON.parse(cachedFeed);
+        if (Array.isArray(updates)) return NextResponse.json({ updates });
+      } catch {}
+    }
 
-    const now = new Date();
-    const updates = await dbRead.statusUpdate.findMany({
-      where: {
-        expiresAt: { gt: now },
-        OR: [
-          { ownerAddress: me },
-          ...(contactAddresses.length ? [{ ownerAddress: { in: contactAddresses }, privacy: { in: ['everyone', 'contacts'] } }] : []),
-          { privacy: 'everyone' },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    let pending = inFlightUpdatesFeed.get(me);
+    if (!pending) {
+      pending = (async () => {
+        try {
+          const dbRead = prismaRead ?? prisma;
+          const contactsKey = `updates:contacts:v1:${me}`;
+          let contactAddresses: string[] | null = null;
+          const cachedContacts = await safeRedisGet(contactsKey);
+          if (cachedContacts && cachedContacts !== 'TIMEOUT') {
+            try {
+              const parsed = JSON.parse(cachedContacts);
+              if (Array.isArray(parsed)) contactAddresses = parsed;
+            } catch {}
+          }
+          if (!contactAddresses) {
+            const contacts = await dbRead.chatContact.findMany({
+              where: { owner: me },
+              select: { peer: true },
+              take: 1000,
+            });
+            contactAddresses = contacts.map((c: { peer: string }) => c.peer.toLowerCase());
+            await safeRedisSet(contactsKey, JSON.stringify(contactAddresses), 'EX', UPDATES_CONTACTS_TTL_S);
+          }
 
+          const now = new Date();
+          const updates = await dbRead.statusUpdate.findMany({
+            where: {
+              expiresAt: { gt: now },
+              OR: [
+                { ownerAddress: me },
+                ...(contactAddresses.length ? [{ ownerAddress: { in: contactAddresses }, privacy: { in: ['everyone', 'contacts'] } }] : []),
+                { privacy: 'everyone' },
+              ],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+          });
+          await safeRedisSet(feedKey, JSON.stringify(updates), 'EX', UPDATES_FEED_TTL_S);
+          return updates;
+        } finally {
+          inFlightUpdatesFeed.delete(me);
+        }
+      })();
+      inFlightUpdatesFeed.set(me, pending);
+    }
+
+    const updates = await pending;
     return NextResponse.json({ updates });
   } catch (error: any) {
     console.error('[Updates API]', error);
@@ -76,6 +114,7 @@ export async function POST(req: NextRequest) {
         createdAt: now,
       },
     });
+    await safeRedisDel(`updates:feed:v1:${me}`);
 
     return NextResponse.json({
       update: {

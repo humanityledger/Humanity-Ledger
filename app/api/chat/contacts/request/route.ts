@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { safeRedisDel } from '@/lib/redis/client';
 
 /** An EVM address or an Aztec address (both are used as contact ids). */
 const ADDRESS_RE = /^0x(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
           read: false,
         },
       });
+      await safeRedisDel(`notif:inbox:v1:${to}`);
     }
 
     return NextResponse.json({ ok: true, status: 'SENT' });

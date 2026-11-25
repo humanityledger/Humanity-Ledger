@@ -10,11 +10,18 @@ const alg = 'EdDSA';
 // Any top-level throw here will crash the Docker build on Railway.
 // The validation is deferred to inside the exported functions so it only fires
 // during actual HTTP request handling — never at import / build time.
-function getHS256Secret(): string {
+let cachedHsSecretRaw: string | null = null;
+let cachedHsSecretBytes: Uint8Array | null = null;
+
+function getHS256SecretBytes(): Uint8Array {
   const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
   // Fail closed: a default written in this public repository would let anyone forge sessions.
   if (!secret || secret.length < 32) throw new Error('JWT_SECRET (or NEXTAUTH_SECRET) must be set to at least 32 characters.');
-  return secret;
+  if (cachedHsSecretRaw !== secret || !cachedHsSecretBytes) {
+    cachedHsSecretRaw = secret;
+    cachedHsSecretBytes = new TextEncoder().encode(secret);
+  }
+  return cachedHsSecretBytes;
 }
 
 // ─── EdDSA key cache ──────────────────────────────────────────────────────────
@@ -22,30 +29,41 @@ const migrationCutoff = process.env.JWT_MIGRATION_CUTOFF
   ? new Date(process.env.JWT_MIGRATION_CUTOFF).getTime()
   : Date.now() + 30 * 24 * 60 * 60 * 1000; // default: 30 days from now
 
+let cachedEddsaKeyPairSig = '';
 let cachedPrivateKey: any = null;
 let cachedPublicKey: any  = null;
 
 async function getEdDSAKeys() {
-  if (cachedPrivateKey && cachedPublicKey) return { privateKey: cachedPrivateKey, publicKey: cachedPublicKey };
-
-  if (process.env.JWT_EDDSA_PRIVATE_JWK && process.env.JWT_EDDSA_PUBLIC_JWK) {
-    try {
-      const privJwk = JSON.parse(process.env.JWT_EDDSA_PRIVATE_JWK);
-      const pubJwk  = JSON.parse(process.env.JWT_EDDSA_PUBLIC_JWK);
-      cachedPrivateKey = await importJWK(privJwk, 'EdDSA');
-      cachedPublicKey  = await importJWK(pubJwk,  'EdDSA');
-      return { privateKey: cachedPrivateKey, publicKey: cachedPublicKey };
-    } catch (parseErr) {
-      console.warn(
-        '[JWT] JWT_EDDSA_*_JWK env var is malformed or invalid JSON. Falling back to HS256.',
-        parseErr instanceof SyntaxError ? parseErr.message : ''
-      );
-      cachedPrivateKey = null;
-      cachedPublicKey  = null;
-      return null;
-    }
+  const privRaw = process.env.JWT_EDDSA_PRIVATE_JWK || '';
+  const pubRaw = process.env.JWT_EDDSA_PUBLIC_JWK || '';
+  if (!privRaw || !pubRaw) {
+    cachedEddsaKeyPairSig = '';
+    cachedPrivateKey = null;
+    cachedPublicKey = null;
+    return null;
   }
-  return null;
+  const sig = `${privRaw}|${pubRaw}`;
+  if (cachedEddsaKeyPairSig === sig && cachedPrivateKey && cachedPublicKey) {
+    return { privateKey: cachedPrivateKey, publicKey: cachedPublicKey };
+  }
+
+  try {
+    const privJwk = JSON.parse(privRaw);
+    const pubJwk  = JSON.parse(pubRaw);
+    cachedPrivateKey = await importJWK(privJwk, 'EdDSA');
+    cachedPublicKey  = await importJWK(pubJwk,  'EdDSA');
+    cachedEddsaKeyPairSig = sig;
+    return { privateKey: cachedPrivateKey, publicKey: cachedPublicKey };
+  } catch (parseErr) {
+    console.warn(
+      '[JWT] JWT_EDDSA_*_JWK env var is malformed or invalid JSON. Falling back to HS256.',
+      parseErr instanceof SyntaxError ? parseErr.message : ''
+    );
+    cachedEddsaKeyPairSig = '';
+    cachedPrivateKey = null;
+    cachedPublicKey  = null;
+    return null;
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -66,14 +84,13 @@ export const mintJWT = async (payload: JWTPayload): Promise<string> => {
   }
 
   // Fallback HS256 — secret is validated lazily here (runtime only)
-  const secret = getHS256Secret();
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
     .setIssuer('ledgerchat.org')
     .setAudience('ledgerchat.org')
-    .sign(new TextEncoder().encode(secret));
+    .sign(getHS256SecretBytes());
 };
 
 // Every caller treats the result as a sign-in, so a token that verifies but is
@@ -88,8 +105,7 @@ export const verifyJWT = async (token: string): Promise<JWTPayload> => {
     ({ payload } = await jwtVerify(token, keys.publicKey, { algorithms: [alg] }));
   } else {
     // HS256 fallback — secret validated lazily (runtime only)
-    const secret = getHS256Secret();
-    ({ payload } = await jwtVerify(token, new TextEncoder().encode(secret), { algorithms: ['HS256'] }));
+    ({ payload } = await jwtVerify(token, getHS256SecretBytes(), { algorithms: ['HS256'] }));
   }
   if (!isSessionPayload(payload)) throw new Error('Not a session token');
   return payload;

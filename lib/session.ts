@@ -3,6 +3,11 @@ import { cookies } from 'next/headers';
 import crypto from 'crypto';
 import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
+import { verifyJWT } from '@/lib/jwt';
+import { isSessionTokenRevoked } from '@/lib/security/sessionRevocation';
+
+let cachedSessionSecretRaw: string | null = null;
+let cachedSessionSecretBytes: Uint8Array | null = null;
 
 // [BUILD-TIME GUARD] Validation fires lazily at request time via getSessionSecret().
 function getSessionSecret(): Uint8Array {
@@ -13,7 +18,11 @@ function getSessionSecret(): Uint8Array {
             + 'Set JWT_SECRET environment variable immediately.'
         );
     }
-    return new TextEncoder().encode(secret);
+    if (cachedSessionSecretRaw !== secret || !cachedSessionSecretBytes) {
+        cachedSessionSecretRaw = secret;
+        cachedSessionSecretBytes = new TextEncoder().encode(secret);
+    }
+    return cachedSessionSecretBytes;
 }
 
 // B-010: Session configuration — Access 15 min, Refresh 30 days
@@ -205,13 +214,10 @@ export async function getSession(req?: any): Promise<SessionPayload | null> {
         cookieStore = req?.cookies;
     }
 
-    const { isSessionTokenRevoked } = await import('@/lib/security/sessionRevocation');
-
     // Priority 1: B-007 unified session cookie 'hl_session'
     const hlSession = cookieStore.get(SESSION_CONFIG.COOKIE_NAME)?.value;
     if (hlSession) {
         try {
-            const { verifyJWT } = await import('@/lib/jwt');
             const payload = (await verifyJWT(hlSession)) as any;
             // A token revoked by logout (on any instance) is not a session.
             if (await isSessionTokenRevoked(hlSession)) throw new Error('revoked');
@@ -238,7 +244,6 @@ export async function getSession(req?: any): Promise<SessionPayload | null> {
         const legacyVal = cookieStore.get(name)?.value;
         if (legacyVal) {
             try {
-                const { verifyJWT } = await import('@/lib/jwt');
                 const payload = (await verifyJWT(legacyVal)) as any;
                 if (await isSessionTokenRevoked(legacyVal)) continue;
                 const uid = payload.walletAddress || payload.address || payload.userId || payload.sub;
