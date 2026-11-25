@@ -1,3 +1,5 @@
+'use client';
+
 import { useT } from '@/lib/i18n/client';
 /**
  * The one loading mark of Ledger Chat. Every screen shown while the app opens (the PIN gate check,
