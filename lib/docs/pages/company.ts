@@ -7,7 +7,7 @@ export const about: DocPage = {
   title: "About Humanity Ledger",
   summary: "Who we are, what we are building and how we work.",
   keywords: ["about", "company", "team", "protocol", "mission", "humanity ledger", "ledger chat"],
-  updated: "2026-11-15",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -24,7 +24,7 @@ export const about: DocPage = {
       strongFirst: true,
       rows: [
         ["Ledger Chat", "Direct messages encrypted with MLS through XMTP, communities, voice and video calls, and payments from your own wallet.", "Early access, in the browser."],
-        ["Private payments wallet", "Private balances on Aztec: shield, send, receive by QR code and unshield, with proofs made on your device.", "Aztec Alpha, which settles on Ethereum mainnet, with a cap per payment. Not audited yet."],
+        ["Private payments wallet", "Private balances on Aztec: shield, send, receive by QR code and unshield, with proofs made on your device.", "Aztec Alpha, which settles on Ethereum mainnet, with a cap per payment. No external audit yet; one begins on 25 November 2026."],
         ["Documentation", "How every part works, what it can see, and which security findings are still open.", "[Read it](/docs/overview)."],
       ],
     },
@@ -101,14 +101,14 @@ export const status: DocPage = {
   title: "Service status",
   summary: "A live check of our servers, run from your browser when you open this page.",
   keywords: ["status", "uptime", "down", "outage", "incident", "health", "working", "operational"],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     { t: "h2", text: "About this page" },
     {
       t: "ul",
       items: [
         "The check above calls our health endpoint directly from your browser. It reflects what you can reach right now, not an average.",
-        "We do not publish uptime history yet. When we do, it will appear here.",
+        "For the closed alpha, [ledgerchat.org/status](/status) shows what was measured in the last 24 hours: private payments by outcome, message delivery reports, the age of the newest Aztec block and any open alert. It shows measurements only, never an uptime percentage or a target.",
         "Services run by others, such as XMTP and the blockchains, are not monitored on this page.",
       ],
     },
@@ -167,24 +167,32 @@ const encryptionPost: DocPage = {
   label: "What encryption covers in Ledger Chat today",
   summary: "An honest map of what is encrypted end to end, what is not yet, and how the app tells you.",
   keywords: ["blog", "encryption", "e2ee", "fallback", "communities", "attachments", "honesty"],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
       text: "Messaging apps tend to say they are encrypted and leave it there. The truth is usually more detailed, and the details are what matter when you decide what to send. Here is ours.",
     },
+    {
+      t: "hint",
+      tone: "info",
+      text: "First published on 21 October 2026, updated on 25 November 2026: attachments are now encrypted, and new communities live in encrypted groups.",
+    },
     { t: "h2", text: "Encrypted end to end" },
     {
-      t: "p",
-      text: "Direct messages delivered through XMTP. They are encrypted on your device with MLS, an IETF standard, and only the devices in the conversation can read them. Our servers never see them in readable form.",
+      t: "ul",
+      items: [
+        "**Direct messages delivered through XMTP.** They are encrypted on your device with MLS, an IETF standard, and only the devices in the conversation can read them. Our servers never see them in readable form.",
+        "**Attachments.** Photos, videos, files and voice notes are encrypted in your browser before upload. Our storage holds only data it cannot read.",
+        "**Communities created from 24 November 2026.** Their posts live in an XMTP MLS group, like a direct message.",
+      ],
     },
     { t: "h2", text: "Not encrypted end to end yet" },
     {
       t: "ul",
       items: [
         "**Fallback messages.** When XMTP cannot deliver a message, the app can send it through our server instead. Those messages carry a label in the conversation.",
-        "**Communities.** Posts and channel messages are stored on our server.",
-        "**Attachments.** Files are stored as uploaded.",
+        "**Communities created before 24 November 2026.** Their posts and channel messages are stored on our server.",
       ],
     },
     { t: "h2", text: "Why say this out loud" },
@@ -206,6 +214,11 @@ export const blog: DocPage = {
   label: "Blog",
   summary: "How Ledger Chat works, why we made the choices we made, and what changed.",
   keywords: ["blog", "news", "articles", "posts", "updates"],
-  updated: "2026-11-13",
-  blocks: [],
+  updated: "2026-11-25",
+  blocks: [
+    {
+      t: "cards",
+      items: BLOG_POSTS.map((p) => ({ title: p.title, text: p.summary, href: p.page.href, icon: "file" as const })),
+    },
+  ],
 };

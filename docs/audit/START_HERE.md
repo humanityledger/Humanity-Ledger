@@ -1,8 +1,8 @@
-# Reviewer start page: 24 November 2026
+# Reviewer start page: 25 November 2026
 
-This is the entry point for anyone reviewing Ledger Chat. It is current as of `main` on 24 November 2026. The older audit documents listed in section 7 are history, and where they disagree with this page, this page is right.
+This is the entry point for anyone reviewing Ledger Chat. It is current as of `main` on 25 November 2026. The older audit documents listed in section 7 are history, and where they disagree with this page, this page is right.
 
-**No external audit or external review exists.** `deployments/aztec-mainnet.json` has `"audit": null`. Aztec Labs, the Aztec Foundation and XMTP Labs have not reviewed, endorsed or audited this project. The internal reviews were written by the engineering assistant and the operator, and they do not replace an external one.
+**An external audit begins on 25 November 2026. None has been completed.** Until its report exists, `deployments/aztec-mainnet.json` keeps `"audit": null`, and the report will be published in full from `/docs/audits`. Aztec Labs, the Aztec Foundation and XMTP Labs have not reviewed, endorsed or audited this project. The internal reviews were written by the engineering assistant and the operator, and they do not replace an external one.
 
 ## 1. What runs today
 
@@ -13,7 +13,9 @@ This is the entry point for anyone reviewing Ledger Chat. It is current as of `m
 | Payment cards, requests and receipts in the chat | Client | Live |
 | Escrow and payment streams (aztec-nr) | Aztec test network only | **Refused on Alpha** in the client and in the scripts while `audit` is `null` |
 | Ethereum portal, receiver addresses and `PortalToken` | None | Written and tested, **not deployed on any network** |
-| Community posts | Our server | Readable by our server, not end-to-end encrypted. A client path to XMTP MLS groups exists, but no community is switched to it |
+| Community posts | XMTP MLS for new communities; our server for older ones | Since 24 Nov 2026 a new community's first channel is an XMTP MLS group made by the creator's client, and the server keeps only its id. Older communities stay readable by our server and are not migrated |
+| Attachments | Client, Cloudflare R2 | Encrypted in the browser (AES-256-GCM); R2 holds ciphertext only (`lib/chat/remote-attachment.ts`) |
+| Languages | Website and chat | English, Spanish, Russian, German, Chinese (`lib/i18n`); legal pages in English |
 
 Each claim comes with its evidence in `README.md` §1.
 
@@ -47,7 +49,8 @@ These are small and each has its own unit tests:
 - `lib/chat/message-authority.ts`: who may edit or delete a message;
 - `lib/backup/encrypted-archive.ts`: an archive sealed with a passphrase (PBKDF2-SHA256 at 600,000 iterations, AES-256-GCM) and bound to the wallet that made it;
 - `lib/chat/safety-glyphs.ts` and `lib/chat/verified-contacts.ts`: the safety number, taken from both inboxes and every installation on them;
-- `lib/communities/mls-membership.ts`: never removes members against an incomplete list.
+- `lib/communities/mls-membership.ts`: never removes members against an incomplete list;
+- `lib/xmtp/client.ts` (`routeFor`): a chat keyed by an XMTP inbox or conversation id sends to that DM instead of failing, and inbox ids resolve through the SDK 5 inbox state.
 
 ### Out of scope
 
@@ -59,7 +62,7 @@ The commands are in `README.md` §14. In brief:
 - `npm ci`, then `npm run test:run` and `npm run test:contracts`;
 - `aztec compile` and `aztec test` in each `contracts/aztec/*` directory (Aztec 6.0.0).
 
-CI runs on every pull request:
+CI runs on every pull request. Four checks are required to merge into `main` and pass there since 24 November 2026: TypeScript & Lint, Unit Tests (Vitest), Contract Tests (Hardhat) and Foundry.
 - `.github/workflows/ci.yml` (type check, lint, unit tests);
 - `aztec-contracts.yml` (compile and TXE);
 - `aztec-ci.yml` (including the ACIR opcode report).
@@ -79,7 +82,9 @@ The read-only checks against Alpha are `aztec-mainnet-preflight.yml` and `aztec-
 | TESTNET-KEYLESS | Function | The shared `PrivateEscrow` and `PaymentStream` instances on the test network were deployed without public keys, so tokens sent to them can never be spent. The app uses a keyed instance for each agreement | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | XMTP-PUBLISH | Reliability | Some sends log "Sync failed to wait for intent" and are retried. Under investigation, with no loss of confidentiality | Messages may arrive late |
 | DEADMAN-SELF | Funds stuck (owner's own mistake) | `LedgerDeadmanSwitch` accepted its own address as backup, so a trigger locked the owner's tokens in it. Found by the Foundry invariant `invariant_deadman_rules` | Fixed in #260. Not deployed |
-| CI-RED | Hygiene | Two checks fail on `main` for reasons outside the code: `npm audit` (prisma and effect rated high, next rated moderate; the lockfile needs updating) and a check that the owner's name does not appear in files outside its exception list | Waiting on the operator |
+| CI-RED | Hygiene | The four required checks pass on `main`. Non-required checks still fail for reasons outside the product code: `npm audit` and the dependency audits (prisma and effect rated high, next rated moderate), Lighthouse, and a check that the owner's name does not appear in files outside its exception list | Waiting on the operator |
+| SEND-UNRESOLVED | Function | Fixed 24 Nov 2026 (#273): replies in a chat filed under an XMTP id failed with "Not sent" | `test/unit/chat/send-to-unresolved-peer.test.ts` |
+| DOCS-500 | Availability | Fixed 25 Nov 2026 (#275): every `/docs` page returned 500 for about seven hours after the i18n merge | `test/unit/i18n/rsc-boundary.test.ts` |
 | XMTP-LABS-CLOSING | Dependency | XMTP announced on 22 Oct 2026 that the network hosted by XMTP Labs, which carries all our direct messages, shuts down in early 2027. Our own backend is planned in `docs/xmtp/SELF_HOSTED_MIGRATION.md`; backend authentication is in code and off | Plan, phases M0 to M7 |
 | G7-R8 | Test gap | The address binding has not been run between two different people | Unit tests only |
 | PASSKEY-DEVICE | Test gap | The passkey path (WebAuthn PRF) has not been tested on a real device | Unit tests only |
@@ -108,7 +113,7 @@ These are kept as written. Read them for context, not for the current state:
 - `docs/audit/INTERNAL_AUDIT_2026-11-18.md`;
 - `docs/audit/INTERNAL_SECURITY_REVIEW_2026-11-18.md` and `-19.md`.
 
-`docs/audit/EXTERNAL_REVIEW_PACKAGE.md` lists what a reviewer receives and is kept current.
+`docs/audit/EXTERNAL_REVIEW_PACKAGE.md` lists what a reviewer receives and is kept current. `docs/LEGAL_REVIEW_25NOV.md` lists where the legal pages no longer match the code; they are left to the operator and counsel (OD-8).
 
 ## Disclosure
 

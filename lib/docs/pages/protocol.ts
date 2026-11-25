@@ -7,7 +7,7 @@ export const architecture: DocPage = {
   title: "Architecture overview",
   summary: "The parts that make up Humanity Ledger, where each one runs, and what each one can see.",
   keywords: ["architecture", "system", "design", "diagram", "stack", "infrastructure", "servers", "components", "trust", "boundary"],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -25,7 +25,7 @@ export const architecture: DocPage = {
         ["Humanity Ledger servers", "Accounts, sessions, profiles, contacts, communities, the hash of your PIN and the fallback relay.", "Only messages that took the fallback path, which are labelled."],
         ["XMTP network", "Encrypted messages waiting to be collected.", "No."],
         ["Ethereum and layer 2 networks", "Public payments you send from your wallet.", "No. Payments themselves are public."],
-        ["Aztec network", "Private payment notes, in our experimental integration.", "No."],
+        ["Aztec network", "Private payment notes, on Aztec Alpha with a cap per payment and on the test network.", "No."],
       ],
     },
     { t: "h2", text: "Our servers" },
@@ -43,7 +43,7 @@ export const architecture: DocPage = {
       items: [
         "Requests that change data must come from our own origin, which blocks cross site request forgery.",
         "A content security policy with a fresh nonce on every request limits which scripts the page can run.",
-        "Sign in, email codes and PIN checks are rate limited.",
+        "Sign in, device linking and PIN checks are rate limited.",
       ],
     },
     { t: "h2", text: "Services we rely on" },
@@ -54,10 +54,9 @@ export const architecture: DocPage = {
       rows: [
         ["XMTP", "Delivering direct messages", "Encrypted messages and the time they were sent."],
         ["Reown WalletConnect", "Connecting wallets on other devices", "Your wallet address and connection requests."],
-        ["Resend", "Sending sign in codes by email", "Your email address and the code."],
-        ["Cloudflare Turnstile", "Stopping automated email sign ups", "Browser signals used to tell people from bots."],
-        ["Cloudflare R2", "Storing attachments", "The files you attach."],
-        ["PeerJS, Google STUN, a TURN relay service", "Setting up and relaying calls", "Connection details and, for relayed calls, encrypted media."],
+        ["Resend", "Sending the emails you ask for: the closed beta application, email alerts and the newsletter", "The email address you give and the message."],
+        ["Cloudflare R2", "Storing attachments", "Encrypted files only. The key never reaches it."],
+        ["Ledger Relay, Google and Cloudflare STUN, Cloudflare TURN", "Setting up and relaying calls. Signalling runs on our own Ledger Relay, with the public PeerJS service only as a fallback when the relay does not answer", "Connection details and, for relayed calls, encrypted media."],
         ["Public blockchain RPC providers", "Reading balances and sending transactions", "Your address and the transactions you send."],
       ],
     },
@@ -84,7 +83,7 @@ export const cryptography: DocPage = {
   title: "Encryption in use",
   summary: "Every cryptographic mechanism in the product, where it applies, and where none applies yet.",
   keywords: ["crypto", "cryptography", "encryption", "keys", "cipher", "mls", "tls", "argon2", "argon2id", "signature", "jwt", "dtls", "srtp", "hmac"],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -102,9 +101,11 @@ export const cryptography: DocPage = {
         ["Signing in", "ECDSA signatures on secp256k1", "Over a Sign in with Ethereum message ([EIP-4361](https://eips.ethereum.org/EIPS/eip-4361))."],
         ["Sessions", "JWT signed with HMAC-SHA256", "The algorithm is fixed on the server, so a token cannot downgrade it."],
         ["Your PIN", "Argon2id ([RFC 9106](https://www.rfc-editor.org/rfc/rfc9106))", "With a salt per account and a secret held only by the server."],
+        ["Attachments", "AES-256-GCM with a key from HKDF-SHA256, a fresh secret per file", "Encrypted in your browser before upload. The key travels inside the encrypted XMTP message; a SHA-256 digest is checked before decrypting."],
+        ["Posts in communities created from 24 November 2026", "MLS through XMTP", "The first channel is an XMTP group. Our server keeps only its identifier."],
         ["Community invite links", "HMAC-SHA256", "So a link cannot be forged or altered."],
         ["Private payments wallet key", "HKDF-SHA256 over an EIP-712 wallet signature", "Computed in your browser. The derived secret is never sent to our servers."],
-        ["Private payments", "Zero knowledge proofs on Aztec, written in Noir", "Aztec Alpha, which settles on Ethereum mainnet, with a cap per payment. The contracts are not audited yet. See [Private payments on Aztec](/docs/zero-knowledge)."],
+        ["Private payments", "Zero knowledge proofs on Aztec, written in Noir", "Aztec Alpha, which settles on Ethereum mainnet, with a cap per payment. No external audit yet; one begins on 25 November 2026. See [Private payments on Aztec](/docs/zero-knowledge)."],
       ],
     },
     { t: "h2", text: "Where encryption does not apply yet" },
@@ -116,8 +117,7 @@ export const cryptography: DocPage = {
       t: "ul",
       items: [
         "Messages that took the [fallback path](/docs/p2p-routing). They are labelled in the conversation.",
-        "Posts and messages in [communities](/docs/communities).",
-        "Attachments, which are stored as uploaded.",
+        "Posts and messages in [communities](/docs/communities) created before 24 November 2026.",
         "Your profile, your contacts and your community memberships.",
       ],
     },
@@ -135,13 +135,13 @@ export const zeroKnowledge: DocPage = {
   label: "Private payments on Aztec",
   summary: "How the private payments wallet works, what it hides, what it does not, and what runs on Aztec Alpha today.",
   keywords: ["zk", "zero knowledge", "aztec", "shielded", "private payment", "proof", "noir", "notes", "nullifier", "shield", "unshield", "send", "receive", "qr", "testnet", "privacy", "wallet", "escrow", "stream", "agreement"],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "hint",
       tone: "warning",
       title: "Aztec Alpha: real network, no audit, small amounts",
-      text: "The private payments wallet on ledgerchat.org runs on Aztec Alpha (version 6.0.0, settled on Ethereum mainnet), which Aztec itself describes as an alpha where serious bugs are expected. The only token listed there is HLC, issued by Humanity Ledger. No contract of ours has had an independent audit. Fees are paid in Fee Juice, which you bridge from Ethereum yourself or a contact pays for you through a fee link; Ledger Chat does not pay network fees for anyone. Escrows and payment streams are refused on Alpha. Use amounts you can afford to lose.",
+      text: "The private payments wallet on ledgerchat.org runs on Aztec Alpha (version 6.0.0, settled on Ethereum mainnet), which Aztec itself describes as an alpha where serious bugs are expected. Private payments there are in cUSDC, a dollar token issued by human.tech, for members of the closed beta, with a cap per payment. HLC, the test token with no monetary value issued by Humanity Ledger and used for the first payments, is no longer listed on Alpha. No contract of ours has an external audit yet; one begins on 25 November 2026. Fees are paid in Fee Juice, which you bridge from Ethereum yourself or a contact pays for you through a fee link; Ledger Chat does not pay network fees for anyone. Escrows and payment streams are refused on Alpha. Use amounts you can afford to lose.",
     },
     {
       t: "p",
@@ -223,10 +223,11 @@ export const zeroKnowledge: DocPage = {
       t: "status",
       items: [
         { label: "Private balances, send and receive", state: "partial", text: "Working on the Aztec test network. On Alpha the first private payment from Ledger Chat settled on 14 November 2026 (L2 block 29012). Not independently audited." },
-        { label: "Bridge from Ethereum", state: "development", text: "Moving real tokens from Ethereum into Aztec and back needs a bridge contract on each side. It is not built." },
+        { label: "Bridge from Ethereum", state: "development", text: "An Ethereum portal for DAI, USDC, USDT and ETH, with caps, pause, timelock and sunset, and its private Aztec token are written and tested in CI. They are not deployed and stay off until an external review." },
+        { label: "Private fee payment", state: "development", text: "Paying the network fee through the shared PrivateFPC recommended by the Aztec documentation, so the public fee payer is that contract and not your account. Written and off by default; not tried on Alpha yet. Ledger Chat runs no fee contract of its own." },
         { label: "Agreements (escrow and payment stream)", state: "partial", text: "In conversations on the Aztec test network. Contracts not independently audited. Two hardening changes to the contract source (a nullifier on each deposit and on each stream creation) are not compiled into the deployed contracts yet, so the app uses the previous versions until they are." },
         { label: "Pausing new payments", state: "partial", text: "We can switch the app to exits only: new payments and agreements are refused, while claiming, refunding, cancelling and withdrawing keep working. This stops our interface, not the contracts, which have no pause. A modified client can still call them." },
-        { label: "Aztec Alpha (mainnet)", state: "partial", text: "Production is built for Alpha. The HLC token is deployed there (block 28992) and checked by our preflight; the first private payment settled in block 29012. Fees in Fee Juice and per token caps are built; agreements are refused; the external audit is still open." },
+        { label: "Aztec Alpha (mainnet)", state: "partial", text: "Production is built for Alpha. The HLC token is deployed there (block 28992) and checked by our preflight; the first private payment settled in block 29012. Since 23 November 2026 the wallet lists only cUSDC there, for the closed beta (first cUSDC transfer in block 46420). Fees in Fee Juice and per token caps are built; agreements are refused; the external audit begins on 25 November 2026." },
       ],
     },
     { t: "h2", text: "Status of the Aztec network" },
@@ -244,12 +245,12 @@ export const whitepaper: DocPage = {
   title: "The Humanity Ledger platform paper",
   summary: "A technical description of the platform: its design goals, each subsystem, the threat model and the open problems.",
   keywords: ["whitepaper", "paper", "yellow paper", "technical", "specification", "design", "threat model", "research"],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "hint",
       tone: "info",
-      text: "Revised 11 November 2026: linked devices (2.1), private payments on Aztec Alpha with their fees (7), and Ledger Studio on open models (8). The 21 October revision had replaced earlier versions that described components the product does not use, such as Waku routing and a Double Ratchet over X3DH.",
+      text: "Revised 25 November 2026: email sign in removed (2), encrypted attachments (3.2), communities on MLS (4), call signalling on our own relay (5), cUSDC and private fee payment (7, 7.1), threat model and open problems (10, 12). Revised 11 November 2026: linked devices (2.1), private payments on Aztec Alpha with their fees (7), and Ledger Studio on open models (8). The 21 October revision had replaced earlier versions that described components the product does not use, such as Waku routing and a Double Ratchet over X3DH.",
     },
     { t: "h2", text: "Abstract", id: "abstract" },
     {
@@ -277,7 +278,7 @@ export const whitepaper: DocPage = {
     },
     {
       t: "p",
-      text: "Accounts can also be created with an email address and a one time code. Such accounts are identified internally by a random identifier rather than an address, and are marked so that routes requiring a wallet can refuse them explicitly.",
+      text: "There is no email or password sign in. Email sign in with a one time code was removed; its routes answer 410 Gone at the edge. A computer without a browser wallet signs in as a linked device of the phone (2.1).",
     },
     { t: "h3", text: "2.1 Linked devices", id: "linked-devices" },
     {
@@ -308,15 +309,24 @@ export const whitepaper: DocPage = {
       t: "p",
       text: "A guard on the server rejects or reports any message body that is not a sealed envelope of the form `hlv1.<algorithm>.<payload>`. In its default mode it records that a readable body arrived without recording the body. Rejection is enabled with a configuration flag once clients seal fallback messages.",
     },
+    { t: "h3", text: "3.2 Attachments", id: "attachments" },
+    {
+      t: "p",
+      text: "Each file is encrypted in the sender's browser with AES-256-GCM under a key derived with HKDF-SHA256 from a fresh 32 byte secret and salt, following the scheme of XMTP's RemoteAttachment. Only the ciphertext is uploaded; the server computes its SHA-256 digest, which the sender checks against its own, and refuses an upload that looks like a plain file. The message, sent through XMTP, carries the URL (always our own attachment path), the digest and the key material. The recipient checks the digest before decrypting. When storage is unavailable, a file of up to 700 KB travels inline inside the XMTP message instead.",
+    },
     { t: "h2", text: "4. Communities", id: "communities" },
     {
       t: "p",
-      text: "Communities, channels, members and roles are rows in PostgreSQL, and permissions are enforced by the server on every request. Invite links carry an HMAC-SHA256 tag so they cannot be forged, and can be revoked. Community posts and channel messages are currently stored in readable form on the server.",
+      text: "Communities, channels, members and roles are rows in PostgreSQL, and permissions are enforced by the server on every request. Invite links carry an HMAC-SHA256 tag so they cannot be forged, and can be revoked.",
+    },
+    {
+      t: "p",
+      text: "Since 24 November 2026 a new community starts on MLS when its creator's XMTP client is ready: the client creates the first channel's XMTP group and the server stores only the group identifier; the post routes answer 410 for that community. Any member's client adds people who joined while no administrator was online; only an administrator's client removes. Communities created earlier are not migrated: their posts and channel messages are stored in readable form on the server. An operator switch (`COMMUNITY_MLS_NEW=off`) returns new communities to the earlier form.",
     },
     { t: "h2", text: "5. Calls", id: "calls" },
     {
       t: "p",
-      text: "Calls use WebRTC. Session descriptions and candidates are exchanged through the public PeerJS signalling service. Connectivity uses Google STUN servers and, when a direct path is unavailable, a TURN relay with short lived credentials from the server, when one is configured. The public OpenRelay service is no longer used. Media is encrypted with DTLS-SRTP negotiated between the browsers, so neither signalling nor relays can decode it. A setting forces relay only connections, which prevents the remote party from learning the user's IP address.",
+      text: "Calls use WebRTC. Ringing, answer, decline and hang up travel as encrypted XMTP messages. Session descriptions and candidates are exchanged through the PeerJS protocol on our own Ledger Relay; when the relay does not answer its health check, call set up falls back to the public PeerJS service so calls keep working. Connectivity uses Google and Cloudflare STUN servers and, when a direct path is unavailable, Cloudflare's TURN service over UDP, TCP and TLS on port 443, with short lived credentials issued by our server. Media is encrypted with DTLS-SRTP negotiated between the browsers, so neither signalling nor relays can decode it. Camera video is sent at 720p and 30 frames per second, up to 2.5 Mbps, with balanced degradation under congestion; a data saver caps it at 360p, 15 frames per second and 0.5 Mbps. A setting forces relay only connections, which prevents the remote party from learning the user's IP address.",
     },
     { t: "h2", text: "6. Payments", id: "payments" },
     {
@@ -326,7 +336,7 @@ export const whitepaper: DocPage = {
     { t: "h2", text: "7. Private payments", id: "private-payments" },
     {
       t: "p",
-      text: "The private wallet runs on Aztec Alpha, the Aztec network that settles on Ethereum mainnet, with Aztec's standard token contract and the operator's token HLC. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with encrypted storage, decrypts the user's notes and generates proofs on the device. Before any step that moves value the client rereads the node's identity (L1 chain, rollup version and address, Fee Juice portal and token) and refuses a node that differs from the pins compiled into the build.",
+      text: "The private wallet runs on Aztec Alpha, the Aztec network that settles on Ethereum mainnet, with cUSDC, a dollar token issued by human.tech that runs the AIP-20 Token of aztec-standards 6.0.0, for members of the closed beta. HLC, the operator's test token with no monetary value on Aztec's standard token contract, carried the first payments and is no longer listed on Alpha. The client derives the secret of a Schnorr account contract from an EIP-712 signature by the user's wallet using HKDF-SHA256, so the same wallet always recovers the same account and the server never holds a spending key. A Private eXecution Environment runs in the browser with encrypted storage, decrypts the user's notes and generates proofs on the device. Before any step that moves value the client rereads the node's identity (L1 chain, rollup version and address, Fee Juice portal and token) and refuses a node that differs from the pins compiled into the build.",
     },
     {
       t: "p",
@@ -337,6 +347,10 @@ export const whitepaper: DocPage = {
     {
       t: "p",
       text: "Alpha has no sponsored fee contract, and Ledger Chat sponsors no fee. Every transaction, including the one that creates the account, pays with the account's own Fee Juice: AZTEC bridged one way from Ethereum through the enshrined FeeJuicePortal. A new account waits until a deposit arrives and deploys itself by claiming it in the same transaction. Claim secrets are derived from the wallet signature, so a deposit is recoverable from Ethereum on any device. Paying a fee from one's own balance makes the account the visible fee payer of its transactions.",
+    },
+    {
+      t: "p",
+      text: "Written and off by default (`NEXT_PUBLIC_AZTEC_PRIVATE_FEES=on`): a payment can pay its fee through the shared PrivateFPC recommended by the Aztec documentation (npm `@alejoamiras/private-fee-juice`, no operator), so the public fee payer is that contract rather than the account. It is gated on the node running Aztec 6.0.0 and on simulated gas limits with a ceiling on the client, keeps the maximum fee of each payment without refund, and has not been tried on Alpha. Ledger Chat operates no fee contract.",
     },
     {
       t: "p",
@@ -359,7 +373,7 @@ export const whitepaper: DocPage = {
       head: ["Adversary", "Can", "Cannot"],
       strongFirst: true,
       rows: [
-        ["Someone with full control of our servers", "Read fallback messages, community posts, attachments, contacts and account data. See who is online. Deny service.", "Read direct messages delivered through XMTP. Sign as a user. Move user funds."],
+        ["Someone with full control of our servers", "Read fallback messages, posts in communities created before 24 November 2026, contacts and account data. See who is online and the size of encrypted attachments. Deny service.", "Read direct messages delivered through XMTP, attachments or posts in MLS communities. Sign as a user. Move user funds."],
         ["An XMTP node operator", "See encrypted messages, their size and timing, and the conversations they belong to.", "Read them."],
         ["An observer on the user's network", "See which services the user connects to and when.", "Read any content protected by TLS."],
         ["Someone with the user's unlocked device", "Open Ledger Chat if they know the PIN. Read data stored by the browser with developer tools, even without it.", "Sign in on another device without the wallet."],
@@ -377,11 +391,10 @@ export const whitepaper: DocPage = {
       t: "ul",
       items: [
         "Removing the readable fallback path, by sealing fallback messages on the client or by ensuring both parties have XMTP installations.",
-        "Encrypting community content end to end, for example as MLS groups.",
-        "Encrypting attachments before upload.",
-        "An independent audit of the contracts and a penetration test of the application.",
-        "Self hosted call signalling, so that call setup does not depend on a public service.",
-        "A private fee payer on Aztec, so that a user's transactions cannot be linked to each other through the public fee payer.",
+        "Moving communities created before 24 November 2026 to MLS groups.",
+        "The external audit that begins on 25 November 2026, and a penetration test of the application.",
+        "Removing the public PeerJS fallback, so that call set up never depends on a public service.",
+        "Trying the shared PrivateFPC on Aztec Alpha and turning it on, so that a user's transactions cannot be linked to each other through the public fee payer.",
         "Post quantum key exchange for linked devices and messages, for example hybrid ML-KEM, once MLS and the browser support it.",
       ],
     },
@@ -408,7 +421,7 @@ export const ecosystem: DocPage = {
   title: "Ecosystem and source code",
   summary: "Every part of Humanity Ledger, how ready it is, and where its code lives.",
   keywords: ["open source", "source code", "github", "ecosystem", "components", "status", "public goods", "map"],
-  updated: "2026-11-15",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
