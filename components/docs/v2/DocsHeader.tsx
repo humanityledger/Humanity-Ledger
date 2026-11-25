@@ -8,9 +8,11 @@ import { HLMark } from "@/components/shared/HLLogo";
 import { EXTERNAL_LINKS } from "@/lib/constants/links";
 import { DocsNav } from "./DocsNav";
 import { SearchDialog } from "./SearchDialog";
+import { useT } from "@/lib/i18n/client";
 import s from "./Docs.module.css";
 
 export function DocsHeader({ current }: { current: string }) {
+  const t = useT();
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -53,25 +55,25 @@ export function DocsHeader({ current }: { current: string }) {
               type="button"
               className={`${s.iconButton} ${s.menuButton}`}
               onClick={() => setDrawerOpen(true)}
-              aria-label="Open navigation"
+              aria-label={t("Open navigation")}
               aria-expanded={drawerOpen}
             >
               <Menu size={19} strokeWidth={1.9} aria-hidden="true" />
             </button>
-            <Link href="/" className={s.brand} aria-label="Humanity Ledger home">
+            <Link href="/" className={s.brand} aria-label={t("Humanity Ledger home")}>
               <HLMark size={26} />
               <span className={s.brandName}>Humanity Ledger</span>
             </Link>
             <span className={s.brandDivider} aria-hidden="true" />
             <Link href="/docs/overview" className={s.brandSection}>
-              Docs
+              {t("Docs")}
             </Link>
           </div>
 
           <div className={s.searchSlot}>
-            <button type="button" className={s.searchTrigger} onClick={() => setSearchOpen(true)} aria-label="Search documentation">
+            <button type="button" className={s.searchTrigger} onClick={() => setSearchOpen(true)} aria-label={t("Search documentation")}>
               <Search size={16} strokeWidth={1.9} aria-hidden="true" />
-              <span>Search</span>
+              <span>{t("Search")}</span>
               <span className={s.kbd} aria-hidden="true">
                 {shortcut}
               </span>
@@ -83,25 +85,25 @@ export function DocsHeader({ current }: { current: string }) {
               type="button"
               className={`${s.iconButton} ${s.searchIconButton}`}
               onClick={() => setSearchOpen(true)}
-              aria-label="Search documentation"
+              aria-label={t("Search documentation")}
             >
               <Search size={18} strokeWidth={1.9} aria-hidden="true" />
             </button>
             <Link href="/docs/developers" className={`${s.headerLink} ${s.hideMedium}`}>
-              Developers
+              {t("Developers")}
             </Link>
             <a
               href={EXTERNAL_LINKS.github.repo}
               target="_blank"
               rel="noopener noreferrer"
               className={`${s.iconButton} ${s.hideTiny}`}
-              aria-label="Humanity Ledger on GitHub"
+              aria-label={t("Humanity Ledger on GitHub")}
             >
               <Github size={18} strokeWidth={1.75} aria-hidden="true" />
             </a>
             <Link href="/chat" className={s.primaryButton}>
-              <span className={s.hideNarrow}>Open Ledger Chat</span>
-              <span className={s.showNarrow}>Open app</span>
+              <span className={s.hideNarrow}>{t("Open Ledger Chat")}</span>
+              <span className={s.showNarrow}>{t("Open app")}</span>
             </Link>
           </div>
         </div>
@@ -110,13 +112,13 @@ export function DocsHeader({ current }: { current: string }) {
       {drawerOpen && (
         <>
           <div className={s.overlay} onClick={() => setDrawerOpen(false)} aria-hidden="true" />
-          <div className={s.drawer} role="dialog" aria-modal="true" aria-label="Documentation navigation">
+          <div className={s.drawer} role="dialog" aria-modal="true" aria-label={t("Documentation navigation")}>
             <div className={s.drawerHead}>
-              <Link href="/" className={s.brand} aria-label="Humanity Ledger home">
+              <Link href="/" className={s.brand} aria-label={t("Humanity Ledger home")}>
                 <HLMark size={24} />
                 <span className={s.brandName}>Humanity Ledger</span>
               </Link>
-              <button type="button" className={s.iconButton} onClick={() => setDrawerOpen(false)} aria-label="Close navigation">
+              <button type="button" className={s.iconButton} onClick={() => setDrawerOpen(false)} aria-label={t("Close navigation")}>
                 <X size={19} strokeWidth={1.9} aria-hidden="true" />
               </button>
             </div>
@@ -124,7 +126,7 @@ export function DocsHeader({ current }: { current: string }) {
               <DocsNav current={current} onNavigate={() => setDrawerOpen(false)} />
             </div>
             <div className={s.drawerFoot}>
-              <Link href="/docs/developers">Developers</Link>
+              <Link href="/docs/developers">{t("Developers")}</Link>
               <a href={EXTERNAL_LINKS.github.repo} target="_blank" rel="noopener noreferrer">
                 <Github size={16} strokeWidth={1.75} aria-hidden="true" />
                 GitHub

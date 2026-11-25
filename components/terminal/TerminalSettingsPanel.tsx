@@ -9,6 +9,7 @@ import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useAccount, useBalance } from 'wagmi';
+import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 import { useT } from '@/lib/i18n/client';
 
 // We will construct categories inside the component to use the hook.
@@ -178,11 +179,11 @@ export function TerminalSettingsPanel() {
               >
                                   {activeTab === 'account' && (
                     <>
-                       {renderInput('displayName' as any, 'Display Name', 'Your visible name in chats', 'text')}
+                       {renderInput('displayName' as any, tr("Display Name"), tr("Your visible name in chats"), 'text')}
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Wallet Address")}</span>
                            <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">{tr("Your primary identity")}</span>
-                           <input disabled value={address ? `${address.slice(0, 6)}...${address.slice(-4)} (Connected Wallet)` : "Not Connected"} className="w-full bg-black/5 border border-transparent rounded-xl px-5 py-3 text-[12px] font-mono text-black/50 cursor-not-allowed" />
+                           <input disabled value={address ? `${address.slice(0, 6)}...${address.slice(-4)} (${tr("Connected Wallet")})` : tr("Not Connected")} className="w-full bg-black/5 border border-transparent rounded-xl px-5 py-3 text-[12px] font-mono text-black/50 cursor-not-allowed" />
                        </div>
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Linked Devices")}</span>
@@ -199,17 +200,17 @@ export function TerminalSettingsPanel() {
 
                  {activeTab === 'notifications' && (
                     <>
-                       {renderToggle('notif_msgs' as any, 'Message Notifications', 'Alert for incoming messages')}
-                       {renderToggle('notif_calls' as any, 'Call Notifications', 'Ring for incoming calls')}
-                       {renderToggle('notif_sound' as any, 'Notification Sound', 'Play sound on new messages')}
-                       {renderToggle('dnd' as any, 'Do Not Disturb', 'Silence all notifications')}
-                       {renderToggle('notif_preview' as any, 'Message Preview', 'Show message text in notifications')}
+                       {renderToggle('notif_msgs' as any, tr("Message Notifications"), tr("Alert for incoming messages"))}
+                       {renderToggle('notif_calls' as any, tr("Call Notifications"), tr("Ring for incoming calls"))}
+                       {renderToggle('notif_sound' as any, tr("Notification Sound"), tr("Play sound on new messages"))}
+                       {renderToggle('dnd' as any, tr("Do Not Disturb"), tr("Silence all notifications"))}
+                       {renderToggle('notif_preview' as any, tr("Message Preview"), tr("Show message text in notifications"))}
                     </>
                  )}
 
                  {activeTab === 'payments' && (
                     <>
-                       {renderToggle('payments_enabled' as any, 'Enable Crypto Payments', 'When disabled, all payment CTAs are hidden throughout the app')}
+                       {renderToggle('payments_enabled' as any, tr("Enable Crypto Payments"), tr("When disabled, payment buttons are hidden throughout the app"))}
                        <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
                            <span className="text-[12px] font-black uppercase tracking-widest text-black mb-1.5">{tr("Sticker Premium Plan")}</span>
                            <span className="text-[10px] text-black/40 font-mono mb-4 leading-relaxed">{tr("Current: Free Plan")}</span>
@@ -225,10 +226,9 @@ export function TerminalSettingsPanel() {
 
                  {activeTab === 'general' && (
                     <>
-                       {renderSelect('language', t('LANGUAGE'), t('INTERFACE_LANGUAGE'), [
-                          {value: 'en', label: t('ENGLISH')},
-                          {value: 'es-ES', label: t('SPANISH')},
-                       ])}
+                       <div className="flex flex-col p-6 bg-white border border-black/10 rounded-2xl hover:border-black/30 transition-all">
+                          <LanguagePicker />
+                       </div>
                        {renderSelect('currency', t('BASE_CURRENCY'), t('DEFAULT_CURRENCY'), [
                           {value: 'USD', label: t('USD_DOLLAR')},
                           {value: 'EUR', label: t('EUR_EURO')},
