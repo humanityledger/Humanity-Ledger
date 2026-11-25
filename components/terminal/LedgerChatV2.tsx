@@ -7370,6 +7370,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   setShowList(true);
                 }}
                 onManage={() => setCommunityManage(true)}
+                onOpenCommunity={(id) => {
+                  setCommunityManage(false);
+                  setActiveCommunity(id);
+                }}
                 onMessage={(addr) => {
                   setActiveCommunity(null);
                   setCommunityManage(false);

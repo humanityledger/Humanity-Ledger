@@ -2068,5 +2068,8 @@
  "without the wallet": "在其他地方登录",
  "yes": "是",
  "you answer": "你接听",
- "you call": "你呼叫"
+ "you call": "你呼叫",
+ "Posts and channel messages are stored on our server and can be read by us. Since 25 November 2026 these communities are read-only: the old posts stay, nothing new is stored, and an administrator can re-create the community end to end encrypted. Each member chooses whether to join it.": "帖子和频道消息存储在我们的服务器上，我们可以读取。自 2026 年 11 月 25 日起这些社区为只读：旧帖子保留，不再存储新内容，管理员可以用端到端加密重新创建社区。每位成员自行决定是否加入。",
+ "The old posts of a community created before 24 November 2026 can be read by a server operator. To keep talking, join its encrypted re-creation or use a direct message.": "2026 年 11 月 24 日之前创建的社区，其旧帖子可被服务器运营者读取。若要继续交流，请加入其加密的新版本，或使用私信。",
+ "**Security.** Communities created before 24 November 2026 are read-only: our server no longer stores new posts for them. The old posts stay, and an administrator can re-create the community end to end encrypted; each member chooses whether to join.": "**安全。** 2026 年 11 月 24 日之前创建的社区为只读：我们的服务器不再为其存储新帖子。旧帖子保留，管理员可以用端到端加密重新创建社区；每位成员自行决定是否加入。"
 }

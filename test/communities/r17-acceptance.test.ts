@@ -160,7 +160,11 @@ describe('AC-02: POST /posts returns 410 for MLS community', () => {
     expect(db.communityPost.create).not.toHaveBeenCalled();
   });
 
-  it('should return 200 when communityMls=false (control case)', async () => {
+  // Since 25 November 2026 a community not on MLS is read-only (lib/communities/legacy.ts,
+  // test/unit/communities/legacy-read-only.test.ts). The control case runs with the operator's
+  // rollback switch, which reopens the old route exactly as it was.
+  it('should return 200 when communityMls=false and the read-only rule is switched off (control case)', async () => {
+    process.env.COMMUNITY_LEGACY_READONLY = 'off';
     db.community.findUnique.mockResolvedValue({
       id: 'test-community-id',
       communityMls: false,
@@ -173,6 +177,7 @@ describe('AC-02: POST /posts returns 410 for MLS community', () => {
     expect(response.status).not.toBe(410);
     expect(response.status).toBe(200);
     expect(db.communityPost.create).toHaveBeenCalled();
+    delete process.env.COMMUNITY_LEGACY_READONLY;
   });
 });
 

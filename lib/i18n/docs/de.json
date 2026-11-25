@@ -2068,5 +2068,8 @@
  "without the wallet": "ohne die Wallet",
  "yes": "ja",
  "you answer": "Sie nehmen an",
- "you call": "Sie rufen an"
+ "you call": "Sie rufen an",
+ "Posts and channel messages are stored on our server and can be read by us. Since 25 November 2026 these communities are read-only: the old posts stay, nothing new is stored, and an administrator can re-create the community end to end encrypted. Each member chooses whether to join it.": "Beiträge und Kanalnachrichten werden auf unserem Server gespeichert und können von uns gelesen werden. Seit dem 25. November 2026 sind diese Communities schreibgeschützt: Die alten Beiträge bleiben, nichts Neues wird gespeichert, und ein Administrator kann die Community Ende-zu-Ende-verschlüsselt neu erstellen. Jedes Mitglied entscheidet, ob es beitritt.",
+ "The old posts of a community created before 24 November 2026 can be read by a server operator. To keep talking, join its encrypted re-creation or use a direct message.": "Die alten Beiträge einer Community, die vor dem 24. November 2026 erstellt wurde, kann ein Serverbetreiber lesen. Um weiterzureden, tritt ihrer verschlüsselten Neuerstellung bei oder nutze eine Direktnachricht.",
+ "**Security.** Communities created before 24 November 2026 are read-only: our server no longer stores new posts for them. The old posts stay, and an administrator can re-create the community end to end encrypted; each member chooses whether to join.": "**Sicherheit.** Communities, die vor dem 24. November 2026 erstellt wurden, sind schreibgeschützt: Unser Server speichert keine neuen Beiträge mehr für sie. Die alten Beiträge bleiben, und ein Administrator kann die Community Ende-zu-Ende-verschlüsselt neu erstellen; jedes Mitglied entscheidet, ob es beitritt."
 }

@@ -2068,5 +2068,8 @@
  "without the wallet": "без кошелька",
  "yes": "да",
  "you answer": "вы отвечаете",
- "you call": "вы звоните"
+ "you call": "вы звоните",
+ "Posts and channel messages are stored on our server and can be read by us. Since 25 November 2026 these communities are read-only: the old posts stay, nothing new is stored, and an administrator can re-create the community end to end encrypted. Each member chooses whether to join it.": "Публикации и сообщения каналов хранятся на нашем сервере, и мы можем их читать. С 25 ноября 2026 года эти сообщества доступны только для чтения: старые публикации остаются, ничего нового не сохраняется, а администратор может пересоздать сообщество со сквозным шифрованием. Каждый участник сам решает, присоединяться ли.",
+ "The old posts of a community created before 24 November 2026 can be read by a server operator. To keep talking, join its encrypted re-creation or use a direct message.": "Оператор сервера может читать старые публикации сообщества, созданного до 24 ноября 2026 года. Чтобы продолжить общение, присоединитесь к его зашифрованной версии или напишите личное сообщение.",
+ "**Security.** Communities created before 24 November 2026 are read-only: our server no longer stores new posts for them. The old posts stay, and an administrator can re-create the community end to end encrypted; each member chooses whether to join.": "**Безопасность.** Сообщества, созданные до 24 ноября 2026 года, доступны только для чтения: наш сервер больше не хранит для них новые публикации. Старые публикации остаются, а администратор может пересоздать сообщество со сквозным шифрованием; каждый участник сам решает, присоединяться ли."
 }

@@ -98,7 +98,8 @@ describe('communities access control', () => {
       new NextRequest('http://localhost/api/chat/communities', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: 'Team' }),
+        // A community is created on MLS (lib/communities/legacy.ts): with the group id its client made.
+        body: JSON.stringify({ name: 'Team', mls: true, xmtpGroupId: '0123456789abcdef' }),
       }),
     );
     expect(db.community.create.mock.calls[0][0].data.isPrivate).toBe(true);
@@ -111,7 +112,8 @@ describe('communities access control', () => {
         new NextRequest('http://localhost/api/chat/communities', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ name: 'Team' }),
+          // A community is created on MLS (lib/communities/legacy.ts): with the group id its client made.
+        body: JSON.stringify({ name: 'Team', mls: true, xmtpGroupId: '0123456789abcdef' }),
         }),
       );
       return db.community.create.mock.calls.at(-1)![0].data.joinCode as string;
