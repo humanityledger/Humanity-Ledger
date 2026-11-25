@@ -22,6 +22,7 @@
 
 
 import { diag, short } from './diag';
+import { COUNTERFACTUAL_DEFAULT_CHAIN, SCW_CHAINS, detectWalletKind, isPlainEcdsa, type WalletKind } from './wallet-kind';
 import { Buffer } from 'buffer';
 
 if (typeof window !== 'undefined' && !window.Buffer) {
@@ -205,12 +206,20 @@ export async function warmInboxIdCache(client: Client): Promise<void> {
  *  - signMessage receives string ONLY (no Uint8Array) and must return Uint8Array
  *  - getIdentifier returns { identifier: checksumAddress, identifierKind: "Ethereum" }
  */
-function buildXmtpSigner(wagmiSigner: {
-  getAddress: () => Promise<string>;
-  signMessage: (message: string | Uint8Array) => Promise<string>;
-}) {
+function buildXmtpSigner(
+  wagmiSigner: {
+    getAddress: () => Promise<string>;
+    signMessage: (message: string | Uint8Array) => Promise<string>;
+  },
+  kind: WalletKind = { type: 'EOA' },
+  onSignature?: (hex: string) => void,
+) {
+  // Smart contract wallets register as SCW on the chain their contract lives on (lib/xmtp/wallet-kind.ts).
+  const scwChain = kind.type === 'SCW' ? kind.chainId : 0;
+  const scw = kind.type === 'SCW' ? { getChainId: () => BigInt(scwChain) } : {};
   return {
-    type: 'EOA' as const,
+    type: kind.type,
+    ...scw,
 
     // getIdentifier: async function returning the exact Identifier shape
     getIdentifier: async (): Promise<XmtpIdentifier> => {
@@ -228,6 +237,7 @@ function buildXmtpSigner(wagmiSigner: {
     // signMessage receives string only, must return Uint8Array
     signMessage: async (message: string): Promise<Uint8Array> => {
       const hexSig = await wagmiSigner.signMessage(message);
+      onSignature?.(hexSig);
       return hexToBytes(hexSig);
     },
   };
@@ -242,6 +252,8 @@ export async function getXMTPClient(
   wagmiSigner: {
     getAddress: () => Promise<string>;
     signMessage: (message: string | Uint8Array) => Promise<string>;
+    /** The chain the wallet is on: where a smart contract wallet is looked for first. */
+    getChainId?: () => Promise<number | undefined> | number | undefined;
   },
   hooks?: {
     /** About to ask for the signature that unlocks the local message database. */
@@ -260,10 +272,25 @@ export async function getXMTPClient(
   // The time a signature takes (the person switching to the wallet app, or approving on their
   // phone for a computer linked by QR) does not count against the start-up watchdog below.
   let signing = 0;
-  const signer = buildXmtpSigner({
+  // EOA or smart contract wallet (lib/xmtp/wallet-kind.ts). Detection never blocks sign-in: any
+  // failure keeps EOA, and a non-ECDSA signature below retries as a smart contract wallet.
+  const preferredChain = await Promise.resolve(wagmiSigner.getChainId?.()).catch(() => undefined);
+  // Detected once per account and device: a returning visit does not wait on seven RPC reads.
+  const kindKey = `ledger_xmtp_wallet_kind_${address}`;
+  let kind: WalletKind | null = null;
+  try { const c = JSON.parse(localStorage.getItem(kindKey) || 'null'); if (c?.type === 'EOA' || (c?.type === 'SCW' && Number.isInteger(c.chainId))) kind = c; } catch {}
+  if (!kind) {
+    kind = await detectWalletKind(address, preferredChain ?? null).catch(() => ({ type: 'EOA' as const }));
+  }
+  const rememberKind = (k: WalletKind) => { try { localStorage.setItem(kindKey, JSON.stringify(k)); } catch {} };
+  let lastSignature = '';
+  diag('signer_kind', { kind: kind.type, chain: kind.type === 'SCW' ? kind.chainId : undefined });
+  const countingSigner = {
     getAddress: wagmiSigner.getAddress,
-    signMessage: async (m) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
-  });
+    signMessage: async (m: string | Uint8Array) => { signing++; try { return await wagmiSigner.signMessage(m); } finally { signing--; } },
+  };
+  const remember = (hex: string) => { lastSignature = hex; };
+  let signer = buildXmtpSigner(countingSigner, kind, remember);
 
   //  Local database key (F-01): never stored in plaintext (lib/xmtp/device-key-vault.ts).
   // One signature to sign in: the key is kept on this device wrapped by a non-extractable
@@ -319,7 +346,7 @@ export async function getXMTPClient(
   }
 
   let client: Client;
-  try {
+  const createOnce = async (): Promise<Client> => {
     // Watchdog: 20 s of Client.create work (WASM load, network), not counting time spent waiting
     // for a signature — a WASM or network hang must never freeze the UI, a person signing must
     // never be cut off.
@@ -348,6 +375,19 @@ export async function getXMTPClient(
       }),
       createTimeout,
     ]).finally(() => clearInterval(watchdog)) as Client;
+  };
+  try {
+    try {
+      client = await createOnce();
+    } catch (first: any) {
+      // The wallet answered with a smart contract signature (ERC-6492: a wallet not deployed yet,
+      // so no code to find above) while registered as EOA: register again as a smart contract wallet.
+      if (kind!.type !== 'EOA' || !lastSignature || isPlainEcdsa(lastSignature)) throw first;
+      const chainId = preferredChain && (SCW_CHAINS as readonly number[]).includes(Number(preferredChain)) ? Number(preferredChain) : COUNTERFACTUAL_DEFAULT_CHAIN;
+      diag('signer_kind_retry', { chain: chainId });
+      signer = buildXmtpSigner(countingSigner, { type: 'SCW', chainId }, remember);
+      client = await createOnce();
+    }
   } catch (err: any) {
     const errorMsg = err?.message || '';
     if (
@@ -365,6 +405,8 @@ export async function getXMTPClient(
     throw err;
   }
 
+  // Only a kind that registered successfully is remembered.
+  rememberKind((signer as any).type === 'SCW' ? { type: 'SCW', chainId: Number((signer as any).getChainId()) } : { type: 'EOA' });
   clientRegistry.set(address, client);
   diag('client_ready', { env: XMTP_ENV, inbox: short((client as any).inboxId), installation: short((client as any).installationId) });
 
@@ -412,7 +454,8 @@ export async function revokeXMTPInstallations(
   },
   inboxId: string
 ): Promise<number> {
-  const signer = buildXmtpSigner(wagmiSigner);
+  const kind = await detectWalletKind((await wagmiSigner.getAddress()).toLowerCase()).catch(() => ({ type: 'EOA' as const }));
+  const signer = buildXmtpSigner(wagmiSigner, kind);
   const states = await (Client as any).inboxStateFromInboxIds([inboxId], XMTP_ENV);
   if (states && states[0] && states[0].installations) {
     const installationsToRevoke = selectInstallationsToRevoke(states[0].installations);
@@ -566,6 +609,15 @@ export async function getRegisteredAddress(address: string): Promise<string> {
 
 const ETH_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 
+/** The recipient has no XMTP inbox yet: nothing can reach them until they sign in once. */
+export class PeerNotOnXmtpError extends Error {
+  readonly code = 'PEER_NOT_ON_XMTP';
+  constructor(readonly address: string) {
+    super('PEER_NOT_ON_XMTP: this address has not turned on Ledger Chat or another XMTP app yet');
+    this.name = 'PeerNotOnXmtpError';
+  }
+}
+
 export async function sendMessage(
   client: Client | null | undefined,
   toAddress: string,
@@ -657,6 +709,13 @@ export async function sendMessage(
           activeDmCache.set(cacheKey, dm);
           continue;
         }
+      }
+      // The other person has no XMTP inbox (never signed in to Ledger Chat or another XMTP app):
+      // no retry can open the chat. Say so instead of four attempts and a generic failure.
+      if (route.kind === 'address' && i === 0 && !(await canReceiveMessages(client, finalTo))) {
+        diag('send_peer_not_registered', {});
+        reportDelivery('peer_not_registered', sendErr);
+        throw new PeerNotOnXmtpError(finalTo);
       }
       // Nothing was created yet: a fresh conversation handle is safe.
       activeDmCache.delete(cacheKey);
