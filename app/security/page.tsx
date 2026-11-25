@@ -7,6 +7,7 @@ import { VISIBILITY } from '@/lib/landing/chapters';
 import { SiteFooter, SiteHeader, Arrow } from '@/components/landing/site/Chrome';
 import s from '@/components/landing/site/site.module.css';
 import { getT } from '@/lib/i18n/server';
+import { translateDeep } from '@/lib/i18n/deep';
 
 /**
  * /security: the security architecture, part by part (verdict prompt, "Enterprise-grade landing
@@ -27,29 +28,29 @@ const review = (mainnet as { internalReview?: { report: string; date: string } }
 export default async function SecurityPage() {
   const __t = await getT();
   const v = versions();
-  const crypto: { part: string; how: string; standard: string; keys: string }[] = [
-    { part: 'Messages', how: `XMTP browser SDK${v.xmtp ? ` ${v.xmtp}` : ''}; group state and keys updated as members and time change`, standard: 'MLS, RFC 9420', keys: 'Made and kept on your device. The local message database is encrypted, its key held under a non-extractable browser key' },
+  const crypto: { part: string; how: string; standard: string; keys: string }[] = translateDeep([
+    { part: 'Messages', how: __t('XMTP browser SDK{version}; group state and keys updated as members and time change', { version: v.xmtp ? ` ${v.xmtp}` : '' }) as string, standard: 'MLS, RFC 9420', keys: 'Made and kept on your device. The local message database is encrypted, its key held under a non-extractable browser key' },
     { part: 'Calls', how: 'WebRTC, peer to peer; a TURN relay with one-hour credentials when a direct path is blocked', standard: 'DTLS-SRTP', keys: 'Negotiated for each call between the two devices. The relay passes encrypted packets' },
     { part: 'Attachments and large files', how: 'Encrypted on the sender’s device; files above 20 MB in 16 MiB pieces bound to their position', standard: 'AES-256-GCM, HKDF-SHA256', keys: 'Fresh for every file, sent only inside the MLS message that references it' },
-    { part: 'Private payments', how: `Aztec PXE in the browser builds the proof; balances are notes, spending one publishes a nullifier${v.aztecNr ? `; contracts in Noir with aztec-nr ${v.aztecNr}` : ''}`, standard: 'Client-side zero-knowledge proofs', keys: 'Derived on your device from a signature by your Ethereum wallet; never sent anywhere' },
+    { part: 'Private payments', how: (v.aztecNr ? __t('Aztec PXE in the browser builds the proof; balances are notes, spending one publishes a nullifier; contracts in Noir with aztec-nr {version}', { version: v.aztecNr }) : __t('Aztec PXE in the browser builds the proof; balances are notes, spending one publishes a nullifier')) as string, standard: 'Client-side zero-knowledge proofs', keys: 'Derived on your device from a signature by your Ethereum wallet; never sent anywhere' },
     { part: 'Paying the right person', how: 'Before value moves, a proof that the person in the conversation controls the Aztec address, bound to the network', standard: 'Schnorr signature over Grumpkin', keys: 'Checked on the payer’s device' },
     { part: 'Sign-in', how: 'A signed message names this website, your address and a one-time code from the server', standard: 'EIP-4361 (Sign-In with Ethereum)', keys: 'Your wallet. The server keeps a session' },
-  ];
-  const threats: { who: string; can: string; cannot: string; mitigation: string }[] = [
+  ], (x) => __t(x));
+  const threats: { who: string; can: string; cannot: string; mitigation: string }[] = translateDeep([
     { who: 'Someone who takes over our server', can: 'Read contacts, community posts, Status and push metadata; see sign-in sessions; block service', cannot: 'Read direct or group messages, call media, files, or payment amounts and recipients', mitigation: 'Moving contacts, communities and Status to MLS; Ledger Relay so others can run every server we run' },
     { who: 'An observer of the network', can: 'See that two inboxes exchange traffic, and when', cannot: 'Read content', mitigation: 'XMTP protects content, not all metadata. Stated next to the claim' },
     { who: 'An observer of the chain', can: 'See that a transaction happened, its fee and the account that paid it', cannot: 'See the amount or the recipient of a private transfer', mitigation: 'Private fee payment is evaluated, not in use' },
     { who: 'A contact who tries to redirect a payment', can: 'Announce an address that is not theirs', cannot: 'Pass the peer check: the payment is refused', mitigation: 'Network-bound proof of address control, checked on the payer’s device' },
     { who: 'A phishing site', can: 'Ask your wallet to sign a message', cannot: 'Produce a message that names ledgerchat.org from another domain', mitigation: 'The sign-in screen shows every field of the message and checks the website against the page' },
     { who: 'Someone with your unlocked device', can: 'Read your chats on that device', cannot: 'Spend without your wallet or an enrolled passkey', mitigation: 'App PIN, the device lock, and the passkey list in the wallet’s Security view' },
-  ];
-  const limits = [
+  ], (x) => __t(x));
+  const limits = translateDeep([
     'There is no external audit yet. Our contracts have had an internal security review.',
     'The account that pays an Aztec network fee is public, so its transactions can be linked to each other.',
     'Contacts, community posts and Status are stored on our server and are not end-to-end encrypted today.',
     'Calls across two strict networks depend on the TURN relay; signalling uses the public PeerJS cloud unless our own server is configured.',
     'Aztec Alpha is an early network; payments on it have a cap per payment.',
-  ];
+  ], (x) => __t(x));
 
   return (
     <div className={s.site} data-site="public">
