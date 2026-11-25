@@ -12,6 +12,8 @@ import { Blocks } from "./Blocks";
 import { ImmersiveField } from "@/components/immersive/ImmersiveField";
 import { SiteFooter } from "@/components/landing/v2/SiteFooter";
 import { getServerLocale, getT } from "@/lib/i18n/server";
+import { translatePage } from "@/lib/docs/i18n";
+import { docsTranslator } from "@/lib/docs/i18n-server";
 import { HTML_LANG, type Locale } from "@/lib/i18n/locales";
 import s from "./Docs.module.css";
 
@@ -78,9 +80,13 @@ export interface DocsLayoutProps {
   meta?: React.ReactNode;
 }
 
-export async function DocsLayout({ current, page, group, before, after, extraToc, meta }: DocsLayoutProps) {
+export async function DocsLayout({ current, page: source, group, before, after, extraToc, meta }: DocsLayoutProps) {
   const t = await getT();
   const locale = await getServerLocale();
+  // The page in the reader's language (lib/docs/i18n.ts); interface texts fall back to t().
+  const tr = await docsTranslator();
+  const page = translatePage(source, tr);
+  const label = (text: string) => (tr && tr(text) !== text ? tr(text) : t(text));
   const entry = findByHref(current);
   const groupName = group ?? entry?.group ?? "Documentation";
   const { prev, next } = neighbours(current);
@@ -99,14 +105,14 @@ export async function DocsLayout({ current, page, group, before, after, extraToc
 
         <main className={s.main} id="docs-content">
           <article className={s.content}>
-            <p className={s.crumbs}>{t(groupName)}</p>
-            <h1 className={s.title}>{t(page.title ?? page.label)}</h1>
-            <p className={s.summary}>{t(page.summary)}</p>
+            <p className={s.crumbs}>{label(groupName)}</p>
+            <h1 className={s.title}>{label(source.title ?? source.label)}</h1>
+            <p className={s.summary}>{label(source.summary)}</p>
             {meta}
 
             <div className={s.prose}>
               {before}
-              <Blocks blocks={page.blocks} />
+              <Blocks blocks={page.blocks} tr={tr} />
               {after}
             </div>
 
@@ -128,7 +134,7 @@ export async function DocsLayout({ current, page, group, before, after, extraToc
                       <ChevronLeft size={18} strokeWidth={1.9} aria-hidden="true" />
                       <span className={s.pagerText}>
                         <span className={s.pagerLabel}>{t("Previous")}</span>
-                        <span className={s.pagerTitle}>{t(prev.label)}</span>
+                        <span className={s.pagerTitle}>{label(prev.label)}</span>
                       </span>
                     </Link>
                   )}
@@ -136,7 +142,7 @@ export async function DocsLayout({ current, page, group, before, after, extraToc
                     <Link href={next.href} className={`${s.pagerLink} ${s.pagerNext}`}>
                       <span className={s.pagerText}>
                         <span className={s.pagerLabel}>{t("Next")}</span>
-                        <span className={s.pagerTitle}>{t(next.label)}</span>
+                        <span className={s.pagerTitle}>{label(next.label)}</span>
                       </span>
                       <ChevronRight size={18} strokeWidth={1.9} aria-hidden="true" />
                     </Link>

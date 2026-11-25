@@ -52,6 +52,9 @@ export function textWidth(text: string, size: number, bold = false): number {
     else if (WIDE.has(ch)) w += 0.86;
     else if (ch >= 'A' && ch <= 'Z') w += 0.66;
     else if (ch >= '0' && ch <= '9') w += 0.58;
+    else if (/[\u2E80-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFFEF\u3000-\u303F]/.test(ch)) w += 1.0;
+    else if (ch >= '\u0410' && ch <= '\u042F') w += 0.7;
+    else if (ch >= '\u0430' && ch <= '\u044F') w += 0.56;
     else w += 0.53;
   }
   return w * size * (bold ? 1.05 : 1);
@@ -59,7 +62,17 @@ export function textWidth(text: string, size: number, bold = false): number {
 
 /** Wraps a line to `max` px. */
 export function wrap(text: string, max: number, size: number, bold = false): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+  // Chinese has no spaces: a run longer than the line is broken between characters.
+  const words = text.split(/\s+/).filter(Boolean).flatMap((w) => {
+    if (textWidth(w, size, bold) <= max || !/[\u2E80-\u9FFF\uFF00-\uFFEF]/.test(w)) return [w];
+    const parts: string[] = [];
+    let cur = '';
+    for (const ch of w) {
+      if (cur && textWidth(cur + ch, size, bold) > max) { parts.push(cur); cur = ch; } else cur += ch;
+    }
+    if (cur) parts.push(cur);
+    return parts;
+  });
   const out: string[] = [];
   let line = '';
   for (const w of words) {
@@ -689,7 +702,51 @@ export function layoutSeq(ast: SeqAst): SeqLayout {
 
 export type DiagramLayout = FlowLayout | SeqLayout;
 
-export function layoutDiagram(code: string): DiagramLayout {
-  const ast = parseDiagram(code);
+/**
+ * Every text a reader sees in a diagram, line by line (node titles and subtitles, edge labels,
+ * group titles, actors, messages, notes, block labels). The documentation's dictionaries
+ * (lib/i18n/docs) translate exactly these strings.
+ */
+export function diagramTexts(ast: DiagramAst): string[] {
+  const out: string[] = [];
+  const add = (xs: string[]) => { for (const x of xs) if (x && /\p{L}/u.test(x)) out.push(x); };
+  if (ast.type === 'flow') {
+    for (const n of ast.nodes) add([...n.title, ...n.sub]);
+    for (const e of ast.edges) add(e.label);
+    for (const g of ast.groups) add([g.title]);
+  } else {
+    for (const a of ast.actors) add([...a.title, ...a.sub]);
+    for (const it of ast.items) {
+      if (it.k === 'msg' || it.k === 'note') add(it.text);
+      else if (it.k === 'open' || it.k === 'else') add([it.label]);
+    }
+  }
+  return out;
+}
+
+/** The same diagram with every visible text passed through `tr`; ids, shapes and edges unchanged. */
+export function translateDiagram(ast: DiagramAst, tr: (s: string) => string): DiagramAst {
+  const m = (xs: string[]) => xs.map((x) => (x ? tr(x) : x));
+  if (ast.type === 'flow') {
+    return {
+      ...ast,
+      nodes: ast.nodes.map((n) => ({ ...n, title: m(n.title), sub: m(n.sub) })),
+      edges: ast.edges.map((e) => ({ ...e, label: m(e.label) })),
+      groups: ast.groups.map((g) => ({ ...g, title: g.title ? tr(g.title) : g.title })),
+    };
+  }
+  return {
+    ...ast,
+    actors: ast.actors.map((a) => ({ ...a, title: m(a.title), sub: m(a.sub) })),
+    items: ast.items.map(
+      (it): SeqItem =>
+        it.k === 'msg' || it.k === 'note' ? { ...it, text: m(it.text) } : it.k === 'open' || it.k === 'else' ? { ...it, label: it.label ? tr(it.label) : it.label } : it,
+    ),
+  };
+}
+
+export function layoutDiagram(code: string, tr?: (s: string) => string): DiagramLayout {
+  let ast = parseDiagram(code);
+  if (tr) ast = translateDiagram(ast, tr);
   return ast.type === 'seq' ? layoutSeq(ast) : layoutFlow(ast);
 }
