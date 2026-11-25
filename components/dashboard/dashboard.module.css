@@ -30,9 +30,9 @@
   min-height: 70vh;
 }
 .dash *, .dash *::before, .dash *::after { box-sizing: border-box; }
-/* Base styles at zero specificity (:where), so every class below wins over them. */
-:where(.dash) a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
-:where(.dash) a:hover { text-decoration-thickness: 2px; }
+/* Higher specificity than .site a (components/landing/site/site.module.css), which wraps /dashboard. */
+.dash a[href] { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+.dash a[href]:hover { text-decoration-thickness: 2px; }
 :where(.dash) :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 :where(.dash) :is(h1, h2, h3, p, dl, ol, ul) { margin: 0; }
 
@@ -159,11 +159,12 @@
 .shown { font-size: 12.5px; color: var(--ink-3); padding-bottom: 8px; }
 
 .btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; font: inherit; font-size: 14px; font-weight: 600; padding: 0 18px; min-height: 42px; border: 1px solid var(--ink); background: var(--ink); color: var(--page); cursor: pointer; text-decoration: none !important; }
-.btn:hover { background: var(--ink-2); border-color: var(--ink-2); }
-.btn:disabled { background: var(--rule); border-color: var(--rule); color: var(--ink-3); cursor: not-allowed; }
-.btnLine { background: var(--page); color: var(--ink); }
-.btnLine:hover { background: var(--page); border-color: var(--ink); text-decoration: underline !important; }
-.btnLine:disabled { background: var(--page); }
+.dash .btn, .dash a.btn { background: var(--ink); color: var(--page); text-decoration: none !important; }
+.btn:hover, .dash .btn:hover, .dash a.btn:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn:disabled, .dash .btn:disabled { background: var(--rule); border-color: var(--rule); color: var(--ink-3); cursor: not-allowed; }
+.btnLine, .dash .btnLine, .dash a.btnLine { background: var(--page); color: var(--ink); }
+.btnLine:hover, .dash .btnLine:hover, .dash a.btnLine:hover { background: var(--page); border-color: var(--ink); text-decoration: underline !important; }
+.btnLine:disabled, .dash .btnLine:disabled { background: var(--page); }
 .textBtn { appearance: none; border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; min-height: 32px; }
 .textBtn:hover { text-decoration-thickness: 2px; }
 .textBtn:disabled { color: var(--ink-3); text-decoration: none; cursor: not-allowed; }

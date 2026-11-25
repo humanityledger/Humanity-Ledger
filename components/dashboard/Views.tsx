@@ -491,8 +491,11 @@ export function PeopleView({ model, hidden }: { model: DashModel; hidden: boolea
           <tbody>
             {model.counterparties.slice(0, 500).map((c) => {
               const tok = Object.entries(c.perToken);
-              const fmt = (pick: 'sent' | 'received') =>
-                hidden ? '••••' : tok.length ? tok.map(([k, v]) => `${formatUnits(v[pick], meta(k)?.decimals ?? 18)} ${meta(k)?.symbol ?? ''}`).join(', ') : '—';
+              const fmt = (pick: 'sent' | 'received') => {
+                const moved = tok.filter(([, v]) => v[pick] > 0n);
+                if (!moved.length) return '—';
+                return hidden ? '••••' : moved.map(([k, v]) => `${formatUnits(v[pick], meta(k)?.decimals ?? 18)} ${meta(k)?.symbol ?? ''}`.trim()).join(', ');
+              };
               return (
                 <tr key={c.address}>
                   <td>
@@ -713,7 +716,7 @@ export function MessagingView({ address }: { address: string }) {
         </div>
       </section>
       <aside aria-labelledby="mg-net">
-        <H2 id="mg-net" src={['public']}>
+        <H2 id="mg-net">
           {t('What the XMTP network sees')}
         </H2>
         <p className={s.stateText}>{t('Messages travel as MLS ciphertext. The network sees inbox ids and timing, not content.')}</p>

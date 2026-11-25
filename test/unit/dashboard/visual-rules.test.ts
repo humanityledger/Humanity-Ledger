@@ -98,4 +98,13 @@ describe('dashboard visual rules', () => {
   it('phones get 16 px inputs (no zoom on focus in iOS Safari)', () => {
     expect(CSS).toMatch(/@media \(max-width: 640px\) \{ \.search, \.select \{ font-size: 16px; \} \}/);
   });
+
+  it('beats .site a specificity on links and button links, omits zero-moved tokens in PeopleView, and never tags XMTP as public chain', () => {
+    expect(CSS).toMatch(/\.dash a\[href\]/);
+    expect(CSS).toMatch(/\.dash a\.btn\b/);
+    expect(CSS).not.toMatch(/:where\(\.dash\) a\b/);
+    const views = TSX.find((x) => x.f === 'Views.tsx')?.src ?? '';
+    expect(views).toMatch(/v\[pick\]\s*>\s*0n/);
+    expect(views).not.toMatch(/id="mg-net"\s+src=\{\['public'\]\}/);
+  });
 });
