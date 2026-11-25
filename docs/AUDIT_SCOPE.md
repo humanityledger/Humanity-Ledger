@@ -29,6 +29,8 @@ This document defines the formal scope for an external security audit of the Hum
 
 ### 3.1 Zero-Knowledge Circuits (Noir / UltraHonk)
 
+> Retired on 25 November 2026 to [`archive/standalone-circuits`](../archive/standalone-circuits/README.md); the paths below are their former locations.
+
 | Circuit | Location | Verification Key |
 |---|---|---|
 | `escrow` | `circuits/escrow/` | `circuits/escrow/target/escrow.vk.json` |

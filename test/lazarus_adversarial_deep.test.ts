@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { AZTEC_ARTIFACT_PINS } from '@/lib/aztec/artifact-pins';
 import { zeroizeBuffer, zeroizeObject } from '@/lib/security/zeroize';
 import { constantTimeCompare, constantTimeCompareBuffers } from '@/lib/security/constant-time';
 import { validateEAFBridgeMessage } from '@/lib/security/eaf-guard';
 import { validateUrlForFetch } from '@/lib/security/ssrfGuard';
 import { detectCanaryBreach, scrubSensitiveData, CANARY_PRIVATE_KEY_HEX, CANARY_IDENTIFIER } from '@/lib/security/canary';
-import { assertVKIntegrity, getLocalVKHash } from '@/lib/aztec/verifier';
 
 /**
  * Humanity Ledger — Lazarus & APT Adversarial Fortification Suite
@@ -250,22 +251,13 @@ describe('Adversarial Deep Fortification — Anti-Lazarus / APT Resistance Batte
       }
     });
 
-    it('Detects and blocks verification key tampering across all 3 production circuits', () => {
-      const legitimateRegistry = {
-        escrow: { hash: getLocalVKHash('escrow'), status: 'ACTIVE' as const },
-        streams: { hash: getLocalVKHash('streams'), status: 'ACTIVE' as const },
-        identity: { hash: getLocalVKHash('identity'), status: 'ACTIVE' as const },
-      };
-
-      // 1. Clean registry passes
-      expect(() => assertVKIntegrity(legitimateRegistry)).not.toThrow();
-
-      // 2. Tampered escrow VK throws
-      const tamperedRegistry = {
-        ...legitimateRegistry,
-        escrow: { hash: '0x' + 'f'.repeat(64), status: 'ACTIVE' as const },
-      };
-      expect(() => assertVKIntegrity(tamperedRegistry)).toThrow(/does not match the registry/);
+    it('Detects a tampered aztec-nr artifact: its SHA-256 no longer matches the pin', () => {
+      for (const p of AZTEC_ARTIFACT_PINS) {
+        const bytes = readFileSync(p.artifact);
+        expect(crypto.createHash('sha256').update(bytes).digest('hex')).toBe(p.sha256);
+        const tampered = Buffer.concat([bytes, Buffer.from(' ')]);
+        expect(crypto.createHash('sha256').update(tampered).digest('hex')).not.toBe(p.sha256);
+      }
     });
   });
 

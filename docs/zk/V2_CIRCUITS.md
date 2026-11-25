@@ -1,5 +1,8 @@
 # Circuitos v2 (experimentales)
 
+> **Retired on 25 November 2026.** The circuits described here moved to [`archive/standalone-circuits`](../../archive/standalone-circuits/README.md) and nothing in the product, build or CI uses them. Ledger Chat moves value only through the aztec-nr contracts in `contracts/aztec/`. This page is kept as a record.
+
+
 Los circuitos v2 corrigen en los circuitos sueltos los hallazgos ZK-01 a ZK-05 y cierran los gaps G2, G3 y G5 de `circuits/CONSTRAINT_COMPLETENESS.md`. Viven en crates nuevos (`circuits/escrow_v2`, `circuits/identity_v2`, `circuits/streams_v2`, con la librería común `circuits/hl_lib`), así que los circuitos v1 y sus VK fijadas no cambian.
 
 **Estado:** experimentales. Se compilan y se prueban con `nargo test` en la CI (workflow "Noir circuits"), que también deriva sus VK con Barretenberg y las compara con los hashes fijados en `scripts/zk/v2-vks.mjs`. Las VK no están commiteadas, no los usa la app y no hay verificador desplegado. El plan de largo plazo sigue siendo el camino A del prompt maestro: contratos aztec-nr (R-08 a R-10). Los v2 son el camino B, útil para pruebas rápidas y para un verificador fuera de Aztec.

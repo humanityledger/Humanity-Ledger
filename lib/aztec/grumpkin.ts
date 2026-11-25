@@ -1,5 +1,5 @@
 /**
- * lib/aztec/grumpkin.ts — gap G1 (circuits/CONSTRAINT_COMPLETENESS.md).
+ * lib/aztec/grumpkin.ts — gap G1 (archive/standalone-circuits/circuits/CONSTRAINT_COMPLETENESS.md).
  *
  * Grumpkin is the curve Aztec uses for account keys and addresses:
  *   y^2 = x^3 - 17  over the BN254 scalar field (p below).

@@ -277,13 +277,13 @@ const htmlContent = `<!DOCTYPE html>
   </p>
   <ul>
     <li>
-      <strong>Client-Side Proving:</strong> Private payment proofs are generated in the user's browser by the Aztec SDK's embedded PXE. The standalone Noir circuits have a Web Worker prover (<code>lib/zk/prover.worker.ts</code>), real in tests only and not wired into any page.
+      <strong>Client-Side Proving:</strong> Private payment proofs are generated in the user's browser by the Aztec SDK's embedded PXE. The standalone Noir circuits and their Web Worker prover were retired on 25 November 2026 (<code>archive/standalone-circuits</code>, known issues ZK-01 to ZK-07).
     </li>
     <li>
-      <strong>Noir Smart Contract Invariants:</strong>
+      <strong>aztec-nr contracts:</strong>
       <ul>
-        <li><code>zk_escrow</code>: Conditional escrow releases governed by authorized witness (authwit) cryptographic signatures.</li>
-        <li><code>zk_streams</code>: Continuous payment streaming contracts with block-timestamp verification and non-repudiation.</li>
+        <li><code>PrivateEscrow</code> (aztec-nr, <code>contracts/aztec/escrow</code>): escrow held as private notes; real on the Aztec test network, refused on Alpha until an external audit.</li>
+        <li><code>PaymentStream</code> (aztec-nr, <code>contracts/aztec/streams</code>): a payment paid out over time; real on the Aztec test network, refused on Alpha until an external audit.</li>
       </ul>
     </li>
     <li>

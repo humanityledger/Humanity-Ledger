@@ -1,55 +1,40 @@
 /**
- * scripts/verify-bundle-integrity.ts
+ * scripts/verify-bundle-integrity.ts — anyone can check what GET /api/security/integrity says.
  *
- * Reproducible verification of client-side proving bundle artifacts and verification keys.
- * Run with: npx tsx scripts/verify-bundle-integrity.ts
+ * Hashes every aztec-nr artifact on disk and compares it with the manifest the app publishes
+ * (lib/security/integrity.ts → lib/aztec/artifact-pins.ts), and checks that the retired standalone
+ * circuits are not in the product tree. Run with: npx tsx scripts/verify-bundle-integrity.ts
  */
-
 import { createHash } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { PINNED_VK_SHA256, CIRCUITS } from '../lib/zk/vk-pins';
-import { getProvingIntegrityManifest } from '../lib/security/integrity';
+import { existsSync, readFileSync } from 'node:fs';
+import { getIntegrityManifest } from '../lib/security/integrity';
 
-console.log('[INTEGRITY CHECK] Verifying client-side proving bundle integrity...');
-
+const manifest = getIntegrityManifest();
 let failures = 0;
-const manifest = getProvingIntegrityManifest();
 
-for (const circuit of CIRCUITS) {
-  const vkPath = resolve(process.cwd(), 'circuits', circuit, 'target', 'vk');
-  const expectedHash = PINNED_VK_SHA256[circuit];
-
-  if (!existsSync(vkPath)) {
-    console.warn(`[WARN] Circuit binary VK missing on disk: ${vkPath}`);
+for (const pin of manifest.contracts) {
+  if (!existsSync(pin.artifact)) {
+    console.error(`[FAIL] ${pin.contract}: ${pin.artifact} is missing`);
+    failures++;
     continue;
   }
-
-  const vkBytes = readFileSync(vkPath);
-  const actualHash = `0x${createHash('sha256').update(vkBytes).digest('hex')}`;
-
-  if (actualHash.toLowerCase() === expectedHash.toLowerCase()) {
-    console.log(`[PASS] ${circuit} binary VK SHA-256 matches pinned hash: ${actualHash}`);
-  } else {
-    console.error(`[FAIL] ${circuit} binary VK MISMATCH!`);
-    console.error(`  Expected: ${expectedHash}`);
-    console.error(`  Actual:   ${actualHash}`);
+  const actual = createHash('sha256').update(readFileSync(pin.artifact)).digest('hex');
+  if (actual === pin.sha256) console.log(`[PASS] ${pin.contract}  ${actual}`);
+  else {
+    console.error(`[FAIL] ${pin.contract}: expected ${pin.sha256}, found ${actual}`);
     failures++;
   }
+}
 
-  const manifestEntry = manifest.circuits[circuit];
-  if (manifestEntry && manifestEntry.pinnedVkSha256.toLowerCase() === expectedHash.toLowerCase()) {
-    console.log(`[PASS] ${circuit} manifest metadata is synchronized.`);
-  } else {
-    console.error(`[FAIL] ${circuit} manifest metadata mismatch.`);
+for (const r of manifest.retired) {
+  if (existsSync('circuits')) {
+    console.error('[FAIL] circuits/ is back in the product tree; it was retired to ' + r.path);
     failures++;
-  }
+  } else console.log(`[PASS] retired: ${r.name} (${r.path})`);
 }
 
 if (failures > 0) {
-  console.error(`[FATAL] Integrity verification failed with ${failures} error(s).`);
+  console.error(`[FATAL] ${failures} integrity check(s) failed.`);
   process.exit(1);
-} else {
-  console.log('[SUCCESS] All client-side proving bundle verification keys match pinned hashes.');
-  process.exit(0);
 }
+console.log(`[SUCCESS] ${manifest.contracts.length} aztec-nr artifacts match the published manifest.`);

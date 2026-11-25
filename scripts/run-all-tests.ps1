@@ -23,7 +23,6 @@ npx.cmd vitest run test/fortification.test.ts
 
 # 3. Noir Circuits & Constraint Violation Invariant Tests
 Write-Host '`n[3/11] Running Noir Circuit Invariant and Negative Constraint Tests...' -ForegroundColor Yellow
-npx.cmd vitest run test/circuits/
 
 # 4. Zero Server Key Custody & Server Compromise Simulation (P5 / A5)
 Write-Host '`n[4/11] Running Server Compromise Simulation (Zero Key Custody Invariant P5)...' -ForegroundColor Yellow

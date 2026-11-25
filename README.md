@@ -36,7 +36,7 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 6. [Ethereum portal and receiver addresses](#6-ethereum-portal-and-receiver-addresses)
 7. [Encrypted local storage](#7-encrypted-local-storage)
 8. [aztec-nr contracts](#8-aztec-nr-contracts-aztec-600)
-9. [Standalone Noir circuits](#9-standalone-noir-circuits-experimental)
+9. [Standalone Noir circuits (retired)](#9-standalone-noir-circuits-retired)
 10. [Cryptographic anchors](#10-cryptographic-anchors)
 11. [What the tests prove, and what they do not](#11-what-the-tests-prove-and-what-they-do-not)
 12. [Explicit non-claims](#12-explicit-non-claims)
@@ -67,7 +67,7 @@ This file is an evaluation dossier. It is written so that an engineer can decide
 | Escrow and payment streams (aztec-nr) | Testnet only | TXE tests in CI (section 8); end to end on testnet | [`docs/AZTEC_TESTNET_DEPLOYMENTS.md`](docs/AZTEC_TESTNET_DEPLOYMENTS.md) |
 | Escrow and streams on Alpha | Off | Refused in the client and the scripts: no external audit (`audit: null`). cUSDC is refused for agreements in any case: its contract has no `transfer_in_private` | [`lib/protocol/agreement-gate.ts`](lib/protocol/agreement-gate.ts), [`lib/aztec/agreement-policy.ts`](lib/aztec/agreement-policy.ts), [`docs/MAINNET_READINESS.md`](docs/MAINNET_READINESS.md) |
 | Protocol fee (escrow and streams) | None | In the source, settlement only, to the designated treasury. CI compiled it with Aztec 6.0.0 and TXE passed (17 Nov 2026). Current classes: escrow `0x2ade61…9504c6`, streams `0x0251d1…c6777b`. Not deployed. Not on Alpha: no external audit | [`docs/protocol/FEE_CONTRACT_SPEC.md`](docs/protocol/FEE_CONTRACT_SPEC.md), [`deployments/aztec-testnet.json`](deployments/aztec-testnet.json) |
-| Standalone Noir circuits | None | Tests only. Known soundness issues ZK-01 to ZK-07 | [section 9](#9-standalone-noir-circuits-experimental) |
+| Standalone Noir circuits | None | Retired on 25 November 2026 to `archive/standalone-circuits`. Known soundness issues ZK-01 to ZK-07 kept there | [section 9](#9-standalone-noir-circuits-retired) |
 | Calls (voice, video, screen) | WebRTC | Real. Since 17 Nov 2026 a call rings without its chat open and hangs up on both sides in every state. Signalling on the Ledger Relay (public PeerJS cloud only as fallback); Cloudflare TURN over UDP, TCP and TLS 443. Since 24 Nov 2026 camera video is 720p30 up to 2.5 Mbps with balanced degradation; data saver 360p15, 0.5 Mbps. A call across two different networks is not yet recorded (R3) | [`docs/CALLS.md`](docs/CALLS.md), [`lib/calls/media.ts`](lib/calls/media.ts) |
 | Community posts | XMTP MLS for new communities; our server for older ones | Since 24 Nov 2026 a new community's first channel is an XMTP MLS group made by the creator's client (`mls: true` in `components/chat/LedgerCommunitiesTab.tsx`); the server stores only the group id and the post route answers 410. `COMMUNITY_MLS_NEW=off` switches it back. Communities created before stay readable by our server and are not migrated | [`app/api/chat/communities/route.ts`](app/api/chat/communities/route.ts), [`lib/communities/mls.ts`](lib/communities/mls.ts), [`docs/communities/MLS_MIGRATION.md`](docs/communities/MLS_MIGRATION.md) |
 | Attachments | Client, R2 | Encrypted in the browser before upload (AES-256-GCM, HKDF-SHA256, fresh secret per file); R2 and our server hold ciphertext only; the key rides inside the XMTP message | [`lib/chat/remote-attachment.ts`](lib/chat/remote-attachment.ts), [`lib/chat/send-attachment.ts`](lib/chat/send-attachment.ts) |
@@ -400,27 +400,21 @@ Three agreement contracts and the portal token, written against `aztec-nr` v6.0.
 
 ---
 
-## 9. Standalone Noir circuits (experimental)
+## 9. Standalone Noir circuits (retired)
 
-`circuits/escrow`, `circuits/identity` and `circuits/streams` compile with nargo 1.0.0 and prove with Barretenberg (@aztec/bb.js 5.3.0) in tests. **No page uses them.** The direction is the aztec-nr contracts of section 8.
+**Retired on 25 November 2026.** The standalone circuits (`escrow`, `identity`, `streams`, v1 and v2), their prover, verifier, VK registry contract (never deployed) and tests are in [`archive/standalone-circuits`](archive/standalone-circuits/README.md). Nothing in the product, the build or the CI reaches them (`test/unit/aztec/artifact-pins.test.ts`). They were Path B: proofs about numbers with no deployed verifier holding state. Ledger Chat follows Path A: value moves only through the aztec-nr contracts of section 8 and the standard Token, proved on the device by the PXE.
 
-| Circuit | Pinned VK SHA-256 ([`lib/zk/vk-pins.ts`](lib/zk/vk-pins.ts)) |
-|---|---|
-| `escrow` | `0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2` |
-| `identity` | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` |
-| `streams` | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` |
-
-| ID | Severity | Issue in v1 |
+| ID | Severity | Issue in the retired circuits |
 |---|---|---|
-| ZK-01 | Critical | Streams: the same accrual can be claimed many times (reproduced in `test/circuits/streams_zk01_known_issue.test.ts`) |
+| ZK-01 | Critical | Streams: the same accrual can be claimed many times |
 | ZK-02 | Critical | Escrow and streams: proofs are not bound to the payout address, so they can be front-run |
 | ZK-03 | High | Escrow: claiming requires the sender's secret; no refund path |
 | ZK-04 | High | Identity: no domain separation between leaf and nullifier hashes |
 | ZK-05 | High | Identity: depth-1 tree, an anonymity set of two |
 | ZK-06 | Medium | Timestamps are chosen by the prover |
-| ZK-07 | Medium | Verification did not pin the VK (fixed) |
+| ZK-07 | Medium | Verification did not pin the VK |
 
-**v2** (`circuits/*_v2`, shared `circuits/hl_lib`) fixes ZK-01 to ZK-05 with Poseidon2 and domain separators, a depth-32 tree and a committed sanction list. It compiles and passes 36 tests in CI; its VK hashes are pinned in `scripts/zk/v2-vks.mjs`. No deployed verifier stores its state ([`docs/zk/V2_CIRCUITS.md`](docs/zk/V2_CIRCUITS.md)).
+The archive README says, for each issue, where the same concern lives in the aztec-nr contracts. Retiring the circuits closes these as findings about reachable code; it does not certify the aztec-nr contracts, which have no external audit yet. Their committed artifacts are pinned by SHA-256 in [`lib/aztec/artifact-pins.ts`](lib/aztec/artifact-pins.ts) and published at `/api/security/integrity`.
 
 ---
 
@@ -430,9 +424,9 @@ Each value is copied from its source; [`docs/readme/FACTS.md`](docs/readme/FACTS
 
 | Anchor | Value | Source |
 |---|---|---|
-| VK SHA-256, escrow | `0x4e3cc4c8ce03607dcb2b98bd50c0d31084300634ee8f70f4674919682eb915c2` | `lib/zk/vk-pins.ts` |
-| VK SHA-256, identity | `0xcd02d2407de202d61e1a03c360633a9b0cdd8fe4b4d67b007cce108990632194` | `lib/zk/vk-pins.ts` |
-| VK SHA-256, streams | `0xa79000bf70441f02ce5ec092f15771e93dfc3d990977a33de9991795bc374346` | `lib/zk/vk-pins.ts` |
+| Artifact SHA-256, PrivateEscrow (aztec-nr) | `645211d00d4b6f4e4ca9342b29f068d4e6cc7e4974c781261ba073bba514221f` | `lib/aztec/artifact-pins.ts` |
+| Artifact SHA-256, IdentityCredential (aztec-nr) | `39561cb73640a077a5391f215e4bd54474cffeb131760d5cce1ec7a6b5dbdf2b` | `lib/aztec/artifact-pins.ts` |
+| Artifact SHA-256, PaymentStream (aztec-nr) | `c154bcd8e3c0c6e2c82eef37a64b01ab5b36a8f2f3182cfc6c2fd033a4b3a304` | `lib/aztec/artifact-pins.ts` |
 | Class ID, `PrivateEscrow` (keyed, current) | `0x1fc9702de2946be7308126990f4cf3b8a3fbe9a4c53dc072d9ccb95bf9f04b5e` | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | Class ID, `PaymentStream` (keyed, current) | `0x1fd6afbe0bffe6a7cb675927dedc0aed886a46bf7c6d58edc32854af073701f2` | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
 | Class ID, `IdentityCredential` (current) | `0x1be813182640bfe08c2dea56bc3f96a7192b380a8dadc8210fc27ae0867e6c06` | `docs/AZTEC_TESTNET_DEPLOYMENTS.md` |
@@ -548,10 +542,9 @@ npm run check:patterns
 (cd contracts/aztec/test_token && aztec compile)
 for c in escrow identity streams portal_token; do (cd contracts/aztec/$c && aztec compile && aztec test); done
 
-# Standalone circuits, artifacts and VK pins
-for c in escrow identity streams; do (cd circuits/$c && nargo check && nargo test); done
-node scripts/zk/check-artifacts.mjs
-npx vitest run test/unit/aztec/circuit-proving.test.ts test/zk/ test/circuits/
+# aztec-nr artifact pins (the standalone circuits are retired)
+node scripts/aztec/pin-artifacts.mjs --check
+npx vitest run test/unit/aztec/artifact-pins.test.ts
 
 # L1 contracts, including HLPortal and the receiver factory
 npm run test:contracts
