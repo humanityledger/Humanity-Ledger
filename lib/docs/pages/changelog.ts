@@ -1,4 +1,4 @@
-﻿import type { DocPage } from "../types";
+import type { Block, DocPage } from "../types";
 
 /**
  * The changelog is written from the repository history, in plain language.
@@ -23,9 +23,27 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    id: "unreleased",
-    title: "Not yet released",
-    note: "In the repository, waiting for the next deployment.",
+    id: "2026-11-25",
+    title: "24 and 25 November 2026",
+    date: "2026-11-25",
+    changes: [
+      { kind: "fixed", text: "Replies reach people again in chats whose sender Ledger Chat could not resolve. Those chats were filed under an XMTP identifier, and every reply in them showed Not sent." },
+      { kind: "new", text: "A message that could not be sent shows Retry next to Not sent, which sends the same text again." },
+      { kind: "new", text: "Ledger Chat in five languages: English, Spanish, Russian, German and Chinese. The language you pick applies to the website and to the chat, and is remembered on this device." },
+      { kind: "improved", text: "Video calls in HD on 4G and 5G: 720p at 30 frames a second, using up to 2.5 Mbps, keeping the picture sharp before it drops frames. Data saver now also lowers what you send, to 360p and 0.5 Mbps." },
+      { kind: "improved", text: "The private wallet has a new, lighter design: the balance on white, round keys for each action, a clearer opening screen, and a recipient picture on every payment so you can tell at a glance that it goes where you meant." },
+      { kind: "new", text: "Shield and Unshield show what each balance becomes while you type the amount." },
+      { kind: "fixed", text: "On iPhone, the home page no longer shows a grey band at the bottom of the screen when Safari hides its toolbar." },
+      { kind: "fixed", text: "Every page of the documentation failed to open for a few hours after the translation release. They open again, and a test now guards against the cause." },
+      { kind: "new", text: "New communities keep their posts in an end to end encrypted XMTP group from the first channel. Communities created before stay as they were." },
+      { kind: "new", text: "Paying the network fee privately, through the shared PrivateFPC recommended by Aztec, is written and off by default. It has not been tried on Aztec Alpha." },
+      { kind: "security", text: "The four checks every change must pass run again: a package missing from the lockfile had stopped them, and nineteen tests that matched old code or comments now check the code itself." },
+    ],
+  },
+  {
+    id: "2026-11-24",
+    title: "18 to 23 November 2026",
+    date: "2026-11-23",
     changes: [
       { kind: "security", text: "Verify encryption: every chat has a Verify button. It shows a 60-digit safety number made from both people's XMTP inboxes and every device on them, so a device added to either account changes the number. Compare it in person or on a call, then mark the contact verified; if the number changes later, the chat tells you." },
       { kind: "security", text: "Only the person who sent a message can edit it or delete it for everyone, and edits are accepted for 24 hours. Before, an edit or delete from the other person could change your own messages on your screen." },
@@ -218,12 +236,29 @@ export const RELEASES: Release[] = [
   },
 ];
 
+const KIND_LABEL: Record<ChangeKind, string> = { new: "New", improved: "Improved", fixed: "Fixed", security: "Security" };
+
+/** One section per release, newest first: a heading, its note, and each change with its kind. */
+export function releaseBlocks(releases: Release[] = RELEASES): Block[] {
+  return releases.flatMap((r): Block[] => [
+    { t: "h2", text: r.title, id: r.id },
+    ...(r.note ? [{ t: "p", text: r.note } as Block] : []),
+    { t: "ul", items: r.changes.map((c) => `**${KIND_LABEL[c.kind]}.** ${c.text}`) },
+  ]);
+}
+
 export const changelog: DocPage = {
   slug: "changelog",
   href: "/docs/changelog",
   label: "Changelog",
   summary: "What changed in Ledger Chat, newest first, written from the repository history.",
   keywords: ["changelog", "releases", "updates", "versions", "history", "what's new", "release notes"],
-  updated: "2026-11-17",
-  blocks: [],
+  updated: "2026-11-25",
+  blocks: [
+    {
+      t: "p",
+      text: "Every change below is live on ledgerchat.org: each one is deployed as soon as it is merged. The full history is in the [repository](https://github.com/humanityledger/Humanity-Ledger/commits/main).",
+    },
+    ...releaseBlocks(),
+  ],
 };

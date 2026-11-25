@@ -36,7 +36,7 @@ export const guide: DocPage = {
     "iphone",
     "beginner",
   ],
-  updated: "2026-11-13",
+  updated: "2026-11-25",
   blocks: [
     {
       t: "p",
@@ -175,7 +175,7 @@ export const guide: DocPage = {
     {
       t: "hint",
       tone: "warning",
-      text: "Private payments run on Aztec Alpha, and our payment contracts have not been independently audited yet. Only use amounts you are comfortable losing. See [Private payments](/docs/payments).",
+      text: "Private payments run on Aztec Alpha, and our payment contracts have no external audit yet; one begins on 25 November 2026. Only use amounts you are comfortable losing. See [Private payments](/docs/payments).",
     },
 
     { t: "h2", text: "Communities and updates", id: "communities" },
