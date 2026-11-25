@@ -363,8 +363,8 @@ export async function getXMTPClient(
       }, 500);
     });
     createTimeout.catch(() => {});
-    client = await Promise.race([
-      Client.create(signer, {
+    return await Promise.race([
+      Client.create(signer as any, {
         env: XMTP_ENV,
         codecs: [],
         dbEncryptionKey,
