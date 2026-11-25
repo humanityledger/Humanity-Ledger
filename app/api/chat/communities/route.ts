@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       let me: any = null;
       try {
         [old, me] = await Promise.all([
-          (prisma as any).community.findUnique({ where: { id: recreateOf }, select: { id: true, ownerAddress: true, communityMls: true, successorId: true } }),
+          (prisma as any).community.findUnique({ where: { id: recreateOf }, select: { id: true, ownerAddress: true, successorId: true, communityMls: true } }),
           (prisma as any).communityMember.findUnique({ where: { communityId_walletAddress: { communityId: recreateOf, walletAddress: caller.toLowerCase() } } }),
         ]);
       } catch {
