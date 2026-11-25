@@ -1207,6 +1207,38 @@ class PrivateWallet {
     return this.runPortal(l2Token, (c) => c.methods.withdraw_private(this.me, eth(recipient), amount, eth(caller), new sdk.Fr(0)));
   }
 
+  /**
+   * The Outbox membership proof of a withdrawal message (lib/portal/outbox.ts), or null while
+   * Aztec has not put a root covering it on Ethereum yet. Built by stdlib's
+   * computeL2ToL1MembershipWitness from this wallet's node, against the roots `getRoots` reads
+   * from the Outbox on Ethereum; it refuses a witness whose root differs from the Outbox's.
+   */
+  async portalOutboxProof(
+    txHash: string,
+    leaf: string,
+    getRoots: (epoch: bigint) => Promise<string[]>,
+  ): Promise<{ epoch: bigint; numCheckpointsInEpoch: bigint; leafIndex: bigint; path: string[] } | null> {
+    if (!this.sdk || !this.node) throw new Error('Open your private wallet first.');
+    const sdk = this.sdk;
+    const [{ computeL2ToL1MembershipWitness }, { TxHash }] = await Promise.all([
+      import('@aztec-labs/stdlib/messaging'),
+      import('@aztec-labs/stdlib/tx'),
+    ]);
+    const witness = await (computeL2ToL1MembershipWitness as any)(
+      this.node,
+      { getRoots: async (epoch: any) => (await getRoots(BigInt(epoch))).map((r) => sdk.Fr.fromHexString(r)) },
+      sdk.Fr.fromHexString(leaf),
+      (TxHash as any).fromString(txHash),
+    );
+    if (!witness) return null;
+    return {
+      epoch: BigInt(witness.epochNumber),
+      numCheckpointsInEpoch: BigInt(witness.numCheckpointsInEpoch),
+      leafIndex: BigInt(witness.leafIndex),
+      path: witness.siblingPath.toBufferArray().map((b: Uint8Array) => '0x' + Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')),
+    };
+  }
+
   /* -------------------------------------------------------------- passkeys */
 
   /**

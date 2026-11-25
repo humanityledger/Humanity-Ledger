@@ -37,7 +37,10 @@ Decision: the Aztec token and the bridge are one contract, with private balances
 - Claims and withdrawals are exits. They stay available in exits-only mode, so an operator pause never traps funds.
 - Before proving, the wallet checks that the PortalToken is one of this build's configured assets. It also reads `portal_address()` on the device and refuses an instance that is linked to any other L1 contract. A withdrawal to an unknown portal would burn the balance into a message that no honest contract executes.
 - The withdraw form refuses the zero address and the person's own receiver addresses (`lib/portal/withdraw.ts`). It shows a review step before anything is proved.
-- The form stays **off** (`WITHDRAW_COMPLETES_IN_WALLET = false` in `components/zk/wallet/ReceiversCard.tsx`) until the wallet also fetches the Outbox proof and sends the L1 payout itself. Starting a withdrawal that only a script could finish is not offered.
+- **Both steps run in the wallet (25 Nov 2026).** Before burning, the wallet reads the portal's `rollupVersion` and `outbox` on Ethereum. It then records the withdrawal on the device with its Outbox leaf (`lib/portal/outbox.ts`).
+- Every minute, the wallet asks its Aztec node for the membership witness. This uses stdlib `computeL2ToL1MembershipWitness` against the roots `Outbox.getRoots(epoch)` returns. The witness is refused if its root differs from the Outbox's.
+- Once a root covers the message, **Receive on Ethereum** sends `HLPortal.withdraw` from the connected Ethereum wallet.
+- No caller is bound, so anyone can send step 2. A message already consumed is shown as paid.
 
 **Build configuration** (`lib/portal/config.ts`). The portal is off unless every check passes:
 - The Aztec test network pairs only with Sepolia, and Aztec Alpha only with Ethereum (chain 1).
@@ -45,7 +48,7 @@ Decision: the Aztec token and the bridge are one contract, with private balances
 - The portal, the factory and the implementation must be three different addresses.
 - No two assets may share a symbol or an Aztec token.
 
-Not wired yet: fetching the Outbox proof from the Aztec node in the wallet. `lib/portal/l1.ts executeWithdrawal` takes the proof as input; the aztec.js v6 call that produces it is to be confirmed against a deployment.
+Leaf hash: `sha256ToField(abi.encodePacked(l2Token, rollupVersion, portal, chainId, content))`, as in Aztec's `Hash.sha256ToField(L2ToL1Msg)` (l1-contracts v6). It is checked against an independent encoding in `test/unit/portal/outbox.test.ts`. The full path still needs the two-account run on a test deployment (§7.2).
 
 ## 4. Invariants (`HLPortal`)
 
@@ -99,5 +102,5 @@ The caps, the 2-day timelock on relaxations and the bounded withdrawal pause are
    - transfer;
    - withdrawal with a real Outbox proof.
 3. An admin multisig and a guardian, designated by the project owner.
-4. The Outbox proof call wired in the wallet (§3).
+4. ~~The Outbox proof call wired in the wallet (§3).~~ Done 25 Nov 2026.
 5. Private fees (Module 3) before receiver addresses are presented as unlinkable on Alpha.

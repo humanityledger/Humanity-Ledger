@@ -18,12 +18,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
-import { usePublicClient } from 'wagmi';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Circle, Clock, Plus } from 'lucide-react';
 import { getPrivateWallet, humanError } from '@/lib/aztec/wallet/client';
 import { PORTAL_CONFIG, type PortalAsset } from '@/lib/portal/config';
 import { claimPlan, type PendingDeposit } from '@/lib/portal/receivers';
-import { findDeposits } from '@/lib/portal/l1';
+import { executeWithdrawal, findDeposits, outboxConsumed, outboxRoots, portalMessaging } from '@/lib/portal/l1';
+import { loadWithdrawals, outboxLeafId, recordWithdrawal, saveWithdrawals, type PendingWithdrawal } from '@/lib/portal/outbox';
+import { l1ClientsFromViem } from '@/lib/aztec/fee-juice';
 import { withdrawProblem } from '@/lib/portal/withdraw';
 import { parseUnits, formatUnits } from '@/lib/aztec/wallet/amounts';
 import { AddressBox, Card, CardHead, FOCUS, INK, INK_2, INK_3, KV, Notice, OK, Pill, PrimaryButton, Segmented, TextButton, shortHex } from './WalletUI';
@@ -42,7 +44,7 @@ const MAX_RECEIVERS = 64;
  * payout itself, starting a withdrawal would burn funds that only a script can finish, so the form
  * stays off. Turn on together with the payout step (docs/PORTAL.md §3).
  */
-const WITHDRAW_COMPLETES_IN_WALLET = false;
+const WITHDRAW_COMPLETES_IN_WALLET = true; // 25 Nov 2026: step 2 sent from the wallet (lib/portal/outbox.ts)
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -358,7 +360,12 @@ function PortalCard({ address, ready }: { address: string; ready: boolean }) {
             </ol>
           </div>
         )}
-        {tab === 'withdraw' && WITHDRAW_COMPLETES_IN_WALLET && <WithdrawForm assets={cfg.assets} ready={ready} l1Name={l1Name} ownAddresses={ownAddresses} />}
+        {tab === 'withdraw' && WITHDRAW_COMPLETES_IN_WALLET && (
+          <>
+            <WithdrawForm assets={cfg.assets} ready={ready} l1Name={l1Name} ownAddresses={ownAddresses} evm={evm} />
+            <PendingWithdrawals evm={evm} ready={ready} l1Name={l1Name} />
+          </>
+        )}
       </div>
     </Card>
   );
@@ -379,8 +386,10 @@ function PrimaryButtonSmall({ children, onClick, disabled, busy }: { children: R
   );
 }
 
-function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalAsset[]; ready: boolean; l1Name: string; ownAddresses: Set<string> }) {
+function WithdrawForm({ assets, ready, l1Name, ownAddresses, evm }: { assets: PortalAsset[]; ready: boolean; l1Name: string; ownAddresses: Set<string>; evm: string }) {
   const tr = useT();
+  const cfg = PORTAL_CONFIG!;
+  const publicClient = usePublicClient({ chainId: cfg.l1ChainId });
   const [asset, setAsset] = useState<PortalAsset>(assets[0]);
   const [amount, setAmount] = useState('');
   const [to, setTo] = useState('');
@@ -393,7 +402,17 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
   const submit = async () => {
     setBusy(true);
     try {
-      const { txHash } = await getPrivateWallet().portalWithdraw(asset.l2, to, parseUnits(amount, asset.decimals));
+      if (!publicClient) throw new Error(`Connect to ${l1Name} first.`);
+      // Read before burning: a withdrawal that the wallet could not finish is never started.
+      const { rollupVersion } = await portalMessaging(publicClient as any, cfg);
+      const value = parseUnits(amount, asset.decimals);
+      const { txHash } = await getPrivateWallet().portalWithdraw(asset.l2, to, value);
+      const record = await recordWithdrawal({
+        txHash, symbol: asset.symbol, l1Token: asset.l1, l2Token: asset.l2, recipient: to, amount: value,
+        unwrap: !!asset.native, portal: cfg.portal, chainId: cfg.l1ChainId, rollupVersion,
+      });
+      saveWithdrawals(evm, String(cfg.l1ChainId), [...loadWithdrawals(evm, String(cfg.l1ChainId)), record]);
+      window.dispatchEvent(new Event('hl-portal-withdrawals'));
       toast.success(tr("Withdrawal started ({slice}…). It can be paid on {l1Name} once Aztec proves its epoch.", { slice: txHash.slice(0, 10), l1Name }));
       setAmount('');
       setTo('');
@@ -494,6 +513,108 @@ function WithdrawForm({ assets, ready, l1Name, ownAddresses }: { assets: PortalA
       <p className="text-[12.5px] leading-relaxed" style={{ color: INK_3 }}>
         {tr("Withdrawals stay available while new payments are paused. The portal itself can pause withdrawals for at most 3 days, and then not again for 4 days.")}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Withdrawals started on this device, until they are paid on Ethereum (lib/portal/outbox.ts).
+ * Every minute the wallet asks its Aztec node for the Outbox proof; once Aztec has put the epoch's
+ * root on Ethereum, "Receive on Ethereum" sends HLPortal.withdraw from the connected wallet.
+ */
+function PendingWithdrawals({ evm, ready, l1Name }: { evm: string; ready: boolean; l1Name: string }) {
+  const tr = useT();
+  const cfg = PORTAL_CONFIG!;
+  const net = String(cfg.l1ChainId);
+  const publicClient = usePublicClient({ chainId: cfg.l1ChainId });
+  const { data: walletClient } = useWalletClient({ chainId: cfg.l1ChainId });
+  const [list, setList] = useState<PendingWithdrawal[]>(() => loadWithdrawals(evm, net));
+  const [proofs, setProofs] = useState<Record<string, { epoch: bigint; numCheckpointsInEpoch: bigint; leafIndex: bigint; path: string[] } | null>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reload = () => setList(loadWithdrawals(evm, net));
+    window.addEventListener('hl-portal-withdrawals', reload);
+    return () => window.removeEventListener('hl-portal-withdrawals', reload);
+  }, [evm, net]);
+
+  const open = list.filter((w) => !w.paidTx);
+
+  const markPaid = useCallback((txHash: string, paidTx: string) => {
+    const next = loadWithdrawals(evm, net).map((w) => (w.txHash === txHash ? { ...w, paidTx } : w));
+    saveWithdrawals(evm, net, next);
+    setList(next);
+  }, [evm, net]);
+
+  const refresh = useCallback(async () => {
+    if (!ready || !publicClient || !open.length) return;
+    const { outbox } = await portalMessaging(publicClient as any, cfg);
+    const found: typeof proofs = {};
+    for (const w of open) {
+      try {
+        const p = await getPrivateWallet().portalOutboxProof(w.txHash, w.leaf, (epoch) => outboxRoots(publicClient as any, outbox, epoch));
+        if (p && (await outboxConsumed(publicClient as any, outbox, p.epoch, outboxLeafId(p)))) {
+          markPaid(w.txHash, 'paid');
+          continue;
+        }
+        found[w.txHash] = p;
+      } catch {
+        found[w.txHash] = null;
+      }
+    }
+    setProofs(found);
+  }, [ready, publicClient, list, cfg, markPaid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void refresh();
+    const t = setInterval(() => void refresh(), 60_000);
+    return () => clearInterval(t);
+  }, [refresh]);
+
+  const pay = async (w: PendingWithdrawal) => {
+    const proof = proofs[w.txHash];
+    const asset = cfg.assets.find((a) => a.l2 === w.l2Token.toLowerCase());
+    if (!proof || !asset) return;
+    if (!publicClient || !walletClient) return toast.error(tr("Connect your {l1Name} wallet to receive the withdrawal.", { l1Name }));
+    setBusy(w.txHash);
+    try {
+      const l1 = l1ClientsFromViem(publicClient as any, walletClient as any);
+      const tx = await executeWithdrawal(l1, cfg, { asset, recipient: w.recipient, amount: BigInt(w.amount), withCaller: false, unwrap: w.unwrap, proof });
+      markPaid(w.txHash, tx);
+      toast.success(tr("Paid on {l1Name}.", { l1Name }));
+    } catch (e) {
+      toast.error(tr(humanError(e)));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!open.length) return null;
+  return (
+    <div className="mt-5 space-y-2" aria-label={tr("Withdrawals in progress")}>
+      <p className="text-[14px] font-semibold" style={{ color: INK }}>{tr("Withdrawals in progress")}</p>
+      {open.map((w) => {
+        const asset = cfg.assets.find((a) => a.l2 === w.l2Token.toLowerCase());
+        const amount = asset ? formatUnits(BigInt(w.amount), asset.decimals) : w.amount;
+        const proof = proofs[w.txHash];
+        return (
+          <div key={w.txHash} className="rounded-2xl border border-[#e4e7ec] px-4 py-3 space-y-2">
+            <KV k="Amount" v={`${amount} ${w.symbol}`} />
+            <KV k="To" v={<span className="font-mono text-[13.5px]">{shortHex(w.recipient)}</span>} />
+            {proof ? (
+              <PrimaryButton onClick={() => void pay(w)} disabled={!!busy} busy={busy === w.txHash}>
+                <ArrowDownLeft size={18} strokeWidth={2.2} aria-hidden="true" />
+                {tr("Receive on {l1Name}", { l1Name })}
+              </PrimaryButton>
+            ) : (
+              <p className="flex items-center gap-2 text-[13px]" style={{ color: INK_3 }}>
+                <Clock size={14} aria-hidden="true" />
+                {tr("Waiting for Aztec to prove this epoch on {l1Name}. This page checks every minute.", { l1Name })}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
