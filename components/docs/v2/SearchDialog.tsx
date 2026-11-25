@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation";
 import { ChevronRight, CornerDownLeft, FileText, Hash, LoaderCircle, Search } from "lucide-react";
 import type { SearchEntry } from "@/lib/docs/registry";
-import { useT } from "@/lib/i18n/client";
+import { useLocale, useT } from "@/lib/i18n/client";
 import s from "./Docs.module.css";
 
 /**
@@ -105,6 +105,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 
 export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
+  const locale = useLocale();
   const router = useRouter();
   const [index, setIndex] = useState<SearchEntry[] | null>(null);
   const [query, setQuery] = useState("");
@@ -127,13 +128,25 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
   useEffect(() => {
     if (!open || index) return;
     let cancelled = false;
-    import("@/lib/docs/searchIndex")
-      .then((m) => !cancelled && setIndex(m.SEARCH_INDEX))
+    // In another language the index is built from the translated pages (lib/docs/i18n.ts); the
+    // page keywords stay English, so an English term still finds its page.
+    const load = async (): Promise<SearchEntry[]> => {
+      const m = await import("@/lib/docs/searchIndex");
+      if (locale === "en") return m.SEARCH_INDEX;
+      const [{ translatePage, translatorFrom }, dict] = await Promise.all([
+        import("@/lib/docs/i18n"),
+        import(`@/lib/i18n/docs/${locale}.json`).then((d) => d.default as Record<string, string>),
+      ]);
+      const tr = translatorFrom(dict);
+      return m.buildIndex((p) => translatePage(p, tr), (s) => (tr(s) !== s ? tr(s) : t(s)));
+    };
+    load()
+      .then((ix) => !cancelled && setIndex(ix))
       .catch(() => !cancelled && setIndex([]));
     return () => {
       cancelled = true;
     };
-  }, [open, index]);
+  }, [open, index, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const results = useMemo(() => {
     if (!index) return [];

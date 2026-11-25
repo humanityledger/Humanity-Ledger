@@ -282,11 +282,36 @@ const FIGURES: Record<FigureKind, () => React.ReactElement> = {
   "studio-path": StudioPath,
 };
 
-export function Figure({ kind, caption }: { kind: FigureKind; caption: string }) {
+/** Not texts: left as they are even if a dictionary had the same word. */
+const NOT_TEXT = new Set(["className", "style", "href", "src", "id", "icon", "kind", "state", "role", "size", "strokeWidth"]);
+
+/**
+ * The figure with every visible text passed through `tr` (lib/docs/i18n.ts): string children,
+ * and strings in props, also inside the arrays and objects handed to Node and Sequence.
+ */
+function translateValue(v: unknown, tr: (s: string) => string): unknown {
+  if (typeof v === "string") return tr(v);
+  if (Array.isArray(v)) return v.map((x) => translateValue(x, tr));
+  if (React.isValidElement(v)) return translateTree(v, tr);
+  if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) {
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, NOT_TEXT.has(k) ? x : translateValue(x, tr)]));
+  }
+  return v;
+}
+
+function translateTree(el: React.ReactElement, tr: (s: string) => string): React.ReactElement {
+  const props = el.props as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(props)) next[k] = NOT_TEXT.has(k) ? v : translateValue(v, tr);
+  return React.cloneElement(el as React.ReactElement<any>, next);
+}
+
+export function Figure({ kind, caption, tr }: { kind: FigureKind; caption: string; tr?: ((s: string) => string) | null }) {
   const Body = FIGURES[kind];
+  const body = tr ? translateTree(Body(), tr) : <Body />;
   return (
     <figure className={s.figure}>
-      <div className={s.figureCanvas}><Body /></div>
+      <div className={s.figureCanvas}>{body}</div>
       <figcaption className={s.figcaption}>{caption}</figcaption>
     </figure>
   );

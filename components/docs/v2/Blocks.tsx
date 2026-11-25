@@ -67,7 +67,10 @@ function CardLink({
   );
 }
 
-export function BlockView({ block }: { block: Block }) {
+/** Translates the texts drawn inside figures and diagrams (lib/docs/i18n.ts); null in English. */
+type Tr = ((text: string) => string) | null;
+
+export function BlockView({ block, tr = null }: { block: Block; tr?: Tr }) {
   switch (block.t) {
     case "p":
       return (
@@ -215,9 +218,9 @@ export function BlockView({ block }: { block: Block }) {
         </div>
       );
     case "figure":
-      return <Figure kind={block.kind} caption={block.caption} />;
+      return <Figure kind={block.kind} caption={block.caption} tr={tr} />;
     case "diagram":
-      return <Diagram code={block.code} caption={block.caption} title={block.title} />;
+      return <Diagram code={block.code} caption={block.caption} title={block.title} tr={tr} />;
     case "person":
       return (
         <div className={s.person}>
@@ -281,11 +284,11 @@ export function BlockView({ block }: { block: Block }) {
   }
 }
 
-export function Blocks({ blocks }: { blocks: Block[] }) {
+export function Blocks({ blocks, tr = null }: { blocks: Block[]; tr?: Tr }) {
   return (
     <>
       {blocks.map((b, i) => (
-        <BlockView key={i} block={b} />
+        <BlockView key={i} block={b} tr={tr} />
       ))}
     </>
   );

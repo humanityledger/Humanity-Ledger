@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import type { DocPage } from "@/lib/docs/types";
 import { LEGACY_SLUGS, findDocBySlug } from "@/lib/docs/registry";
 import { DocsLayout } from "./DocsLayout";
+import { translatePage } from "@/lib/docs/i18n";
+import { docsTranslator } from "@/lib/docs/i18n-server";
 
 /** Shared helpers for the routes that render documentation pages. */
 
@@ -17,9 +19,11 @@ export function metadataFor(page: DocPage): Metadata {
   };
 }
 
-export function docMetadata(slug: string): Metadata {
+/** Title and description in the reader's language (lib/docs/i18n.ts). */
+export async function docMetadata(slug: string): Promise<Metadata> {
   const entry = findDocBySlug(slug);
-  return entry ? metadataFor(entry.page) : { title: "Not found" };
+  if (!entry) return { title: "Not found" };
+  return metadataFor(translatePage(entry.page, await docsTranslator()));
 }
 
 export function renderDoc(slug: string) {
