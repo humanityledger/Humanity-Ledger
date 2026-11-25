@@ -303,9 +303,9 @@ export function computeAlerts(a: AlertInputs): DashAlert[] {
     out.push({ id: 'fee-juice', level: 'action', text: 'No Fee Juice for the next transaction. Payments wait until this account has Fee Juice.' });
   }
   const ready = fj?.claims.filter((c) => c.ready).length ?? 0;
-  if (ready > 0) out.push({ id: 'claims', level: 'action', text: '{count} Fee Juice deposit can be claimed now.', vars: { count: ready } });
-  if (a.model.stuck > 0) out.push({ id: 'stuck', level: 'warn', text: '{count} transaction has been on its way for more than ten minutes.', vars: { count: a.model.stuck } });
-  if (a.model.failedRecent > 0) out.push({ id: 'failed', level: 'warn', text: '{count} transaction failed in the last seven days.', vars: { count: a.model.failedRecent } });
+  if (ready > 0) out.push({ id: 'claims', level: 'action', text: 'Fee Juice deposits ready to claim now: {count}.', vars: { count: ready } });
+  if (a.model.stuck > 0) out.push({ id: 'stuck', level: 'warn', text: 'Transactions on their way for more than ten minutes: {count}.', vars: { count: a.model.stuck } });
+  if (a.model.failedRecent > 0) out.push({ id: 'failed', level: 'warn', text: 'Transactions that failed in the last seven days: {count}.', vars: { count: a.model.failedRecent } });
   if (a.receiveOnly) out.push({ id: 'receive-only', level: 'info', text: 'This device is set to receive only.' });
   out.push({ id: 'unaudited', level: 'info', text: 'The contracts have had an internal review, not an external audit yet.' });
   return out;
