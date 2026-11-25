@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { canFollowSuccessor, legacyPostsClosed } from '@/lib/communities/legacy';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 import { verifyCryptographicInvite } from '@/lib/crypto/CommunityInviteEngine';
@@ -24,6 +25,33 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
+
+    // Following a legacy community to its re-creation on MLS (lib/communities/legacy.ts): a member
+    // of the old community joins the new one without an invite code. Each member decides; nobody is
+    // added for them. The admin's client then adds them to the encrypted group.
+    if (typeof body?.fromCommunityId === 'string' && body.fromCommunityId.length <= 64) {
+      const fromId = body.fromCommunityId;
+      const [old, mine] = await Promise.all([
+        (prisma as any).community.findUnique({ where: { id: fromId }, select: { id: true, ownerAddress: true, successorId: true, communityMls: true } }),
+        (prisma as any).communityMember.findUnique({ where: { communityId_walletAddress: { communityId: fromId, walletAddress: caller } } }),
+      ]);
+      const isMember = !!old && (!!mine || String(old.ownerAddress || '').toLowerCase() === caller);
+      const check = canFollowSuccessor(old, isMember);
+      if (!check.ok) return NextResponse.json({ error: check.error, code: check.code }, { status: check.status });
+      const next = await (prisma as any).community.findUnique({ where: { id: old.successorId } });
+      if (!next || next.communityMls !== true) {
+        return NextResponse.json({ error: 'The new community no longer exists.', code: 'COMMUNITY_NOT_FOUND' }, { status: 404 });
+      }
+      try {
+        await (prisma as any).communityMember.create({ data: { communityId: next.id, walletAddress: caller, role: 'MEMBER' } });
+      } catch (e: any) {
+        if (e?.code === 'P2002') return NextResponse.json({ ok: true, status: 'ALREADY_MEMBER', community: { id: next.id, name: next.name } });
+        throw e;
+      }
+      // An MLS community: no system notice is stored here.
+      return NextResponse.json({ ok: true, status: 'JOINED', role: 'MEMBER', community: { id: next.id, name: next.name } });
+    }
+
     const { joinCode, token, inviteToken } = body ?? {};
     const rawToken = token || inviteToken || (typeof joinCode === 'string' && joinCode.startsWith('inv_') ? joinCode : null);
 
@@ -131,8 +159,9 @@ export async function POST(req: NextRequest) {
       throw e;
     }
 
-    // Create system welcome event. An MLS community does not store that text here.
-    if (community.communityMls !== true) {
+    // Create system welcome event. An MLS community does not store that text here, and a legacy
+    // community is read-only (lib/communities/legacy.ts), so it gets no new notice either.
+    if (community.communityMls !== true && !legacyPostsClosed(community)) {
       try {
         await (prisma as any).communityPost.create({
           data: {

@@ -171,14 +171,14 @@ export const communities: DocPage = {
       strongFirst: true,
       rows: [
         ["Created from 24 November 2026", "When the creator's secure messaging is ready, the first channel is an XMTP MLS group, encrypted end to end like a direct message. Our server stores only the group's identifier and refuses to store posts for it."],
-        ["Created before 24 November 2026", "Posts and channel messages are stored on our server and can be read by us. These communities are not moved to the new form."],
+        ["Created before 24 November 2026", "Posts and channel messages are stored on our server and can be read by us. Since 25 November 2026 these communities are read-only: the old posts stay, nothing new is stored, and an administrator can re-create the community end to end encrypted. Each member chooses whether to join it."],
       ],
     },
     {
       t: "hint",
       tone: "warning",
       title: "Older communities are readable by our server",
-      text: "In a community created before 24 November 2026, do not share anything you would not want a server operator to see. Use a direct message instead.",
+      text: "The old posts of a community created before 24 November 2026 can be read by a server operator. To keep talking, join its encrypted re-creation or use a direct message.",
     },
     {
       t: "p",

@@ -1630,6 +1630,10 @@ model Community {
   // XMTP MLS groups (xmtpGroupId on each CommunityChannel). The post endpoint
   // returns 410 for migrated communities; content is not stored on this server.
   communityMls Boolean  @default(false)
+  // Legacy communities (communityMls false) are read-only since 25 November 2026
+  // (lib/communities/legacy.ts). When an admin re-creates one on MLS, this holds the new
+  // community's id; members of the old one may then join the new one. Null otherwise.
+  successorId  String?
 
   members     CommunityMember[]
   channels    CommunityChannel[]

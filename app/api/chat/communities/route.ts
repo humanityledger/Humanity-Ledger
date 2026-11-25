@@ -7,6 +7,7 @@ import {
   listInMemoryCommunities,
   getInMemoryCommunityBySlugOrId,
 } from '@/lib/communities/in-memory-communities';
+import { canRecreate, legacyPostsClosed, serverStoredCreationAllowed } from '@/lib/communities/legacy';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
           membersCount: c._count?.members || 1,
           channelsCount: c._count?.channels || 1,
           isMember: false,
+          postsReadOnly: legacyPostsClosed(c),
         }));
       } else {
         const memberships = await (prisma as any).communityMember.findMany({
@@ -63,6 +65,7 @@ export async function GET(req: NextRequest) {
           ...m.community,
           membersCount: m.community._count?.members || 1,
           myRole: m.role,
+          postsReadOnly: legacyPostsClosed(m.community),
         }));
       }
     } catch {}
@@ -114,6 +117,36 @@ export async function POST(req: NextRequest) {
     // COMMUNITY_MLS_NEW=off (operator switch back), the community is created as before. Existing
     // communities are never changed here.
     const mlsGroupId = body?.mls === true && process.env.COMMUNITY_MLS_NEW !== 'off' && isPersistableXmtpGroupId(body?.xmtpGroupId) ? String(body.xmtpGroupId) : null;
+    // While legacy communities are read-only (lib/communities/legacy.ts), a community whose posts
+    // this server would store is not created at all: it could never receive a post.
+    if (!mlsGroupId && !serverStoredCreationAllowed()) {
+      return NextResponse.json(
+        { error: 'Encrypted messaging is not ready on this device yet, so the community was not created. Wait a moment and try again.', code: 'MLS_REQUIRED' },
+        { status: 409 },
+      );
+    }
+
+    // Re-creating a legacy community on MLS: only its owner or an admin, once. The old community
+    // keeps its posts (read-only) and points to the new one; members choose whether to follow.
+    const recreateOf = typeof body?.recreateOf === 'string' && body.recreateOf.length <= 64 ? body.recreateOf : null;
+    if (recreateOf) {
+      if (!mlsGroupId) {
+        return NextResponse.json({ error: 'A re-created community must be end-to-end encrypted.', code: 'MLS_REQUIRED' }, { status: 409 });
+      }
+      let old: any = null;
+      let me: any = null;
+      try {
+        [old, me] = await Promise.all([
+          (prisma as any).community.findUnique({ where: { id: recreateOf }, select: { id: true, ownerAddress: true, communityMls: true, successorId: true } }),
+          (prisma as any).communityMember.findUnique({ where: { communityId_walletAddress: { communityId: recreateOf, walletAddress: caller.toLowerCase() } } }),
+        ]);
+      } catch {
+        return NextResponse.json({ error: 'Communities are unavailable right now. Nothing was created; try again in a minute.', code: 'STORE_UNAVAILABLE' }, { status: 503 });
+      }
+      const isAdmin = !!old && (String(old.ownerAddress || '').toLowerCase() === caller.toLowerCase() || me?.role === 'ADMIN');
+      const check = canRecreate(old, isAdmin);
+      if (!check.ok) return NextResponse.json({ error: check.error, code: check.code }, { status: check.status });
+    }
 
     // The database is the only place a community lives. When it cannot be written, nothing is
     // created and the caller is told so: a copy kept in this server's memory used to be returned as
@@ -146,6 +179,18 @@ export async function POST(req: NextRequest) {
             permissions: { create: {} },
           },
         });
+        if (recreateOf) {
+          // Only set when still empty, so two taps cannot point the old community at two new ones.
+          const linked = await (prisma as any).community
+            .updateMany({ where: { id: recreateOf, successorId: null }, data: { successorId: community.id } })
+            .catch(() => ({ count: 0 }));
+          if (!linked?.count) {
+            // Someone re-created it first: this new community stays (it is the caller's, and empty),
+            // and the caller is told which one the old community points to.
+            return NextResponse.json({ community, linked: false }, { status: 201 });
+          }
+          return NextResponse.json({ community, linked: true, recreatedFrom: recreateOf }, { status: 201 });
+        }
         return NextResponse.json({ community }, { status: 201 });
       } catch (e: any) {
         if (e?.code === 'P2002' && attempt < 2) continue; // join code already taken: draw another

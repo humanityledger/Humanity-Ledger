@@ -16,6 +16,8 @@ interface Community {
   createdAt: number;
   joinCode: string;
   myRole?: string;
+  /** Legacy community, read-only (lib/communities/legacy.ts). */
+  postsReadOnly?: boolean;
 }
 
 interface LedgerCommunitiesTabProps {
@@ -72,7 +74,7 @@ function CommunityRow({ c, onOpen, onManage }: { c: Community; onOpen: () => voi
         <span className="flex-1 min-w-0">
           <span className="block text-[18px] font-semibold text-[#15171c] truncate">{c.name}</span>
           <span className="block text-[16px] text-[#3d424b] mt-0.5 tabular-nums leading-snug">
-            {t(countLabel(members, 'member', 'members'))} · {c.isPrivate ? t("Private") : t("Public")}{c.myRole === 'ADMIN' ? t(" · You manage it") : c.myRole === 'MODERATOR' ? t(" · You moderate it") : ''}
+            {t(countLabel(members, 'member', 'members'))} · {c.isPrivate ? t("Private") : t("Public")}{c.myRole === 'ADMIN' ? t(" · You manage it") : c.myRole === 'MODERATOR' ? t(" · You moderate it") : ''}{c.postsReadOnly ? t(" · Read-only") : ''}
           </span>
           {c.description && (
             <span className="block text-[16px] text-[#3d424b] truncate">{c.description}</span>
@@ -123,7 +125,8 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
     setCreating(true);
     try {
       // The first channel's XMTP group, made here, so the server stores its id and never the posts.
-      // If XMTP is not ready the community is created as before (server-stored posts).
+      // If XMTP is not ready the server refuses (MLS_REQUIRED) unless the operator turned
+      // COMMUNITY_MLS_NEW off (lib/communities/legacy.ts).
       let xmtpGroupId: string | null = null;
       if (xmtpClient) {
         try {
@@ -147,7 +150,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         if (id) onOpenCommunity(id);
       } else {
         const d = await res.json().catch(() => ({}));
-        toast.error(d.error || t("Could not create the community"));
+        // MLS_REQUIRED: legacy communities are read-only (lib/communities/legacy.ts), so a community
+        // without an encrypted group is not created; XMTP was not ready on this device yet.
+        toast.error(d.code === 'MLS_REQUIRED' ? t("Encrypted messaging is not ready on this device yet, so the community was not created. Wait a moment and try again.") : d.error || t("Could not create the community"));
       }
     } catch {
       toast.error(t("Could not reach the server. Try again."));

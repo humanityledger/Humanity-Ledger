@@ -36,6 +36,7 @@ export const RELEASES: Release[] = [
       { kind: "fixed", text: "On iPhone, the home page no longer shows a grey band at the bottom of the screen when Safari hides its toolbar." },
       { kind: "fixed", text: "Every page of the documentation failed to open for a few hours after the translation release. They open again, and a test now guards against the cause." },
       { kind: "new", text: "New communities keep their posts in an end to end encrypted XMTP group from the first channel. Communities created before stay as they were." },
+      { kind: "security", text: "Communities created before 24 November 2026 are read-only: our server no longer stores new posts for them. The old posts stay, and an administrator can re-create the community end to end encrypted; each member chooses whether to join." },
       { kind: "new", text: "Paying the network fee privately, through the shared PrivateFPC recommended by Aztec, is written and off by default. It has not been tried on Aztec Alpha." },
       { kind: "security", text: "The four checks every change must pass run again: a package missing from the lockfile had stopped them, and nineteen tests that matched old code or comments now check the code itself." },
     ],

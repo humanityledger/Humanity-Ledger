@@ -1,5 +1,7 @@
 # Comunidades: de PostgreSQL legible a grupos MLS de XMTP (tarea R-17)
 
+**Estado (25/11/2026):** las comunidades anteriores al 24/11/2026 son de solo lectura (`lib/communities/legacy.ts`, `docs/communities/LEGACY_READ_ONLY.md`): no se guarda ninguna publicación nueva en el servidor, las antiguas siguen legibles y un administrador puede recrear la comunidad en MLS. El paso 5 de abajo («se exportan y se borran») no está hecho: borrar es irreversible y necesita la aprobación de Stefan Antonio Cirisanu.
+
 **Estado (24/11/2026):** implementado en el cliente (`lib/communities/mls.ts`, `CommunityReader`, `CommunityManage`) y apagado: ninguna comunidad tiene `communityMls` activado; solo el operador lo activa. Antes:** diseño, no implementado. Hoy las publicaciones de comunidad se guardan legibles en PostgreSQL (`CommunityPost.content`). El comentario del esquema Prisma que dice "ENCRYPTED CIPHERTEXT" no describe lo que se guarda; se corrige en este mismo cambio.
 
 Integra el documento "Communities → MLS Groups Migration" del paquete de cierre de gaps, corregido contra el código.
