@@ -145,6 +145,7 @@ const KeyboardShortcutsModal = dynamic(() => import('@/components/chat/KeyboardS
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
+import { coldContactDecision, quarantinePeer, setAdmittedPeers } from '@/lib/g8/quarantine';
 import { deletionWatermark, decideIncoming, streamGate, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat, collectPreDeleteHistory } from '@/lib/chat/incoming-revival';
 import { createSingleFlightRunner } from '@/lib/chat/poll-runner';
 import { clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
@@ -1909,6 +1910,25 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const initInFlight = useRef(false);
   // Persistent known-peers set  survives across sync cycles (fixes mobile-to-mobile)
   const knownPeersRef = useRef<Set<string>>(new Set());
+  // G8 privacy shield (lib/g8/quarantine.ts): strangers' first contact waits in Requests.
+  const g8ShieldRef = useRef(false);
+  g8ShieldRef.current = !!(ledgerSettings as any)?.g8_privacy_shield;
+  useEffect(() => {
+    if (!g8ShieldRef.current) return;
+    let live = true;
+    fetch('/api/g8/invite', { credentials: 'include', cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null)).then(j => { if (live && Array.isArray(j?.admitted)) setAdmittedPeers(j.admitted); }).catch(() => {});
+    return () => { live = false; };
+  }, [(ledgerSettings as any)?.g8_privacy_shield, effectiveAddress]);
+  /** True when this peer's contact must be held (shield on, stranger); records it in Requests. */
+  const g8Hold = (peerLower: string): boolean => {
+    const owner = (effectiveAddress || address || '').toLowerCase();
+    if (!owner || !g8ShieldRef.current) return false;
+    const d = coldContactDecision({ owner, peer: peerLower, shieldOn: true, known: knownPeersRef.current.has(peerLower) || conversationsRef.current.some(c => c.peerAddress?.toLowerCase() === peerLower), blocked: false });
+    if (d !== 'quarantine') return false;
+    quarantinePeer(owner, peerLower);
+    return true;
+  };
   /**
    * DEDUPLICATION ENGINE
    * confirmedMsgIds: the single source of truth for all real XMTP message IDs.
@@ -2582,6 +2602,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                return;
              }
              if (busyElsewhere(busyPeersRef.current, hinted)) {
+               pendingConnectionRef.current = null;
+               try { connection.close(); } catch {}
+               return;
+             }
+             if (hinted && g8Hold(String(hinted).toLowerCase())) {
                pendingConnectionRef.current = null;
                try { connection.close(); } catch {}
                return;
@@ -4780,7 +4805,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               if (surviving.length > 0) {
                 const latest = surviving[surviving.length - 1];
                 if (delAt > 0) reviveDeletedChat(pLower, [effectiveAddress, address], announceRevive);
-                knownPeersRef.current.add(pLower);
+                if (!g8Hold(pLower)) knownPeersRef.current.add(pLower);
 
                 const mappedMsgs = surviving.map(({ raw, mappedContent, burnAtNs, msgMs }) => createChatMessageRecord({
                   id: raw.id,
@@ -4813,7 +4838,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 });
               } else if (delAt === 0 && clearAt === 0) {
                 // Brand new XMTP DM with no text messages yet (e.g. opened by peer)
-                knownPeersRef.current.add(pLower);
+                if (!g8Hold(pLower)) knownPeersRef.current.add(pLower);
                 toRevive.push({
                   peerAddress: pLower,
                   lastMessage: ' New message received',
@@ -5479,6 +5504,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               if (callStateRef.current === 'idle' && busyElsewhere(busyPeersRef.current, msgConvPeer)) {
                 continue; // another window of this browser already has this call
               }
+              if (callStateRef.current === 'idle' && /^0x[0-9a-f]{40}$/i.test(String(msgConvPeer)) && g8Hold(String(msgConvPeer).toLowerCase())) {
+                continue; // G8 shield: a stranger's call does not ring; it waits in Requests
+              }
               if (callStateRef.current === 'idle') {
                 // The chat that is open stays open while it rings; answering opens the caller's chat.
                 if (msgConvPeer && msgConvPeer !== 'unknown' && msgConvPeer.toLowerCase() !== activePeerRef.current?.toLowerCase()) {
@@ -5786,7 +5814,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               if (bgVerdict === 'suppress' || bgVerdict === 'drop') continue;
               // Revive the deleted conversation so it stays visible and persists across reloads.
               if (bgVerdict === 'revive') reviveDeletedChat(bgPeerLower, [effectiveAddress, address], announceRevive);
-              knownPeersRef.current.add(bgPeerLower);
+              const heldByShield = fromPeer && bgVerdict !== 'revive' && g8Hold(bgPeerLower);
+              if (!heldByShield) knownPeersRef.current.add(bgPeerLower);
 
               // CRITICAL FIX: Persist background / revived messages to IndexedDB so opening the chat
               // shows the message immediately even before XMTP network sync finishes.
@@ -5801,7 +5830,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 lastAt: mappedMsg.sentAtNs,
               }).catch(() => {});
 
-              if (fromPeer && !content.startsWith('__')) {
+              if (fromPeer && !content.startsWith('__') && !heldByShield) {
                 const dnd = (ledgerSettings as any)?.do_not_disturb;
                 const notifEnabled = ledgerSettings?.notifications_private !== false;
                 const mutedPeer = (() => { try { return !!localStorage.getItem('ledger_muted_' + bgPeerLower); } catch { return false; } })();

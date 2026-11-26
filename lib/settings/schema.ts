@@ -224,6 +224,8 @@ export interface LedgerProtocolSettings {
   echo_cancellation?: boolean;
   /** Do not disturb mode */
   do_not_disturb?: boolean;
+  /** G8 privacy shield: first messages from strangers wait in Requests (no ring, no notification, no media). */
+  g8_privacy_shield?: boolean;
   /** Hide notification content preview */
   hide_notification_content?: boolean;
   /** Auto-lock timer label */
@@ -360,6 +362,7 @@ export const DEFAULT_PXE_SETTINGS: LedgerProtocolSettings = {
   // an entry here, device sync (applyRemote) and the server allowlist drop them.
   anti_screenshot: false,
   do_not_disturb: false,
+  g8_privacy_shield: false,
   hide_notification_content: true,
   enter_to_send: true,
   typing_indicators: true,
