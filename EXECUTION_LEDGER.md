@@ -50,3 +50,17 @@ Plan completo: docs/plan/MASTER_PROMPT_5_ESTRELLAS.md · Protocolo de tokens: do
 - [ ] SESIÓN 5 (PC+Móvil, /prove Worker/COOP, WebRTC/XMTP): IV.1–IV.4, CON-11 | commit: —
 - [ ] SESIÓN 6 (Contratos D-4, PrivateFPC, Portal, R17): V.1–V.4, CON-01, CON-07 | commit: —
 - [ ] SESIÓN 7 (SSOT, RGPD/DSA, legal diff, gate final): CON-02..06, VI, VII | commit: —
+
+## 2026-11-26 — G8 ZKP-SP + Titan V4 (8 stacked PRs on feat/hyperion-v3)
+| PR | Branch | What | Tests |
+|---|---|---|---|
+| 1 | g8/01-spec | Spec + constants | — |
+| 2 | g8/02-circuit | Noir circuit + CI | 4 Noir tests (CI) |
+| 3 | g8/03-core | TS reference, admission, invites | 6 |
+| 4 | g8/04-server | Migration, /api/g8/*, fail-closed verifier | 4 |
+| 5 | g8/05-quarantine | Privacy shield (opt-in) | 4 |
+| 6 | g8/06-passkey-account | Passkey account on /connect (flag off) | 5 |
+| 7 | g8/07-ui | Verification center, Requests, invites, i18n | 3 + i18n 9 |
+| 8 | g8/08-titan-v4 | SCAN, getClientIP, L2 rails | 3 |
+
+Open: Level 2 needs the audited circuit pinned in `G8_CIRCUIT`, an identity issuer and the native app (Web NFC is unavailable on Safari). `lib/prisma.ts(284)` type error is pre-existing (regenerate Prisma client).
