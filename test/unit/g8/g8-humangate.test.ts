@@ -184,6 +184,13 @@ describe('HumanGate server', () => {
     expect(humanGateEnabled('1')).toBe(true);
   });
 
+  it('middleware lets signed-out visitors reach the check, and nothing else under /api/g8', () => {
+    const mw = read('middleware.ts');
+    const block = mw.slice(mw.indexOf('const PUBLIC_PREFIXES'), mw.indexOf('];', mw.indexOf('const PUBLIC_PREFIXES')));
+    expect(block).toMatch(/'\/api\/g8\/humangate\/'/);
+    expect(block).not.toMatch(/'\/api\/g8\/'/);
+  });
+
   it('wiring: routes rate-limit by getClientIP; siwe/verify consumes the receipt before minting', () => {
     const docker = read('Dockerfile');
     for (const v of ['NEXT_PUBLIC_HUMAN_GATE', 'NEXT_PUBLIC_PASSKEY_ACCOUNTS', 'NEXT_PUBLIC_L2_RAILS']) expect(docker).toMatch(new RegExp(`^ARG ${v}$`, 'm'));

@@ -97,6 +97,9 @@ const PUBLIC_PREFIXES = [
   // session without a nonce. /api/siwe/verify is the other half and must
   // be reachable for the same reason.
   '/api/siwe/',
+  // G8 HumanGate runs before sign-in, so it cannot need a session (lib/g8/humanGate.ts). Only the
+  // challenge and verify routes: every other /api/g8/* route requires a wallet session.
+  '/api/g8/humangate/',
   '/api/metrics/',
   '/api/chat/stories', // stories need to be public for viewing
   '/api/aztec/airdrop',
@@ -455,6 +458,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
         // Distributed Edge Redis check (no-op if UPSTASH_REDIS_REST_* env vars are absent)
         if (
           pathname.startsWith('/api/siwe/') ||
+          pathname.startsWith('/api/g8/humangate/') ||
           pathname === '/api/chat/attachments/presign' ||
           pathname === '/api/chat/users/search' ||
           relay
