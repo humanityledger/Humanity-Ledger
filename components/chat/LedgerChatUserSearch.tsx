@@ -101,13 +101,14 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
     try {
       const res = await fetch('/api/chat/contacts/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toAddress: addr }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || t("Could not send request"));
+        // 403 = a block in either direction; the server never says which.
+        toast.error(res.status === 403 ? t("This user is unavailable.") : (data.error || t("Could not send request")));
         setRequestStatuses(prev => ({ ...prev, [addr]: 'none' }));
         return;
       }

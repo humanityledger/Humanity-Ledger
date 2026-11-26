@@ -1,0 +1,38 @@
+# EXECUTION LEDGER — HUMANITY LEDGER 5★ UPGRADE
+
+Regla: actualizar SOLO al cerrar cada sesión con commit SHA + comando exacto verificado en verde. Prohibido marcar DONE sin test real ejecutado tras la última edición.
+Plan completo: docs/plan/MASTER_PROMPT_5_ESTRELLAS.md · Protocolo de tokens: docs/plan/TOKEN_PROTOCOL.md
+
+## Bloqueadores humanos externos (no cerrables por código)
+- [ ] H1: Constitución S.L. + taxId + postalAddress (lib/constants/legalEntity.ts)
+- [ ] H2: Informe de auditoría externa (deployments/aztec-mainnet.json → audit)
+- [ ] H3: Multisig 4-de-7 TREASURY real en Aztec Alpha
+- [ ] H4: Firma letrada de lib/docs/pages/legal.ts (OD-8)
+- [ ] H5: Respuesta human.tech + seguro RC/cyber + CASP (CUSDC_GATES)
+- [ ] H6: Pruebas físicas iPhone Safari + Android Chrome MetaMask + DATABASE_URL_UNPOOLED + TURN Railway
+
+## Estado por sesión
+- [~] SESIÓN 0 (Ajustes nativos — petición directa 26-Nov): Public tip token + sync de todos los ajustes | commit: — (pendiente, working tree)
+  - HECHO: lib/settings/schema.ts (SSOT de ajustes), 8 claves sin default añadidas, /api/chat/settings deriva allowlist + guarda last_synced_at, sanitizador tipado; PublicTipTokenPicker (radiogroup, saldos mainnet reales, toast, aviso si pagos off); lista única lib/payments/publicTipTokens.ts compartida con NativeCryptoSendModal (DAI incluido); estado/modales muertos eliminados de LedgerSettingsFull.
+  - VERIFICADO: test/unit/settings/settings-sync.test.ts 8/8 (shim node, ver §4 CLAUDE.md); tsc estricto acotado 0 errores; check:patterns, check:copy PASS.
+  - PENDIENTE: `npx vitest run test/unit/settings` en Windows; prueba manual en /chat → Ajustes → Pagos.
+- [~] SESIÓN 1 (Seguridad P0 Auth/Billing/XSS): SEG-C1, SEG-C2, SEG-C3, SEG-H4 | commit: —
+  - HECHO SEG-C1: tier normalizado, HMAC para cualquier 'elite', hex 64 + timestamp entero finito, DEV_INTERNAL_WAC sólo NODE_ENV=development + ALLOW_DEV_INTERNAL_WAC=1, IP por getClientIP, whitelist con CIDR (net.BlockList); keys/update: SSRF (https, 443, sin credenciales, ssrfGuard + DNS todo-público), ipWhitelist IPv4/IPv6/CIDR ≤32, tier case-insensitive.
+  - HECHO SEG-C2/H4: payment/{confirm,create-subscription,portal}, payments/{checkout,provision-owner,customer-portal}, dev/deploy, admin/{launch-checklist,logout} → stubs 410 + retiredRoutes; /api/payments/checkout fuera de PUBLIC_PREFIXES; CSP-Report-Only eliminado; Permissions-Policy unificada (geolocation=(self) usado por chat).
+  - HECHO SEG-C3: contentHtml del cliente ignorado; columna = texto escapado (lib/communities/postBody.ts); CommunityReader ya no lo envía; scripts/purge-community-contenthtml.ts (dry-run por defecto) para filas antiguas. PIN_MESSAGE revisado: no invertido.
+  - VERIFICADO: test/unit/security/session1-critical.test.ts 30/30 (shim node); tsc estricto acotado 0 errores.
+  - PENDIENTE: R2-6 (estrechar connect-src/frame-src de middleware.ts) — requiere inventario en navegador real de WalletConnect/Aztec/XMTP/RPC; ejecutar purge-community-contenthtml.ts --apply tras backup; borrar físicamente los stubs (requiere permiso de borrado); vitest real en Windows; commit.
+- [~] MISIÓN 26-Nov-B (Delete≠Block · Ajustes nativos · RAM) | commit: — (working tree)
+  - FASE A HECHO: lib/chat/incoming-revival.ts (marca de agua con tiempos de red vistos, snapshot de 64 ids persistido, decideIncoming único) en los 6 caminos de entrada de LedgerChatV2; Delete nunca toca consentimiento XMTP. Bloqueo en 4 capas (lib/chat/blockActions.ts): vault canónico (+migración ledger_blocklist_*), `blocked:<peer>` en LWW, XMTP consent Denied/Allowed (setPeerConsent), servidor ChatBlock + /api/chat/blocks (solo lista propia) + isMutuallyBlocked/blockedCounterparties en contacts/request (+accept), presence, direct, queue. Banner «Desbloquear», envío/llamada fail-closed, 403 neutro en UI. deriveAztecAddress eliminado de contact requests.
+  - FASE B HECHO: @ts-nocheck fuera de LedgerSettingsFull (0 errores strict); 13 footers + modales + plurales + wallpaperScope traducidos; 78+25 claves nuevas en es/de/ru/zh; lib/chat/fonts.ts (solo caras reales: Inter/Plex Mono self-hosted + pilas nativas, alias de ids viejos); lib/chat/autoDelete.ts (6 opciones ofrecidas = aceptadas = aplicadas); text_size único 0..4; copyText cross-browser; storage medido async (lib/storage/usage.ts). Bug crítico: /api/settings sustituía la fila UserSettings del chat → ahora lib/settings/store.ts (merge vs replace) con requireWallet y Prisma tipado en las 4 rutas.
+  - FASE C HECHO: EphemeralKernelProver (Barretenberg.new + destroy en finally, hilos por RAM, wake lock, DecompressionStream nativo) cableado en EmbeddedWallet; IndexedDB v2 con índice compuesto + cursor 'prev' O(limit); BoundedLRU en vault (256 entradas/256 KB, nada >16 KB), xmtp dm caches (500), activeDm (24), profileCache (64), glyphCache (48), callSignals (8×200); base64 por trozos; listeners de actividad sin timers; AntiTamperCore y AztecProvider fuera del layout (CON-08); MemoryObservatory.
+  - MEDIDO (node --expose-gc, scripts/benchmark-ram.ts): caché perfiles 10k → 78,00 MB vs 0,52 MB; hilo 10k filas 4,58 MB vs ventana 50 → 0,02 MB; base64 5 MB: spread revienta la pila, troceado OK 230 ms.
+  - VERIFICADO: 81 tests (delete-vs-block 21, settings-completeness 9, settings-sync 8, session1 30, ram 13) con shim node; tsc strict acotado sin errores salvo prisma.chatBlock (pendiente generate); check:patterns + check:copy PASS.
+  - PENDIENTE OPERADOR (Windows): `npx prisma generate` + `npx prisma migrate deploy` (20261126120000_chat_block); `npx vitest run test/unit/chat test/unit/settings test/unit/perf test/unit/security`; `npm run build`; prueba física de una prueba Aztec midiendo memoria antes/después; 254 claves i18n fuera de Ajustes (trinquete en test); PXE completo en Worker (Invention #2) no hecho.
+- [ ] SESIÓN 2 (Zombis/Aztec/OFAC/IP/Cookies): SEG-C4, SEG-H1, SEG-H2, SEG-H3, SEG-M1 | commit: —
+  - Nota: 20+ lecturas directas de x-forwarded-for siguen fuera de api-guard; Resend 're_dummy_key' en rutas ya retiradas (news/share, newsletter, notifications/email).
+- [ ] SESIÓN 3 (Build estricto, TS, poda DB/deps): CON-08, CON-09, CON-10, III.1, III.3, III.4 | commit: —
+- [ ] SESIÓN 4 (Refactor LedgerChatV2): III.2 | commit: —
+- [ ] SESIÓN 5 (PC+Móvil, /prove Worker/COOP, WebRTC/XMTP): IV.1–IV.4, CON-11 | commit: —
+- [ ] SESIÓN 6 (Contratos D-4, PrivateFPC, Portal, R17): V.1–V.4, CON-01, CON-07 | commit: —
+- [ ] SESIÓN 7 (SSOT, RGPD/DSA, legal diff, gate final): CON-02..06, VI, VII | commit: —

@@ -26,6 +26,7 @@
   background: var(--ledger-chat-bg);
   font-family: var(--ledger-chat-font-family);
   font-size: var(--ledger-chat-font-size);
+  letter-spacing: var(--ledger-chat-letter-spacing, normal);
 }
 
 /* Message bubbles use density variable */

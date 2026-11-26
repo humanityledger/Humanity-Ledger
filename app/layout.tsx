@@ -37,9 +37,7 @@ import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 
 import { ScrollProgressBar } from "@/components/ui/ScrollProgressBar";
 
-import { AntiTamperCore } from "@/components/security/AntiTamperCore";
 
-import { AztecProvider } from "@/context/AztecContext";
 import { getServerLocale, getT, loadMessages } from '@/lib/i18n/server';
 import { I18nProvider } from '@/lib/i18n/client';
 import { HTML_LANG } from '@/lib/i18n/locales';
@@ -607,15 +605,11 @@ document.addEventListener('focusout',off,true);
 
             <MobileEnforcer>
 
-              <AztecProvider>
-
                   <ClientLayout>
 
                     <CookieProvider>
 
                       <ErrorSuppressor />
-
-                      <AntiTamperCore />
 
                       {children}
 
@@ -628,8 +622,6 @@ document.addEventListener('focusout',off,true);
                     </CookieProvider>
 
                   </ClientLayout>
-
-              </AztecProvider>
 
             </MobileEnforcer>
 

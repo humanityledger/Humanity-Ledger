@@ -33,7 +33,6 @@ const PUBLIC_PREFIXES = [
   '/api/aztec/derive-address',
   '/api/aztec/identity-status',
   '/api/aztec/restore-session',
-  '/api/payments/checkout',
   '/api/webhooks/',
   '/api/registry/',
   '/api/user/register',

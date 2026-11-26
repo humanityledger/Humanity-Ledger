@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateSecureRequest } from '@/lib/security/premium-security';
+import { requireWallet } from '@/lib/security/requireWallet';
 
 // Map exact DB columns (for strongly typed schema fields)
 const STORE_TO_DB: Record<string, string> = {
@@ -79,17 +79,15 @@ function mapDbToStore(data: Record<string, any>): Record<string, any> {
 
 export async function GET(req: any) {
     try {
-        const validation = await validateSecureRequest(req);
-        if (!validation.valid || !validation.userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        const address = validation.userId;
+        const auth = await requireWallet(req);
+        if (auth.errorResponse) return auth.errorResponse;
+        const address = auth.walletAddress;
 
         let user: any = null;
 
         try {
             // Full schema retrieval (including extendedSettings)
-            user = await (prisma as any).user.findUnique({
+            user = await prisma.user.findUnique({
                 where: { walletAddress: address },
             });
         } catch {
@@ -115,11 +113,9 @@ export async function GET(req: any) {
 
 async function handleUpdate(req: any) {
     try {
-        const validation = await validateSecureRequest(req);
-        if (!validation.valid || !validation.userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        const address = validation.userId;
+        const auth = await requireWallet(req);
+        if (auth.errorResponse) return auth.errorResponse;
+        const address = auth.walletAddress;
 
         const body = await req.json();
 
@@ -144,7 +140,7 @@ async function handleUpdate(req: any) {
         
         try {
             // First fetch existing extendedSettings to merge
-            const current = await (prisma as any).user.findUnique({
+            const current = await prisma.user.findUnique({
                 where: { walletAddress: address },
                 select: { extendedSettings: true }
             });
@@ -163,7 +159,7 @@ async function handleUpdate(req: any) {
                 updateData.extendedSettings = mergedExt;
             }
 
-            updatedUser = await (prisma as any).user.upsert({
+            updatedUser = await prisma.user.upsert({
                 where: { walletAddress: address },
                 update: updateData,
                 create: {
@@ -178,7 +174,7 @@ async function handleUpdate(req: any) {
                 if (SAFE_COLUMNS.includes(k)) safeData[k] = updateData[k];
             }
             if (Object.keys(safeData).length > 0) {
-                updatedUser = await (prisma as any).user.upsert({
+                updatedUser = await prisma.user.upsert({
                     where: { walletAddress: address },
                     update: safeData,
                     create: {

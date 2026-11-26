@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as prismaModule from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { isMutuallyBlocked } from '@/lib/chat/blockFirewall';
 
 function getPresenceReadDb() {
   return Object.prototype.hasOwnProperty.call(prismaModule, 'prismaRead')
@@ -42,6 +43,10 @@ export async function POST(req: NextRequest) {
     // Fetch peer presence if requested
     if (peerAddress && /^0x[a-fA-F0-9]{40}$/.test(peerAddress)) {
       const normalizedPeer = peerAddress.toLowerCase();
+      // A block in either direction reads as offline (no hint of who blocked).
+      if (await isMutuallyBlocked(callerAddress, normalizedPeer)) {
+        return NextResponse.json(visiblePresence(null, callerAudience, now));
+      }
 
       // Verify contact relationship
       // Both sides must have the other as a contact. A one-sided check let

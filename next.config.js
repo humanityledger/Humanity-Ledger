@@ -496,10 +496,9 @@ const nextConfig = {
     // Defining it here too would send DUPLICATE CSP headers causing the browser
     // to apply the most restrictive combination - breaking Clerk & WalletConnect.
     //
-    // SECURITY: Content-Security-Policy-Report-Only is added here (not in middleware)
-    // so it does not interfere with the enforced CSP from middleware.ts.
-    // Report-only violations are collected at /api/security/csp-report.
-    // Reference: docs/OBSERVABILITY.md — hl_csp_violations_total
+    // The only CSP is the enforced, nonce-based one from middleware.ts. The old
+    // Report-Only policy here allowed 'unsafe-inline'/'unsafe-eval' and only
+    // produced noise next to it, so it was removed (SEG-H4).
     async headers() {
         return [
             {
@@ -511,12 +510,8 @@ const nextConfig = {
                     { key: 'Strict-Transport-Security',           value: 'max-age=63072000; includeSubDomains; preload' },
                     { key: 'X-Permitted-Cross-Domain-Policies',   value: 'none' },
                     { key: 'Referrer-Policy',                     value: 'strict-origin-when-cross-origin' },
-                    { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), display-capture=(self), autoplay=(self), geolocation=(), interest-cohort=()' },
+                    { key: 'Permissions-Policy',                  value: 'camera=(self), microphone=(self), display-capture=(self), autoplay=(self), geolocation=(self), interest-cohort=()' }, // same as middleware.ts: chat location sharing uses geolocation
                     { key: 'X-DNS-Prefetch-Control',              value: 'off' },
-                    // [SECURITY] CSP Report-Only: collects violation reports without blocking.
-                    // Enforced CSP is set per-request by middleware.ts (nonce-based).
-                    // Reports are collected at /api/security/csp-report.
-                    { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob: data:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; report-uri /api/security/csp-report" },
                 ]
             },
             //  API routes: never cache sensitive data endpoints 

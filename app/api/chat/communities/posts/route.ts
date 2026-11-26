@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { postBodyColumns } from '@/lib/communities/postBody';
 import { legacyPostsClosed, legacyReadOnlyBody } from '@/lib/communities/legacy';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
@@ -13,7 +14,8 @@ export async function POST(req: Request) {
     const authorAddress = auth.walletAddress;
 
     const body = await req.json();
-    const { communityId, channelId, title, content, contentHtml } = body;
+    // contentHtml from the client is ignored: posts are plain text (lib/communities/postBody.ts).
+    const { communityId, channelId, title, content } = body;
 
     if (!communityId || !content) {
       return NextResponse.json(
@@ -71,9 +73,11 @@ export async function POST(req: Request) {
 
     // Limits that did not exist: size, speed, and a channel that belongs to
     // this community.
-    if (typeof content !== 'string' || content.length > 20_000 || (contentHtml && (typeof contentHtml !== 'string' || contentHtml.length > 40_000))) {
+    if (typeof content !== 'string' || content.length > 20_000) {
       return NextResponse.json({ error: 'The message is too long.' }, { status: 413 });
     }
+    const bodyColumns = postBodyColumns(content);
+    if (!bodyColumns) return NextResponse.json({ error: 'Empty content' }, { status: 400 });
     if (title !== undefined && title !== null && (typeof title !== 'string' || title.length > 140)) {
       return NextResponse.json({ error: 'Invalid title.' }, { status: 400 });
     }
@@ -91,8 +95,7 @@ export async function POST(req: Request) {
         channelId,
         authorAddress: authorAddress.toLowerCase(),
         title,
-        content,
-        contentHtml: contentHtml || content,
+        ...bodyColumns,
       },
     });
 

@@ -5,6 +5,13 @@ import { RedisRateLimiter } from './redis/rate-limiter';
 import { safeRedisGet, safeRedisSet, redisClient } from './redis/client';
 import { timingSafeEqual } from 'crypto';
 import { safeJsonParse } from '@/lib/utils/json';
+import { getClientIP } from '@/lib/security/rateLimiter';
+import { ipInWhitelist } from '@/lib/security/webhookTarget';
+
+/** HMAC-SHA256 hex signature: exactly 64 hex characters. */
+const HMAC_HEX = /^[0-9a-f]{64}$/i;
+/** Unix seconds, digits only (no signs, decimals, exponents or NaN). */
+const UNIX_SECONDS = /^\d{1,12}$/;
 
 export interface ApiKeyValidation {
   valid: boolean;
@@ -22,7 +29,9 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   }
 
   //  INTERNAL BYPASS for development/dashboard (LEGENDARY) 
-  if (process.env.NODE_ENV !== 'production' && apiKey === 'DEV_INTERNAL_WAC') {
+  // Local development only, and only when explicitly enabled: never on a
+  // production, staging or preview build (NODE_ENV is 'production' there).
+  if (process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_INTERNAL_WAC === '1' && apiKey === 'DEV_INTERNAL_WAC') {
     return { 
       valid: true, 
       subscription: { 
@@ -109,13 +118,14 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   }
 
   //  Tier Enforcement (Starter / Pro / Elite) 
-  const tier = subscription.tier.toLowerCase();
+  // Normalised once: the DB may hold 'Elite', 'elite' or 'ELITE'.
+  const tier = String(subscription.tier ?? 'starter').toLowerCase();
   
   // Set default limits if not in DB
   const tierLimits: Record<string, { threshold: number, windowDays: number }> = {
     starter: { threshold: 500000, windowDays: 1 },
     pro: { threshold: 100000, windowDays: 30 },
-    Elite: { threshold: 50000, windowDays: 365 }
+    elite: { threshold: 50000, windowDays: 365 }
   };
 
   const limit = tierLimits[tier] || tierLimits.starter;
@@ -125,9 +135,9 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   subscription.enforcedWindowDays = limit.windowDays;
 
   //  IP Whitelisting (Elite/Pro) 
-  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const clientIp = getClientIP(req);
   if (subscription.ipWhitelist && subscription.ipWhitelist.length > 0) {
-    if (!subscription.ipWhitelist.includes(clientIp)) {
+    if (!ipInWhitelist(clientIp, subscription.ipWhitelist)) {
       return {
         valid: false,
         error: `IP Unauthorized: ${clientIp}. Add it to your whitelist in the developer dashboard.`,
@@ -137,7 +147,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
   }
 
   //  HMAC Request Signing (Elite) 
-  if (tier === 'Elite' && subscription.hmacSecret) {
+  if (tier === 'elite' && subscription.hmacSecret) {
     const signature = req.headers.get('x-wac-signature');
     const timestamp = req.headers.get('x-wac-timestamp');
 
@@ -149,9 +159,14 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
       };
     }
 
+    if (!HMAC_HEX.test(signature) || !UNIX_SECONDS.test(timestamp)) {
+      return { valid: false, error: 'Malformed HMAC headers.', statusCode: 401 };
+    }
+
     // Check clock drift (max 5 minutes)
     const now = Math.floor(Date.now() / 1000);
-    if (Math.abs(now - parseInt(timestamp)) > 300) {
+    const ts = Number(timestamp);
+    if (!Number.isFinite(ts) || Math.abs(now - ts) > 300) {
       return { valid: false, error: 'Request timestamp expired (clock drift > 5m).', statusCode: 401 };
     }
 
@@ -190,7 +205,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiKeyValidation
 
 //  Log a successful API request 
 export async function logApiRequest(req: NextRequest, subscriptionId: string, endpoint: string, statusCode: number) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+  const ip = getClientIP(req);
   
   //  Phase 3: Redis-Buffered Logging (Unlocking 100M Scale) 
   // Instead of direct DB writes, we push to a Redis list for background worker processing

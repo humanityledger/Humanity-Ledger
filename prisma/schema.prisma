@@ -389,6 +389,19 @@ model ChatContactRequest {
   @@index([fromAddress, status])
 }
 
+/// A wallet's block of another wallet (Delete is never a block). Enforced in
+/// both directions by lib/chat/blockFirewall.ts; GET /api/chat/blocks only ever
+/// returns the caller's own list, never who blocked the caller.
+model ChatBlock {
+  id          String   @id @default(uuid())
+  owner       String // lowercase wallet that blocked
+  blockedPeer String // lowercase wallet that is blocked
+  createdAt   DateTime @default(now())
+
+  @@unique([owner, blockedPeer])
+  @@index([blockedPeer, owner])
+}
+
 model PendingChatMessage {
   id        String   @id @default(uuid())
   sender    String

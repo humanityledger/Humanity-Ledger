@@ -26,15 +26,35 @@ function parse(raw: string | null | undefined): string[] {
   try { return normalizeBlockList(JSON.parse(raw)); } catch { return []; }
 }
 
+/** Older wallet builds kept per-account lists under `ledger_blocklist_<account>`. */
+export const WALLET_LEGACY_PREFIX = 'ledger_blocklist_';
+
+function legacyKeys(): string[] {
+  const out: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) || '';
+      if (k === LEGACY_BLOCK_LIST_KEY || k.startsWith(WALLET_LEGACY_PREFIX)) out.push(k);
+    }
+  } catch {}
+  return out;
+}
+
 export async function loadBlockList(): Promise<string[]> {
   const current = parse(await vault.getItem(BLOCK_LIST_KEY).catch(() => null));
+  const keys = legacyKeys();
+  if (keys.length === 0) return current;
   let legacy: string[] = [];
-  try { legacy = parse(localStorage.getItem(LEGACY_BLOCK_LIST_KEY)); } catch {}
-  if (legacy.length === 0) return current;
+  for (const k of keys) { try { legacy = legacy.concat(parse(localStorage.getItem(k))); } catch {} }
   const merged = normalizeBlockList([...current, ...legacy]);
-  await vault.setItem(BLOCK_LIST_KEY, JSON.stringify(merged)).catch(() => {});
-  try { localStorage.removeItem(LEGACY_BLOCK_LIST_KEY); } catch {}
+  // Only drop the old keys once the merged list is safely in the vault.
+  const saved = await vault.setItem(BLOCK_LIST_KEY, JSON.stringify(merged)).then(() => true, () => false);
+  if (saved) for (const k of keys) { try { localStorage.removeItem(k); } catch {} }
   return merged;
+}
+
+export async function isPeerBlocked(peer: string): Promise<boolean> {
+  return (await loadBlockList()).includes(peer.trim().toLowerCase());
 }
 
 export async function saveBlockList(list: string[]): Promise<string[]> {

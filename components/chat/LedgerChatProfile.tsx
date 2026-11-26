@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, BellOff, Trash2, Ban, EyeOff, FileText, Image as ImageIcon, Link2, Copy, CheckCircle2, AlertTriangle, UserCircle2 } from 'lucide-react';
-import { getBlocklist, unblockUser } from '@/lib/wallet/blocklist';
 import { useT } from '@/lib/i18n/client';
 
 interface LedgerChatProfileProps {

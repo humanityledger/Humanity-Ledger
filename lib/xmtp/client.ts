@@ -22,6 +22,7 @@
 
 
 import { diag, short } from './diag';
+import { BoundedLRU } from '@/lib/core/BoundedLRU';
 import { COUNTERFACTUAL_DEFAULT_CHAIN, SCW_CHAINS, detectWalletKind, isPlainEcdsa, type WalletKind } from './wallet-kind';
 import { Buffer } from 'buffer';
 
@@ -650,7 +651,8 @@ export async function getDmId(client: Client, peerAddress: string): Promise<stri
 // Cache for verified registered address casing to avoid redundant network calls
 const registeredAddressCache = new Map<string, string>();
 // Cache for active DM conversation objects by inboxId:peerAddress to avoid re-creating MLS sessions per message
-const activeDmCache = new Map<string, any>();
+// Live DM handles (SDK proxies): bounded so long sessions do not pin every chat ever opened.
+const activeDmCache = new BoundedLRU<string, any>({ max: 24, name: 'xmtp.activeDm' });
 
 /**
  * Resolves the EXACT casing of the peer's Ethereum address that is registered on XMTP.
@@ -1269,9 +1271,12 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
  * not yet present in the known set. Used by Ledger Chat global sync loop.
  */
 /** DM ids whose peer discoverNewPeers already resolved, per inbox. */
-const resolvedDmIds = new Map<string, Set<string>>();
+const resolvedDmIds = new Map<string, BoundedLRU<string, true>>();
 /** Cached lowercase peer address per DM conversation id, per inbox. */
-const dmIdToPeerCache = new Map<string, Map<string, string>>();
+const dmIdToPeerCache = new Map<string, BoundedLRU<string, string>>();
+/** Per-inbox caps: an evicted DM id is simply resolved again on the next scan. */
+const DM_CACHE_MAX = 500;
+function newDmCache<V>(name: string): BoundedLRU<string, V> { return new BoundedLRU<string, V>({ max: DM_CACHE_MAX, name }); }
 
 /** Forgets a previously resolved DM id for a deleted peer so future activity is detected promptly. */
 export function forgetResolvedPeer(client: Client | null | undefined, peerAddress: string): void {
@@ -1339,7 +1344,7 @@ export async function scanDmsForActivity(
     }
 
     let byId = dmIdToPeerCache.get(selfInboxId);
-    if (!byId) { byId = new Map(); dmIdToPeerCache.set(selfInboxId, byId); }
+    if (!byId) { byId = newDmCache<string>('xmtp.dmIdToPeer'); dmIdToPeerCache.set(selfInboxId, byId); }
 
     // Batch-resolve missing peer inboxIds in a single preferences call when supported
     const unresolvedInboxIds = new Set<string>();
@@ -1440,16 +1445,16 @@ export async function discoverNewPeers(
     // runs every 10 s, and it used to resolve every DM of the account every time: the cost grew
     // with the number of conversations, for every open window.
     let seen = resolvedDmIds.get(selfInboxId);
-    if (!seen) { seen = new Set(); resolvedDmIds.set(selfInboxId, seen); }
+    if (!seen) { seen = newDmCache<true>('xmtp.resolvedDmIds'); resolvedDmIds.set(selfInboxId, seen); }
     let byId = dmIdToPeerCache.get(selfInboxId);
-    if (!byId) { byId = new Map(); dmIdToPeerCache.set(selfInboxId, byId); }
+    if (!byId) { byId = newDmCache<string>('xmtp.dmIdToPeer'); dmIdToPeerCache.set(selfInboxId, byId); }
 
     for (const dm of dms) {
       if (dm?.id && seen.has(dm.id)) continue;
       try {
         const peerAddr = await extractPeerAddress(dm, selfInboxId, (client as any).accountAddress, client);
         if (peerAddr && dm?.id) {
-          seen.add(dm.id);
+          seen.set(dm.id, true);
           byId.set(dm.id, peerAddr.toLowerCase());
         }
         if (
@@ -1635,3 +1640,40 @@ export async function syncOfflineQueue(_client: Client, _myEthAddress: string): 
 }
 
 
+
+/**
+ * XMTP protocol consent for a peer's DM. Block → Denied (the peer's messages
+ * stop at the protocol level on every device of this inbox); Unblock →
+ * Allowed. Delete never calls this: deleting a chat is not blocking.
+ * Returns false when the SDK wrapper offers no way to set it (never throws).
+ */
+export async function setPeerConsent(client: Client | null | undefined, peerAddress: string, state: 'allowed' | 'denied'): Promise<boolean> {
+  if (!client || !/^0x[0-9a-fA-F]{40}$/.test(peerAddress)) return false;
+  const value = state === 'denied' ? 2 : 1; // ConsentState.Denied / Allowed
+  try {
+    const identifier: XmtpIdentifier = { identifier: await checksumAddress(peerAddress), identifierKind: 'Ethereum' };
+    const convs = client.conversations as any;
+    const dm = typeof convs.getDmByIdentifier === 'function' ? await convs.getDmByIdentifier(identifier) : undefined;
+    if (dm && typeof dm.updateConsentState === 'function') {
+      await dm.updateConsentState(value);
+      return true;
+    }
+    // No DM yet: record consent for the peer's inbox so a future DM starts in that state.
+    const inboxId = typeof (client as any).findInboxIdByIdentifier === 'function'
+      ? await (client as any).findInboxIdByIdentifier(identifier) : undefined;
+    const prefs = (client as any).preferences;
+    if (inboxId && prefs && typeof prefs.setConsentStates === 'function') {
+      await prefs.setConsentStates([{ entity: inboxId, entityType: 1 /* ConsentEntityType.InboxId */, state: value }]);
+      return true;
+    }
+  } catch (e) {
+    diag('consent_set_failed', { peer: short(peerAddress.toLowerCase()), state });
+  }
+  return false;
+}
+
+/** The already-open XMTP client for an account, if this tab has one (never creates one). */
+export function getOpenXmtpClient(account: string | null | undefined): Client | undefined {
+  if (!account) return undefined;
+  return clientRegistry.get(account) ?? clientRegistry.get(account.toLowerCase());
+}

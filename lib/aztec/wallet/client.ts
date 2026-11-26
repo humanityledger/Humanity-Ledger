@@ -456,9 +456,18 @@ class PrivateWallet {
       this.stores = stores;
 
       // The same node client (and route) for the PXE as for the checks above.
+      // Zero-residency proving: a fresh Barretenberg per proof, destroyed right after, so the
+      // ~1–2 GB of WebAssembly memory a proof needs is returned to the OS (lib/aztec/prover).
+      const [{ createEphemeralProver }, { WASMSimulator }] = await Promise.all([
+        import('@/lib/aztec/prover/ephemeral-prover'),
+        import('@aztec-labs/simulator/client'),
+      ]);
+      const simulator = new WASMSimulator();
       this.wallet = await sdk.EmbeddedWallet.create(this.node, {
         pxe: {
           store: stores.pxeStore,
+          simulator,
+          proverOrOptions: createEphemeralProver(simulator),
         },
         walletDb: {
           store: stores.walletStore,

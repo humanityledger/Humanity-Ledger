@@ -300,7 +300,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title: tr("Community post"), content: body, contentHtml: body }),
+        body: JSON.stringify({ title: tr("Community post"), content: body }),
       });
       status = res.status;
       const d = await res.json().catch(() => ({}));

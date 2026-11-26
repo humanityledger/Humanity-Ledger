@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { blockedCounterparties } from '@/lib/chat/blockFirewall';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,11 @@ export async function GET(req: NextRequest) {
     const allById = new Map<string, typeof undeliveredMessages[0]>();
     for (const m of undeliveredMessages) allById.set(m.id, m);
     for (const m of recentMessages) allById.set(m.id, m);
-    const messages = Array.from(allById.values()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    // Nothing crosses a block, in either direction (lib/chat/blockFirewall.ts).
+    const hidden = await blockedCounterparties(address);
+    const messages = Array.from(allById.values())
+      .filter(m => !hidden.has(String(m.sender === address ? m.recipient : m.sender).toLowerCase()))
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
     // Mark undelivered ones as delivered now that we're returning them
     const toMarkDelivered = undeliveredMessages.map(m => m.id);

@@ -16,10 +16,29 @@
  * - removeItem zeros the memory cache entry before deleting from disk.
  */
 
+import { BoundedLRU } from '@/lib/core/BoundedLRU';
+
+/**
+ * Base64 for any size: 32 KB chunks. `btoa(String.fromCharCode(...bytes))`
+ * spreads every byte as a call argument and throws "Maximum call stack size
+ * exceeded" past ~100 KB on Safari.
+ */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 0x8000)));
+  }
+  return btoa(bin);
+}
+
 export class SecureVault {
   private static _instance: SecureVault;
-  // In-memory cache: decrypted values for instant access within session
-  private memoryCache = new Map<string, string>();
+  // In-memory cache: decrypted values for instant access within session. Bounded by entry count
+  // and a byte budget; values over 16 KB are never kept decrypted in the heap (read from disk).
+  private memoryCache = new BoundedLRU<string, string>({ max: 256, maxBytes: 256 * 1024, maxItemBytes: 16 * 1024, sizeOf: v => v.length * 2, name: 'vault.memoryCache' });
+  // Values whose encrypted write has not finished yet: always served from here, never evicted.
+  private pendingWrites = new Map<string, string>();
+  private lastActivity = Date.now();
   // Per-session AES-GCM key — derived once, kept only in memory
   private cryptoKey: CryptoKey | null = null;
   // Whether Web Crypto + localStorage are available
@@ -47,17 +66,26 @@ export class SecureVault {
   private _initAutoLock(): void {
     if (typeof window === 'undefined') return;
     const resetEvents = ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'];
-    const onActivity = () => this._resetAutoLock();
-    resetEvents.forEach(evt => window.addEventListener(evt, onActivity, { passive: true }));
+    // Activity only stamps a time (no timer churn on every mousemove/scroll); one timer checks it.
+    const onActivity = () => { this.lastActivity = Date.now(); };
+    resetEvents.forEach(evt => window.addEventListener(evt, onActivity, { passive: true, capture: true }));
     this._resetAutoLock();
   }
 
   private _resetAutoLock(): void {
     if (this.autoLockTimeout) clearTimeout(this.autoLockTimeout);
-    this.autoLockTimeout = setTimeout(() => {
-      this.lock();
-      console.info('[SecureVault] Auto-locked after inactivity.');
-    }, this.AUTO_LOCK_MS);
+    this.lastActivity = Date.now();
+    const check = () => {
+      const idle = Date.now() - this.lastActivity;
+      if (idle >= this.AUTO_LOCK_MS) {
+        this.lock();
+        console.info('[SecureVault] Auto-locked after inactivity.');
+        this.autoLockTimeout = null;
+        return;
+      }
+      this.autoLockTimeout = setTimeout(check, this.AUTO_LOCK_MS - idle);
+    };
+    this.autoLockTimeout = setTimeout(check, this.AUTO_LOCK_MS);
   }
 
   // ── Private Helpers ─────────────────────────────────────────────────────
@@ -85,7 +113,7 @@ export class SecureVault {
         // Generate new 256-bit master secret
         masterBytes = new Uint8Array(32);
         window.crypto.getRandomValues(masterBytes);
-        localStorage.setItem(MASTER_KEY, btoa(String.fromCharCode(...masterBytes)));
+        localStorage.setItem(MASTER_KEY, bytesToBase64(masterBytes));
       }
 
       // Import as HKDF key, then derive AES-GCM key
@@ -144,7 +172,7 @@ export class SecureVault {
     const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
     combined.set(iv, 0);
     combined.set(new Uint8Array(ciphertext), iv.byteLength);
-    return `aes:${btoa(String.fromCharCode(...combined))}`;
+    return `aes:${bytesToBase64(combined)}`;
   }
 
   private async decrypt(stored: string): Promise<string | null> {
@@ -174,25 +202,29 @@ export class SecureVault {
   // ── Public API ────────────────────────────────────────────────────────────
 
   public async setItem(key: string, value: string): Promise<void> {
-    // 1. Write to memory cache immediately (in-process fast path)
+    // 1. Visible to readers immediately, even if the LRU would not keep it.
     this.memoryCache.set(key, value);
+    if (typeof window === 'undefined') return;
+    this.pendingWrites.set(key, value);
 
     // 2. Persist encrypted to localStorage
-    if (typeof window === 'undefined') return;
     try {
       const storageKey = await this.hashKey(key);
       const encrypted = await this.encrypt(value);
       window.localStorage.setItem(storageKey, encrypted);
     } catch (e) {
       console.error('[SecureVault] setItem failed', e);
+    } finally {
+      if (this.pendingWrites.get(key) === value) this.pendingWrites.delete(key);
     }
   }
 
   public async getItem(key: string): Promise<string | null> {
-    // 1. Fast path: in-memory cache
-    if (this.memoryCache.has(key)) {
-      return this.memoryCache.get(key) ?? null;
-    }
+    // 1. Fast path: a write in flight, then the in-memory cache
+    const pending = this.pendingWrites.get(key);
+    if (pending !== undefined) return pending;
+    const cached = this.memoryCache.get(key);
+    if (cached !== undefined) return cached;
 
     // 2. Read from localStorage and decrypt
     if (typeof window === 'undefined') return null;
@@ -215,6 +247,7 @@ export class SecureVault {
   public removeItem(key: string): void {
     // Synchronously zero memory first
     this.memoryCache.delete(key);
+    this.pendingWrites.delete(key);
 
     if (typeof window === 'undefined') return;
     // Async disk cleanup (fire and forget — memory is already clean)

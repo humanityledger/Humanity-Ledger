@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { postBodyColumns } from '@/lib/communities/postBody';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { getInMemoryCommunityBySlugOrId } from '@/lib/communities/in-memory-communities';
@@ -118,14 +119,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const body = await req.json().catch(() => ({}));
-    const { title, content, contentHtml, channelId } = body;
-    const text = typeof content === 'string' ? content : '';
-    const html = typeof contentHtml === 'string' ? contentHtml : '';
-    if (!text.trim() && !html.trim()) {
-      return NextResponse.json({ error: 'Empty content' }, { status: 400 });
-    }
-    if (text.length > MAX_BODY || html.length > MAX_BODY * 2) {
+    // contentHtml from the client is ignored: posts are plain text (lib/communities/postBody.ts).
+    const { title, content, channelId } = body;
+    if (typeof content === 'string' && content.length > MAX_BODY) {
       return NextResponse.json({ error: 'The post is too long' }, { status: 413 });
+    }
+    const bodyColumns = postBodyColumns(content);
+    if (!bodyColumns) {
+      return NextResponse.json({ error: 'Empty content' }, { status: 400 });
     }
 
     // A channel id must belong to this community.
@@ -145,8 +146,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         channelId: safeChannelId,
         authorAddress: caller.toLowerCase(),
         title: postTitle,
-        content: text || html,
-        contentHtml: html || text,
+        ...bodyColumns,
         // Sending never pins. Only PIN_MESSAGE sets pinnedAt.
         pinnedAt: null,
         pinnedBy: null,

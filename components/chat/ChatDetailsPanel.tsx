@@ -1,5 +1,6 @@
 'use client';
 
+import { BoundedLRU } from '@/lib/core/BoundedLRU';
 import React, { useEffect, useState } from 'react';
 import { BellOff, Bell, Phone, Video, Wallet } from 'lucide-react';
 import { PeerAvatar, shortAddr } from './ui/kit';
@@ -18,7 +19,7 @@ import { useT } from '@/lib/i18n/client';
  * states for the glyphs (lib/chat/safety-glyphs.ts).
  */
 
-const glyphCache = new Map<string, string[]>();
+const glyphCache = new BoundedLRU<string, string[]>({ max: 48, name: 'chat.glyphCache' });
 
 export function ChatDetailsPanel({
   peerAddress,

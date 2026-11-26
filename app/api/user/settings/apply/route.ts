@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateSecureRequest } from '@/lib/security/premium-security';
+import { requireWallet } from '@/lib/security/requireWallet';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -43,13 +44,11 @@ const DIRECT_RULES: Record<string, (v: unknown) => boolean> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const validation = await validateSecureRequest(req);
-    if (!validation.valid || !validation.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const address = validation.userId;
+    const auth = await requireWallet(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const address = auth.walletAddress;
 
-    let body: { key: string; value: any };
+    let body: { key?: unknown; value?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -57,43 +56,40 @@ export async function POST(req: NextRequest) {
     }
 
     const { key, value } = body;
-    if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 });
+    if (typeof key !== 'string' || !key) return NextResponse.json({ error: 'Missing key' }, { status: 400 });
     const rule = EXTENDED_RULES[key] ?? DIRECT_RULES[key];
     if (!rule) return NextResponse.json({ error: 'This setting is not stored on the server' }, { status: 400 });
     if (!rule(value)) return NextResponse.json({ error: 'Invalid value' }, { status: 400 });
 
-    let updateData: Record<string, any> = {};
+    const updateData: Prisma.UserUpdateInput = {};
 
     if (DIRECT_COLUMNS[key]) {
       // Map to a direct schema column
-      updateData[DIRECT_COLUMNS[key]] = value;
+      (updateData as Record<string, unknown>)[DIRECT_COLUMNS[key]] = value;
     } else {
       // Merge into extendedSettings JSON
-      const current = await (prisma as any).user.findUnique({
+      const current = await prisma.user.findUnique({
         where: { walletAddress: address },
         select: { extendedSettings: true },
       });
 
-      const currentExt: Record<string, any> =
-        typeof current?.extendedSettings === 'string'
-          ? JSON.parse(current.extendedSettings)
-          : (current?.extendedSettings ?? {});
+      const ext = current?.extendedSettings;
+      const currentExt: Record<string, Prisma.JsonValue> =
+        typeof ext === 'string' ? (() => { try { return JSON.parse(ext); } catch { return {}; } })()
+          : (ext && typeof ext === 'object' && !Array.isArray(ext) ? ext as Record<string, Prisma.JsonValue> : {});
 
-      updateData.extendedSettings = { ...currentExt, [key]: value };
+      updateData.extendedSettings = { ...currentExt, [key]: value as Prisma.JsonValue };
     }
 
-    await (prisma as any).user.upsert({
+    await prisma.user.upsert({
       where: { walletAddress: address },
       update: updateData,
-      create: {
-        walletAddress: address,
-        ...updateData,
-      },
+      create: { ...(updateData as Prisma.UserCreateInput), walletAddress: address },
     });
 
     return NextResponse.json({ success: true, applied: { key, value } });
-  } catch (e: any) {
-    console.error('[settings/apply] Error:', e.message);
+  } catch (e) {
+    console.error('[settings/apply] Error:', (e as Error).message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
