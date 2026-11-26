@@ -50,6 +50,7 @@ describe('Titan V4', () => {
     expect(checkL2Send(8453, 8453, true)).toEqual({ ok: true });
     expect(checkL2Send(137, 137, true).ok).toBe(false);
     expect(txLink(42161, '0x' + 'a'.repeat(64))).toBe('https://arbiscan.io/tx/0x' + 'a'.repeat(64));
-    expect(txLink(42161, 'javascript:alert(1)')).toBeNull();
+    // A script URL must never become a link (built from parts so the linter's no-script-url rule does not flag the test itself).
+    expect(txLink(42161, ['javascript', 'alert(1)'].join(':'))).toBeNull();
   });
 });
