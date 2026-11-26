@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { openNonce, resolveSiweDomainForVerification, consumeNonceLocally, NONCE_TTL_SEC } from '@/lib/security/siweNonce';
 import { verifyContractWalletSiwe } from '@/lib/security/siweContractWallet';
 import { checkRateLimit, getClientIP } from '@/lib/security/rateLimiter';
+import { HUMAN_GATE_COOKIE, consumeHumanGateReceipt, humanGateRequiredFor, peekHumanGateCookie } from '@/lib/g8/humanGate';
 
 // Normalizes Secp256k1 malleable (non-canonical) signatures from various wallets (MetaMask, Rabby, Ledger)
 function normalizeSignature(sig: string): string {
@@ -46,7 +47,16 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(Math.max(1, rl.resetAt - Math.floor(Date.now() / 1000))) } },
       );
     }
-    const { message, signature } = await req.json();
+    const body = await req.json();
+    const { message, signature } = body ?? {};
+    // G8 HumanGate (lib/g8/humanGate.ts): when the server requires it, or the new /connect flow
+    // says it ran, a valid single-use receipt cookie must be present. Consumed right before the
+    // session is minted, so a failed signature does not cost the person a new check.
+    const gateRequired = humanGateRequiredFor(body);
+    const gateReceipt = gateRequired ? peekHumanGateCookie(req) : null;
+    if (gateRequired && !gateReceipt) {
+      return NextResponse.json({ ok: false, error: 'Complete the human presence check first.', detail: 'human_gate' }, { status: 403 });
+    }
     // The cookie is MAC-sealed by /api/siwe/nonce (lib/security/siweNonce.ts),
     // so a client cannot choose the nonce it is checked against.
     const nonce = openNonce(req.cookies.get('siwe-nonce')?.value);
@@ -209,6 +219,10 @@ export async function POST(req: NextRequest) {
       logger.warn({ dbErr }, '[SIWE] Database sync warning — continuing with authenticated cryptographic session');
     }
 
+    if (gateReceipt && !(await consumeHumanGateReceipt(gateReceipt))) {
+      return NextResponse.json({ ok: false, error: 'Complete the human presence check first.', detail: 'human_gate' }, { status: 403 });
+    }
+
     // Mint Sovereign System JWT
     const { mintJWT } = await import('@/lib/jwt');
     const sessionToken = await mintJWT({
@@ -252,6 +266,7 @@ export async function POST(req: NextRequest) {
 
     // B-007: Primary session cookie hl_session + legacy compatibility
     res.cookies.set('hl_session', sessionToken, httpOnlyCookieOptions);
+    if (gateReceipt) res.cookies.set(HUMAN_GATE_COOKIE, '', { ...httpOnlyCookieOptions, maxAge: 0 });
     res.cookies.set('human_session', sessionToken, httpOnlyCookieOptions);
     res.cookies.set('ledger_session', sessionToken, httpOnlyCookieOptions);
 

@@ -44,6 +44,8 @@ import { useSystemSignOut } from "@/hooks/useSystemSignOut";
 import { setSessionActivity } from "@/lib/activities/hooks";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
 import { passkeyAccountsEnabled } from "@/lib/g8/passkeyAccount";
+import { humanGateEnabled } from "@/lib/g8/humanGateClient";
+import { HumanGateCard } from "@/components/connect/HumanGateCard";
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { landingAfterSignIn, readLandingStatus } from "@/lib/beta/landing";
@@ -206,6 +208,8 @@ export default function ConnectPage() {
 
   const [pendingWallet, setPendingWallet] = useState<{ id: string; name: string; logo: string } | null>(null);
   const [authStatus, setAuthStatus] = useState<"idle" | "verifying" | "failed">("idle");
+  /* ── G8 HumanGate: a human presence check before any sign-in (lib/g8/humanGate.ts) ── */
+  const [gatePassed, setGatePassed] = useState(false);
   const [signStep, setSignStep] = useState<1 | 2 | 3>(2);
   const [signError, setSignError] = useState<string | null>(null);
   const [signErrorDetail, setSignErrorDetail] = useState<string | null>(null);
@@ -476,6 +480,10 @@ export default function ConnectPage() {
   useEffect(() => {
     if (!mounted || accountStatus !== "connected" || !address) return;
     if (redirectingRef.current || signingRef.current || authStatus === "failed") return;
+    // G8 HumanGate: no signature is requested before the human presence check has passed. The page
+    // shows the check instead; passing it re-runs this effect (gatePassed is a dependency). A visitor
+    // who already has a session is still sent on by the session-heal check on mount.
+    if (humanGateEnabled() && !gatePassed) return;
 
     // `isLinked` is not a session: LinkedGate sets it whenever wagmi has a wallet connected, and on phones
     // WalletConnect reconnects the wallet on every page load. Redirecting on it alone (as this effect did)
@@ -714,7 +722,7 @@ export default function ConnectPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ message, signature }),
+          body: JSON.stringify({ message, signature, ...(humanGateEnabled() ? { humanGateRequired: true } : {}) }),
         });
 
         if (vr.ok) {
@@ -746,6 +754,8 @@ export default function ConnectPage() {
         }
 
         const detail = await vr.json().catch(() => null);
+        // The human presence receipt expired or was used: run the check again before signing in.
+        if (vr.status === 403 && detail?.detail === "human_gate") setGatePassed(false);
         setSignError(detail?.error || t("Your signature could not be verified. Try again."));
         setAuthStatus("failed");
         signingRef.current = false;
@@ -758,7 +768,7 @@ export default function ConnectPage() {
         signingRef.current = false;
       }
     })();
-  }, [mounted, accountStatus, address, authStatus, chainId, signMessageAsync, setLinked, activeConnector]);
+  }, [mounted, accountStatus, address, authStatus, chainId, signMessageAsync, setLinked, activeConnector, gatePassed]);
 
   /* ── Auto-heal / Resume when returning from wallet app ────────────────── */
   useEffect(() => {
@@ -922,6 +932,7 @@ export default function ConnectPage() {
 
   /* ── G8 passkey account: no wallet, no MetaMask signature (lib/g8/passkeyAccount.ts) ── */
   const [passkeyBusy, setPasskeyBusy] = useState(false);
+
   const handlePasskey = useCallback(async (mode: "signin" | "create") => {
     if (passkeyBusy) return;
     setPasskeyBusy(true);
@@ -938,8 +949,13 @@ export default function ConnectPage() {
         domain: window.location.hostname,
         origin: window.location.origin,
         buildMessage: (f) => new SiweMessage({ ...f, statement: "Sign in to Ledger Chat.", version: "1", chainId: 1 }).prepareMessage(),
+        extraBody: humanGateEnabled() ? { humanGateRequired: true } : undefined,
       });
-      if (!res.ok) { toast.error(res.error || t("We could not sign you in. Try again in a moment.")); return; }
+      if (!res.ok) {
+        if (res.status === 403 && res.detail === "human_gate") setGatePassed(false);
+        toast.error(res.error || t("We could not sign you in. Try again in a moment."));
+        return;
+      }
       try {
         localStorage.setItem("system_session_v2", JSON.stringify({ wallet: res.address, exp: Date.now() + 604_800_000, source: "passkey" }));
         sessionStorage.setItem("system_wallet_addr", res.address);
@@ -989,6 +1005,7 @@ export default function ConnectPage() {
   else if (effectiveIsConnected) stage = "signing";
   else if (pendingWallet && isPending) stage = "connecting";
   else if (view === "qr") stage = "qr";
+  if ((stage === "choose" || (stage === "signing" && authStatus !== "verifying")) && humanGateEnabled() && !gatePassed) stage = "human_check";
 
   return (
     <>
@@ -1025,6 +1042,7 @@ export default function ConnectPage() {
         onLinkDevice={() => setShowMobileScanner(true)}
         onPasskey={passkeyAccountsEnabled() ? (m) => void handlePasskey(m) : undefined}
         passkeyBusy={passkeyBusy}
+        humanGate={<HumanGateCard onPassed={() => setGatePassed(true)} />}
       />
 
       {isMobile && (

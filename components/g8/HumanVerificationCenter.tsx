@@ -4,8 +4,8 @@
  * this account proves today and what it does not:
  *   L0 Invite        — someone you trust vouched for you (single-use link).
  *   L1 Device        — a passkey on real hardware, a person present.
- *   L2 Unique human  — one person, one account, via an identity issuer.
- *                      Not live: it needs the audited circuit and an issuer.
+ *   L2 Unique human  — Zero-Passport: community vouches + in-browser proof of a
+ *                      long-lived account. No documents. Not live until the circuit is pinned.
  * Plus the privacy shield, the Requests list and the invite generator.
  */
 import React, { useCallback, useEffect, useState } from 'react';
@@ -96,7 +96,7 @@ export function HumanVerificationCenter({ address, shieldOn, onShield }: { addre
         <div className="relative">
           <p className="text-[12px] font-semibold uppercase tracking-[.14em] text-white/60">{t('Protocol G8 · ZK-SP')}</p>
           <h2 id="g8-title" className="text-[21px] font-semibold mt-1 leading-tight">{t('One person, one voice')}</h2>
-          <p className="text-[13.5px] text-white/75 mt-2 leading-snug max-w-[440px]">{t('Prove you are a real person without revealing who you are. Each app sees a different anonymous tag, so nobody can follow you across services — and a blocked person cannot come back with a new account.')}</p>
+          <p className="text-[13.5px] text-white/75 mt-2 leading-snug max-w-[440px]">{t('Prove you are a real person without revealing who you are. Each app sees a different anonymous tag, so nobody can follow you across services. With Level 2, a blocked person cannot simply come back with a new account.')}</p>
           <div className="mt-3"><G8LevelBadge level={level} /></div>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function HumanVerificationCenter({ address, shieldOn, onShield }: { addre
         <ol className="list-none m-0 p-0">
           <Step n={0} active={level === 0} done={level > 0} icon={<Ticket size={18} />} title={t('Invited')} body={t('A person you know vouches for you with a one-time link.')} limit={t('Proves trust, not uniqueness.')} />
           <Step n={1} active={level === 1} done={false} icon={<Fingerprint size={18} />} title={t('Verified device')} body={t('Your account lives in a passkey on your phone or computer — Face ID, Touch ID or Windows Hello. No wallet, no seed phrase.')} limit={t('Proves a real device and a person present. One person can still hold several passkeys.')} />
-          <Step n={2} active={false} done={false} soon icon={<ShieldCheck size={18} />} title={t('Unique human')} body={t('A zero-knowledge proof from an official identity document (e-passport or EU digital identity). Your name and number never leave your phone.')} limit={t('Arrives with the audited circuit, an identity issuer and the native app. Nothing about it is simulated here.')} />
+          <Step n={2} active={false} done={false} soon icon={<ShieldCheck size={18} />} title={t('Unique human')} body={t('Built on vouches from people already in Ledger Chat and an in-browser cryptographic proof that you have had an account for years. No passport, no ID card, no documents.')} limit={t('Strong protection against bots and mass sign-ups, not a government-grade guarantee. It stays off until its circuit is published and reviewed. Nothing here is simulated.')} />
         </ol>
       </div>
 
