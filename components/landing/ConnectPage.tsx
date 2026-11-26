@@ -277,6 +277,8 @@ export default function ConnectPage() {
       /* storage unavailable */
     }
     const p = new URLSearchParams(window.location.search);
+    // A G8 invite link (/connect?invite=…) is kept until the person is signed in (lib/g8/inviteClient.ts).
+    void import("@/lib/g8/inviteClient").then((m) => m.rememberInviteFromUrl(window.location.search)).catch(() => {});
     if (p.has("s") && p.has("p")) {
       window.location.replace("/scan?payload=" + encodeURIComponent(window.location.href));
       return;
