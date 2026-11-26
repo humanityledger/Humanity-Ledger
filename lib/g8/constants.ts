@@ -40,7 +40,7 @@ export enum G8Level {
   Invite = 0,
   /** Level 1: a device-bound hardware credential (not proof of a unique human). */
   Hardware = 1,
-  /** Level 2: a uniqueness-anchored credential (e-passport / eIDAS PID). */
+  /** Level 2: Zero-Passport anchors — bounded ZK vouches + in-browser zkTLS/DKIM proof of a long-lived account (no documents). */
   UniqueHuman = 2,
 }
 

@@ -6,12 +6,12 @@
  *                (the server's existing viem verifyMessage accepts it; nothing changes there);
  *   - Aztec secret → root for the Aztec account, so the chat identity and the
  *                Aztec address come from one secret the user never sees;
- *   - s_human candidate → the secret G8 will commit to when an issuer
+ *   - s_human candidate → the secret G8 will commit to when a Level 2 issuer
  *                attests uniqueness (Level 2). Until then it proves nothing.
  *
  * Nothing secret is stored: keys are re-derived after each biometric check
  * and dropped. Honest limit: a passkey proves a device and a person present,
- * not a unique human — Level 2 needs an issuer (e-passport / eIDAS).
+ * not a unique human — Level 2 uses Zero-Passport anchors (spec §4.1), never documents.
  * Behind NEXT_PUBLIC_PASSKEY_ACCOUNTS (default off). The MetaMask path is unchanged.
  */
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
@@ -100,17 +100,19 @@ export interface SiweDeps {
   /** Builds the EIP-4361 text; the page passes the siwe package (same as the wallet path). */
   buildMessage: (f: { domain: string; address: string; uri: string; nonce: string; issuedAt: string }) => string;
   now?: () => Date;
+  /** Extra fields for /api/siwe/verify (e.g. humanGateRequired). */
+  extraBody?: Record<string, unknown>;
 }
 
 /** Signs in with a passkey-derived account through the unchanged /api/siwe/* routes. */
-export async function siweWithAccount(account: PrivateKeyAccount, d: SiweDeps): Promise<{ ok: true; address: string } | { ok: false; status: number; error?: string }> {
+export async function siweWithAccount(account: PrivateKeyAccount, d: SiweDeps): Promise<{ ok: true; address: string } | { ok: false; status: number; error?: string; detail?: string }> {
   const nr = await d.fetch('/api/siwe/nonce', { cache: 'no-store', credentials: 'include' });
   if (!nr.ok) return { ok: false, status: nr.status };
   const nonce = (await nr.text()).trim();
   const message = d.buildMessage({ domain: d.domain, address: account.address, uri: d.origin, nonce, issuedAt: (d.now?.() ?? new Date()).toISOString() });
   const signature = await account.signMessage({ message });
-  const vr = await d.fetch('/api/siwe/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ message, signature }) });
-  if (!vr.ok) return { ok: false, status: vr.status, error: (await vr.json().catch(() => null))?.error };
+  const vr = await d.fetch('/api/siwe/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ message, signature, ...(d.extraBody ?? {}) }) });
+  if (!vr.ok) { const j = await vr.json().catch(() => null); return { ok: false, status: vr.status, error: j?.error, detail: j?.detail }; }
   return { ok: true, address: account.address.toLowerCase() };
 }
 

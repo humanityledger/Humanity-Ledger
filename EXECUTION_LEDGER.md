@@ -62,5 +62,6 @@ Plan completo: docs/plan/MASTER_PROMPT_5_ESTRELLAS.md · Protocolo de tokens: do
 | 6 | g8/06-passkey-account | Passkey account on /connect (flag off) | 5 |
 | 7 | g8/07-ui | Verification center, Requests, invites, i18n | 3 + i18n 9 |
 | 8 | g8/08-titan-v4 | SCAN, getClientIP, L2 rails | 3 |
+| 9 | g8/09-human-gate | HumanGate on /connect (avatar mosaic), Zero-Passport Level 2 | 13 + SIWE 5 |
 
-Open: Level 2 needs the audited circuit pinned in `G8_CIRCUIT`, an identity issuer and the native app (Web NFC is unavailable on Safari). `lib/prisma.ts(284)` type error is pre-existing (regenerate Prisma client).
+Open: Level 2 (Zero-Passport: bounded ZK vouches + in-browser zkTLS/DKIM proof of a long-lived account; no documents, no NFC) needs its issuer service and the reviewed circuit pinned in `G8_CIRCUIT`. `lib/prisma.ts(284)` type error is pre-existing (regenerate Prisma client).

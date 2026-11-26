@@ -4,7 +4,7 @@ import path from 'path';
 
 const root = path.resolve(__dirname, '../../..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
-const ui = ['components/g8/HumanVerificationCenter.tsx', 'components/g8/RequestBanner.tsx', 'components/connect/ConnectView.tsx'];
+const ui = ['components/g8/HumanVerificationCenter.tsx', 'components/g8/RequestBanner.tsx', 'components/connect/ConnectView.tsx', 'components/connect/HumanGateCard.tsx'];
 const keys = (s: string) => [...s.matchAll(/\bt\(\s*'((?:[^'\\]|\\.)*)'|\bt\(\s*"((?:[^"\\]|\\.)*)"/g)].map(m => (m[1] ?? m[2]).replace(/\\(['"])/g, "$1"));
 
 describe('G8 UI', () => {

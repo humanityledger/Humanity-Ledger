@@ -35,7 +35,7 @@ import { useT } from '@/lib/i18n/client';
  * handed, which is what lets each state be rendered and checked on its own.
  */
 
-export type ConnectStage = "choose" | "qr" | "connecting" | "signing" | "failed" | "done";
+export type ConnectStage = "choose" | "human_check" | "qr" | "connecting" | "signing" | "failed" | "done";
 
 export interface WalletOption {
   id: string;
@@ -88,6 +88,8 @@ export interface ConnectViewProps {
   /** G8 passkey account (NEXT_PUBLIC_PASSKEY_ACCOUNTS): sign in or create, no wallet. */
   onPasskey?: (mode: 'signin' | 'create') => void;
   passkeyBusy?: boolean;
+  /** G8 HumanGate card (NEXT_PUBLIC_HUMAN_GATE), shown in place of the choices until it passes. */
+  humanGate?: React.ReactNode;
 }
 
 const FACTS = [
@@ -493,6 +495,7 @@ export function ConnectView(props: ConnectViewProps) {
   const { stage } = props;
 
   const body =
+    stage === "human_check" && props.humanGate ? props.humanGate :
     stage === "qr" ? <QrStage {...props} /> :
     stage === "connecting" ? <Connecting {...props} /> :
     stage === "signing" ? <Signing {...props} /> :
