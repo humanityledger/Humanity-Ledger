@@ -138,8 +138,22 @@ export function openReceipt(token: unknown, now = Date.now()): ReceiptPayload | 
   return p;
 }
 
-/** Whether this sign-in must present a receipt: server switch, or the new client flow asking for it. */
-export function humanGateRequiredFor(body: unknown): boolean {
+/**
+ * Whether the /connect page of this build shows the check. Literal access, so Next.js inlines the
+ * same build-time value here as in the client bundle.
+ */
+export function humanGateBuilt(v: string | undefined = process.env.NEXT_PUBLIC_HUMAN_GATE): boolean {
+  return v === '1' || v === 'true';
+}
+
+/**
+ * Whether this sign-in must present a receipt: server switch, or the new client flow asking for it.
+ * Never when this build's page cannot show the check: HUMAN_GATE_REQUIRED=1 on a build without
+ * NEXT_PUBLIC_HUMAN_GATE locked every sign-in out (26 Nov 2026), because the server demanded a
+ * receipt that no page could produce.
+ */
+export function humanGateRequiredFor(body: unknown, built = humanGateBuilt()): boolean {
+  if (!built) return false;
   return process.env.HUMAN_GATE_REQUIRED === '1' || (body as { humanGateRequired?: unknown })?.humanGateRequired === true;
 }
 
