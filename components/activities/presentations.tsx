@@ -15,6 +15,7 @@ import type { ActionName } from '@/lib/activities/actions';
 import { formatAmount, formatElapsed, spokenDuration } from '@/lib/activities/values';
 import { Wave } from './Wave';
 import { Ring } from './Ring';
+import { LIVE_STEPS, liveProofProgress } from '@/lib/activities/proof-timing';
 import s from './activities.module.css';
 import { t as tr, useT } from '@/lib/i18n/client';
 
@@ -194,13 +195,13 @@ function present(a: AnyActivity, c: PresentContext): Presentation {
       const to = a.attributes.to;
       const failed = step === 'failed';
       const done = step === 'settled';
-      const stepAt = PROOF_STEPS.findIndex((x) => x.key === step);
       const leading = failed
         ? <span className={`${s.dot} ${s.dotDanger}`}><AlertTriangle {...I} /></span>
         : done
           ? <span className={`${s.dot} ${s.dotLive}`}><Check {...I} /></span>
-          // One arc per step; an arc fills when its step is done (the wallet says so, nothing guesses).
-          : <Ring value={Math.max(0, stepAt) / PROOF_STEPS.length} segments={PROOF_STEPS.length}><Lock size={10} strokeWidth={2.6} aria-hidden="true" /></Ring>;
+          // One arc per live step. Inside the current step the arc advances on this device's measured
+          // durations, capped below the next step until the wallet reports it (lib/activities/proof-timing.ts).
+          : <Ring live value={liveProofProgress(step, a.state.updatedAt, c.now)} segments={LIVE_STEPS.length}><Lock size={10} strokeWidth={2.6} aria-hidden="true" /></Ring>;
       return {
         tone: failed ? 'danger' : done ? 'live' : 'violet',
         leading,

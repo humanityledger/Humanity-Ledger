@@ -146,6 +146,7 @@ import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke 
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
 import { coldContactDecision, quarantinePeer, setAdmittedPeers } from '@/lib/g8/quarantine';
+import { compareChats, newerLastAt, orderChats } from '@/lib/chat/chat-order';
 import { isPasskeySession, signWithPasskey } from '@/lib/g8/passkeyAccount';
 import { redeemPendingInvite } from '@/lib/g8/inviteClient';
 import { RequestBanner } from '@/components/g8/RequestBanner';
@@ -4241,7 +4242,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           .filter(c => !blockedPeersRef.current.has((c.peerAddress || '').toLowerCase()))
           .map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [effectiveAddress, address])))
           .filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [effectiveAddress, address])))
-          .sort((a, b) => (b.lastAt ? new Date(b.lastAt).getTime() : 0) - (a.lastAt ? new Date(a.lastAt).getTime() : 0));
+          .sort((a, b) => compareChats(a, b));
         setConversations(quick);
       }
       
@@ -4266,7 +4267,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                  // A peer deleted locally must not come back from the server contact list.
                  if (deletedAtMs(pLower, [address]) > 0) return;
                  if (!merged.find(c => c.peerAddress.toLowerCase() === pLower)) {
-                   merged.push({ peerAddress: peer, lastMessage: '', lastAt: new Date() });
+                   // No message known yet: no time. "Now" put every such contact at the top of the
+                   // list on each load, above real conversations.
+                   merged.push({ peerAddress: peer, lastMessage: '' });
                  }
                });
             }
@@ -4345,11 +4348,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         }
       }
       
-      merged.sort((a, b) => {
-          const tA = a.lastAt ? new Date(a.lastAt).getTime() : 0;
-          const tB = b.lastAt ? new Date(b.lastAt).getTime() : 0;
-          return tB - tA;
-      });
+      merged = orderChats(merged);
 
       setConversations(merged);
     } catch (e) {}
@@ -4916,8 +4915,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 if (!upd) return c;
                 return {
                   ...c,
-                  lastMessage: upd.lastMessage || c.lastMessage,
-                  lastAt: upd.lastAt,
+                  lastMessage: toMs(upd.lastAt) >= toMs(c.lastAt) ? (upd.lastMessage || c.lastMessage) : c.lastMessage,
+                  lastAt: newerLastAt(c.lastAt, upd.lastAt) as Date,
                   unreadCount: upd.bumpUnread ? Math.max(c.unreadCount || 0, 1) : c.unreadCount,
                 };
               });
@@ -7717,11 +7716,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   : chatFilter === 'unread' ? (conv.unreadCount || 0) > 0
                   : chatFilter === 'groups' ? !/^0x[0-9a-f]{40}$/i.test(conv.peerAddress)
                   : isPaymentChat(conv))
-                .sort((a, b) => {
-                  const aPin = pinnedPeers.has(a.peerAddress.toLowerCase()) ? 1 : 0;
-                  const bPin = pinnedPeers.has(b.peerAddress.toLowerCase()) ? 1 : 0;
-                  return bPin - aPin;
-                });
+                // Pinned first, then the last message (sent or received), newest at the top
+                // (lib/chat/chat-order.ts). Decided here, at render, so every update path agrees.
+                .sort((a, b) => compareChats(a, b, pinnedPeers));
               if (list.length === 0) {
                 return (
                   <p className="px-6 py-10 text-center text-[14px] text-[#727a88]">

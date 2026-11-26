@@ -10,12 +10,14 @@ import s from './activities.module.css';
 const R = 10.5;
 const C = 2 * Math.PI * R;
 
-export function Ring({ value, segments, tone = 'violet', children }: {
+export function Ring({ value, segments, tone = 'violet', live = false, children }: {
   /** 0..1 */
   value: number;
   /** Draw this many separate arcs instead of one continuous one. */
   segments?: number;
   tone?: 'violet' | 'live' | 'warn' | 'danger' | 'neutral';
+  /** Recomputed every second: ease linearly between ticks so the arc moves continuously. */
+  live?: boolean;
   children?: React.ReactNode;
 }) {
   const v = Math.max(0, Math.min(1, value));
@@ -36,7 +38,7 @@ export function Ring({ value, segments, tone = 'violet', children }: {
             <circle cx="12" cy="12" r={R} fill="none" stroke="var(--island-track)" strokeWidth="2.4" strokeLinecap="round"
               strokeDasharray={`${a.len} ${C - a.len}`} strokeDashoffset={a.offset} />
             {a.filled > 0 && (
-              <circle className={s.ringArc} cx="12" cy="12" r={R} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round"
+              <circle className={`${s.ringArc} ${live ? s.ringArcLive : ''}`} cx="12" cy="12" r={R} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round"
                 strokeDasharray={`${a.len * a.filled} ${C - a.len * a.filled}`} strokeDashoffset={a.offset} />
             )}
           </g>
