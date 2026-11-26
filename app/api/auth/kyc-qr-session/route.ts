@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 /**
  * POST /api/auth/kyc-qr-session
@@ -13,7 +14,7 @@ import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
  */
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const ip = getClientIP(req);
 
     // Rate limiting: max 3 attempts per IP per minute
     const rlKey = `kyc-rate-limit:${ip}`;

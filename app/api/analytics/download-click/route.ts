@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 const clickSchema = z.object({
   platform: z.string(),
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Get geolocation from headers
     const country = request.headers.get('cf-ipcountry') || 'Unknown';
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'Unknown';
+    const ip = getClientIP(request);
 
     // Log analytics event (TODO: Add analyticsEvent table to Prisma schema)
     console.log('[Analytics] Download click:', {

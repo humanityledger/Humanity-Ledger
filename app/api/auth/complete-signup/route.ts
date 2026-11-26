@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { hashPassword, isValidPassword } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { ethers } from 'ethers';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Generate access and refresh tokens
     const userAgent = request.headers.get('user-agent') || '';
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ip = getClientIP(request);
     
     const { createAccessToken, createRefreshToken, setSessionCookies, generateFingerprint } = await import('@/lib/session');
     const fingerprint = generateFingerprint(userAgent, ip);

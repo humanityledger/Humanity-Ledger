@@ -4,6 +4,7 @@
  * Requires REDIS_URL in env. Without it, cache silently degrades (passthrough mode).
  */
 import { redisClient } from '@/lib/redis/client';
+import { scanDelete } from '@/lib/redis/scan';
 
 export const CacheTTL = {
   PORTFOLIO_BALANCE: 30,     // 30 seconds
@@ -77,11 +78,8 @@ export const marketCacheKey   = (symbol: string, timeframe?: string) => timefram
 /** Wipe all keys for a given user. Useful after profile changes. */
 export async function invalidateUserCache(userId: string): Promise<void> {
   try {
-    const keys = await redisClient.keys(`user:${userId}:*`);
-    if (keys.length > 0) {
-      await redisClient.del(...keys);
-      console.log(`[Cache] Invalidated ${keys.length} keys for user ${userId}`);
-    }
+    const n = await scanDelete(redisClient as any, `user:${userId}:*`);
+    if (n > 0) console.log(`[Cache] Invalidated ${n} keys for user ${userId}`);
   } catch (error: any) {
     console.warn('[Cache] invalidateUserCache error:', error.message);
   }

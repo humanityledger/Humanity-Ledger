@@ -7,6 +7,7 @@ import {
 import { safeRedisGet, safeRedisSet } from '@/lib/redis/client';
 import { assertFetchableUrl, fetchPublicUrl } from '@/lib/security/publicFetch';
 import { enqueueOnionDelivery } from '@/lib/chat/onionQueue';
+import { getClientIP } from '@/lib/security/rateLimiter';
 /**
  * POST /api/chat/onion/relay
  *
@@ -201,7 +202,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // ── 5. Rate limit ─────────────────────────────────────────────────────────
   // Use a hash of the IP as the rate-limit key (not stored, just counted)
-  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = getClientIP(req);
   const ipKey = btoa(ip).slice(0, 16);
   if (!checkRateLimit(ipKey)) {
     return NextResponse.json(

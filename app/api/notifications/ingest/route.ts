@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { redisClient as redis } from '@/lib/redis/client';
 import { OmnichannelAlertEvent } from '@/lib/types/alerts';
 import crypto, { createHash, timingSafeEqual } from 'crypto';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 const STREAM_KEY = 'global_crypto_alerts';
 const MIN_KEY_LENGTH = 16;
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
 
         const authKey = request.headers.get('X-Ingest-Key') || '';
         if (!authKey || !timingSafeEqual(digest(authKey), digest(internalKey))) {
-            console.warn(`[INGEST:Unauthorized] Access denied from IP: ${request.headers.get('x-forwarded-for')}`);
+            console.warn(`[INGEST:Unauthorized] Access denied from IP: ${getClientIP(request)}`);
             return NextResponse.json({ error: 'Omega Clearance Level Required' }, { status: 401 });
         }
 

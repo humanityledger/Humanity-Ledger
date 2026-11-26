@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import rateLimit from '@/lib/rate-limit';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -39,7 +40,7 @@ const BINANCE_MAP: Record<string, string> = {
 
 export async function GET(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIP(request);
     try {
         await limiter.check(50, ip);
     } catch {

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     // Generate access and refresh tokens
     const userAgent = request.headers.get('user-agent') || '';
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ip = getClientIP(request);
     
     const { createAccessToken, createRefreshToken, setSessionCookies, generateFingerprint } = await import('@/lib/session');
     const fingerprint = generateFingerprint(userAgent, ip);

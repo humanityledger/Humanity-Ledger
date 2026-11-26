@@ -12,14 +12,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { coordsForTimeZone, utcDay } from '@/lib/stats/live';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
-const clientIp = (req: NextRequest) => {
-  const xff = req.headers.get('x-forwarded-for') || '';
-  const parts = xff.split(',').map((s) => s.trim()).filter(Boolean);
-  return parts[parts.length - 1] || req.headers.get('x-real-ip') || 'unknown';
-};
+const clientIp = (req: NextRequest) => getClientIP(req);
 
 export async function POST(req: NextRequest) {
   const rl = await checkRateLimit(clientIp(req), { max: 10, windowSec: 60, prefix: 'rl:stats-visit' });

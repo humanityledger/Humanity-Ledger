@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, createAccessToken, createRefreshToken, setSessionCookies, generateFingerprint, validateFingerprint } from '@/lib/session';
 import { cookies } from 'next/headers';
 import { isSessionTokenRevoked, revokeSessionToken } from '@/lib/security/sessionRevocation';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 /**
  * POST /api/auth/refresh
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
 
         // Validate device fingerprint
         const userAgent = request.headers.get('user-agent') || '';
-        const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+        const ip = getClientIP(request);
         const currentFingerprint = generateFingerprint(userAgent, ip);
 
         if (payload.fingerprint && !validateFingerprint(payload.fingerprint, currentFingerprint)) {

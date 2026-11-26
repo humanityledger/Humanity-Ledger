@@ -5,6 +5,8 @@ import { verifyMessage } from 'viem';
 import { createHash } from 'crypto';
 import { RedisRateLimiter } from '@/lib/redis/rate-limiter';
 import { redisClient } from '@/lib/redis/client';
+import { getClientIP } from '@/lib/security/rateLimiter';
+import { scanDelete } from '@/lib/redis/scan';
 
 export async function POST(req: Request) {
     const session = await getSession();
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
         // 2. Strict Rate Limiting (1 nuke attempt per 24 hours per wallet)
         // using UPSTASH redis rate limiter, assuming it's hooked up or we use direct redis.
         // For simplicity, we just enforce the rate limit directly.
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || '127.0.0.1';
+        const ip = getClientIP(req);
         
         const rateLimitKey = `ratelimit:nuke:${address.toLowerCase()}`;
         if (redisClient && !(redisClient as any).__isMock) {
@@ -105,18 +107,11 @@ export async function POST(req: Request) {
         }
 
         // 5. PURGE REDIS MEMORY
-        if (redisClient && !(redisClient as any).__isMock && typeof redisClient.keys === 'function') {
+        if (redisClient && !(redisClient as any).__isMock && typeof (redisClient as any).scan === 'function') {
             try {
-                // Warning: keys('*') in production Redis can block. Doing targeted deletes where possible.
-                // Or if Upstash supports SCAN
-                const keys = await redisClient.keys(`user:${userAddress}:*`);
-                if (keys && keys.length > 0) {
-                    await redisClient.del(...keys);
-                }
-                const kycKeys = await redisClient.keys(`kyc:status:${userAddress}*`);
-                if (kycKeys && kycKeys.length > 0) {
-                    await redisClient.del(...kycKeys);
-                }
+                // SCAN in batches, never KEYS (which blocks Redis for the whole keyspace).
+                await scanDelete(redisClient as any, `user:${userAddress}:*`);
+                await scanDelete(redisClient as any, `kyc:status:${userAddress}*`);
             } catch (e) {
                 console.error('[LedgerFortress:Nuke] Warning: Redis cleanup failed', e);
             }

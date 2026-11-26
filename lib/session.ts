@@ -5,6 +5,7 @@ import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 import { verifyJWT } from '@/lib/jwt';
 import { isSessionTokenRevoked } from '@/lib/security/sessionRevocation';
+import { scanDelete, scanKeys } from '@/lib/redis/scan';
 
 let cachedSessionSecretRaw: string | null = null;
 let cachedSessionSecretBytes: Uint8Array | null = null;
@@ -130,8 +131,7 @@ export async function rotateRefreshToken(oldRefreshToken: string): Promise<{ acc
         if (!exists) {
             // REUSE DETECTED: Revoke all tokens in this family (B-009)
             logger.warn({ familyId, userId }, 'Refresh token reuse detected — revoking family');
-            const keys = await redis.keys(`refresh:${familyId}:*`);
-            if (keys.length > 0) await redis.del(...keys);
+            await scanDelete(redis as any, `refresh:${familyId}:*`);
             return null;
         }
 
@@ -152,7 +152,7 @@ export async function rotateRefreshToken(oldRefreshToken: string): Promise<{ acc
 export async function revokeAllSessions(userId: string): Promise<void> {
     try {
         const redis = await getRedisClient();
-        const keys = await redis.keys(`refresh:*`);
+        const keys = await scanKeys(redis as any, `refresh:*`, 50_000);
         for (const k of keys) {
             const owner = await redis.get(k);
             if (owner === userId) await redis.del(k);

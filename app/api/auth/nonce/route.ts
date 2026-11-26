@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import rateLimit from '@/lib/rate-limit';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,7 @@ const limiter = rateLimit({
  */
 export async function GET(req: Request) {
     try {
-        const hops = (req.headers.get('x-forwarded-for') || '').split(',').map(h => h.trim()).filter(Boolean);
-        const ip = hops[hops.length - 1] || '127.0.0.1';
+        const ip = getClientIP(req);
         try {
             await limiter.check(20, ip); // Max 100 requests per minute (increased to prevent lockout during reloads)
         } catch {

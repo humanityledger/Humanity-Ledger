@@ -2,6 +2,7 @@ import { getSession } from '@/lib/session';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export async function POST(req: Request) {
     const session = await getSession();
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         const { action, metadata } = body;
-        const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
+        const ipAddress = getClientIP(req);
 
         // Attempt to write telemetry  silently discard if table doesn't exist
         try {
