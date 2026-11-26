@@ -402,6 +402,26 @@ model ChatBlock {
   @@index([blockedPeer, owner])
 }
 
+/// G8 blind block (docs/protocol/G8_ZKPSP_SPEC.md §3): SHA-256("hl/zkblock/v1"‖owner‖T).
+/// Only the fingerprint is stored: never the tag T next to a wallet, never who the person is.
+model G8BlockedFingerprint {
+  owner       String // lowercase wallet that blocked
+  fingerprint String // 64 hex
+  createdAt   DateTime @default(now())
+
+  @@id([owner, fingerprint])
+}
+
+/// Single-use G8 invites (Level 0): a jti is redeemed once, by one wallet.
+model G8InviteRedemption {
+  jti        String   @id
+  issuer     String
+  redeemedBy String
+  redeemedAt DateTime @default(now())
+
+  @@index([issuer])
+}
+
 model PendingChatMessage {
   id        String   @id @default(uuid())
   sender    String
