@@ -105,6 +105,69 @@ export function decideIncoming(f: IncomingFacts): IncomingVerdict {
   return f.deletedAt > 0 ? 'revive' : 'deliver';
 }
 
+/** How far a live message may be stamped before the cut-off and still be new (clock skew). */
+export const LIVE_SKEW_MS = 180_000;
+
+export interface StreamFacts {
+  /** Deleted for me, on screen at the clear/delete (snapshot or this session's ids). */
+  hidden: boolean;
+  /** Network time of the message, ms (ns accepted). */
+  msgMs: unknown;
+  /** max(clear cut-off, deletion) on this account, ms; 0 if none. */
+  cutMs: number;
+  /** Deletion mark, ms; 0 if the chat is not deleted. */
+  deletedAt: number;
+  fromPeer: boolean;
+  /** First time this session sees the id (not a replay after a reconnect). */
+  firstSight: boolean;
+  /** The stream had been open for a moment: not the burst of an opening sync. */
+  liveAfterOpen: boolean;
+  /** Newest network time that was on screen at the clear/delete, 0 if unknown. */
+  preMaxMs: number;
+  /** Rescued earlier (persisted rescue list). */
+  rescued: boolean;
+  /** Content a person wrote, or a call offer: may be rescued across clock skew. */
+  rescuable: boolean;
+}
+
+export interface StreamDecision {
+  verdict: IncomingVerdict;
+  /** Record the id in the rescue list (a skewed live message kept). */
+  rescueNow: boolean;
+  /** Why a message is suppressed (diagnostics), absent otherwise. */
+  reason?: 'deleted on this device' | 'before this chat was cleared';
+}
+
+/**
+ * The live stream's gate, on top of decideIncoming (the one rule of every path). A live message
+ * the other person just sent is new even when its network time is a little before the cut-off
+ * (a deleting device whose clock is ahead), provided it is newer than anything shown at the
+ * delete: that is the clock-skew rescue, now decided here instead of inline in the component.
+ */
+export function streamGate(f: StreamFacts): StreamDecision {
+  if (f.hidden) return { verdict: 'suppress', rescueNow: false, reason: 'deleted on this device' };
+  const msgMs = toMs(f.msgMs);
+  const cut = f.cutMs > 0 ? f.cutMs : 0;
+  let rescueNow = false;
+  const after = cut === 0 || msgMs > cut || f.rescued;
+  if (!after && f.fromPeer && f.firstSight && f.liveAfterOpen && f.rescuable && cut > 0) {
+    const behind = cut - msgMs;
+    const newerThanShown = f.preMaxMs === 0 || msgMs > f.preMaxMs;
+    if (behind >= 0 && behind < LIVE_SKEW_MS && newerThanShown) rescueNow = true;
+  }
+  const verdict = decideIncoming({
+    blocked: false,
+    msgMs,
+    cutMs: cut,
+    deletedAt: f.deletedAt,
+    preDelete: false,
+    rescued: f.rescued || rescueNow,
+  });
+  return verdict === 'suppress'
+    ? { verdict, rescueNow: false, reason: 'before this chat was cleared' }
+    : { verdict, rescueNow };
+}
+
 /** Clears the deletion locally and tells the account's other devices. */
 export function reviveDeletedChat(
   peer: string,

@@ -18,7 +18,11 @@ describe('delivery diagnostics', () => {
   it('every place a received message can be dropped leaves an event', () => {
     const chat = readFileSync('components/terminal/LedgerChatV2.tsx', 'utf8');
     for (const reason of ['blocked', 'already shown', 'error while handling']) expect(chat).toContain(`reason: '${reason}'`);
-    expect(chat).toMatch(/'deleted on this device' : 'before this chat was cleared'/);
+    // The clear/delete gate's reasons come from streamGate (lib/chat/incoming-revival.ts).
+    expect(chat).toMatch(/diag\('drop', \{ msg: short\(realId\), reason: gate\.reason \?\? gate\.verdict \}\)/);
+    const gate = readFileSync('lib/chat/incoming-revival.ts', 'utf8');
+    expect(gate).toContain("reason: 'deleted on this device'");
+    expect(gate).toContain("reason: 'before this chat was cleared'");
     expect(chat).toMatch(/diag\('recv', \{/);
     expect(chat).toMatch(/diag\('stream_ended'/);
     expect(chat).toMatch(/diag\('stream_restart'/);
