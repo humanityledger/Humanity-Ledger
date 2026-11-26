@@ -146,6 +146,7 @@ import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke 
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
 import { coldContactDecision, quarantinePeer, setAdmittedPeers } from '@/lib/g8/quarantine';
+import { isPasskeySession, signWithPasskey } from '@/lib/g8/passkeyAccount';
 import { deletionWatermark, decideIncoming, streamGate, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat, collectPreDeleteHistory } from '@/lib/chat/incoming-revival';
 import { createSingleFlightRunner } from '@/lib/chat/poll-runner';
 import { clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
@@ -4379,6 +4380,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           } finally {
             setIsWaitingForSignature(false);
           }
+        }
+        // G8 passkey account (lib/g8/passkeyAccount.ts): no wallet; one biometric check signs.
+        if (!connector && address && isPasskeySession(address)) {
+          setIsWaitingForSignature(true);
+          try { return await signWithPasskey(address, msg); } finally { setIsWaitingForSignature(false); }
         }
         if (isLocalSystemWallet) {
             const wallet = await useWalletStore.getState().getConnectedWallet();

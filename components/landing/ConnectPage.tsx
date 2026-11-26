@@ -43,6 +43,7 @@ import { useUIStore } from "@/lib/store/ui-store";
 import { useSystemSignOut } from "@/hooks/useSystemSignOut";
 import { setSessionActivity } from "@/lib/activities/hooks";
 import { ConnectView, type ConnectStage, type WalletOption } from "@/components/connect/ConnectView";
+import { passkeyAccountsEnabled } from "@/lib/g8/passkeyAccount";
 
 import { safeReturnPath } from "@/lib/security/safeRedirect";
 import { landingAfterSignIn, readLandingStatus } from "@/lib/beta/landing";
@@ -917,6 +918,47 @@ export default function ConnectPage() {
     setAuthStatus("idle");
   }, []);
 
+  /* ── G8 passkey account: no wallet, no MetaMask signature (lib/g8/passkeyAccount.ts) ── */
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const handlePasskey = useCallback(async (mode: "signin" | "create") => {
+    if (passkeyBusy) return;
+    setPasskeyBusy(true);
+    try {
+      const pk = await import("@/lib/aztec/wallet/passkey");
+      const g8 = await import("@/lib/g8/passkeyAccount");
+      const api = pk.browserWebAuthn();
+      if (!api || !(await pk.passkeysAvailable())) { toast.error(t("This browser cannot use passkeys here. Use a wallet instead.")); return; }
+      const rpId = pk.passkeyRpId(window.location.hostname);
+      const prf = mode === "create" ? await g8.createPasskeyAccount(api, rpId, "Ledger Chat") : await g8.unlockPasskeyAccount(api, rpId);
+      const account = await g8.accountFromPrf(prf);
+      const res = await g8.siweWithAccount(account, {
+        fetch: window.fetch.bind(window),
+        domain: window.location.hostname,
+        origin: window.location.origin,
+        buildMessage: (f) => new SiweMessage({ ...f, statement: "Sign in to Ledger Chat.", version: "1", chainId: 1 }).prepareMessage(),
+      });
+      if (!res.ok) { toast.error(res.error || t("We could not sign you in. Try again in a moment.")); return; }
+      try {
+        localStorage.setItem("system_session_v2", JSON.stringify({ wallet: res.address, exp: Date.now() + 604_800_000, source: "passkey" }));
+        sessionStorage.setItem("system_wallet_addr", res.address);
+        localStorage.setItem("system_wallet_addr", res.address);
+        g8.markPasskeySession(res.address);
+        clearDisconnectGuard();
+      } catch { /* storage unavailable */ }
+      if (!allowAutoRedirect()) { toast.error(t(LOOP_MESSAGE)); return; }
+      setLinked(true);
+      redirectingRef.current = true;
+      void goAfterSignIn();
+    } catch (e: unknown) {
+      const m = String((e as { message?: string; name?: string })?.name || (e as { message?: string })?.message || "");
+      toast.error(/NO_PRF/.test(m)
+        ? t("This passkey cannot derive a secret. Use iCloud Keychain, Google Password Manager, 1Password or a security key with PRF.")
+        : /NotAllowed|Abort|CANCELLED/.test(m) ? t("The passkey request was closed.") : t("We could not sign you in. Try again in a moment."));
+    } finally {
+      setPasskeyBusy(false);
+    }
+  }, [passkeyBusy, setLinked, t]);
+
   const handlePhone = useCallback(() => {
     if (isMobile) {
       setShowMobileScanner(true);
@@ -979,6 +1021,8 @@ export default function ConnectPage() {
         }}
         onRefreshQr={handleRefreshQr}
         onLinkDevice={() => setShowMobileScanner(true)}
+        onPasskey={passkeyAccountsEnabled() ? (m) => void handlePasskey(m) : undefined}
+        passkeyBusy={passkeyBusy}
       />
 
       {isMobile && (

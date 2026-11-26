@@ -7,6 +7,7 @@ import React from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Fingerprint,
   ChevronRight,
   CircleAlert,
   CircleCheck,
@@ -84,6 +85,9 @@ export interface ConnectViewProps {
   onCancelPending: () => void;
   onRefreshQr: () => void;
   onLinkDevice?: () => void;
+  /** G8 passkey account (NEXT_PUBLIC_PASSKEY_ACCOUNTS): sign in or create, no wallet. */
+  onPasskey?: (mode: 'signin' | 'create') => void;
+  passkeyBusy?: boolean;
 }
 
 const FACTS = [
@@ -197,6 +201,16 @@ function Choose(p: ConnectViewProps) {
       <p className={s.subtitle}>{t("Connect the wallet you want to use as your account.")}</p>
 
       {p.isMobile && p.externalMobile ? <MetaMaskDappLink /> : null}
+
+      {p.onPasskey ? (
+        <>
+          <div className={s.options}>
+            <Option icon={Fingerprint} name={t("Continue with passkey")} hint={p.passkeyBusy ? t("Waiting for Face ID, Touch ID or Windows Hello…") : t("No wallet needed. Your passkey is your account on every device it syncs to.")} onClick={() => !p.passkeyBusy && p.onPasskey!('signin')} />
+            <Option icon={KeyRound} name={t("Create a passkey account")} hint={t("New here? One fingerprint or face scan creates your account and your private Aztec identity.")} onClick={() => !p.passkeyBusy && p.onPasskey!('create')} />
+          </div>
+          <div className={s.divider}>{t("or use a wallet")}</div>
+        </>
+      ) : null}
 
       <div className={s.options}>
         {p.wallets.map((w) => (
