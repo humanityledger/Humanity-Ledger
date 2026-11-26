@@ -1,0 +1,39 @@
+name: G8 admission circuit
+
+on:
+  pull_request:
+    paths: ['circuits/g8_admission/**', 'lib/g8/**', '.github/workflows/g8-circuit.yml']
+  push:
+    branches: [main]
+    paths: ['circuits/g8_admission/**', 'lib/g8/**']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: nargo test + compile (Aztec 6.0.0 toolchain)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the Aztec 6.0.0 toolchain (ships nargo)
+        run: |
+          set -euo pipefail
+          curl -fsSL https://install.aztec.network -o /tmp/install-aztec.sh
+          VERSION=6.0.0 NON_INTERACTIVE=1 bash /tmp/install-aztec.sh </dev/null
+          for d in "$HOME/.aztec/bin" "$HOME/.aztec/current/bin" "$HOME/.aztec/versions/6.0.0/bin"; do
+            [ -d "$d" ] && echo "$d" >> "$GITHUB_PATH"
+          done
+      - name: Test and compile
+        working-directory: circuits/g8_admission
+        run: |
+          set -euo pipefail
+          NARGO=$(command -v nargo || command -v aztec-nargo)
+          "$NARGO" test
+          "$NARGO" compile
+          sha256sum target/g8_admission.json | tee target/g8_admission.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: g8_admission
+          path: circuits/g8_admission/target/

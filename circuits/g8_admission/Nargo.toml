@@ -1,0 +1,11 @@
+[package]
+name = "g8_admission"
+type = "bin"
+authors = ["Humanity Ledger Protocol"]
+compiler_version = ">=1.0.0"
+# G8 · ZKP-SP admission proof (docs/protocol/G8_ZKPSP_SPEC.md §5). Off-chain UltraHonk:
+# proven in the browser (lib/aztec/prover), verified by the recipient. Same poseidon2
+# as aztec-nr v6 (same crate as contracts/aztec/identity), so tags match lib/g8/hash.ts.
+
+[dependencies]
+aztec = { git = "https://github.com/aztec-labs-eng/aztec-nr", tag = "v6.0.0", directory = "aztec" }
