@@ -1,6 +1,9 @@
 @import './ledger-tokens.css';
 
 @tailwind base;
+
+/* One Inter instance (app/layout.tsx); the old second Inter instance is gone. */
+:root { --font-aztec-serif: var(--font-inter); }
 @tailwind components;
 @tailwind utilities;
 
@@ -2106,4 +2109,45 @@ html.hl-kb-open [data-chat-root] {
   body:has([data-chat-page]) {
     padding-bottom: 0;
   }
+}
+
+/* ============================================================
+   HYPERION COMPOSITOR DISCIPLINE (26 Nov 2026)
+   WebKit backs every will-change element with its own IOSurface; Blink with
+   its own GPU tile set. Permanent hints on static elements waste VRAM and
+   memory on every device, so they are cleared here; real animations get
+   their layer from the animation itself.
+   ============================================================ */
+.transform-gpu,
+.perf-composited-3d,
+.perf-will-change-transform,
+.hardware-accelerated,
+.scroll-gpu { will-change: auto; }
+
+/* The 160vw blurred prism animates forever: only on mains power / plenty of battery
+   (body.perf-high, ClientLayout) and never with reduced motion. */
+.animate-prism-shift { will-change: auto !important; }
+body:not(.perf-high) .animate-prism-shift { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-prism-shift, .animate-pixel-deform { animation: none !important; }
+}
+
+/* iOS / iPadOS WebKit: cap modal backdrop blurs (each one re-renders everything beneath it). */
+@supports (-webkit-touch-callout: none) {
+  .backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl, .backdrop-blur-2xl, .backdrop-blur-3xl {
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur-sm, .backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl {
+    -webkit-backdrop-filter: none; backdrop-filter: none; background-color: rgba(20, 22, 28, 0.55);
+  }
+}
+
+/* Sidebar rows: isolate each row's layout and paint (they already clip with overflow:hidden). */
+.hl-row { contain: layout style paint; }
+/* Off-screen rows skip rendering on engines where it is safe. iOS/iPadOS WebKit is excluded
+   (-webkit-touch-callout exists only there): content-visibility broke iPad Safari scrolling. */
+@supports (content-visibility: auto) and (not (-webkit-touch-callout: none)) {
+  .hl-row { content-visibility: auto; contain-intrinsic-block-size: auto 72px; }
 }

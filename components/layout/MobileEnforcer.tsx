@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { MobileLanding as MobileSystemLanding } from '@/components/landing/MobileLanding';
 import dynamic from 'next/dynamic';
 import { useSystemAccount } from '@/hooks/useSystemAccount';
 

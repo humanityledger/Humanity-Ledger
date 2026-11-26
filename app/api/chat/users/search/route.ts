@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, prismaRead } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { blockedCounterparties } from '@/lib/chat/blockFirewall';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { canonicalUsername, usernameProblem } from '@/lib/chat/usernames';
 import { safeRedisGet, safeRedisSet } from '@/lib/redis';
@@ -25,6 +26,12 @@ export async function GET(req: NextRequest) {
   if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const rl = await checkRateLimit(caller, { max: 60, windowSec: 60, prefix: 'rl:user-search' });
   if (!rl.allowed) return NextResponse.json({ users: [], error: 'Too many searches' }, { status: 429 });
+  // Results are cached for everyone; blocks (either direction) are removed per caller here.
+  const respond = async (payload: { users?: Array<{ address?: string }> } & Record<string, unknown>) => {
+    const hidden = await blockedCounterparties(caller);
+    if (!hidden.size || !Array.isArray(payload.users)) return NextResponse.json(payload);
+    return NextResponse.json({ ...payload, users: payload.users.filter(u => !hidden.has(String(u.address ?? '').toLowerCase())) });
+  };
 
   const { searchParams } = new URL(req.url);
   const raw = searchParams.get('q')?.trim() ?? '';
@@ -40,7 +47,7 @@ export async function GET(req: NextRequest) {
   if (cached && cached !== 'TIMEOUT') {
     try {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed?.users)) return NextResponse.json(parsed);
+      if (Array.isArray(parsed?.users)) return respond(parsed);
     } catch {}
   }
 
@@ -86,7 +93,7 @@ export async function GET(req: NextRequest) {
       if (user) await loadUsernames([user.walletAddress]);
       const payload = { users: user ? [formatUser(user, true)] : [] };
       await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', SEARCH_CACHE_TTL_S);
-      return NextResponse.json(payload);
+      return respond(payload);
     }
 
     // Hex address prefix lookup (uses User.walletAddress unique B-Tree index)
@@ -100,7 +107,7 @@ export async function GET(req: NextRequest) {
       await loadUsernames(users.map((u: any) => u.walletAddress));
       const payload = { users: users.map((u: any) => formatUser(u)) };
       await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', SEARCH_CACHE_TTL_S);
-      return NextResponse.json(payload);
+      return respond(payload);
     }
 
     // Exact canonical @username lookup first (unique B-Tree index)
@@ -144,7 +151,7 @@ export async function GET(req: NextRequest) {
     const rest = users.filter((u: any) => !exact || String(u.walletAddress).toLowerCase() !== String(exact.walletAddress).toLowerCase());
     const payload = { users: [...(exact ? [formatUser(exact, true)] : []), ...rest.map((u: any) => formatUser(u))] };
     await safeRedisSet(cacheKey, JSON.stringify(payload), 'EX', SEARCH_CACHE_TTL_S);
-    return NextResponse.json(payload);
+    return respond(payload);
   } catch (err: any) {
     console.error('[chat/users/search]', err);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });

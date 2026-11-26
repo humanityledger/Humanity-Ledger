@@ -47,9 +47,9 @@ describe('Delete ≠ Block: deleting never stops the other person', () => {
 
   it('pre-delete ids persist across reloads and are bounded', () => {
     const s = memStorage();
-    saveDeleteSnapshot(B, [A], Array.from({ length: 100 }, (_, i) => `m${i}`), s);
-    expect(isPreDeleteId(B, 'm99', [A], s)).toBe(true);
-    expect(isPreDeleteId(B, 'm0', [A], s)).toBe(false); // ring of 64
+    saveDeleteSnapshot(B, [A], Array.from({ length: 300 }, (_, i) => `m${i}`), s);
+    expect(isPreDeleteId(B, 'm299', [A], s)).toBe(true);
+    expect(isPreDeleteId(B, 'm0', [A], s)).toBe(false); // ring of 256 digests
     expect(isPreDeleteId(B, 'new', [A], s)).toBe(false);
   });
 

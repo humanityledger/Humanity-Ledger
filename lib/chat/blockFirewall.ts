@@ -10,6 +10,10 @@ import { safeRedisGet, safeRedisSetMany, safeRedisDel } from '@/lib/redis/client
 const ADDR = /^0x[0-9a-f]{40}$/;
 const TTL_SEC = 300;
 let warned = false;
+/** A partial Prisma mock (unit tests) has no chatBlock delegate: fail open, silently. */
+function hasDelegate(): boolean {
+  return !!(prisma as unknown as { chatBlock?: unknown })?.chatBlock;
+}
 function warnOnce(e: unknown) {
   if (warned) return;
   warned = true;
@@ -26,6 +30,7 @@ export function normalizePeer(v: unknown): string | null {
 export async function isMutuallyBlocked(a: string, b: string): Promise<boolean> {
   const x = normalizePeer(a), y = normalizePeer(b);
   if (!x || !y || x === y) return false;
+  if (!hasDelegate()) return false;
   const cached = await safeRedisGet(pairKey(x, y));
   if (cached === '1') return true;
   if (cached === '0') return false;
@@ -47,7 +52,7 @@ export async function isMutuallyBlocked(a: string, b: string): Promise<boolean> 
 
 export async function listOwnBlocks(owner: string): Promise<string[]> {
   const o = normalizePeer(owner);
-  if (!o) return [];
+  if (!o || !hasDelegate()) return [];
   const rows = await prisma.chatBlock.findMany({ where: { owner: o }, select: { blockedPeer: true }, take: 1000, orderBy: { createdAt: 'desc' } });
   return rows.map(r => r.blockedPeer);
 }
@@ -70,7 +75,7 @@ export async function setServerBlock(owner: string, peer: string, blocked: boole
  */
 export async function blockedCounterparties(me: string): Promise<Set<string>> {
   const m = normalizePeer(me);
-  if (!m) return new Set();
+  if (!m || !hasDelegate()) return new Set();
   try {
     const rows = await prisma.chatBlock.findMany({
       where: { OR: [{ owner: m }, { blockedPeer: m }] },

@@ -123,6 +123,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isDashboard = pathname.startsWith('/terminal');
   const isLanding = pathname === '/';
   const isBounded = !isDashboard && !isLanding && BOUNDED_PREFIXES.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)));
+  // Declared before the effects that read it (it was used before its declaration).
+  const isChat = pathname.startsWith('/chat') || pathname.startsWith('/studio');
 
   // Documentation, company and legal pages are public and must never be
   // wrapped in LinkedGate, which redirects visitors without a session.
@@ -163,7 +165,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       document.documentElement.style.overflow = originalHtmlOverflow;
       document.body.classList.remove('ios-scroll-lock-strict');
     };
-  }, [isDashboard, isBounded]);
+  }, [isDashboard, isBounded, isChat]);
 
   // [AUDIO REMOVED] Global click audio feedback has been permanently disabled.
   // No sounds play on user interaction anywhere in the system.
@@ -175,7 +177,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // When on battery, the class is absent  noise-shift is paused (0 CPU).
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    let battery: any = null;
+    let battery: { charging: boolean; level: number; addEventListener(t: string, f: () => void): void; removeEventListener(t: string, f: () => void): void } | null = null;
+    let alive = true;
+    // One stable reference, so unmount removes the very listener that was added.
+    const onChange = () => { if (battery) applyPerfClass(battery.charging, battery.level); };
 
     const applyPerfClass = (charging: boolean, level: number) => {
       const isHigh = charging || level > 0.30;
@@ -185,9 +190,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     const initBattery = async () => {
       try {
         if ('getBattery' in navigator) {
-          battery = await (navigator as any).getBattery();
-          applyPerfClass(battery.charging, battery.level);
-          const onChange = () => applyPerfClass(battery.charging, battery.level);
+          const b = await (navigator as Navigator & { getBattery(): Promise<NonNullable<typeof battery>> }).getBattery();
+          if (!alive) return; // unmounted before getBattery() resolved
+          battery = b;
+          applyPerfClass(b.charging, b.level);
           battery.addEventListener('chargingchange', onChange);
           battery.addEventListener('levelchange', onChange);
         } else {
@@ -201,9 +207,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     initBattery();
     return () => {
+      alive = false;
       if (battery) {
-        battery.removeEventListener('chargingchange', () => {});
-        battery.removeEventListener('levelchange', () => {});
+        battery.removeEventListener('chargingchange', onChange);
+        battery.removeEventListener('levelchange', onChange);
       }
       document.body.classList.remove('perf-high');
     };
@@ -211,7 +218,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // /connect, /sign-up, /login manage their own internal centering
   const isCenteredPage = ['/clearance'].some(p => pathname.startsWith(p));
-  const isChat = pathname.startsWith('/chat') || pathname.startsWith('/studio');
 
   // Root container
   const rootClass = isDashboard

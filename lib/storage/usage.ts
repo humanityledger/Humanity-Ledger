@@ -58,3 +58,27 @@ export function formatBytes(b: number | null): { value: string; unit: 'KB' | 'MB
   if (n >= 100 * 1024) return { value: (n / 1024 ** 2).toFixed(2), unit: 'MB' };
   return { value: (n / 1024).toFixed(1), unit: 'KB' };
 }
+
+/**
+ * Prover reference strings cached by bb.js (idb-keyval default store: 'keyval-store'/'keyval',
+ * keys g1Data ~33 MB, g2Data, grumpkinG1DataV2). Removing them only costs a re-download on
+ * the next private payment. Resolves the number of keys removed.
+ */
+export function purgeProverCrs(): Promise<number> {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open('keyval-store');
+      req.onerror = () => resolve(0);
+      req.onsuccess = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('keyval')) { db.close(); return resolve(0); }
+        const tx = db.transaction('keyval', 'readwrite');
+        const store = tx.objectStore('keyval');
+        const keys = ['g1Data', 'g2Data', 'grumpkinG1DataV2'];
+        keys.forEach(k => store.delete(k));
+        tx.oncomplete = () => { db.close(); resolve(keys.length); };
+        tx.onerror = () => { db.close(); resolve(0); };
+      };
+    } catch { resolve(0); }
+  });
+}

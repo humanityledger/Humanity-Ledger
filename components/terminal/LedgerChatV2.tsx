@@ -23,7 +23,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
 import { OTHER_TAB_NOTICE, watchOtherTabs } from '@/lib/xmtp/tab-presence';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -35,16 +35,22 @@ import { toast } from 'sonner';
 import { chatTextPx, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { ChatCredit } from '@/components/chat/ChatCredit';
 import { loadBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
-import { applyPeerBlock, applySyncedBlocks } from '@/lib/chat/blockActions';
+import { applyPeerBlock, applySyncedBlocks, hydrateServerBlocks, callPreflight } from '@/lib/chat/blockActions';
 import { resolveChatFont } from '@/lib/chat/fonts';
 import { BoundedLRU } from '@/lib/core/BoundedLRU';
+import { every } from '@/lib/perf/clock';
+import { idleStorage } from '@/lib/perf/idle-storage';
+import { contentText } from '@/lib/chat/normalizeContent';
+import { createChatMessageRecord } from '@/lib/chat/messageRecord';
+import { frameBudget } from '@/lib/perf/scheduler';
 import { sendBurnSeconds } from '@/lib/chat/autoDelete';
 import { deriveCallLog, callLogMessages, decodeCallEntry, callEntryLabel, isCallSignal, CALL_LOG_PREFIX, type CallSignal } from '@/lib/chat/callLog';
 import { startDeviceSync, stopDeviceSync, handleDeviceSyncMessage, setSynced, getSynced, getDeviceStore, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
 import { vault } from '@/lib/core/SecureVault';
 import { getLocalContacts, saveLocalContact, resolveContactName, LocalContact } from '@/lib/wallet/localAddressBook';
 import { getCallHistory, saveCallRecord, CallRecord } from '@/lib/wallet/callHistory';
-import { LedgerChatOnboarding } from '@/components/chat/LedgerChatOnboarding';
+// Rarely shown: fetched on first use, not parsed with /chat.
+const LedgerChatOnboarding = dynamic(() => import('@/components/chat/LedgerChatOnboarding').then(m => ({ default: m.LedgerChatOnboarding })), { ssr: false });
 import { LedgerChatStatusBar } from '@/components/chat/LedgerChatStatusBar';
 import { useLedgerChatPresence } from '@/hooks/useLedgerChatPresence';
 import { extensionForRecording, pickRecordingMimeType } from '@/lib/chat/recording';
@@ -52,12 +58,15 @@ import { moderateContent, sanitizeFilename, isAllowedMimeType, checkRateLimit } 
 import { ledgerAnalytics, trackMessageSent, trackCallStarted, trackCallAnswered, trackAttachmentSent, trackFeatureUsed } from '@/lib/utils/ledgerAnalytics';
 import { notificationEngine } from '@/lib/wallet/NotificationEngine';
 import { Search, Phone as PhoneIcon, Clock as ClockIcon } from 'lucide-react';
-import { EncryptionInfoSheet } from '@/components/chat/EncryptionInfoSheet';
+// Rarely shown: fetched on first use, not parsed with /chat.
+const EncryptionInfoSheet = dynamic(() => import('@/components/chat/EncryptionInfoSheet').then(m => ({ default: m.EncryptionInfoSheet })), { ssr: false });
 import { hidesNotificationContent, messageNotification } from '@/lib/privacy/defaults';
 import { mayEdit, mayRevoke, withinEditWindow } from '@/lib/chat/message-authority';
 import { wasVerified } from '@/lib/chat/verified-contacts';
 
-import { LedgerChatSettings, useLedgerSettings } from './LedgerChatSettings';
+import { useLedgerSettings } from '@/lib/hooks/useLedgerSettings';
+// The legacy settings panel is fetched only if it is ever opened.
+const LedgerChatSettings = dynamic(() => import('./LedgerChatSettings').then(m => ({ default: m.LedgerChatSettings })), { ssr: false });
 import { useSettingsEffect, playMessageSound, playKeyboardClick, getChatBgStyle } from '@/lib/hooks/useSettingsEffect';
 import '@/app/ledger-chat-settings.css';
 import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
@@ -129,12 +138,14 @@ import { useCallMedia } from '@/lib/activities/call-media';
 import { notifyMessage, notifyMissedCall, notifyPaymentReceived, useCallActivitySync, useRecordingActivitySync } from '@/lib/activities/hooks';
 import { chatDB } from '@/lib/chat/indexeddb';
 import { EncryptedMediaEngine } from '@/lib/chat/media';
-import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
-import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal';
+// Rarely shown: fetched on first use, not parsed with /chat.
+const SavedMessagesModal = dynamic(() => import('@/components/chat/SavedMessagesModal').then(m => ({ default: m.SavedMessagesModal })), { ssr: false });
+// Rarely shown: fetched on first use, not parsed with /chat.
+const KeyboardShortcutsModal = dynamic(() => import('@/components/chat/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })), { ssr: false });
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
-import { deletionWatermark, decideIncoming, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat } from '@/lib/chat/incoming-revival';
+import { deletionWatermark, decideIncoming, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat, collectPreDeleteHistory } from '@/lib/chat/incoming-revival';
 import { clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
 
 
@@ -175,7 +186,7 @@ function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: 
     try {
       return isMe
         ? localStorage.getItem('ledger_avatar') || ''
-        : (address && localStorage.getItem('peer_avatar_' + address.toLowerCase())) || '';
+        : (address && getPeerProfile(address)?.avatarUrl) || ''; // resolves media-ref photos (lib/core/MediaArena.ts)
     } catch {
       return '';
     }
@@ -739,7 +750,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         toast.success(tr("Message saved to bookmarks"));
       }
       try {
-        localStorage.setItem(`ledger_saved_msgs_${address.toLowerCase()}`, JSON.stringify(next));
+        idleStorage.set(`ledger_saved_msgs_${address.toLowerCase()}`, () => JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -851,7 +862,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         if (name && !name.startsWith('0x')) {
           setProfileNames(prev => {
             const next = { ...prev, [lower]: name };
-            try { localStorage.setItem('ledger_profile_names', JSON.stringify(next)); } catch {}
+            idleStorage.set('ledger_profile_names', () => JSON.stringify(next));
             return next;
           });
           const myAddr = (effectiveAddress || address || '').toLowerCase();
@@ -873,18 +884,59 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const messagesRef = useRef<any[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Phase 3: Self-Destruct Timer
+  // Phase 3: Self-Destruct Timer — runs only while a message on screen can burn, on the shared
+  // visibility-gated clock (lib/perf/clock.ts); no 1 s timer for chats without disappearing messages.
+  const hasBurning = useMemo(() => messages.some(m => !!m.burnAtNs), [messages]);
+  // Sidebar fallback previews: the newest few non-system text messages per conversation, from ONE
+  // pass over the working set (was a full filter of every message for every row, every render).
+  const previewCandidates = useMemo(() => {
+    const out = new Map<string, any[]>();
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (typeof m.content !== 'string' || isSystemSignal(m.content)) continue;
+      const id = String(m.conversationId || '').toLowerCase();
+      const list = out.get(id);
+      if (!list) out.set(id, [m]); else if (list.length < 4) list.push(m);
+    }
+    return out;
+  }, [messages]);
+
+  // Single-conversation working set: switching chats drops other chats' messages from React state
+  // (they live in the local store and reload by cursor), keeping only the last few visited chats
+  // (2 on desktop, 1 on low-memory phones), each capped to its newest 80 messages.
+  const recentConvsRef = useRef<string[]>([]);
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
+    if (!activePeer) return;
+    const active = `dm-${activePeer.toLowerCase()}`;
+    const lowMem = typeof navigator !== 'undefined' && (((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4);
+    const keep = lowMem ? 1 : 2;
+    recentConvsRef.current = [active, ...recentConvsRef.current.filter(c => c !== active)].slice(0, keep + 1);
+    const allowed = new Set(recentConvsRef.current);
+    setMessages(prev => {
+      const perConv = new Map<string, number>();
+      let dropped = false;
+      const next: any[] = [];
+      for (let i = prev.length - 1; i >= 0; i--) {
+        const m = prev[i];
+        const c = String(m.conversationId || '').toLowerCase();
+        if (!allowed.has(c)) { dropped = true; continue; }
+        const n = (perConv.get(c) ?? 0) + 1;
+        perConv.set(c, n);
+        if (c !== active && n > 80) { dropped = true; continue; }
+        next.push(m);
+      }
+      return dropped ? next.reverse() : prev;
+    });
+  }, [activePeer]);
+  useEffect(() => {
+    if (!hasBurning) return;
+    return every(1000, (now) => {
       setMessages(prev => {
-        // Checked without allocating: most seconds nothing has expired.
         if (!prev.some(m => m.burnAtNs && m.burnAtNs <= now)) return prev;
         return prev.filter(m => !m.burnAtNs || m.burnAtNs > now);
       });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    });
+  }, [hasBurning]);
 
   const [inputText, setInputText] = useState('');
   const [peerInput, setPeerInput] = useState('');
@@ -1115,7 +1167,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const setConvWallpaper = useCallback((peer: string, bg: string) => {
     setConvWallpapers(prev => {
       const next = { ...prev, [peer.toLowerCase()]: bg };
-      localStorage.setItem('ledger_conv_wallpapers', JSON.stringify(next));
+      idleStorage.set('ledger_conv_wallpapers', () => JSON.stringify(next));
       return next;
     });
   }, []);
@@ -1453,6 +1505,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const loadBlocked = async () => {
       try {
         setBlockedPeers(new Set(await loadBlockList()));
+        // Server block list (a fresh device, or blocks made elsewhere), reconciled with local tombstones.
+        void hydrateServerBlocks({ account: effectiveAddress, client: clientRef.current }).then(list => {
+          if (!list) return;
+          const next = new Set(list);
+          blockedPeersRef.current = next;
+          setBlockedPeers(next);
+        });
         const perm = await vault.getItem('ledger_media_perm');
         if (perm === 'true') setHasMediaPermission(true);
 
@@ -1782,7 +1841,18 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     });
     setMessages(prev => prev.filter(m => (m.conversationId || '').toLowerCase() !== dmId));
     try { localStorage.removeItem(`ledger_pinned_${peerLower}`); } catch {}
-    import('@/lib/chat/indexeddb').then(({ chatDB }) => {
+    // Before the local store is cleared: remember up to 256 pre-delete ids (as digests) from the
+    // store and the XMTP DM (≤300 ms, off the UI path), and raise the cut to the newest persisted
+    // time, so an unopened or busy chat never falls back to the 5-minute grace window.
+    import('@/lib/chat/indexeddb').then(async ({ chatDB }) => {
+      const hist = await collectPreDeleteHistory({
+        db: () => chatDB.getMessagesForConversation(dmId, 128),
+        xmtp: () => recentDmMessages(client, peerLower, 32),
+      });
+      saveDeleteSnapshot(peerLower, [myAddr, address], hist.ids);
+      if (hist.maxPersistedMs > cut && markDeleted(peerLower, [myAddr, address], hist.maxPersistedMs) && myAddr) {
+        try { setSynced(myAddr, { [`cleared:${peerLower}`]: hist.maxPersistedMs, [`deleted:${peerLower}`]: hist.maxPersistedMs }); } catch {}
+      }
       chatDB.clearConversation(dmId).catch(() => {});
       chatDB.clearConversation(peerLower).catch(() => {});
       chatDB.removeConversation(peerLower).catch(() => {});
@@ -2240,7 +2310,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const draftKey = `ledger_draft_${address.toLowerCase()}_${activePeer.toLowerCase()}`;
     
     if (inputText.trim()) {
-      localStorage.setItem(draftKey, btoa(encodeURIComponent(inputText)));
+      idleStorage.set(draftKey, btoa(encodeURIComponent(inputText))); // every keystroke: batched
     } else {
       localStorage.removeItem(draftKey);
     }
@@ -2913,10 +2983,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     st.addEventListener('addtrack', onAdd as EventListener);
     st.addEventListener('removetrack', update);
     update();
-    // Some Safari versions do not fire unmute on remote tracks: a light check keeps the screen right.
-    const poll = setInterval(() => { st.getVideoTracks().forEach(bind); update(); }, 1000);
+    // Track events drive this. Only Safari, which may not fire 'unmute' on remote tracks, gets a
+    // light visibility-gated check (2 s), and only until video is live.
+    const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|chromium|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    let stopPoll = isSafari ? every(2000, () => {
+      st.getVideoTracks().forEach(bind); update();
+      if (st.getVideoTracks().some(t => t.readyState === 'live' && !t.muted)) { stopPoll(); stopPoll = () => {}; }
+    }) : () => {};
     return () => {
-      clearInterval(poll);
+      stopPoll();
       st.removeEventListener('addtrack', onAdd as EventListener);
       st.removeEventListener('removetrack', update);
       bound.forEach((t) => { t.removeEventListener('unmute', update); t.removeEventListener('mute', update); t.removeEventListener('ended', update); });
@@ -3061,9 +3136,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       try { pendingConnectionRef.current.close(); } catch {}
       pendingConnectionRef.current = null;
     }
-    if (myVideoRef.current) myVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    if (remoteAudioRef.current) { remoteAudioRef.current.srcObject = null; }
+    // Detach and reset each media element: WebKit keeps the decoder pipeline (and on iOS the
+    // camera/mic indicator) alive until the element is reloaded with no source.
+    for (const el of [myVideoRef.current, remoteVideoRef.current, remoteAudioRef.current] as Array<HTMLMediaElement | null>) {
+      if (!el) continue;
+      try { el.pause(); } catch {}
+      el.srcObject = null;
+      try { el.load(); } catch {}
+    }
   }, []);
 
   // [CRITICAL FIX] Wire the ref immediately after performEndCall is created.
@@ -3124,6 +3204,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     if (!targetPeer) return;
     if (blockedPeersRef.current.has(targetPeer.toLowerCase())) {
       toast.error(tr("You blocked this contact. Unblock to call."));
+      return;
+    }
+    // A block on their side ends here at once, neutrally, instead of 45 s of ringing.
+    if (!(await callPreflight(targetPeer))) {
+      toast.error(tr("This user is unavailable."));
       return;
     }
     setCallPeer(targetPeer.toLowerCase());
@@ -3490,8 +3575,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const load = () => setMeetings(upcomingMeetings(loadMeetings(address)));
     load();
     window.addEventListener(MEETINGS_EVENT, load);
-    const id = setInterval(load, 60_000);
-    return () => { window.removeEventListener(MEETINGS_EVENT, load); clearInterval(id); };
+    const stopClock = every(60_000, load);
+    return () => { window.removeEventListener(MEETINGS_EVENT, load); stopClock(); };
   }, [address]);
 
   // Join on a card in the open chat starts an ordinary call with that person.
@@ -3547,8 +3632,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       }
     };
     check();
-    const id = setInterval(check, 20_000);
-    return () => clearInterval(id);
+    // Meeting reminders must fire with the tab in the background too.
+    return every(20_000, check, { background: true });
   }, [meetings, address, getDisplayName]);
 
   const handleAnswerCall = async () => {
@@ -4090,7 +4175,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   useEffect(() => {
     if (activePeer && address) {
       const draftKey = `ledger_draft_${address.toLowerCase()}_${activePeer.toLowerCase()}`;
-      const saved = localStorage.getItem(draftKey);
+      const saved = idleStorage.read(draftKey);
       if (saved) {
           try {
               setInputText(decodeURIComponent(atob(saved)));
@@ -4106,7 +4191,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const loadConversations = useCallback(async () => {
     try {
       let merged: ConversationMeta[] = [];
-      const stored = localStorage.getItem(`ledger_chat_history_${address}`);
+      const stored = idleStorage.read(`ledger_chat_history_${address}`);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.conversations) merged = parsed.conversations;
@@ -4215,7 +4300,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             .map(c => previewAfterClear(c, clearedAtMs(c.peerAddress, [effectiveAddress, address])))
             .filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [effectiveAddress, address])));
           if (merged.length > 0) {
-            localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: merged.map((c: any) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
+            idleStorage.set(`ledger_chat_history_${address}`, () => JSON.stringify({ conversations: merged.map((c: any) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
           }
         } catch (e) {
           console.error('[Ledger Chat] Failed to sync contacts/pending from server', e);
@@ -4491,7 +4576,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const persistToLocal = useCallback((arr: ConversationMeta[]) => {
     if (!address) return;
     const stored = arr.map((c) => previewAfterClear(c, clearedAtMs(c.peerAddress, [address]))).filter((c) => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [address])));
-    localStorage.setItem(`ledger_chat_history_${address}`, JSON.stringify({ conversations: stored.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
+    // Off the main thread's critical path: queued, serialized once per idle flush (lib/perf/idle-storage.ts).
+    idleStorage.set(`ledger_chat_history_${address}`, () => JSON.stringify({ conversations: stored.map((c) => (c.lastMessage ? { ...c, lastMessage: lastMessageOf(c.lastMessage) } : c)) }));
     
     // Backup of the contact list to the server, debounced: this runs on every new message and
     // used to post the whole list (up to 200 rows written) each time. Now at most once every 5 s,
@@ -4650,7 +4736,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           const previewUpdates = new Map<string, { lastMessage: string; lastAt: Date; bumpUnread: boolean }>();
           const myInboxId = String((client as any).inboxId ?? '').toLowerCase();
 
+          // Yield to the main thread every ~8 ms of work so taps and typing stay responsive.
+          const yieldIfDue = frameBudget(8);
           for (const entry of dmEntries) {
+            await yieldIfDue();
             const pLower = entry.peerAddress.toLowerCase();
             if (!pLower || pLower === address?.toLowerCase() || blockedPeersRef.current.has(pLower)) continue;
             if (entry.dmId) convIdToPeer.current.set(entry.dmId, pLower);
@@ -4662,7 +4751,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             if (!visibleSet.has(pLower)) {
               const surviving = entry.messages
                 .map((m: any) => {
-                  const rawContent = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
+                  const rawContent = contentText(m);
                   let mappedContent = rawContent;
                   let burnAtNs: number | undefined = undefined;
                   const msgMs = toMs(m.sentAtNs ?? m.sentAt ?? m.sent);
@@ -4692,15 +4781,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 if (delAt > 0) reviveDeletedChat(pLower, [effectiveAddress, address], announceRevive);
                 knownPeersRef.current.add(pLower);
 
-                const mappedMsgs = surviving.map(({ raw, mappedContent, burnAtNs, msgMs }) => ({
+                const mappedMsgs = surviving.map(({ raw, mappedContent, burnAtNs, msgMs }) => createChatMessageRecord({
                   id: raw.id,
-                  senderInboxId: raw.senderInboxId ?? '',
+                  conversationId: `dm-${pLower}`,
                   senderAddress: String(raw.senderInboxId ?? '').toLowerCase() === myInboxId ? address.toLowerCase() : pLower,
+                  senderInboxId: raw.senderInboxId ?? '',
                   content: mappedContent,
-                  burnAtNs,
                   sentAtNs: msgMs,
                   status: 'delivered',
-                  conversationId: `dm-${pLower}`,
+                  burnAtNs,
                 }));
                 const nonCallMsgs = mappedMsgs.filter(m => !String(m.content || '').startsWith('__CALL_'));
                 if (nonCallMsgs.length > 0) {
@@ -4734,7 +4823,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               }
             } else if (entry.lastMessage) {
               const m = entry.lastMessage;
-              const rawContent = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
+              const rawContent = contentText(m);
               if (
                 m.id &&
                 !isHidden(pLower, String(m.id)) &&
@@ -4813,7 +4902,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     const newRaw = rawMsgs.filter(m => {
                         if (!m.id || existingIds.has(m.id)) return false;
                         if (isHidden(peerNowAtStart, String(m.id))) return false;
-                        const cStr = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : '');
+                        const cStr = contentText(m);
                         if (cStr.includes('initiatedByInboxId') || cStr.includes('addedInboxes') || cStr.includes('group is inactive')) return false;
                         if (clearCutPoll > 0 && !survivesClear(m.sentAtNs ?? m.sentAt ?? m.sent, clearCutPoll) && !isRescuedMessage(peerNowAtStart, String(m.id), [effectiveAddress, address])) {
                           return false;
@@ -4827,7 +4916,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     const selfId = (client as any).inboxId ?? "";
                     const mapped = newRaw.map((m: any) => {
                        const isFromPeer = m.senderInboxId !== selfId;
-                       let content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+                       let content = contentText(m);
                        let burnAtNs: number | undefined = undefined;
                        const msgMs = nsToDate(m.sentAtNs ?? m.sentAt).getTime();
                        if (typeof content === 'string' && content.startsWith('__BURN_')) {
@@ -4929,10 +5018,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               if (handleDeviceSyncMessage(msg)) continue;
               // [AUDIT FIX] Dynamically fetch selfInboxId to avoid stale closure if client rotates
               const selfInboxId = (client as any).inboxId ?? '';
-              const _rawContentStr = typeof msg.content === 'string' ? msg.content : (msg.content ? JSON.stringify(msg.content) : '');
+              const _rawContentStr = contentText(msg);
               if (_rawContentStr.includes('initiatedByInboxId') || _rawContentStr.includes('addedInboxes') || _rawContentStr.includes('group is inactive') || _rawContentStr.includes('groupUpdated')) continue;
               const fromPeer = msg.senderInboxId !== selfInboxId;
-              const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+              const content = contentText(msg);
               const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
               const currentActivePeer = activePeerRef.current?.toLowerCase();
               
@@ -5967,9 +6056,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         } catch (e) { console.warn('[Offline Queue] Failed to fetch pending messages:', e); }
         
         const rawMappedMsgs = raw
-          .filter((m: any) => { const _str = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : ''); return !(_str.includes('initiatedByInboxId') || _str.includes('addedInboxes') || _str.includes('groupUpdated') || _str.includes('group is inactive')); })
+          .filter((m: any) => { const _str = contentText(m); return !(_str.includes('initiatedByInboxId') || _str.includes('addedInboxes') || _str.includes('groupUpdated') || _str.includes('group is inactive')); })
           .map((m: any) => {
-            const content = typeof m.content === 'string' ? m.content : (m.content ? JSON.stringify(m.content) : m.fallback || 'Encrypted Data');
+            const content = contentText(m, m.fallback || 'Encrypted Data');
             return {
               id: m.id,
               senderInboxId: m.senderInboxId,
@@ -6105,7 +6194,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         if (lastPeerMsgId) {
           const receiptKey = `ledger_receipt_${address.toLowerCase()}_${activePeer.toLowerCase()}`;
           if (localStorage.getItem(receiptKey) !== lastPeerMsgId) {
-            localStorage.setItem(receiptKey, lastPeerMsgId);
+            idleStorage.set(receiptKey, lastPeerMsgId);
             sendMessage(client, activePeer, `__READ__${lastPeerMsgId}`, address).catch(e => console.warn('Failed to send read receipt', e));
           }
         }
@@ -6243,12 +6332,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       } catch (e) {}
     };
     fetchFriendRequests();
-    const reqPollId = setInterval(fetchFriendRequests, 30_000 + Math.floor(Math.random() * 5000));
+    const stopReqPoll = every(30_000, fetchFriendRequests);
 
     return () => {
       cancelled = true;
       clearInterval(pollId);
-      if (typeof reqPollId !== 'undefined') clearInterval(reqPollId);
+      stopReqPoll();
     };
   }, [client, activePeer, address]);
 
@@ -7646,18 +7735,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                             const convId = `dm-${conv.peerAddress.toLowerCase()}`;
                             // The fallback obeys "Clear chat" and "Delete for me" too: it used to bring
                             // back, under the name, a message that had been cleared from the thread.
-                            const validMsgs = messages.filter(m =>
-                              m.conversationId?.toLowerCase() === convId &&
-                              typeof m.content === 'string' &&
-                              !isSystemSignal(m.content) &&
-                              survivesClear(m.sentAtNs, cut) &&
-                              !(m.id && isHidden(conv.peerAddress, String(m.id)))
-                            );
-                            if (validMsgs.length > 0) {
-                              preview = formatMessagePreview(validMsgs[validMsgs.length - 1].content);
-                            } else {
-                              preview = '';
-                            }
+                            // O(1) per row: candidates come from one pass over the messages (previewCandidates).
+                            const last = (previewCandidates.get(convId) ?? []).find(m =>
+                              survivesClear(m.sentAtNs, cut) && !(m.id && isHidden(conv.peerAddress, String(m.id))));
+                            preview = last ? formatMessagePreview(last.content as string) : '';
                           }
                           // Discreet state: the lock only on direct messages (MLS); ticks only when the
                           // last message in the chat is yours.

@@ -15,6 +15,7 @@
  * read), so it shows at once on the next visit.
  */
 
+import { isDataUrl, isMediaRef, putDataUrl, resolveRef, resolveRefSync, onMediaEvicted } from '@/lib/core/MediaArena';
 export interface PeerProfile {
   avatarUrl: string;
   displayName: string;
@@ -59,12 +60,38 @@ export function getPeerProfile(address: string | null | undefined): PeerProfile 
   const hit = cache.get(a);
   if (hit) return hit;
   const s = storage();
-  const avatarUrl = s?.getItem(`peer_avatar_${a}`) || '';
-  if (!avatarUrl) return undefined;
-  const seeded: PeerProfile = { avatarUrl, displayName: '', at: 0 };
+  const stored = s?.getItem(`peer_avatar_${a}`) || '';
+  if (!stored) return undefined;
+  if (isMediaRef(stored)) {
+    // Binary photo in the media arena: shown at once if its object URL is live, else loaded.
+    const live = resolveRefSync(stored);
+    if (live) { const p: PeerProfile = { avatarUrl: live, displayName: '', at: 0 }; cache.set(a, p); return p; }
+    void resolveRef(stored).then(url => { if (url && !cache.get(a)) { cache.set(a, { avatarUrl: url, displayName: '', at: 0 }); notify(a); } });
+    return undefined;
+  }
+  const seeded: PeerProfile = { avatarUrl: stored, displayName: '', at: 0 };
   cache.set(a, seeded);
+  if (isDataUrl(stored)) void migrateAvatar(a, stored);
   return seeded;
 }
+
+/**
+ * A data: URL photo becomes one Blob in the media arena: localStorage keeps a 45-char
+ * media-ref instead of the base64, and the profile shows a live object URL.
+ */
+async function migrateAvatar(a: string, dataUrl: string) {
+  try {
+    const { ref, url } = await putDataUrl(dataUrl);
+    storage()?.setItem(`peer_avatar_${a}`, ref);
+    const cur = cache.get(a);
+    if (cur && cur.avatarUrl === dataUrl) { cache.set(a, { ...cur, avatarUrl: url }); notify(a); }
+  } catch { /* IndexedDB unavailable: the data URL keeps working */ }
+}
+
+// A revoked object URL must not be handed out again: forget it so the next view reloads the Blob.
+if (typeof window !== 'undefined') onMediaEvicted(() => {
+  for (const [addr, p] of cache) if (p.avatarUrl.startsWith('blob:')) { cache.delete(addr); }
+});
 
 /** Applies a server answer: what avatars show, and the copy kept on this device. */
 export function setPeerProfile(address: string, profile: { avatarUrl?: string | null; displayName?: string | null }, at = Date.now()) {
@@ -75,8 +102,9 @@ export function setPeerProfile(address: string, profile: { avatarUrl?: string | 
   cache.set(a, next);
   const s = storage();
   try {
-    if (next.avatarUrl) s?.setItem(`peer_avatar_${a}`, next.avatarUrl);
-    else s?.removeItem(`peer_avatar_${a}`);
+    if (!next.avatarUrl) s?.removeItem(`peer_avatar_${a}`);
+    else if (isDataUrl(next.avatarUrl)) void migrateAvatar(a, next.avatarUrl);
+    else s?.setItem(`peer_avatar_${a}`, next.avatarUrl);
   } catch { /* storage full: the photo still shows this session */ }
   if (!prev || prev.avatarUrl !== next.avatarUrl || prev.displayName !== next.displayName) notify(a);
 }

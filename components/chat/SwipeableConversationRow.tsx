@@ -193,7 +193,7 @@ export default function SwipeableConversationRow({
   };
 
   return (
-    <div ref={rowRef} className="relative overflow-hidden bg-[#f2f4f7]" data-swipe-open={open ?? "none"}>
+    <div ref={rowRef} className="hl-row relative overflow-hidden bg-[#f2f4f7]" data-swipe-open={open ?? "none"}>
       {touch && RIGHT_W > 0 && <Island side="right" actions={right} width={RIGHT_W} x={x} interactive={open === "right"} onRun={run} name={displayName} />}
       {touch && LEFT_W > 0 && <Island side="left" actions={left} width={LEFT_W} x={x} interactive={open === "left"} onRun={run} name={displayName} />}
 

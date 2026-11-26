@@ -52,11 +52,7 @@ const inter = Inter({
   display: 'swap'
 })
 
-const aztecFont = Inter({
-  subsets: ['latin', 'latin-ext', 'cyrillic'],
-  variable: '--font-aztec-serif',
-  display: 'swap',
-})
+// One Inter instance; --font-aztec-serif is mapped to it in app/globals.css (no second download).
 
 // Editorial display face for headings on the public pages (landing, docs,
 // /connect, footer). Body text stays Inter.
@@ -336,7 +332,7 @@ export default async function RootLayout({
 
   return (
 
-    <html lang={HTML_LANG[locale]} className={`light bg-white ${inter.variable} ${aztecFont.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang={HTML_LANG[locale]} className={`light bg-white ${inter.variable} ${plexMono.variable} ${displaySerif.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
 
       <head>
         {/* The boot mark's image (components/layout/BootMark.tsx): fetched before the first paint so it never pops in. */}
@@ -368,8 +364,10 @@ var locked=ios;
 var tag=function(){return base+(locked?', maximum-scale='+scale:'')};
 var busy=false;
 var si=function(){if(busy)return;busy=true;try{var c=tag();var m=document.querySelectorAll('meta[name="viewport"]');if(!m.length){var n=document.createElement('meta');n.name='viewport';n.content=c;document.head.appendChild(n)}else{for(var i=0;i<m.length;i++)if(m[i].getAttribute('content')!==c)m[i].setAttribute('content',c)}}finally{busy=false}};
-si();document.addEventListener('DOMContentLoaded',si,{once:true});
-try{new MutationObserver(si).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']})}catch(e){}
+var mo=null;var watch=function(){try{if(mo)mo.disconnect();var m=document.querySelector('meta[name="viewport"]');if(m){mo=new MutationObserver(si);mo.observe(m,{attributes:true,attributeFilter:['content']})}}catch(e){}};
+var queued=false;var onHead=function(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;si();watch()})};
+si();watch();document.addEventListener('DOMContentLoaded',function(){si();watch()},{once:true});
+try{new MutationObserver(onHead).observe(document.head,{childList:true})}catch(e){}
 if(ios)return;
 var editable=function(el){if(!el||el.nodeType!==1)return false;var t=el.tagName;if(t==='TEXTAREA'||el.isContentEditable)return true;if(t!=='INPUT')return false;return !/^(button|checkbox|radio|range|color|file|image|submit|reset|hidden)$/i.test(el.type||'')};
 var on=function(e){var el=e.target&&e.target.closest?e.target.closest('input,textarea,[contenteditable]'):null;if(editable(el)&&!locked){locked=true;si()}};

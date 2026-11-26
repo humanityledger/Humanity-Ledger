@@ -340,9 +340,33 @@ const nextConfig = {
         // diagnosing the crash), so no minimizer is configured: the previous
         // TerserPlugin entry was never used and made `npm run build` require a
         // devDependency, which fails under NODE_ENV=production installs.
+        // IV.1 (26 Nov 2026): minification is back ON, scope hoisting stays OFF. The TDZ came from
+        // module concatenation reordering circular wagmi/viem modules; renaming does not reorder.
+        // When terser-webpack-plugin is installed it runs with Safari-safe options (no var
+        // collapsing/inlining that could move a read above its `const`, safari10 mangling);
+        // otherwise Next's built-in minifier is used, so production installs need no devDependency.
+        // Instant rollback: HL_DISABLE_MINIFY=1.
         if (!dev) {
             config.optimization.concatenateModules = false;
-            config.optimization.minimize = false;
+            // Client bundles only (what browsers parse); server bundles stay as they were.
+            config.optimization.minimize = !isServer && process.env.HL_DISABLE_MINIFY !== '1';
+            if (config.optimization.minimize) {
+                let TerserPlugin = null;
+                try { TerserPlugin = require('terser-webpack-plugin'); } catch { /* use Next's default */ }
+                if (TerserPlugin) {
+                    config.optimization.minimizer = [new TerserPlugin({
+                        parallel: true,
+                        extractComments: false,
+                        terserOptions: {
+                            ecma: 2020,
+                            safari10: true,
+                            compress: { collapse_vars: false, reduce_vars: false, sequences: false, inline: 1, passes: 1 },
+                            mangle: { safari10: true },
+                            format: { comments: false, safari10: true },
+                        },
+                    })];
+                }
+            }
         }
 
 

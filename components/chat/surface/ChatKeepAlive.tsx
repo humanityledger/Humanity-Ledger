@@ -13,7 +13,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useActivities } from '@/lib/activities/store';
-import { ChatSurface } from './ChatSurface';
+import dynamic from 'next/dynamic';
+
+// Loaded only when the chat is actually mounted: other routes parse 0 bytes of the chat bundle.
+const ChatSurface = dynamic(() => import('./ChatSurface').then(m => ({ default: m.ChatSurface })), { ssr: false });
 
 export function ChatKeepAlive() {
   const pathname = usePathname() ?? '/';

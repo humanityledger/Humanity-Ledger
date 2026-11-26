@@ -1652,20 +1652,23 @@ export async function setPeerConsent(client: Client | null | undefined, peerAddr
   const value = state === 'denied' ? 2 : 1; // ConsentState.Denied / Allowed
   try {
     const identifier: XmtpIdentifier = { identifier: await checksumAddress(peerAddress), identifierKind: 'Ethereum' };
-    const convs = client.conversations as any;
-    const dm = typeof convs.getDmByIdentifier === 'function' ? await convs.getDmByIdentifier(identifier) : undefined;
-    if (dm && typeof dm.updateConsentState === 'function') {
-      await dm.updateConsentState(value);
-      return true;
-    }
-    // No DM yet: record consent for the peer's inbox so a future DM starts in that state.
+    let done = false;
+    // 1. Inbox-level consent: works with no DM open or even created yet, on every installation.
     const inboxId = typeof (client as any).findInboxIdByIdentifier === 'function'
       ? await (client as any).findInboxIdByIdentifier(identifier) : undefined;
     const prefs = (client as any).preferences;
     if (inboxId && prefs && typeof prefs.setConsentStates === 'function') {
       await prefs.setConsentStates([{ entity: inboxId, entityType: 1 /* ConsentEntityType.InboxId */, state: value }]);
-      return true;
+      done = true;
     }
+    // 2. The DM's own consent too, when one exists (older SDK wrappers read only this).
+    const convs = client.conversations as any;
+    const dm = typeof convs.getDmByIdentifier === 'function' ? await convs.getDmByIdentifier(identifier) : undefined;
+    if (dm && typeof dm.updateConsentState === 'function') {
+      await dm.updateConsentState(value);
+      done = true;
+    }
+    return done;
   } catch (e) {
     diag('consent_set_failed', { peer: short(peerAddress.toLowerCase()), state });
   }
@@ -1676,4 +1679,18 @@ export async function setPeerConsent(client: Client | null | undefined, peerAddr
 export function getOpenXmtpClient(account: string | null | undefined): Client | undefined {
   if (!account) return undefined;
   return clientRegistry.get(account) ?? clientRegistry.get(account.toLowerCase());
+}
+
+/** Latest messages of the DM with a peer from the local XMTP store (no network); [] when none. */
+export async function recentDmMessages(client: Client | null | undefined, peerAddress: string, limit = 32): Promise<Array<{ id?: unknown; sentAtNs?: unknown }>> {
+  if (!client || !/^0x[0-9a-fA-F]{40}$/.test(peerAddress)) return [];
+  try {
+    const identifier: XmtpIdentifier = { identifier: await checksumAddress(peerAddress), identifierKind: 'Ethereum' };
+    const dm = await (client.conversations as any).getDmByIdentifier?.(identifier);
+    if (!dm || typeof dm.messages !== 'function') return [];
+    const list = await dm.messages({ limit: BigInt(limit) });
+    return Array.isArray(list) ? list.map((m: any) => ({ id: m?.id, sentAtNs: m?.sentAtNs })) : [];
+  } catch {
+    return [];
+  }
 }

@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, ChevronRight, Check, MapPin, AtSign, User, Shield, Bell, Lock, Fingerprint, Sparkles, Globe, Key } from 'lucide-react';
-import { useLedgerSettings } from '@/components/terminal/LedgerChatSettings';
+import { useLedgerSettings } from '@/lib/hooks/useLedgerSettings';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { useT } from '@/lib/i18n/client';
 

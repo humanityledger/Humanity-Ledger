@@ -23,7 +23,7 @@ if (typeof self !== 'undefined' && (self.location.hostname === 'localhost' || se
 // cached shell only when offline); hashed build assets are cache-first; the
 // API and anything that is not a same-origin GET is never touched.
 
-const VERSION = 'hl-2026-11-26-fast';
+const VERSION = 'hl-2026-11-26-hyperion';
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 const SHELL = ['/manifest.json', '/favicon.ico', '/icon-192.png', '/icon-512.png', '/apple-icon.png', '/boot-mark.webp'];
@@ -40,6 +40,16 @@ function isImmutableStaticAsset(pathname) {
   );
 }
 
+// WebAssembly.instantiateStreaming (and the engines' compiled-code cache) requires
+// Content-Type: application/wasm; a cached copy without it would fall back to slow
+// ArrayBuffer compilation in both V8 and JavaScriptCore.
+function asWasm(pathname, res) {
+  if (!pathname.endsWith('.wasm') || res.headers.get('content-type') === 'application/wasm') return res;
+  const headers = new Headers(res.headers);
+  headers.set('content-type', 'application/wasm');
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 self.addEventListener('install', (event) => {
   // Pre-cache lightweight static shell icons only (never hit SSR HTML on install across 3M users).
   event.waitUntil(
@@ -52,7 +62,9 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys()
+    // Navigation Preload: the page request starts while this worker boots (Chrome, Safari 15.4+).
+    Promise.resolve(self.registration.navigationPreload && self.registration.navigationPreload.enable()).catch(() => {})
+      .then(() => caches.keys())
       .then((keys) => Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
@@ -86,10 +98,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
         const hit = await cache.match(req);
-        if (hit) return hit;
+        if (hit) return asWasm(url.pathname, hit);
         const res = await fetch(req);
         if (res.ok) cache.put(req, res.clone()).catch(() => {});
-        return res;
+        return asWasm(url.pathname, res);
       }),
     );
     return;
@@ -98,7 +110,8 @@ self.addEventListener('fetch', (event) => {
   // Pages: always ask the network first (fresh CSP nonce HTML after deploy); offline fallback only.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req, { cache: 'no-store' })
+      Promise.resolve(event.preloadResponse)
+        .then((pre) => pre || fetch(req, { cache: 'no-store' }))
         .then((res) => {
           if (res.ok && res.headers.get('content-type')?.includes('text/html')) {
             const copy = res.clone();

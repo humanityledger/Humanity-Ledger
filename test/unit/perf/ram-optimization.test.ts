@@ -12,7 +12,7 @@ const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
 describe('Zero-residency prover', () => {
   const src = read('lib/aztec/prover/ephemeral-prover.ts');
   it('uses a fresh Barretenberg per proof and always destroys it', () => {
-    expect(src).toMatch(/Barretenberg\.new\(\{ threads \}\)/);
+    expect(src).toMatch(/Barretenberg\.new\(\{ threads: profile\.threads/);
     expect(src).not.toMatch(/Barretenberg\.initSingleton\(/);
     expect(src).toMatch(/finally \{[\s\S]*barretenberg\?\.destroy\(\)/);
     expect(src).toMatch(/extends BBLazyPrivateKernelProver/);

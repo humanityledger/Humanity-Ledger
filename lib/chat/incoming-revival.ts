@@ -20,8 +20,18 @@ import { toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
 
 /** Used only when nothing was on screen: how far behind the network this device may be. */
 export const SKEW_GRACE_MS = 5 * 60_000;
-/** How many of the last shown message ids are remembered per deleted chat. */
-export const SNAPSHOT_IDS = 64;
+/** How many pre-delete message ids are remembered per deleted chat (as 8-hex digests, ≤2.9 KB stored). */
+export const SNAPSHOT_IDS = 256;
+
+/** FNV-1a 32-bit as 8 hex chars: a compact, stable digest of a message id. */
+export function idDigest(id: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+const HEX8 = /^[0-9a-f]{8}$/;
+/** Entries written by the 64-raw-id build are hashed on read. */
+const asDigest = (v: string) => (HEX8.test(v) ? v : idDigest(v));
 
 /**
  * The cut-off to store for "Delete chat" / "Clear chat": the newest network
@@ -46,7 +56,7 @@ const owners = (o: ReadonlyArray<string | null | undefined>) => [...new Set(o.fi
 export function saveDeleteSnapshot(peer: string, own: ReadonlyArray<string | null | undefined>, ids: ReadonlyArray<string>, s = storage()): void {
   if (!s || !peer) return;
   const prev = loadSnapshotIds(peer, own, s);
-  const merged = [...new Set([...prev, ...ids.filter(Boolean).map(String)])].slice(-SNAPSHOT_IDS);
+  const merged = [...new Set([...prev, ...ids.filter(Boolean).map(i => idDigest(String(i)))])].slice(-SNAPSHOT_IDS);
   for (const o of owners(own)) { try { s.setItem(snapKey(o, peer), JSON.stringify(merged)); } catch {} }
 }
 
@@ -55,7 +65,7 @@ export function loadSnapshotIds(peer: string, own: ReadonlyArray<string | null |
   for (const o of owners(own)) {
     try {
       const v = JSON.parse(s.getItem(snapKey(o, peer)) || '[]');
-      if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+      if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string').map(asDigest);
     } catch {}
   }
   return [];
@@ -63,7 +73,7 @@ export function loadSnapshotIds(peer: string, own: ReadonlyArray<string | null |
 
 export function isPreDeleteId(peer: string, id: unknown, own: ReadonlyArray<string | null | undefined>, s = storage()): boolean {
   if (id === undefined || id === null || id === '') return false;
-  return loadSnapshotIds(peer, own, s).includes(String(id));
+  return loadSnapshotIds(peer, own, s).includes(idDigest(String(id)));
 }
 
 export type IncomingVerdict = 'drop' | 'suppress' | 'deliver' | 'revive';
@@ -105,4 +115,26 @@ export function reviveDeletedChat(
   const p = peer.toLowerCase();
   unmarkDeleted(p, own, s);
   try { announce?.(p); } catch {}
+}
+
+/**
+ * Pre-delete history read at the moment of deletion, beyond what is on screen:
+ * the local message store (persisted before the deletion, so certainly old) and
+ * the XMTP DM's own latest messages (bounded to `budgetMs`, so the UI never
+ * waits). Returns ids to remember and the newest persisted network time.
+ */
+export async function collectPreDeleteHistory(
+  sources: { db?: () => Promise<Array<{ id?: unknown; sentAtNs?: unknown }>>; xmtp?: () => Promise<Array<{ id?: unknown; sentAtNs?: unknown }>> },
+  budgetMs = 300,
+): Promise<{ ids: string[]; maxPersistedMs: number }> {
+  const within = <T,>(p: Promise<T>, fallback: T) => Promise.race([p.catch(() => fallback), new Promise<T>(r => setTimeout(() => r(fallback), budgetMs))]);
+  const [db, xm] = await Promise.all([
+    sources.db ? within(sources.db(), []) : Promise.resolve([]),
+    sources.xmtp ? within(sources.xmtp(), []) : Promise.resolve([]),
+  ]);
+  const ids: string[] = [];
+  let maxPersistedMs = 0;
+  for (const r of db) { if (r.id != null) ids.push(String(r.id)); const t = toMs(r.sentAtNs); if (t > maxPersistedMs) maxPersistedMs = t; }
+  for (const r of xm) if (r.id != null) ids.push(String(r.id));
+  return { ids: ids.slice(-SNAPSHOT_IDS), maxPersistedMs };
 }
