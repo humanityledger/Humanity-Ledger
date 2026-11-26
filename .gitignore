@@ -200,3 +200,8 @@ Claude outputs/
 
 # cUSDC beta invitation codes in clear (scripts/beta/generate-100-codes.mjs): operator-only, never committed
 docs/beta/100_BETA_INVITE_CODES.md
+
+# Local scratch and saved web pages (never published)
+_sync_tmp/
+public/landing/*Claude.html
+public/landing/*Claude_files/
