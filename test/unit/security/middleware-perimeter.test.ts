@@ -51,6 +51,12 @@ describe('isPublicPath — sibling routes do not inherit a neighbour’s exempti
     expect(isPublicPath('/api/pinger')).toBe(false);
     expect(isPublicPath('/api/ping/extra')).toBe(false);
     expect(isPublicPath('/api/aztec/sponsor')).toBe(false);
+    // G8 HumanGate runs before sign-in; every other /api/g8 route needs a session.
+    expect(isPublicPath('/api/g8/humangate/challenge')).toBe(true);
+    expect(isPublicPath('/api/g8/humangate/verify')).toBe(true);
+    expect(isPublicPath('/api/g8/invite')).toBe(false);
+    expect(isPublicPath('/api/g8/blocks')).toBe(false);
+    expect(isPublicPath('/api/g8/humangateway')).toBe(false);
     // Since 2026-10-28 the user directory needs a session: anyone could walk it.
     expect(isPublicPath('/api/chat/users/search')).toBe(false);
   });

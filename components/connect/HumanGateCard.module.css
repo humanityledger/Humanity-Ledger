@@ -88,7 +88,8 @@
 }
 .meter > span { display: block; height: 100%; background: #15803d; border-radius: inherit; transition: width 0.08s linear; }
 
-.primary, .pulseBtn {
+/* .card.card beats ConnectView's `.root.root button { min-height: auto }` reset. */
+.card.card .primary, .card.card .pulseBtn {
   margin-top: 16px;
   display: inline-flex;
   align-items: center;
@@ -107,13 +108,13 @@
 .primary:active, .pulseBtn:active { transform: scale(0.98); }
 .primary:focus-visible, .pulseBtn:focus-visible, .switch:focus-visible { outline: 3px solid #1f5fd6; outline-offset: 3px; }
 
-.pulseBtn { min-height: 64px; min-width: 240px; flex-direction: column; gap: 10px; padding: 12px 22px; font-size: 16px; }
+.card.card .pulseBtn { min-height: 64px; min-width: 240px; flex-direction: column; gap: 10px; padding: 12px 22px; font-size: 16px; }
 .pulseOn { background: #15803d; }
 .dots { display: inline-flex; gap: 6px; }
 .dots i { width: 8px; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.3); }
 .dots i.dotOn { background: #ffffff; }
 
-.switch {
+.card.card .switch {
   margin-top: 14px;
   display: inline-flex;
   align-items: center;
