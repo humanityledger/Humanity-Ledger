@@ -4590,5 +4590,17 @@
  "Built on vouches from people already in Ledger Chat and an in-browser cryptographic proof that you have had an account for years. No passport, no ID card, no documents.": "Se basa en avales de personas que ya están en Ledger Chat y en una prueba criptográfica hecha en tu navegador de que tienes una cuenta desde hace años. Sin pasaporte, sin DNI, sin documentos.",
  "Strong protection against bots and mass sign-ups, not a government-grade guarantee. It stays off until its circuit is published and reviewed. Nothing here is simulated.": "Una protección fuerte contra bots y altas masivas, no una garantía de nivel gubernamental. Seguirá desactivado hasta que su circuito se publique y se revise. Aquí no se simula nada.",
  "Tap the button to begin. Then tap it each time the board lights up and you hear a tone.": "Toca el botón para empezar. Después, tócalo cada vez que el tablero se ilumine y oigas un tono.",
- "Accessible check without moving": "Comprobación accesible sin movimiento"
+ "Accessible check without moving": "Comprobación accesible sin movimiento",
+ "Cache cleared: {value} {unit} freed. Reloading…": "Caché vaciada: {value} {unit} liberados. Recargando…",
+ "Everything this site keeps in this browser, as the browser counts it.": "Todo lo que este sitio guarda en este navegador, tal como lo cuenta el navegador.",
+ "Message database": "Base de datos de mensajes",
+ "Your encrypted messages and this device's keys. Not cache.": "Tus mensajes cifrados y las claves de este dispositivo. No es caché.",
+ "Private wallet and local data": "Billetera privada y datos locales",
+ "Private wallet notes, prover files and the local copy of messages.": "Notas de la billetera privada, archivos del probador y la copia local de los mensajes.",
+ "Offline app files": "Archivos de la app sin conexión",
+ "{count} files. Cleared by Clear cache.": "{count} archivos. Se borran con Vaciar caché.",
+ "Settings and lists": "Ajustes y listas",
+ "{count} Ledger Chat items.": "{count} elementos de Ledger Chat.",
+ "This browser does not report the split by kind; the total above is exact.": "Este navegador no indica el reparto por tipo; el total de arriba es exacto.",
+ "Removes the offline app files, the prover parameters (downloaded again on your next private payment), cached images and the local copy of messages (they come back from your encrypted inbox). Your message database, private wallet, contacts and settings are kept.": "Elimina los archivos de la app sin conexión, los parámetros del probador (se vuelven a descargar en tu próximo pago privado), las imágenes en caché y la copia local de los mensajes (vuelven desde tu bandeja cifrada). Se conservan tu base de datos de mensajes, la billetera privada, los contactos y los ajustes."
 }

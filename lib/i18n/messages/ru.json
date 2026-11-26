@@ -4590,5 +4590,17 @@
  "Built on vouches from people already in Ledger Chat and an in-browser cryptographic proof that you have had an account for years. No passport, no ID card, no documents.": "Основан на поручительствах людей, которые уже есть в Ledger Chat, и на криптографическом доказательстве в вашем браузере, что у вас много лет есть аккаунт. Без паспорта, без удостоверения, без документов.",
  "Strong protection against bots and mass sign-ups, not a government-grade guarantee. It stays off until its circuit is published and reviewed. Nothing here is simulated.": "Надёжная защита от ботов и массовых регистраций, но не гарантия государственного уровня. Останется выключенным, пока его схема не будет опубликована и проверена. Здесь ничего не имитируется.",
  "Tap the button to begin. Then tap it each time the board lights up and you hear a tone.": "Нажмите кнопку, чтобы начать. Затем нажимайте её каждый раз, когда поле подсвечивается и звучит сигнал.",
- "Accessible check without moving": "Доступная проверка без движения"
+ "Accessible check without moving": "Доступная проверка без движения",
+ "Cache cleared: {value} {unit} freed. Reloading…": "Кэш очищен: освобождено {value} {unit}. Перезагрузка…",
+ "Everything this site keeps in this browser, as the browser counts it.": "Всё, что этот сайт хранит в этом браузере, по подсчёту браузера.",
+ "Message database": "База сообщений",
+ "Your encrypted messages and this device's keys. Not cache.": "Ваши зашифрованные сообщения и ключи этого устройства. Это не кэш.",
+ "Private wallet and local data": "Приватный кошелёк и локальные данные",
+ "Private wallet notes, prover files and the local copy of messages.": "Заметки приватного кошелька, файлы прувера и локальная копия сообщений.",
+ "Offline app files": "Офлайн-файлы приложения",
+ "{count} files. Cleared by Clear cache.": "Файлов: {count}. Удаляются кнопкой «Очистить кэш».",
+ "Settings and lists": "Настройки и списки",
+ "{count} Ledger Chat items.": "Элементов Ledger Chat: {count}.",
+ "This browser does not report the split by kind; the total above is exact.": "Этот браузер не показывает разбивку по типам; общий объём выше точный.",
+ "Removes the offline app files, the prover parameters (downloaded again on your next private payment), cached images and the local copy of messages (they come back from your encrypted inbox). Your message database, private wallet, contacts and settings are kept.": "Удаляет офлайн-файлы приложения, параметры прувера (загрузятся снова при следующем приватном платеже), кэшированные изображения и локальную копию сообщений (они вернутся из вашего зашифрованного ящика). База сообщений, приватный кошелёк, контакты и настройки сохраняются."
 }

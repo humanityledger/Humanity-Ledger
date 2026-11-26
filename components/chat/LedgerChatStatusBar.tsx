@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LocalContact } from '@/lib/wallet/localAddressBook';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 
 interface LedgerStatus {
   peerAddress: string;
@@ -45,49 +46,7 @@ function saveMyStatus(address: string, status: LedgerStatus) {
 }
 
 function AddressAvatar({ address, size = 40, showSaved = false }: { address: string; size?: number; showSaved?: boolean }) {
-  const [savedAvatar, setSavedAvatar] = React.useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('ledger_avatar') || '';
-  });
-  
-  React.useEffect(() => {
-    const handler = (e: any) => {
-      if (e.detail?.avatarUrl) setSavedAvatar(e.detail.avatarUrl);
-    };
-    window.addEventListener('ledger_settings_update', handler);
-    return () => window.removeEventListener('ledger_settings_update', handler);
-  }, []);
-
-  const initials = address.slice(2, 4).toUpperCase();
-  const hue = parseInt(address.slice(2, 8), 16) % 360;
-
-  if (showSaved && savedAvatar) {
-    return (
-      <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-        <img src={savedAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: `hsl(${hue},65%,45%)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontWeight: 900,
-        fontSize: size * 0.28,
-        flexShrink: 0,
-      }}
-    >
-      {initials}
-    </div>
-  );
+  return <UserAvatar address={address} isMe={showSaved || undefined} size={size} />;
 }
 
 interface LedgerChatStatusBarProps {

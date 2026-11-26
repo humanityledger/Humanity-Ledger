@@ -25,6 +25,7 @@ import { motion } from 'framer-motion';
 import { Check, Copy, Eye, EyeOff, X } from 'lucide-react';
 import { cleanAmount } from './walletLogic';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 
 export { cleanAmount };
 
@@ -145,28 +146,8 @@ export function TokenMark({ symbol, size = 28 }: { symbol: string; size?: number
  * address is always shown next to it.
  */
 export function AddressAvatar({ address, size = 40 }: { address: string; size?: number }) {
-  const hex = (address || '').replace(/^0x/i, '').toLowerCase();
-  const byte = (i: number) => {
-    const v = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-    return Number.isFinite(v) ? v : 0;
-  };
-  const h1 = Math.round((byte(0) / 255) * 360);
-  const h2 = (h1 + 70 + Math.round((byte(1) / 255) * 140)) % 360;
-  const h3 = (h2 + 50 + Math.round((byte(2) / 255) * 90)) % 360;
-  const angle = Math.round((byte(3) / 255) * 360);
-  const cx = 25 + Math.round((byte(4) / 255) * 50);
-  const cy = 25 + Math.round((byte(5) / 255) * 50);
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-block rounded-full shrink-0"
-      style={{
-        width: size,
-        height: size,
-        background: `radial-gradient(circle at ${cx}% ${cy}%, hsl(${h3} 85% 70% / 0.95), transparent 46%), conic-gradient(from ${angle}deg, hsl(${h1} 72% 52%), hsl(${h2} 70% 46%), hsl(${h1} 72% 52%))`,
-      }}
-    />
-  );
+  // The same 10 × 10 mosaic as every avatar in Ledger Chat, read from the address's first bits.
+  return <UserAvatar address={address} size={size} />;
 }
 
 

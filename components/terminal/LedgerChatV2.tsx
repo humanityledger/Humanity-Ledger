@@ -118,6 +118,7 @@ import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { formatBytes, parseLargeFileMessage } from '@/lib/chat/large-file';
 import { isRecordMessage, legacyPreview, parseLegacyMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 import { RecordSendError, sealFileMessage, sealNoteInsideMessage, sealNoteMessage } from '@/lib/chat/seal-record';
 import { epochForPeer, RecordEpochError, setRecordEpochProvider } from '@/lib/chat/record-epoch';
 import { installRecordWorker } from '@/lib/chat/record-worker';
@@ -184,52 +185,9 @@ export interface LedgerChatProps {
 }
 
 function Avatar({ address, isMe = false, size = 44 }: { address: string; isMe?: boolean; size?: number }) {
-  // Your own photo only on your own avatar (18 November 2026: setting a profile photo showed it
-  // on every contact, because every Avatar started from `ledger_avatar` and every one listened
-  // to your settings updates). A contact starts from their cached photo, or initials.
-  const [savedAvatar, setSavedAvatar] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    try {
-      return isMe
-        ? localStorage.getItem('ledger_avatar') || ''
-        : (address && getPeerProfile(address)?.avatarUrl) || ''; // resolves media-ref photos (lib/core/MediaArena.ts)
-    } catch {
-      return '';
-    }
-  });
-
-  useEffect(() => {
-    if (!isMe) return;
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.avatarUrl !== undefined) setSavedAvatar(detail.avatarUrl);
-    };
-    window.addEventListener('ledger_settings_update', handler);
-    return () => window.removeEventListener('ledger_settings_update', handler);
-  }, [isMe]);
-
-  // A contact's photo comes from one shared cache (lib/chat/peerProfiles.ts): batched requests,
-  // refreshed after five minutes and when the tab comes back, and never cleared by an error.
-  useEffect(() => {
-    if (isMe || !address || typeof window === 'undefined') return;
-    const sync = () => setSavedAvatar(getPeerProfile(address)?.avatarUrl || '');
-    sync();
-    const off = subscribePeerProfile(address, sync);
-    requestPeerProfile(address);
-    return off;
-  }, [address, isMe]);
-
-  if (savedAvatar) {
-    return (
-      <div className="rounded-full overflow-hidden shrink-0 ring-1 ring-black/5" style={{ width: size, height: size }}>
-        <img src={savedAvatar} alt="" className="w-full h-full object-cover" />
-      </div>
-    );
-  }
-
-  // No photo: a geometric glyph derived from the wallet address (WalletGlyph), the same for the
-  // same person everywhere, instead of two letters on a tinted circle.
-  return <WalletGlyph address={address} size={size} />;
+  // One avatar everywhere (components/chat/UserAvatar.tsx): your photo on you, a contact's photo,
+  // else the 10 × 10 mosaic of the address.
+  return <UserAvatar address={address} isMe={isMe || undefined} size={size} />;
 }
 
 const shortAddr = (addr: string) => formatAddress(addr);

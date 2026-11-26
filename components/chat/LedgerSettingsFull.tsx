@@ -39,7 +39,7 @@ import { applyPeerBlock } from '@/lib/chat/blockActions';
 import { CHAT_FONTS, resolveChatFont } from '@/lib/chat/fonts';
 import { AUTO_DELETE_OPTIONS } from '@/lib/chat/autoDelete';
 import { copyText } from '@/lib/ui/copyText';
-import { measureStorage, purgeCachedMedia, purgeProverCrs, formatBytes, type StorageUsage } from '@/lib/storage/usage';
+import { measureStorage, purgeCachedMedia, purgeProverCrs, purgeOfflineCaches, formatBytes, type StorageUsage } from '@/lib/storage/usage';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { ThemePickerSheet, type AppearanceTab } from './ThemePickerSheet';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
@@ -50,6 +50,7 @@ import { setStickerEffectsEnabled, stickerEffectsEnabled } from './StickerSceneH
 import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
 import { ProfileHeaderCard, ProfilePanel, ProfileSharePanel, UsernameEditor } from './profile/ProfileShare';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -536,6 +537,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   }, [myAddress, nuclearDisconnect]);
 
   const purgeCache = useCallback(async () => {
+    // What is cache: the offline app files, prover parameters, the local copy of messages (they come
+    // back from the encrypted inbox), cached images and list caches. Never the message database or
+    // the private wallet: those are your keys and history, not cache.
+    const before = (await measureStorage().catch(() => null))?.originBytes ?? null;
     let count = 0;
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
@@ -550,6 +555,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     
     // Prover reference strings (~33 MB, re-downloaded on the next private payment).
     await purgeProverCrs().catch(() => 0);
+    // Offline app files (Cache Storage); the service worker fetches the shell again.
+    count += await purgeOfflineCaches().catch(() => 0);
+    // Cached photos and previews kept as data: URLs.
+    count += purgeCachedMedia();
 
     // Clear IndexedDB for messages (they re-sync from the encrypted inbox)
     let clearedDb = false;
@@ -560,7 +569,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     } catch(e) {}
 
     setStorageTick(t => t + 1);
-    toast.success(clearedDb ? tr("Message cache cleared. Reloading…") : (count === 1 ? tr("Cleared 1 cached item") : tr("Cleared {count} cached items", { count })));
+    const after = (await measureStorage().catch(() => null))?.originBytes ?? null;
+    const freed = before != null && after != null ? Math.max(0, before - after) : null;
+    if (freed != null) {
+      const f = formatBytes(freed);
+      toast.success(tr("Cache cleared: {value} {unit} freed. Reloading…", { value: f.value, unit: f.unit }));
+    } else {
+      toast.success(clearedDb ? tr("Message cache cleared. Reloading…") : (count === 1 ? tr("Cleared 1 cached item") : tr("Cleared {count} cached items", { count })));
+    }
     setModal(null);
     setTimeout(() => window.location.reload(), 1000);
   }, []);
@@ -600,18 +616,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <button
                       type="button"
                       onClick={() => avatarFileRef.current?.click()}
-                      className="w-[88px] h-[88px] rounded-full overflow-hidden shadow-lg ring-4 ring-black/[0.08] hover:ring-black/20 transition-all active:scale-95"
+                      className={`w-[88px] h-[88px] overflow-hidden transition-all active:scale-95 ${avatarUrl ? 'rounded-full shadow-lg ring-4 ring-black/[0.08] hover:ring-black/20' : 'rounded-[26px] hover:opacity-90'}`}
                       title={tr("Change profile photo")}
                     >
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt={tr("Profile")} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-[#15171c] flex items-center justify-center">
-                          <span className="text-white text-3xl font-semibold">
-                            {myAddress ? myAddress.slice(2, 4).toUpperCase() : '??'}
-                          </span>
-                        </div>
-                      )}
+                      {/* The same avatar as everywhere else: your photo, else the 10 × 10 mosaic. */}
+                      <UserAvatar address={myAddress || address || ''} photo={avatarUrl || undefined} isMe size={88} />
                     </button>
                     {/* Camera badge */}
                     <button
@@ -1312,7 +1321,31 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <div className="w-full bg-[#e4e7ec] rounded-full h-2">
                       <div className="bg-[#15171c] h-2 rounded-full transition-all" style={{ width: `${Math.max(pct, storageUsage ? 1 : 0)}%` }} />
                     </div>
-                    <p className="text-[12px] text-[#727a88] mt-2">{tr("About {count} Ledger Chat items in local storage. Private-wallet notes and keys are in this browser's origin storage, not in this number. Remove them from Payments.", { count })}</p>
+                    <p className="text-[12px] text-[#727a88] mt-2">{tr("Everything this site keeps in this browser, as the browser counts it.")}</p>
+                    {storageUsage && (() => {
+                      const opfs = storageUsage.opfsFiles.reduce((a, f) => a + f.bytes, 0);
+                      const d = storageUsage.details;
+                      const rows: { label: string; bytes: number; hint: string }[] = [
+                        { label: tr("Message database"), bytes: Math.max(opfs, d?.fileSystem ?? 0), hint: tr("Your encrypted messages and this device's keys. Not cache.") },
+                        { label: tr("Private wallet and local data"), bytes: d?.indexedDB ?? 0, hint: tr("Private wallet notes, prover files and the local copy of messages.") },
+                        { label: tr("Offline app files"), bytes: (d?.caches ?? 0) + (d?.serviceWorker ?? 0), hint: tr("{count} files. Cleared by Clear cache.", { count: storageUsage.cacheEntries }) },
+                        { label: tr("Settings and lists"), bytes: storageUsage.localBytes, hint: tr("{count} Ledger Chat items.", { count }) },
+                      ].filter(r => r.bytes > 0 || r.label === tr("Settings and lists"));
+                      return (
+                        <div className="mt-4 border-t border-[#f0f1f4]">
+                          {rows.map(r => { const f = formatBytes(r.bytes); return (
+                            <div key={r.label} className="flex items-start justify-between gap-3 py-2.5 border-b border-[#f0f1f4] last:border-0">
+                              <div className="min-w-0">
+                                <p className="text-[13.5px] font-medium text-[#15171c]">{r.label}</p>
+                                <p className="text-[12px] text-[#727a88] leading-snug">{r.hint}</p>
+                              </div>
+                              <p className="text-[13.5px] font-semibold text-[#15171c] tabular-nums shrink-0">{f.value} {tr(f.unit)}</p>
+                            </div>
+                          ); })}
+                          {!d && <p className="text-[12px] text-[#727a88] pt-2">{tr("This browser does not report the split by kind; the total above is exact.")}</p>}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
@@ -1629,7 +1662,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'clearCache' && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">{tr("Clear cache")}</h3>
-                  <p className="text-[14px] text-[#727a88] mb-6 leading-relaxed">{tr("This removes temporary cached data. Your messages, contacts, and settings are safe and will not be deleted.")}</p>
+                  <p className="text-[14px] text-[#727a88] mb-6 leading-relaxed">{tr("Removes the offline app files, the prover parameters (downloaded again on your next private payment), cached images and the local copy of messages (they come back from your encrypted inbox). Your message database, private wallet, contacts and settings are kept.")}</p>
                   <button type="button" onClick={purgeCache} className="w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px]">
                     {tr("Clear Cache")}
                   </button>
