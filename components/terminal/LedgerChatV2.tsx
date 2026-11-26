@@ -147,6 +147,8 @@ import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfil
 import { canMove as canMoveCall } from '@/lib/calls/machine';
 import { coldContactDecision, quarantinePeer, setAdmittedPeers } from '@/lib/g8/quarantine';
 import { isPasskeySession, signWithPasskey } from '@/lib/g8/passkeyAccount';
+import { redeemPendingInvite } from '@/lib/g8/inviteClient';
+import { RequestBanner } from '@/components/g8/RequestBanner';
 import { deletionWatermark, decideIncoming, streamGate, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat, collectPreDeleteHistory } from '@/lib/chat/incoming-revival';
 import { createSingleFlightRunner } from '@/lib/chat/poll-runner';
 import { clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
@@ -1921,6 +1923,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       .then(r => (r.ok ? r.json() : null)).then(j => { if (live && Array.isArray(j?.admitted)) setAdmittedPeers(j.admitted); }).catch(() => {});
     return () => { live = false; };
   }, [(ledgerSettings as any)?.g8_privacy_shield, effectiveAddress]);
+  // A G8 invite opened on /connect is redeemed once the chat is signed in (single use, server-side).
+  useEffect(() => {
+    if (!effectiveAddress) return;
+    redeemPendingInvite().then(r => {
+      if (!r) return;
+      if (r.ok) toast.success(tr("Invite accepted. You can now write to {who}.", { who: formatAddress(r.issuer || '') }));
+      else toast.error(r.error || tr("This invite could not be used."));
+    }).catch(() => {});
+  }, [effectiveAddress]);
   /** True when this peer's contact must be held (shield on, stranger); records it in Requests. */
   const g8Hold = (peerLower: string): boolean => {
     const owner = (effectiveAddress || address || '').toLowerCase();
@@ -8141,7 +8152,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 // The end-to-end encryption notice is the first item of the conversation and scrolls
                 // with it. 21 November 2026: it sat above the scrolling list, so messages were cut off
                 // under it, in the middle of the screen, instead of at the top of the chat.
-                const encryptionNotice = (
+                const encryptionNoticeBase = (
                   <div className="flex justify-center pt-4 pb-1 px-4">
                   <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
                     <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
@@ -8149,6 +8160,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     </span>
                   </button>
                 </div>
+                );
+                // G8 privacy shield: a held stranger's chat opens with Accept / Dismiss / Block.
+                const encryptionNotice = (
+                  <>
+                    {encryptionNoticeBase}
+                    <RequestBanner owner={effectiveAddress || address} peer={activePeer} onBlock={() => activePeer && blockPeer(activePeer)} />
+                  </>
                 );
                 // Filter messages for the current active conversation only
                 const convId = `dm-${activePeer!.toLowerCase()}`;

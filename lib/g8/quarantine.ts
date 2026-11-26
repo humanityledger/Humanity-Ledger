@@ -2,7 +2,7 @@
  * G8 privacy shield (spec §7), client side. With the shield on, a first
  * message or call from someone you never talked to, never admitted and who
  * did not redeem your invite waits in Requests: it is stored, but it does not
- * ring, notify or load media until you accept it. Existing contacts are never
+ * ring or notify until you accept it. Existing contacts are never
  * affected. With the shield off nothing changes (default).
  *
  * Storage prefix `hl.g8.*` is new (spec §0: existing prefixes are untouched).

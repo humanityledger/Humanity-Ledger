@@ -7,6 +7,7 @@ import { NodeChoiceSheet } from '@/components/chat/settings/NodeChoiceSheet';
 import { PaymentsSettingsSheet } from '@/components/chat/settings/PaymentsSettingsSheet';
 import { PublicTipTokenPicker } from '@/components/chat/settings/PublicTipTokenPicker';
 import { MemoryDiagnostics } from '@/components/chat/settings/MemoryDiagnostics';
+import { HumanVerificationCenter } from '@/components/g8/HumanVerificationCenter';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -934,6 +935,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'privacy' && (
             <>
+              <HumanVerificationCenter
+                address={(myAddress || address || null) as string | null}
+                shieldOn={!!(settings as any).g8_privacy_shield}
+                onShield={v => updateSetting('g8_privacy_shield' as any, v)}
+              />
               <Group title={tr("Who can see")} footer={tr("Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.")}>
                 <Row icon={<Clock size={18} />} label={tr("Last seen and online")} value={tr(({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || 'My contacts')} onTap={() => setModal('privacy_last_seen')} />
               </Group>

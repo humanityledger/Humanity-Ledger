@@ -224,7 +224,7 @@ export interface LedgerProtocolSettings {
   echo_cancellation?: boolean;
   /** Do not disturb mode */
   do_not_disturb?: boolean;
-  /** G8 privacy shield: first messages from strangers wait in Requests (no ring, no notification, no media). */
+  /** G8 privacy shield: first messages from strangers wait in Requests (no ring, no notification). */
   g8_privacy_shield?: boolean;
   /** Hide notification content preview */
   hide_notification_content?: boolean;
