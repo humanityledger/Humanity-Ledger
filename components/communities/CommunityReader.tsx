@@ -42,6 +42,7 @@ import { createCommunityGroup } from '@/lib/communities/mls';
 import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
 export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';
 /** For a community whose posts live in an XMTP MLS group (lib/communities/mls.ts). */
@@ -454,6 +455,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 onMenu={(at) => setMenu({ at, post: p })}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
+                  {isWalletAddress(p.authorAddress) ? <UserAvatar address={p.authorAddress} size={36} /> : (
                   <span
                     className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0 select-none"
                     style={tintFor(p.authorAddress)}
@@ -461,6 +463,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                   >
                     {initials(author.mine ? '' : author.name, p.authorAddress)}
                   </span>
+                  )}
                   <p className="min-w-0 flex-1 text-[16px] leading-tight">
                     <span className="font-semibold" style={{ color: INK }}>{author.name}</span>
                     {author.wallet ? <span className="ml-1.5 tabular-nums" style={{ color: INK_SOFT }}>{author.wallet}</span> : null}

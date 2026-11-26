@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Video, X, PhoneIncoming, PhoneOutgoing, PhoneMissed } from 'lucide-react';
 import type { CallRecord } from '@/lib/wallet/callHistory';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 
 interface LedgerChatCallHistoryProps {
   callHistory: CallRecord[];
@@ -13,27 +14,7 @@ interface LedgerChatCallHistoryProps {
 }
 
 function AddressAvatar({ address, size = 40 }: { address: string; size?: number }) {
-  const initials = address?.slice(2, 4).toUpperCase() ?? '??';
-  const hue = address ? parseInt(address.slice(2, 8), 16) % 360 : 180;
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: `hsl(${hue},65%,45%)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontWeight: 900,
-        fontSize: size * 0.28,
-        flexShrink: 0,
-      }}
-    >
-      {initials}
-    </div>
-  );
+  return <UserAvatar address={address} size={size} />;
 }
 
 function formatDuration(seconds: number): string {

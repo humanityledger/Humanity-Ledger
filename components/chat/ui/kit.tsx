@@ -13,6 +13,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
 export const shortAddr = (addr?: string | null) => (addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '');
 
@@ -33,6 +34,9 @@ export function initials(name?: string | null, address?: string | null) {
 }
 
 export function PeerAvatar({ address, name, photo, size = 44 }: { address?: string | null; name?: string | null; photo?: string | null; size?: number }) {
+  // A person: the one avatar of Ledger Chat (photo, else the 10 × 10 mosaic). Not a wallet (a
+  // group, a community): initials on a tint, as before.
+  if (isWalletAddress(address)) return <UserAvatar address={address} photo={photo} size={size} />;
   return (
     <span
       className="rounded-full flex items-center justify-center shrink-0 overflow-hidden font-semibold select-none"

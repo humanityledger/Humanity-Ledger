@@ -17,7 +17,12 @@ import { createPortal } from 'react-dom';
 import { stickerRef } from '@/lib/chat/stickers';
 
 export const STICKER_SCENE_EVENT = 'ledger:sticker-scene';
-const PREF_KEY = 'ledger_sticker_effects';
+/**
+ * Sticker effects are OFF for everyone by default (27 Nov 2026). The choice lives under a new key,
+ * so every account starts from off once, whatever the old `ledger_sticker_effects` said; turning
+ * them on in Settings → Chats is remembered from then on.
+ */
+const PREF_KEY = 'ledger_sticker_effects_v2';
 const PLAYED_KEY = 'ledger_sticker_scenes_played';
 
 interface SceneDetail {
@@ -29,9 +34,9 @@ interface SceneDetail {
 /** Whether moments play by themselves on this device (default on). */
 export function stickerEffectsEnabled(): boolean {
   try {
-    return localStorage.getItem(PREF_KEY) !== 'off';
+    return localStorage.getItem(PREF_KEY) === 'on';
   } catch {
-    return true;
+    return false;
   }
 }
 

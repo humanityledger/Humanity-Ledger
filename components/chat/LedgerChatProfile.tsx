@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, BellOff, Trash2, Ban, EyeOff, FileText, Image as ImageIcon, Link2, Copy, CheckCircle2, AlertTriangle, UserCircle2 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 
 interface LedgerChatProfileProps {
   peerAddress: string;
@@ -24,8 +25,6 @@ export function LedgerChatProfile({
   const [copied, setCopied] = useState(false);
 
   const displayName = getDisplayName(peerAddress);
-  const initials = peerAddress.slice(2, 4).toUpperCase();
-  const hue = parseInt(peerAddress.slice(2, 8), 16) % 360;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(peerAddress);
@@ -52,12 +51,7 @@ export function LedgerChatProfile({
       <div className="flex-1 overflow-y-auto">
         {/* Avatar Section */}
         <div className="flex flex-col items-center py-8 border-b border-black/5">
-          <div 
-            className="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-semibold text-white shadow-lg mb-4"
-            style={{ background: `hsl(${hue},70%,45%)` }}
-          >
-            {initials}
-          </div>
+          <div className="mb-4"><UserAvatar address={peerAddress} size={112} /></div>
           <h1 className="text-[24px] font-semibold tracking-tight text-black">{displayName}</h1>
           
           <button 

@@ -16,6 +16,7 @@ import {
 import s from './CallScreens.module.css';
 import { formatCallDuration } from '@/lib/calls/format';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
 export { formatCallDuration };
 
@@ -56,6 +57,14 @@ export function CallAvatar({
   photo?: string | null;
   scale?: number;
 }) {
+  if (isWalletAddress(address)) {
+    // The same avatar as everywhere else (photo, else the 10 × 10 mosaic), at the call's size.
+    return (
+      <div className={s.avatar} style={{ background: 'transparent', transform: `scale(${scale})`, borderRadius: photo ? undefined : 32 }} aria-hidden="true">
+        <UserAvatar address={address} photo={photo} size={128} />
+      </div>
+    );
+  }
   return (
     <div className={s.avatar} style={{ ...peerTint(address), transform: `scale(${scale})` }} aria-hidden="true">
       {photo ? <img src={photo} alt="" /> : initialsFor(name, address)}
