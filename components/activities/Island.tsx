@@ -43,7 +43,10 @@ import { useT } from '@/lib/i18n/client';
 
 export const CALL_SURFACE_ID = 'live-call-surface';
 
-const hasTimer = (a: AnyActivity | null) => !!a && ((a.kind === 'call' && !!a.state.connectedAt) || a.kind === 'recording');
+const hasTimer = (a: AnyActivity | null) => !!a && (
+  (a.kind === 'call' && !!a.state.connectedAt) || a.kind === 'recording'
+  // A private payment in flight: its ring advances every second (lib/activities/proof-timing.ts).
+  || (a.kind === 'paymentProof' && a.state.step !== 'settled' && a.state.step !== 'failed'));
 
 /** How far (px) or how fast (px/s) a vertical swipe must go to count. */
 const SWIPE_DISTANCE = 22;
@@ -51,7 +54,7 @@ const SWIPE_VELOCITY = 380;
 
 const AURA: Record<Tone, string> = { live: s.auraLive, warn: s.auraWarn, danger: s.auraDanger, violet: s.auraViolet, neutral: s.auraNeutral };
 
-export function Island({ quiet = false }: { quiet?: boolean }) {
+export function Island({ quiet = false, callOnly = false }: { quiet?: boolean; callOnly?: boolean }) {
   const t = useT();
   const activities = useActivities((st) => st.activities);
   const presentation = useActivities((st) => st.presentation);
@@ -70,11 +73,11 @@ export function Island({ quiet = false }: { quiet?: boolean }) {
   const [collapsedAuto, setCollapsedAuto] = useState<Set<string>>(() => new Set());
   const [stackOpen, setStackOpen] = useState(false);
 
-  const layout = useMemo(() => islandLayout(activities, presentation, { quiet }), [activities, presentation, quiet]);
+  const layout = useMemo(() => islandLayout(activities, presentation, { quiet, callOnly }), [activities, presentation, quiet, callOnly]);
   const pinnedActivity = pinned ? layout.all.find((a) => a.id === pinned) ?? null : null;
   const primary = pinnedActivity ?? layout.primary;
   const secondary = pinnedActivity ? (layout.primary?.id === pinned ? layout.secondary : layout.primary) : layout.secondary;
-  const now = useNow(hasTimer(primary));
+  const now = useNow(hasTimer(primary) || hasTimer(secondary));
 
   useEffect(() => { if (pinned && !pinnedActivity) setPinned(null); }, [pinned, pinnedActivity]);
   useEffect(() => { if (stackOpen && layout.all.length < 2) setStackOpen(false); }, [stackOpen, layout.all.length]);

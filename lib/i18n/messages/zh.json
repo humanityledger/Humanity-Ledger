@@ -4588,5 +4588,7 @@
  "Use the moving square instead": "改用移动方格",
  "Prove you are a real person without revealing who you are. Each app sees a different anonymous tag, so nobody can follow you across services. With Level 2, a blocked person cannot simply come back with a new account.": "在不透露身份的情况下证明你是真人。每个应用看到的匿名标签都不同，因此没人能跨服务追踪你。有了第 2 级，被屏蔽的人就无法简单地换个新账户回来。",
  "Built on vouches from people already in Ledger Chat and an in-browser cryptographic proof that you have had an account for years. No passport, no ID card, no documents.": "基于 Ledger Chat 现有成员的担保，以及在你的浏览器中完成的、证明你多年来一直拥有某个账户的密码学证明。无需护照、身份证或任何证件。",
- "Strong protection against bots and mass sign-ups, not a government-grade guarantee. It stays off until its circuit is published and reviewed. Nothing here is simulated.": "能有力防范机器人和批量注册，但不是政府级别的保证。在其电路公开并经过审查之前会一直保持关闭。这里不会模拟任何内容。"
+ "Strong protection against bots and mass sign-ups, not a government-grade guarantee. It stays off until its circuit is published and reviewed. Nothing here is simulated.": "能有力防范机器人和批量注册，但不是政府级别的保证。在其电路公开并经过审查之前会一直保持关闭。这里不会模拟任何内容。",
+ "Tap the button to begin. Then tap it each time the board lights up and you hear a tone.": "点按按钮开始。之后每当方格板亮起并听到提示音时点按一下。",
+ "Accessible check without moving": "无需移动的无障碍验证"
 }

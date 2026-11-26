@@ -16,6 +16,8 @@
  *     count ("+2") that opens the stack, where every one of them is listed. Nothing is dropped.
  *  5. On quiet routes (landing, sign-in, docs) only a call and notices show: the app's own toasts
  *     must still reach the user there, and nothing else should.
+ *  6. The island belongs to Ledger Chat (/chat, /studio). Anywhere else it is not drawn, except a
+ *     live call (callOnly), which must stay reachable when the chat is kept alive off /chat.
  */
 import type { AnyActivity, CallPresentation } from './types';
 
@@ -82,11 +84,14 @@ export interface IslandLayout {
 export interface LayoutOptions {
   /** A quiet route: only a call and notices (rule 5). */
   quiet?: boolean;
+  /** Outside Ledger Chat: only a live call, so it can be reached or ended (rule 6). */
+  callOnly?: boolean;
 }
 
 export function islandLayout(activities: readonly AnyActivity[], presentation: CallPresentation, options: LayoutOptions = {}): IslandLayout {
   const ranked = activities
     .filter((a) => !options.quiet || QUIET_KINDS.has(a.kind))
+    .filter((a) => !options.callOnly || a.kind === 'call')
     .map((a) => ({ a, r: rank(a, presentation) }))
     .filter((x): x is { a: AnyActivity; r: number } => x.r !== null)
     .sort((x, y) => y.r - x.r || y.a.startedAt - x.a.startedAt);

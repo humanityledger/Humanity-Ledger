@@ -21,6 +21,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, LayoutGroup } from 'framer-motion';
+import { Toaster } from 'sonner';
 import { useActivities } from '@/lib/activities/store';
 import { windowCall } from '@/lib/activities/priority';
 import { useCallMedia } from '@/lib/activities/call-media';
@@ -33,6 +34,13 @@ import s from './activities.module.css';
 
 /** Routes where the island shows only a call and the app's notices (landing, sign-in, docs). */
 const QUIET_ROUTES = [/^\/$/, /^\/connect/, /^\/docs/, /^\/privacy/, /^\/terms/, /^\/legal/];
+
+/**
+ * The island belongs to Ledger Chat. Anywhere else (docs, dashboard, landing, sign-in) it is not
+ * drawn, except for a live call kept alive off /chat; the app's toasts there use the plain toaster.
+ */
+export const LEDGER_CHAT_ROUTES = [/^\/chat(\/|$)/, /^\/studio(\/|$)/];
+export const isLedgerChatRoute = (pathname: string) => LEDGER_CHAT_ROUTES.some((r) => r.test(pathname));
 
 /**
  * Light by default (the brand is white mode). Dark when the document says so, by either of the two
@@ -76,6 +84,15 @@ export function LiveActivityLayer() {
 
   const call = activities.find((a) => a.kind === 'call');
   const quiet = QUIET_ROUTES.some((r) => r.test(pathname));
+  const inChat = isLedgerChatRoute(pathname);
+  const liveCall = !!call && call.kind === 'call' && call.state.phase !== 'ended';
+
+  // Leaving Ledger Chat: notices mirrored from toasts go with it (the plain toaster takes over).
+  useEffect(() => {
+    if (inChat) return;
+    const st = useActivities.getState();
+    for (const a of st.activities) if (a.kind === 'notice') st.dismiss(a.id);
+  }, [inChat]);
 
   // Announce each activity when it starts and whenever its phase or step changes.
   const spoken = useRef(new Map<string, string>());
@@ -106,10 +123,10 @@ export function LiveActivityLayer() {
   return createPortal(
     <div className={s.layer} data-theme={theme} data-live-activities="">
       <LayoutGroup id="live-activities">
-        <Island quiet={quiet} />
+        {(inChat || liveCall) && <Island quiet={quiet} callOnly={!inChat} />}
         <AnimatePresence>{inWindow && <CallWindow key="call-window" announce={say} />}</AnimatePresence>
       </LayoutGroup>
-      <ToastBridge />
+      {inChat ? <ToastBridge /> : <Toaster position="top-center" closeButton theme={theme} />}
       <div className={s.srOnly} aria-live="polite" aria-atomic="true">{polite}</div>
       <div className={s.srOnly} aria-live="assertive" aria-atomic="true">{assertive}</div>
     </div>,

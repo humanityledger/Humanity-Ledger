@@ -36,7 +36,10 @@ const prefersReducedMotion = () => typeof window !== 'undefined' && window.match
 
 export function HumanGateCard({ onPassed }: { onPassed: () => void }) {
   const t = useT();
-  const [mode, setMode] = useState<HumanGateMode>(() => (prefersReducedMotion() ? 'accessible-rhythm' : 'orbit'));
+  // The touch/pointer board first, everywhere. Phones often report reduced motion (battery saver),
+  // which used to open the keyboard check by default; it stays one tap away below the board.
+  const [mode, setMode] = useState<HumanGateMode>('orbit');
+  const [touch] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches);
   const [phase, setPhase] = useState<Phase>('loading');
   const [progress, setProgress] = useState(0);
   const [hits, setHits] = useState(0);
@@ -236,7 +239,9 @@ export function HumanGateCard({ onPassed }: { onPassed: () => void }) {
     phase === 'passed' ? t('Human presence verified') :
     phase === 'failed' ? t('We could not confirm it. Try a new pulse.') :
     mode === 'orbit' ? t('Keep your pointer or finger on the lit square') :
-    phase === 'ready' ? t('Press Space or the button to begin. Then press it each time the board lights up and you hear a tone.') :
+    phase === 'ready' ? (touch
+      ? t('Tap the button to begin. Then tap it each time the board lights up and you hear a tone.')
+      : t('Press Space or the button to begin. Then press it each time the board lights up and you hear a tone.')) :
     lit ? t('Now') : t('Pulse {n} of 4', { n: Math.min(4, hits + 1) });
 
   return (
@@ -282,7 +287,7 @@ export function HumanGateCard({ onPassed }: { onPassed: () => void }) {
       {phase !== 'passed' && phase !== 'checking' && (
         <button type="button" className={s.switch} onClick={() => setMode(m => (m === 'orbit' ? 'accessible-rhythm' : 'orbit'))}>
           {mode === 'orbit'
-            ? <><Keyboard size={15} strokeWidth={1.9} aria-hidden="true" /> {t('Accessible keyboard check')}</>
+            ? <><Keyboard size={15} strokeWidth={1.9} aria-hidden="true" /> {touch ? t('Accessible check without moving') : t('Accessible keyboard check')}</>
             : <><MousePointer2 size={15} strokeWidth={1.9} aria-hidden="true" /> {t('Use the moving square instead')}</>}
         </button>
       )}

@@ -257,6 +257,7 @@
 }
 .ring svg { position: absolute; inset: 0; }
 .ringArc { transition: stroke-dasharray 420ms cubic-bezier(0.2, 0.9, 0.3, 1); }
+.ringArcLive { transition: stroke-dasharray 1000ms linear; }
 .ringCore { position: relative; display: grid; place-items: center; }
 .ringPct { font-size: 8.5px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .inlineIcon { vertical-align: -1px; margin-right: 4px; }
@@ -480,7 +481,7 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .spin, .breathe, .wavePulse .waveBar, .dotRinging::after, .avatarRinging { animation: none; }
-  .ringArc, .waveBar, .island { transition: none; }
+  .ringArc, .ringArcLive, .waveBar, .island { transition: none; }
 }
 
 /* ── Call window ────────────────────────────────────── */

@@ -5,6 +5,7 @@
  * accepts free text: names go through toDisplayName and amounts through toAmount.
  */
 import { useEffect, useRef } from 'react';
+import { recordStepDuration } from '@/lib/activities/proof-timing';
 import { useActivities } from './store';
 import { setAction, setOpenAction } from './actions';
 import { toAmount, toDisplayName } from './values';
@@ -98,6 +99,14 @@ export const PROOF_STALE_MS = 15 * 60_000;
  */
 export function usePaymentProofActivity(p: { key: string | null; step: ProofStep; toName: string; amount: string; symbol: string }) {
   const { key, step, toName, amount, symbol } = p;
+  // When each step started, to learn this device's real durations for the live ring.
+  const stepClock = useRef<{ key: string | null; step: ProofStep; at: number } | null>(null);
+  useEffect(() => {
+    if (!key) { stepClock.current = null; return; }
+    const prev = stepClock.current;
+    if (prev && prev.key === key && prev.step !== step) recordStepDuration(prev.step, Date.now() - prev.at);
+    if (!prev || prev.key !== key || prev.step !== step) stepClock.current = { key, step, at: Date.now() };
+  }, [key, step]);
   useEffect(() => {
     if (!key) return;
     const value = toAmount(amount, symbol);
