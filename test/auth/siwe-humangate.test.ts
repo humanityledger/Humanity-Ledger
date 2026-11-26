@@ -52,6 +52,14 @@ describe('SIWE + G8 HumanGate', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://ledgerchat.org';
     delete process.env.NEXT_PUBLIC_DOMAIN;
     delete process.env.HUMAN_GATE_REQUIRED;
+    process.env.NEXT_PUBLIC_HUMAN_GATE = '1';
+  });
+
+  it('HUMAN_GATE_REQUIRED=1 on a build without the check never locks sign-in out', async () => {
+    delete process.env.NEXT_PUBLIC_HUMAN_GATE;
+    process.env.HUMAN_GATE_REQUIRED = '1';
+    const res = await signIn((message, signature) => ({ message, signature }));
+    expect(res.status).toBe(200);
   });
 
   it('gate off: signs in without a receipt (existing behaviour)', async () => {

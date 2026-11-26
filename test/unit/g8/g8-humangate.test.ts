@@ -170,17 +170,23 @@ describe('HumanGate server', () => {
   it('is required only when the server or the new client flow asks for it; client flag off by default', () => {
     const saved = process.env.HUMAN_GATE_REQUIRED;
     delete process.env.HUMAN_GATE_REQUIRED;
-    expect(humanGateRequiredFor({ message: 'x' })).toBe(false);
-    expect(humanGateRequiredFor({ humanGateRequired: true })).toBe(true);
-    expect(humanGateRequiredFor({ humanGateRequired: 'true' })).toBe(false);
+    expect(humanGateRequiredFor({ message: 'x' }, true)).toBe(false);
+    expect(humanGateRequiredFor({ humanGateRequired: true }, true)).toBe(true);
+    expect(humanGateRequiredFor({ humanGateRequired: 'true' }, true)).toBe(false);
     process.env.HUMAN_GATE_REQUIRED = '1';
-    expect(humanGateRequiredFor({})).toBe(true);
+    expect(humanGateRequiredFor({}, true)).toBe(true);
+    // Regression 26 Nov 2026: the server switch on a build whose page cannot show the check
+    // must not lock every sign-in out.
+    expect(humanGateRequiredFor({}, false)).toBe(false);
+    expect(humanGateRequiredFor({ humanGateRequired: true }, false)).toBe(false);
     if (saved === undefined) delete process.env.HUMAN_GATE_REQUIRED; else process.env.HUMAN_GATE_REQUIRED = saved;
     expect(humanGateEnabled(undefined)).toBe(false);
     expect(humanGateEnabled('1')).toBe(true);
   });
 
   it('wiring: routes rate-limit by getClientIP; siwe/verify consumes the receipt before minting', () => {
+    const docker = read('Dockerfile');
+    for (const v of ['NEXT_PUBLIC_HUMAN_GATE', 'NEXT_PUBLIC_PASSKEY_ACCOUNTS', 'NEXT_PUBLIC_L2_RAILS']) expect(docker).toMatch(new RegExp(`^ARG ${v}$`, 'm'));
     for (const f of ['app/api/g8/humangate/challenge/route.ts', 'app/api/g8/humangate/verify/route.ts']) {
       const src = read(f);
       expect(src).toMatch(/checkRateLimit\(getClientIP\(req\)/);

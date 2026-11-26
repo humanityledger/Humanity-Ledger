@@ -170,6 +170,11 @@ ARG NEXT_PUBLIC_XMTP_ENV
 ARG NEXT_PUBLIC_XMTP_BACKEND_URL
 ARG NEXT_PUBLIC_XMTP_SELF_HOSTED
 ARG NEXT_PUBLIC_ZK_MODE
+# G8 feature flags (default off). NEXT_PUBLIC_HUMAN_GATE must be built in for the server's
+# HUMAN_GATE_REQUIRED to take effect: without it the page cannot show the check (lib/g8/humanGate.ts).
+ARG NEXT_PUBLIC_HUMAN_GATE
+ARG NEXT_PUBLIC_PASSKEY_ACCOUNTS
+ARG NEXT_PUBLIC_L2_RAILS
 # strict: a token or cap that does not match deployments/aztec-mainnet.json fails the build, so the
 # previous deployment keeps running. Every recorded token has been confirmed by the mainnet preflight.
 # Set AZTEC_ALPHA_CONFIG_CHECK=warn on the service only to diagnose, never as the normal state.
