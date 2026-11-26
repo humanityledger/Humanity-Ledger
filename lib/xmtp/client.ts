@@ -34,6 +34,7 @@ import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
 import { resolveDbKey, browserKeyStore, checkName, wrappedKeyName, legacyKeyName, XmtpDbKeyError } from './db-key';
 import { loadDeviceDbKey, saveDeviceDbKey, randomDbKey } from './device-key-vault';
 import { isSyncWaitError, redactXmtpError } from './syncErrors';
+import { dmHealth, forgetDmHealth, clearDmHealth, singleFlight, isEphemeralSignal } from './dm-health';
 
 //  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
@@ -320,22 +321,51 @@ function buildXmtpSigner(
  * If a client already exists in the registry (IndexedDB-backed),
  * it is returned immediately without re-prompting the user to sign.
  */
-export async function getXMTPClient(
-  wagmiSigner: {
-    getAddress: () => Promise<string>;
-    signMessage: (message: string | Uint8Array) => Promise<string>;
-    /** The chain the wallet is on: where a smart contract wallet is looked for first. */
-    getChainId?: () => Promise<number | undefined> | number | undefined;
-  },
-  hooks?: {
-    /** About to ask for the signature that unlocks the local message database. */
-    onDbKeyRequest?: () => void;
-    /** A plaintext key from an earlier version was encrypted and removed. */
-    onLegacyKeyMigrated?: () => void;
-  },
-): Promise<Client> {
-  const address = (await wagmiSigner.getAddress()).toLowerCase();
+type XmtpWalletSigner = {
+  getAddress: () => Promise<string>;
+  signMessage: (message: string | Uint8Array) => Promise<string>;
+  /** The chain the wallet is on: where a smart contract wallet is looked for first. */
+  getChainId?: () => Promise<number | undefined> | number | undefined;
+};
+type XmtpClientHooks = {
+  /** About to ask for the signature that unlocks the local message database. */
+  onDbKeyRequest?: () => void;
+  /** A plaintext key from an earlier version was encrypted and removed. */
+  onLegacyKeyMigrated?: () => void;
+};
 
+/**
+ * One XMTP client per account per tab (26 November 2026). Each Client.create starts its own
+ * worker on the same database file (`xmtp-<env>-<inbox>.db3`), and the XMTP browser SDK must not
+ * be used by two clients on one database at once. Two things made a second one:
+ *  - concurrent calls (the chat's start-up retry, the dashboard) each ran Client.create;
+ *  - the 20 s start-up watchdog rejected the caller while Client.create kept running in its
+ *    worker, and the retry started another. The first finished later, unregistered, still running.
+ * Now concurrent calls share one start-up, and a retry after the watchdog waits for the creation
+ * already running instead of starting another. A creation that finishes after its caller gave up
+ * is registered and reused.
+ */
+const clientInFlight = new Map<string, Promise<Client>>();
+const pendingCreates = new Map<string, Promise<Client>>();
+const clientGeneration = new Map<string, number>();
+
+export async function getXMTPClient(wagmiSigner: XmtpWalletSigner, hooks?: XmtpClientHooks): Promise<Client> {
+  const address = (await wagmiSigner.getAddress()).toLowerCase();
+  const ready = clientRegistry.get(address);
+  if (ready) return ready;
+  const running = clientInFlight.get(address);
+  if (running) {
+    diag('client_join_inflight', {});
+    return running;
+  }
+  const p = createXMTPClient(address, wagmiSigner, hooks);
+  clientInFlight.set(address, p);
+  const clear = () => { if (clientInFlight.get(address) === p) clientInFlight.delete(address); };
+  p.then(clear, clear);
+  return p;
+}
+
+async function createXMTPClient(address: string, wagmiSigner: XmtpWalletSigner, hooks?: XmtpClientHooks): Promise<Client> {
   if (clientRegistry.has(address)) {
     return clientRegistry.get(address)!;
   }
@@ -435,8 +465,14 @@ export async function getXMTPClient(
       }, 500);
     });
     createTimeout.catch(() => {});
-    return await Promise.race([
-      Client.create(signer as any, {
+    // A creation still running from an earlier attempt (its caller hit the watchdog) is waited
+    // for, never doubled: its worker already holds this account's database.
+    let creation = pendingCreates.get(address);
+    if (creation) {
+      diag('client_create_resumed', {});
+    } else {
+      const gen = clientGeneration.get(address) ?? 0;
+      const started: Promise<Client> = Client.create(signer as any, {
         env: XMTP_ENV,
         codecs: [],
         dbEncryptionKey,
@@ -444,9 +480,24 @@ export async function getXMTPClient(
         // The SDK logs every MLS step at "info": thousands of console lines per
         // session, each one work for the main thread. Warnings and errors only.
         loggingLevel: 'warn',
-      }),
-      createTimeout,
-    ]).finally(() => clearInterval(watchdog)) as Client;
+      });
+      creation = started;
+      pendingCreates.set(address, started);
+      started.then(
+        (c) => {
+          if (pendingCreates.get(address) === started) pendingCreates.delete(address);
+          if ((clientGeneration.get(address) ?? 0) !== gen) {
+            // Signed out while it was starting: this client must not keep the database open.
+            try { (c as any)?.close?.(); } catch { /* already closed */ }
+            return;
+          }
+          // Finished after its caller gave up: registered, so the next call reuses it.
+          if (!clientRegistry.has(address)) clientRegistry.set(address, c);
+        },
+        () => { if (pendingCreates.get(address) === started) pendingCreates.delete(address); },
+      );
+    }
+    return await Promise.race([creation, createTimeout]).finally(() => clearInterval(watchdog)) as Client;
   };
   try {
     try {
@@ -541,7 +592,14 @@ export async function revokeXMTPInstallations(
 
 /** Remove a client from the registry (call on wallet disconnect) */
 export function destroyXMTPClient(address: string): void {
-  clientRegistry.delete(address.toLowerCase());
+  const lower = address.toLowerCase();
+  // A start-up still running is not adopted after sign-out (see createOnce).
+  clientGeneration.set(lower, (clientGeneration.get(lower) ?? 0) + 1);
+  pendingCreates.delete(lower);
+  clientInFlight.delete(lower);
+  dmOpenInFlight.clear();
+  clearDmHealth();
+  clientRegistry.delete(lower);
   const key = dbKeyCache.get(address.toLowerCase());
   if (key) key.fill(0);
   dbKeyCache.delete(address.toLowerCase());
@@ -565,6 +623,17 @@ export async function canReceiveMessages(
   _client: Client,
   address: string,
 ): Promise<boolean> {
+  return (await peerRegistration(address)) === 'yes';
+}
+
+/**
+ * Whether the network says this address has an XMTP inbox: 'yes', 'no', or 'unknown' when the
+ * lookup itself failed. sendMessage gives up on a message only on 'no' (26 Nov 2026): a lookup
+ * that failed (a rate limit, a dropped connection) after a slow first attempt used to end the send
+ * with "this address has not turned on Ledger Chat", without retrying, for a person who had.
+ */
+export async function peerRegistration(address: string): Promise<'yes' | 'no' | 'unknown'> {
+  const yesNo = (v: boolean): 'yes' | 'no' => (v ? 'yes' : 'no');
   try {
     const identifier: XmtpIdentifier = {
       identifier: address,
@@ -577,20 +646,20 @@ export async function canReceiveMessages(
       // Try all casing variants
       const lower = address.toLowerCase();
       for (const [key, val] of result.entries()) {
-        if (key.toLowerCase() === lower) return !!val;
+        if (key.toLowerCase() === lower) return yesNo(!!val);
       }
-      return false;
+      return 'no';
     }
 
     if (result && typeof result === 'object') {
       const lower = address.toLowerCase();
       for (const key of Object.keys(result as object)) {
-        if (key.toLowerCase() === lower) return !!(result as any)[key];
+        if (key.toLowerCase() === lower) return yesNo(!!(result as any)[key]);
       }
-      return false;
+      return 'no';
     }
 
-    return false;
+    return 'unknown';
   } catch (err) {
     console.warn('[XMTP] canReceiveMessages error:', err);
     // [FIX — 24 Nov 2026] The old code returned `true` on any error, which meant
@@ -598,12 +667,11 @@ export async function canReceiveMessages(
     // but vanished into a ghost DM. The sender saw "sent" with ticks, the
     // recipient saw nothing. This was the #1 cause of "messages not arriving".
     //
-    // New behaviour: return false on error. The caller (sendMessage) will then
-    // throw, and the UI shows "Not sent" with a retry action. A transient
-    // network error is retried by sendMessage's own retry loop; a permanent
-    // "not registered" is surfaced honestly.
+    // A failed lookup is 'unknown', never 'yes' (that was the ghost DM above) and never 'no':
+    // canReceiveMessages() still answers false, while sendMessage keeps retrying the message
+    // instead of declaring the person unregistered on a network error.
     reportDelivery('client_failed', err);
-    return false;
+    return 'unknown';
   }
 }
 
@@ -653,6 +721,44 @@ const registeredAddressCache = new Map<string, string>();
 // Cache for active DM conversation objects by inboxId:peerAddress to avoid re-creating MLS sessions per message
 // Live DM handles (SDK proxies): bounded so long sessions do not pin every chat ever opened.
 const activeDmCache = new BoundedLRU<string, any>({ max: 24, name: 'xmtp.activeDm' });
+/** The open (find or create) of a conversation's DM still running, per conversation. */
+const dmOpenInFlight = new Map<string, Promise<any>>();
+
+/**
+ * The DM to write into, checked first: the other person must be one of its members
+ * (lib/xmtp/dm-health.ts). When they are not, the DM is synced (that publishes the commit adding
+ * them, still pending) and the conversations are synced (that takes a welcome to a DM they created
+ * meanwhile), then the DM is looked up again. Signals are dropped for a DM still without them
+ * (null); a message a person wrote is written anyway, and publishes once the add has landed.
+ */
+async function ensureSendableDm(
+  client: Client,
+  cacheKey: string,
+  dm: any,
+  selfInbox: string,
+  identifier: XmtpIdentifier | null,
+  ephemeral: boolean,
+): Promise<any | null> {
+  if ((await dmHealth(dm, selfInbox)) !== 'peer_missing') return dm;
+  diag('dm_peer_not_member', { conv: short(dm?.id) });
+  reportDelivery('dm_peer_missing', 'the other person is not a member of this DM yet');
+  if (ephemeral) return null;
+  await runSerial(cacheKey, () => withTimeout(dm.sync(), 5000, 'sync timeout')).catch(() => {});
+  try { await withTimeout(client.conversations.sync(), 5000, 'sync timeout'); } catch { /* the local list may already have it */ }
+  forgetDmHealth(selfInbox, dm?.id);
+  let next = dm;
+  if (identifier) {
+    try {
+      const inboxId = await client.findInboxIdByIdentifier(identifier);
+      const found = inboxId ? await client.conversations.getDmByInboxId(inboxId) : null;
+      if (found) next = found;
+    } catch { /* keep the DM we have */ }
+  }
+  const after = await dmHealth(next, selfInbox);
+  diag('dm_heal', { conv: short(next?.id), health: after, switched: next?.id !== dm?.id });
+  if (after === 'ok') reportDelivery('dm_healed', '');
+  return next;
+}
 
 /**
  * Resolves the EXACT casing of the peer's Ethereum address that is registered on XMTP.
@@ -736,11 +842,23 @@ export async function sendMessage(
     identifier: finalTo,
     identifierKind: 'Ethereum',
   };
-  const openDm = (): Promise<any> => route.kind === 'address'
-    ? client.conversations.newDmWithIdentifier(identifier)
-    : route.open();
-
   const cacheKey = `${client.inboxId || ''}:${finalTo.toLowerCase()}`;
+  // One open (find or create) per conversation at a time. An attempt that stopped waiting after
+  // 8 s and tries again joins the open still running instead of starting a second
+  // newDmWithIdentifier while the first is adding the other person (lib/xmtp/dm-health.ts).
+  const openDm = (): Promise<any> => singleFlight(dmOpenInFlight, cacheKey, () => (route.kind === 'address'
+    ? client.conversations.newDmWithIdentifier(identifier)
+    : route.open()));
+  const selfInbox = String((client as any).inboxId || '');
+  const ephemeral = isEphemeralSignal(content);
+
+  // Typing, read and delivery receipts are sent only when they can arrive now. Queued behind
+  // messages the network has not confirmed they only add intents to the same stuck queue.
+  if (ephemeral && (publishRetries.has(cacheKey) || undelivered.has(cacheKey))) {
+    diag('signal_skipped', { reason: 'publish pending' });
+    return undefined;
+  }
+
   let lastError: any = null;
 
   // ── Exactly-once send ─────────────────────────────────────────────────────
@@ -764,6 +882,13 @@ export async function sendMessage(
         { const fresh = dm; runSerial(cacheKey, () => withTimeout(fresh.sync(), 3000, 'sync timeout')).catch(() => {}); }
       }
       if (!sentId) {
+        const usable = await ensureSendableDm(client, cacheKey, dm, selfInbox, route.kind === 'address' ? identifier : null, ephemeral);
+        if (!usable) {
+          // A receipt or typing signal for a DM the other person cannot read: not sent, never queued.
+          diag('signal_skipped', { reason: 'peer not a member' });
+          return undefined;
+        }
+        dm = usable;
         sentId = await withTimeout<string>(dm.sendOptimistic(content), 5000, 'prepare timeout');
       }
       activeDmCache.set(cacheKey, dm);
@@ -795,7 +920,7 @@ export async function sendMessage(
       }
       // The other person has no XMTP inbox (never signed in to Ledger Chat or another XMTP app):
       // no retry can open the chat. Say so instead of four attempts and a generic failure.
-      if (route.kind === 'address' && i === 0 && !(await canReceiveMessages(client, finalTo))) {
+      if (route.kind === 'address' && i === 0 && (await peerRegistration(finalTo)) === 'no') {
         diag('send_peer_not_registered', {});
         reportDelivery('peer_not_registered', sendErr);
         throw new PeerNotOnXmtpError(finalTo);
@@ -811,7 +936,13 @@ export async function sendMessage(
     // The message exists locally but the network did not confirm it. Keep
     // publishing in the background; it will not be duplicated, and the chat
     // already shows it with its real id.
-    schedulePublishRetry(cacheKey, dm);
+    if (isSyncWaitError(lastError)) {
+      // The handle may point at a DM that changed since (a welcome from the other person, a
+      // duplicate stitched in): the next send looks it up again instead of reusing this one.
+      activeDmCache.delete(cacheKey);
+      forgetDmHealth(selfInbox, dm?.id);
+    }
+    schedulePublishRetry(cacheKey, dm, 0, client);
     diag('send_pending', { conv: short(dm?.id) });
     if (!isSignal(content)) reportDelivery('publish_pending', lastError);
     return sentId;
@@ -962,7 +1093,9 @@ export function publishSerial(cacheKey: string, dm: any): Promise<void> {
   return runSerial(cacheKey, () => dm.publishMessages());
 }
 
-const publishRetries = new Map<string, { dm: any; attempt: number; timer: ReturnType<typeof setTimeout> | null }>();
+const publishRetries = new Map<string, { dm: any; attempt: number; timer: ReturnType<typeof setTimeout> | null; client?: Client }>();
+/** The client of each conversation being retried, kept across retries and "Retry" from the notice. */
+const retryClients = new Map<string, Client>();
 const MAX_PUBLISH_RETRIES = 60; // about 25 minutes at the 30 s cap, plus every online/visible flush
 /** Conversations whose messages the network has not confirmed after every retry. Never dropped silently. */
 const undelivered = new Map<string, any>();
@@ -997,7 +1130,8 @@ export async function retryUndelivered(): Promise<number> {
 }
 
 /** Keep publishing a conversation's unpublished messages until the network confirms them. */
-function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
+function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0, client?: Client) {
+  if (client) retryClients.set(cacheKey, client);
   const existing = publishRetries.get(cacheKey);
   if (attempt === 0 && existing) { existing.dm = dm; return; } // already retrying
   if (attempt >= MAX_PUBLISH_RETRIES) {
@@ -1019,22 +1153,55 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0) {
     diag('dm_cache_evict', { key: short(cacheKey), attempt });
   }
   if (attempt === 4) reportDelivery('publish_retrying', `attempt ${attempt}`);
-  const entry = { dm, attempt, timer: null as ReturnType<typeof setTimeout> | null };
+  const entry = { dm, attempt, timer: null as ReturnType<typeof setTimeout> | null, client: retryClients.get(cacheKey) };
   publishRetries.set(cacheKey, entry);
   entry.timer = setTimeout(() => {
     publishSerial(cacheKey, entry.dm)
-      .then(() => { publishRetries.delete(cacheKey); undelivered.delete(cacheKey); })
+      .then(() => {
+        publishRetries.delete(cacheKey); undelivered.delete(cacheKey); retryClients.delete(cacheKey);
+        if (attempt > 0) diag('publish_recovered', { conv: short(entry.dm?.id), attempt });
+      })
       .catch(async (err: unknown) => {
         // "Sync failed to wait for intent": the publish intent is waiting for the group's state.
         // A sync processes the pending commits that intent waits on; then the next publish can
         // finish instead of waiting on the same intent again (production log, 20/11/2026).
         if (isSyncWaitError(err)) {
           await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
-          if (attempt === 2) void reportPublishState(entry.dm);
+          // The welcomes too: a DM the other person created with us is processed, and stitched in.
+          if (entry.client) {
+            try { await withTimeout(entry.client.conversations.sync(), 5000, 'sync timeout'); } catch { /* next retry */ }
+          }
+          if (attempt === 2) void explainStuckPublish(entry.dm, entry.client);
         }
         schedulePublishRetry(cacheKey, entry.dm, attempt + 1);
       });
   }, Math.min(1000 * 2 ** attempt, 30_000));
+}
+
+/**
+ * Why a conversation keeps failing to publish, reported once per stuck conversation: its MLS
+ * state (reportPublishState), whether a newer XMTP version paused it for this one
+ * (pausedForVersion(): libxmtp then skips every sync of the group until this app updates), and
+ * whether the other person is a member of it at all (dm-health.ts).
+ */
+async function explainStuckPublish(dm: any, client?: Client): Promise<void> {
+  void reportPublishState(dm);
+  try {
+    const paused = typeof dm?.pausedForVersion === 'function' ? await withTimeout<any>(dm.pausedForVersion(), 5000, 'paused timeout') : null;
+    if (typeof paused === 'string' && paused) {
+      diag('publish_paused', { version: paused.slice(0, 24) });
+      reportDelivery('publish_paused', `needs libxmtp ${paused.slice(0, 24)}`);
+    }
+  } catch { /* not available in this SDK build */ }
+  if (client) {
+    const self = String((client as any).inboxId || '');
+    forgetDmHealth(self, dm?.id);
+    const health = await dmHealth(dm, self);
+    if (health === 'peer_missing') {
+      diag('dm_peer_not_member', { conv: short(dm?.id), stuck: true });
+      reportDelivery('dm_peer_missing', 'stuck publish: the other person is not a member of this DM');
+    }
+  }
 }
 
 /**
@@ -1226,13 +1393,16 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       console.warn('[XMTP] listDms failed, falling back to newDmWithIdentifier', listErr);
     }
 
-    // Fallback: create/get DM via identifier if not found in list
+    // Reading never creates a conversation (26 November 2026). This used to call
+    // newDmWithIdentifier here, on every poll of the open chat (every 10 s, on the receiving side
+    // too): each call that found nothing locally created a DM of our own with the other person,
+    // racing the DM the send path was creating and the welcome of theirs, and a creation cut off
+    // half way stayed at epoch 0 without them (lib/xmtp/dm-health.ts). Nothing here yet means no
+    // message yet; sending is what opens the DM.
     if (!dm) {
-      const dmTimeout = new Promise<any>((_, r) => setTimeout(() => r(new Error('newDm timeout')), 10000));
-      dm = await Promise.race([client.conversations.newDmWithIdentifier(identifier), dmTimeout]);
+      diag('read_no_dm', { peer: short(normalizedPeer.toLowerCase()) });
+      return [];
     }
-
-    if (!dm) return [];
 
     // 3. CRITICAL: Sync the specific DM from the network (not just local cache)
     // First sync — pulls network state

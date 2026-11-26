@@ -145,7 +145,8 @@ const KeyboardShortcutsModal = dynamic(() => import('@/components/chat/KeyboardS
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
-import { deletionWatermark, decideIncoming, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat, collectPreDeleteHistory } from '@/lib/chat/incoming-revival';
+import { deletionWatermark, decideIncoming, streamGate, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat, collectPreDeleteHistory } from '@/lib/chat/incoming-revival';
+import { createSingleFlightRunner } from '@/lib/chat/poll-runner';
 import { clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
 
 
@@ -4641,7 +4642,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
     
     let syncCount = 0;
-    const syncGlobal = async () => {
+    const syncGlobalOnce = async () => {
       if (cancelled) return;
       const runIndex = syncCount++;
       try {
@@ -4965,6 +4966,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         console.warn('[Ledger Chat] Global sync error:', e);
       }
     };
+    // One global sync at a time (26 Nov 2026). A run syncs every conversation, every hidden DM one
+    // by one and the open chat; with many chats it outlasts the 10 s interval, and the visibility
+    // and online events start more. Runs piled up on the same conversations as the publishes of
+    // messages being sent. A call during a run now asks for one more run after it, never a second
+    // run alongside.
+    const syncGlobal = createSingleFlightRunner(syncGlobalOnce, () => cancelled);
 
     syncGlobal();
     // Run immediate sync when network returns or user returns to tab (critical after offline/mobile sleep)
@@ -5174,6 +5181,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                       chatDB.saveMessages([{ id: realId, senderInboxId: msg.senderInboxId ?? '', senderAddress: resolvedLower, content, sentAtNs, conversationId: `dm-${resolvedLower}`, status: 'sent' }]).catch(() => {});
                       chatDB.saveConversation({ peerAddress: resolvedLower, lastAt: sentAtNs }).catch(() => {});
                     }
+                  } else {
+                    // Still nobody to file it under. The DM scan of the next global sync picks the
+                    // conversation up (scanDmsForActivity); this says it waited for it.
+                    diag('receive_unresolved_final', { msg: short(realId), conv: short(convoId) });
+                    reportDelivery('receive_unresolved', 'late resolution found no address; left to the DM scan');
                   }
                 } catch (e) {
                   console.warn('[XMTP] Late peer resolution failed:', e);
@@ -5223,24 +5235,37 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
             // Cleared or deleted on this device: keep old history hidden, but rescue fresh
             // post-delete live messages if local clock was ahead of the network clock.
-            const clearCut = clearedAtMs(msgConvPeer, [effectiveAddress, address]);
-            const hiddenHere = isHidden(msgConvPeer, realId) || preClearIdsRef.current.has(realId) || isPreDeleteId(msgConvPeer, realId, [effectiveAddress, address]);
-            let survivedHere = survivesClear(sentAtNs, clearCut) || isRescuedMessage(msgConvPeer, realId, [effectiveAddress, address]);
-            if (!hiddenHere && !survivedHere && fromPeer && firstSight && clearCut > 0) {
-              const preMaxMs = preClearMaxMsgMsRef.current.get(String(msgConvPeer).toLowerCase()) ?? 0;
-              const liveAfterOpen = Date.now() - streamOpenedAtMs > 1500;
-              const withinClockSkew = (clearCut - sentAtNs) >= 0 && (clearCut - sentAtNs) < 180_000;
-              const newerThanPreClear = preMaxMs === 0 || sentAtNs > preMaxMs;
-              if (liveAfterOpen && withinClockSkew && newerThanPreClear && (!isSystemSignal(content) || content.startsWith('__CALL_OFFER__'))) {
-                markRescuedMessage(msgConvPeer, realId, [effectiveAddress, address]);
-                survivedHere = true;
+            // One gate (lib/chat/incoming-revival.ts streamGate → decideIncoming), the same rule as
+            // the poll, the offline queue and late resolution: history stays hidden, anything new
+            // comes through, and a deleted chat comes back with the new message only.
+            const gateOwners = [effectiveAddress, address];
+            const gateDeletedAt = deletedAtMs(msgConvPeer, gateOwners);
+            const liveAfterOpen = Date.now() - streamOpenedAtMs > 1500;
+            const gate = streamGate({
+              hidden: isHidden(msgConvPeer, realId) || preClearIdsRef.current.has(realId) || isPreDeleteId(msgConvPeer, realId, gateOwners),
+              msgMs: sentAtNs,
+              cutMs: Math.max(clearedAtMs(msgConvPeer, gateOwners), gateDeletedAt),
+              deletedAt: gateDeletedAt,
+              fromPeer,
+              firstSight,
+              liveAfterOpen,
+              preMaxMs: preClearMaxMsgMsRef.current.get(String(msgConvPeer).toLowerCase()) ?? 0,
+              rescued: isRescuedMessage(msgConvPeer, realId, gateOwners),
+              rescuable: !isSystemSignal(content) || content.startsWith('__CALL_OFFER__'),
+            });
+            if (gate.rescueNow) markRescuedMessage(msgConvPeer, realId, gateOwners);
+            if (gate.verdict === 'suppress' || gate.verdict === 'drop') {
+              diag('drop', { msg: short(realId), reason: gate.reason ?? gate.verdict });
+              // A message the other person wrote, arriving live, that is hidden on arrival: the
+              // server log shows it (the only receive-side drop besides blocking).
+              if (fromPeer && firstSight && liveAfterOpen && !isSystemSignal(content)) {
+                reportDelivery(gate.reason === 'deleted on this device' ? 'receive_suppressed' : 'receive_cleared', gate.reason ?? 'suppressed');
               }
-            }
-            if (!survivedHere || hiddenHere) {
-              const reason = hiddenHere ? 'deleted on this device' : 'before this chat was cleared';
-              diag('drop', { msg: short(realId), reason });
-              if (fromPeer && !hiddenHere) reportDelivery('receive_cleared', 'new message older than the clear cut-off');
               continue;
+            }
+            // Receipts and typing never bring a deleted chat back on their own: only a message does.
+            if (gate.verdict === 'revive' && !isSystemSignal(content) && msgConvPeer && msgConvPeer !== 'unknown') {
+              reviveDeletedChat(String(msgConvPeer).toLowerCase(), gateOwners, announceRevive);
             }
 
             // A payment message from the other person, sent in the last two minutes: who and how
