@@ -754,8 +754,14 @@ export default function ConnectPage() {
         }
 
         const detail = await vr.json().catch(() => null);
-        // The human presence receipt expired or was used: run the check again before signing in.
-        if (vr.status === 403 && detail?.detail === "human_gate") setGatePassed(false);
+        // The human presence receipt expired or was used: show the check again, not a failed sign-in.
+        if (vr.status === 403 && detail?.detail === "human_gate" && humanGateEnabled()) {
+          setGatePassed(false);
+          setSignError(null);
+          setAuthStatus("idle");
+          signingRef.current = false;
+          return;
+        }
         setSignError(detail?.error || t("Your signature could not be verified. Try again."));
         setAuthStatus("failed");
         signingRef.current = false;
