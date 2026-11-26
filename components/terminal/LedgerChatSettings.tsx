@@ -31,32 +31,8 @@ import { useT } from '@/lib/i18n/client';
 //  Subscribes a component to the PXE engine for reactive setting updates.
 // ─────────────────────────────────────────────────────────────────────────
 
-export function useLedgerSettings(address: string) {
-  const [settings, setSettings] = useState<LedgerProtocolSettings>(DEFAULT_PXE_SETTINGS);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!address) return;
-    const unsubscribe = pxeEngine.subscribe(address, (newSettings) => {
-      setSettings(newSettings);
-      setIsLoaded(true);
-    });
-    return () => unsubscribe();
-  }, [address]);
-
-  const updateSetting = async <K extends keyof LedgerProtocolSettings>(
-    key: K,
-    value: LedgerProtocolSettings[K]
-  ) => {
-    await pxeEngine.mutate(address, key, value);
-  };
-
-  const updateBatch = async (mutations: Partial<LedgerProtocolSettings>) => {
-    await pxeEngine.mutateBatch(address, mutations);
-  };
-
-  return { settings, updateSetting, updateBatch, isLoaded };
-}
+export { useLedgerSettings } from '@/lib/hooks/useLedgerSettings';
+import { useLedgerSettings } from '@/lib/hooks/useLedgerSettings';
 
 // ─────────────────────────────────────────────────────────────────────────
 //  MAIN ROUTER COMPONENT

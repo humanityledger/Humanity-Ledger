@@ -14,7 +14,7 @@ const messages = Object.fromEntries(LOCALES.map(l => [l, JSON.parse(read(`lib/i1
 const SETTINGS_FILES = [
   'components/chat/LedgerSettingsFull.tsx',
   ...readdirSync(path.join(root, 'components/chat/settings')).filter(f => f.endsWith('.tsx')).map(f => `components/chat/settings/${f}`),
-  'components/chat/ContactInfoPanel.tsx', 'components/chat/profile/ProfileShare.tsx',
+  'components/chat/ContactInfoPanel.tsx', 'components/chat/profile/ProfileShare.tsx', 'components/chat/settings/MemoryDiagnostics.tsx',
 ];
 
 function keysIn(src: string): string[] {
@@ -55,7 +55,7 @@ describe('Settings: fully native, fully localized', () => {
   it('global key gap only shrinks (ratchet)', () => {
     const union = new Set(LOCALES.flatMap(l => Object.keys(messages[l])));
     const gap = Object.fromEntries(LOCALES.map(l => [l, [...union].filter(k => !(k in messages[l])).length]));
-    const BASELINE: Record<string, number> = { es: 172, de: 150, ru: 243, zh: 3 };
+    const BASELINE: Record<string, number> = { es: 0, de: 0, ru: 0, zh: 0 }; // 100% parity (26 Nov 2026)
     for (const l of LOCALES) expect(gap[l] <= BASELINE[l]).toBe(true);
   });
 });

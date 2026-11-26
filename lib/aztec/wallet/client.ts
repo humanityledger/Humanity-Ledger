@@ -303,6 +303,23 @@ class PrivateWallet {
   }
 
   /**
+   * Settings → Storage → "Hibernate private node": gives the node's memory back now. Closes the
+   * PXE and both encrypted stores (locks freed), drops cached artifacts; keys and notes stay
+   * encrypted on disk and reopen on the next private action. Never during a payment or proof.
+   */
+  async hibernate(): Promise<boolean> {
+    if (this.transacting || this.connecting) return false;
+    this.portalArtifactCache = null;
+    if (this.stores) await this.release(IDLE_CLOSED_MESSAGE);
+    return true;
+  }
+
+  /** True while the PXE and its stores are open in this tab. */
+  isNodeActive(): boolean {
+    return this.stores !== null;
+  }
+
+  /**
    * Stops the PXE and closes both encrypted stores, freeing their locks. Keys held in memory for
    * address proofs are dropped. Idempotent; never throws.
    */
@@ -1893,3 +1910,8 @@ export function getPrivateWallet(): PrivateWallet {
 }
 
 export type { PrivateWallet };
+
+/** The wallet if this tab already created it; never creates one (Settings diagnostics). */
+export function peekPrivateWallet(): PrivateWallet | null {
+  return instance ?? null;
+}

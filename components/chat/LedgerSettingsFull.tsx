@@ -6,6 +6,7 @@ import { HistoryBackupSheet } from '@/components/chat/settings/HistoryBackupShee
 import { NodeChoiceSheet } from '@/components/chat/settings/NodeChoiceSheet';
 import { PaymentsSettingsSheet } from '@/components/chat/settings/PaymentsSettingsSheet';
 import { PublicTipTokenPicker } from '@/components/chat/settings/PublicTipTokenPicker';
+import { MemoryDiagnostics } from '@/components/chat/settings/MemoryDiagnostics';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useAccount, useBalance, useDisconnect, useSignMessage } from 'wagmi';
 import { toast } from 'sonner';
-import { useLedgerSettings } from '../terminal/LedgerChatSettings';
+import { useLedgerSettings } from '@/lib/hooks/useLedgerSettings';
 import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 
@@ -37,7 +38,7 @@ import { applyPeerBlock } from '@/lib/chat/blockActions';
 import { CHAT_FONTS, resolveChatFont } from '@/lib/chat/fonts';
 import { AUTO_DELETE_OPTIONS } from '@/lib/chat/autoDelete';
 import { copyText } from '@/lib/ui/copyText';
-import { measureStorage, purgeCachedMedia, formatBytes, type StorageUsage } from '@/lib/storage/usage';
+import { measureStorage, purgeCachedMedia, purgeProverCrs, formatBytes, type StorageUsage } from '@/lib/storage/usage';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { ThemePickerSheet, type AppearanceTab } from './ThemePickerSheet';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
@@ -546,6 +547,9 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
       }
     }
     
+    // Prover reference strings (~33 MB, re-downloaded on the next private payment).
+    await purgeProverCrs().catch(() => 0);
+
     // Clear IndexedDB for messages (they re-sync from the encrypted inbox)
     let clearedDb = false;
     try {
@@ -1306,6 +1310,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   </div>
                 );
               })()}
+
+              <MemoryDiagnostics />
 
               <Group title={tr("Manage")} footer={tr("Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.")}>
                 <Row icon={<RefreshCw size={18} />} label={tr("Clear cache")} sublabel={tr("Remove temporary files")} onTap={() => setModal('clearCache')} />

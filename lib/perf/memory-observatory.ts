@@ -5,7 +5,7 @@
  * plus counters the app reports itself: prover runs, LRU caches, blob URLs.
  * Nothing runs on a timer; callers ask for a snapshot.
  */
-export interface ProverRun { threads: number; ms: number; steps: number; at: number }
+export interface ProverRun { threads: number; ms: number; steps: number; at: number; srsSize?: number; peakStepBytes?: number }
 export interface CacheStat { name: string; size: number; capacity: number; bytes?: number; hits: number; misses: number }
 
 const proverRuns: ProverRun[] = [];

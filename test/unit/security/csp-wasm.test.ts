@@ -24,8 +24,8 @@ describe('CSP lets the wallet load its WebAssembly', () => {
     }
   });
 
-  it('the report-only header agrees, so reports do not cry wolf', () => {
+  it('next.config.js emits no second CSP that could conflict with middleware.ts (SEG-H4)', () => {
     const cfg = fs.readFileSync(path.join(root, 'next.config.js'), 'utf8');
-    expect(cfg).toMatch(/connect-src 'self' https: wss: blob: data:; frame-src/);
+    expect(cfg).not.toMatch(/key:\s*'Content-Security-Policy(-Report-Only)?'/);
   });
 });
