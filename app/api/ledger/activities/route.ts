@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import rateLimit from '@/lib/rate-limit';
 import { withCache, CacheTTL } from '@/lib/cache/redis-cache';
 import { fetchRealLedgerTransfers } from '@/lib/blockchain/LedgerFlowService';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 /**
  * Ledger Activities API Route
@@ -19,7 +20,7 @@ const limiter = rateLimit({
 
 export async function GET(req: NextRequest) {
     try {
-        const ip = req.headers.get('x-forwarded-for') || 'anonymous';
+        const ip = getClientIP(req);
         try {
             await limiter.check(20, ip);
         } catch {

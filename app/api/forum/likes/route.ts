@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateSecureRequest } from '@/lib/security/premium-security';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export async function POST(req: NextRequest) {
     try {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
                     data: {
                         userId: user.id,
                         action: 'CLICK_LIKE',
-                        ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+                        ipAddress: getClientIP(req),
                         metadata: { topicId, postId }
                     }
                 });

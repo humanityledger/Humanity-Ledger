@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 // Map exact DB columns (for strongly typed schema fields)
 const STORE_TO_DB: Record<string, string> = {
@@ -194,7 +195,7 @@ async function handleUpdate(req: any) {
                         action: 'SETTINGS_UPDATED',
                         resource: 'User',
                         metadata: updateData,
-                        ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+                        ipAddress: getClientIP(req),
                     }
                 });
             } catch { /* audit log non-critical */ }

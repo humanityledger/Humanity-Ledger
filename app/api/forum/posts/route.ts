@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateSecureRequest } from '@/lib/security/premium-security';
 import { logProvenanceEvent } from '@/lib/aztec/provenanceIndexer';
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 export async function POST(req: NextRequest) {
     try {
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
                     data: {
                         userId: user.id, action: 'FORUM_POST_CREATED', resource: 'ForumPost',
                         metadata: { postId: newPost.id, topicId },
-                        ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+                        ipAddress: getClientIP(req),
                     }
                 });
             } catch { /* AuditLog table may not exist yet */ }
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
                 await (prisma as any).forumTelemetry.create({
                     data: {
                         userId: user.id, action: 'REPLY_POST',
-                        ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1',
+                        ipAddress: getClientIP(req),
                         metadata: { topicId, postId: newPost.id }
                     }
                 });

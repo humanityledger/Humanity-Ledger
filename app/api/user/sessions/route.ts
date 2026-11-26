@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
+import { getClientIP } from '@/lib/security/rateLimiter';
 
 // This route reads from IP address  no authentication needed.
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(_req: Request) {
+export async function GET(req: Request) {
   try {
-    const headersList = await headers();
-    let ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-             headersList.get("x-real-ip") ||
-             "127.0.0.1";
+    // The proxy-appended hop, never the client-supplied first one (CLAUDE.md §3).
+    let ip = getClientIP(req);
 
     if (ip === "::1" || ip === "127.0.0.1") {
         ip = "8.8.8.8";
