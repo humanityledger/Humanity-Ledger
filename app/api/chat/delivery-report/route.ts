@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 const KINDS = new Set(['send_published', 'send_failed', 'publish_pending', 'publish_retrying', 'publish_gave_up', 'group_failed', 'client_failed', 'stream_restarted', 'stream_failed', 'receive_unresolved', 'receive_cleared', 'multi_tab', 'publish_debug',
   // 26 Nov 2026: a DM the other person is not a member of (epoch 0), its repair, a conversation a
   // newer XMTP version paused for this one, a live message hidden on arrival, no XMTP inbox.
-  'dm_peer_missing', 'dm_healed', 'publish_paused', 'receive_suppressed', 'peer_not_registered']);
+  'dm_peer_missing', 'dm_healed', 'dm_unhealed', 'publish_paused', 'receive_suppressed', 'peer_not_registered']);
 const BROWSERS = new Set(['chrome', 'safari', 'firefox', 'edge', 'other']);
 
 export async function POST(req: NextRequest) {

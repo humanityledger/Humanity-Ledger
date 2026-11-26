@@ -34,7 +34,7 @@ import { Client, type XmtpEnv } from '@xmtp/browser-sdk';
 import { resolveDbKey, browserKeyStore, checkName, wrappedKeyName, legacyKeyName, XmtpDbKeyError } from './db-key';
 import { loadDeviceDbKey, saveDeviceDbKey, randomDbKey } from './device-key-vault';
 import { isSyncWaitError, redactXmtpError } from './syncErrors';
-import { dmHealth, forgetDmHealth, clearDmHealth, singleFlight, isEphemeralSignal } from './dm-health';
+import { dmHealth, findReadableDuplicate, forgetDmHealth, clearDmHealth, singleFlight, isEphemeralSignal } from './dm-health';
 
 //  Type definitions matching the pinned browser-sdk 
 type IdentifierKind = 'Ethereum';
@@ -744,19 +744,31 @@ async function ensureSendableDm(
   reportDelivery('dm_peer_missing', 'the other person is not a member of this DM yet');
   if (ephemeral) return null;
   await runSerial(cacheKey, () => withTimeout(dm.sync(), 5000, 'sync timeout')).catch(() => {});
-  try { await withTimeout(client.conversations.sync(), 5000, 'sync timeout'); } catch { /* the local list may already have it */ }
+  // Welcomes first: the DM the other person created for us arrives as a welcome.
+  try { await withTimeout((client.conversations as any).syncAll([0, 1]), 8000, 'sync timeout'); }
+  catch { try { await withTimeout(client.conversations.sync(), 5000, 'sync timeout'); } catch { /* the local list may already have it */ } }
   forgetDmHealth(selfInbox, dm?.id);
   let next = dm;
+  let peerInbox = '';
+  try { peerInbox = String((await dm?.peerInboxId?.()) ?? ''); } catch { /* resolved below */ }
   if (identifier) {
     try {
       const inboxId = await client.findInboxIdByIdentifier(identifier);
+      if (inboxId) peerInbox = inboxId;
       const found = inboxId ? await client.conversations.getDmByInboxId(inboxId) : null;
       if (found) next = found;
     } catch { /* keep the DM we have */ }
   }
-  const after = await dmHealth(next, selfInbox);
+  let after = await dmHealth(next, selfInbox);
+  if (after !== 'ok' && peerInbox) {
+    // The stitched lookup returned the broken DM again: pick, among every duplicate, the one the
+    // other person is a member of (lib/xmtp/dm-health.ts, findReadableDuplicate).
+    const readable = await findReadableDuplicate(client.conversations as any, peerInbox, selfInbox, next?.id).catch(() => null);
+    if (readable) { next = readable; after = 'ok'; diag('dm_heal_duplicate', { conv: short((readable as any)?.id) }); }
+  }
   diag('dm_heal', { conv: short(next?.id), health: after, switched: next?.id !== dm?.id });
-  if (after === 'ok') reportDelivery('dm_healed', '');
+  if (after === 'ok') reportDelivery('dm_healed', next?.id !== dm?.id ? 'switched to a DM the other person can read' : '');
+  else reportDelivery('dm_unhealed', 'no DM with the other person on this device yet');
   return next;
 }
 

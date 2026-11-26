@@ -90,3 +90,45 @@ export function singleFlight<V>(inFlight: Map<string, Promise<V>>, key: string, 
 export function isEphemeralSignal(content: unknown): boolean {
   return typeof content === 'string' && /^__(TYPING|READ|DELIVERED)__/.test(content);
 }
+
+interface DuplicateDmLike extends DmLike { peerInboxId?: () => Promise<unknown>; createdAtNs?: unknown }
+interface DmLister { listDms: (options?: Record<string, unknown>) => Promise<unknown> }
+
+const ns = (v: unknown): number => { try { return Number(typeof v === 'bigint' ? v : BigInt(String(v ?? 0))); } catch { return 0; } };
+
+/**
+ * A DM with this person that they can actually read, among ALL the duplicates on this device.
+ *
+ * 26 November 2026 (production log): Safari on a phone kept `dm_peer_missing` → `publish_pending`
+ * → `publish_retrying` for one chat while Chrome on the other side published fine. Its own DM was
+ * stuck at epoch 0 without the other person; the healthy DM the other person created (whose
+ * welcome this device had received) existed, but `getDmByInboxId` and `newDmWithIdentifier` both
+ * return the stitched duplicate with the newest local activity, which was the broken one, so the
+ * repair kept landing on it. `listDms({ includeDuplicateDms: true })` returns every DM group; the
+ * newest one whose member list includes someone other than us is used instead.
+ */
+export async function findReadableDuplicate(
+  conversations: DmLister,
+  peerInboxId: string,
+  selfInboxId: string,
+  skipId?: unknown,
+  timeoutMs = 3000,
+): Promise<DuplicateDmLike | null> {
+  const peer = (peerInboxId || '').toLowerCase();
+  if (!peer) return null;
+  let list: unknown;
+  try { list = await within(conversations.listDms({ includeDuplicateDms: true }), timeoutMs * 2); } catch { return null; }
+  if (!Array.isArray(list)) return null;
+  const candidates: DuplicateDmLike[] = [];
+  for (const d of list as DuplicateDmLike[]) {
+    if (!d || d.id === skipId || typeof d.peerInboxId !== 'function') continue;
+    let p = '';
+    try { p = String(await within(d.peerInboxId(), timeoutMs)).toLowerCase(); } catch { continue; }
+    if (p === peer) candidates.push(d);
+  }
+  candidates.sort((a, b) => ns(b.createdAtNs) - ns(a.createdAtNs));
+  for (const d of candidates) {
+    if ((await dmHealth(d, selfInboxId, timeoutMs)) === 'ok') return d;
+  }
+  return null;
+}
