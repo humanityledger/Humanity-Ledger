@@ -28,7 +28,7 @@ export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; 
   const fileRef = useRef<HTMLInputElement>(null);
 
   const weak = mode === 'export' && pass ? passphraseProblem(pass) : null;
-  const mismatch = mode === 'export' && confirm && confirm !== pass ? 'The two passphrases differ.' : null;
+  const mismatch = mode === 'export' && confirm && confirm !== pass ? t("The two passphrases differ.") : null;
 
   const doExport = async () => {
     setBusy(true);

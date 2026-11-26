@@ -1,0 +1,41 @@
+# Dependencias, builds y caches
+node_modules/
+.next/
+out/
+cache/
+artifacts/
+.cache/
+tsconfig.tsbuildinfo
+# Artefactos compilados enormes (Noir/Solidity ABI JSONs)
+contracts/**/target/*.json
+contracts/**/target/*.bak
+deployments/*.local.json
+# Código retirado e histórico obsoleto (no leer salvo orden explícita)
+archive/
+Claude outputs/
+docs/verification-logs/
+docs/audit/PROTOCOL_STATE_2026-11-14.md
+docs/audit/JANUARY_2027_AUDIT_DOSSIER.md
+docs/AUDIT_SCOPE.md
+docs/AZTEC_AUDIT_MANIFEST.md
+# Medios pesados y binarios estáticos
+public/releases/
+public/globe/
+public/textures/
+public/lottie/
+public/lotties/
+public/stickers/
+public/stickers2/
+public/stickers3/
+public/system-shots/
+public/media/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.mp4
+**/*.lottie
+**/*.exe
+**/*.pdf
+# Lockfile gigante (consultar solo scripts/package.json salvo npm audit)
+package-lock.json

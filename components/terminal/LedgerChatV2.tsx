@@ -31,11 +31,14 @@ import { TuringShieldGate } from '@/components/auth/TuringShieldGate';
 import type { Client } from '@xmtp/browser-sdk';
 import { useSettingsStore } from '@/lib/store/useSettingsStore';
 import { useWalletStore } from '@/lib/store/wallet-store';
-import { useAztec } from '@/context/AztecContext';
 import { toast } from 'sonner';
 import { chatTextPx, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/textSize';
 import { ChatCredit } from '@/components/chat/ChatCredit';
-import { loadBlockList, saveBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
+import { loadBlockList, BLOCK_LIST_EVENT } from '@/lib/chat/blockList';
+import { applyPeerBlock, applySyncedBlocks } from '@/lib/chat/blockActions';
+import { resolveChatFont } from '@/lib/chat/fonts';
+import { BoundedLRU } from '@/lib/core/BoundedLRU';
+import { sendBurnSeconds } from '@/lib/chat/autoDelete';
 import { deriveCallLog, callLogMessages, decodeCallEntry, callEntryLabel, isCallSignal, CALL_LOG_PREFIX, type CallSignal } from '@/lib/chat/callLog';
 import { startDeviceSync, stopDeviceSync, handleDeviceSyncMessage, setSynced, getSynced, getDeviceStore, DEVICE_SYNC_EVENT, type DeviceSyncEventDetail } from '@/lib/sync/runtime';
 import { vault } from '@/lib/core/SecureVault';
@@ -131,7 +134,8 @@ import { KeyboardShortcutsModal } from '@/components/chat/KeyboardShortcutsModal
 import { hiddenIds, isHidden, markDeletedForMe, markRevoked, shouldHonourRevoke } from '@/lib/chat/deleted-messages';
 import { getPeerProfile, requestPeerProfile, setPeerProfile, subscribePeerProfile } from '@/lib/chat/peerProfiles';
 import { canMove as canMoveCall } from '@/lib/calls/machine';
-import { clearCutoff, clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
+import { deletionWatermark, decideIncoming, isPreDeleteId, saveDeleteSnapshot, reviveDeletedChat } from '@/lib/chat/incoming-revival';
+import { clearedAtMs, clearRescuedMessages, deletedAtMs, hiddenAfterDelete, isRescuedMessage, lineWasCleared, markCleared, markDeleted, markRescuedMessage, previewAfterClear, previewAfterDelete, survivesClear, toMs, unmarkDeleted } from '@/lib/chat/cleared-chats';
 
 
 
@@ -448,7 +452,6 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
   // [PHASE 2 - SILOING] Consume the sandboxed PXE context for Chat Operations
   // This strictly isolates Chat from the Portfolio state to prevent cross-contamination.
-  const { getSiloedPXE } = useAztec();
 
   // Mechanical keyboard click sound
   // One AudioContext for every click: browsers cap how many a page may open.
@@ -476,8 +479,6 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const pattern = intensity === 1 ? [10] : intensity === 2 ? [20, 10, 20] : [30, 10, 30, 10, 30];
     navigator.vibrate(pattern);
   };
-  const chatContractAddress = { toString: () => '0xCHAT_CONTRACT_ADDRESS_PLACEHOLDER' } as any;
-  const siloedPxe = getSiloedPXE ? getSiloedPXE(chatContractAddress) : null;
   const { setSettingsOpen } = useSettingsStore();
   const chatName = ledgerSettings?.displayName || '';
   const chatBio = ledgerSettings?.bio || '';
@@ -513,16 +514,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
   }, [chatBackground, chatBackgroundCustomUrl]);
 
-  const FONT_MAP: Record<string, string> = {
-    'inter':    '"Inter", sans-serif',
-    'system':   '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    'mono':     '"JetBrains Mono", monospace',
-    'comic':    '"Comic Sans MS", "Comic Sans", cursive',
-    'serif':    '"Merriweather", serif',
-    'dyslexic': '"OpenDyslexic", sans-serif',
-    'humanist': '"Nunito", sans-serif',
-  };
-  const fontFamily = FONT_MAP[chatFont] || FONT_MAP['inter'];
+  // One typeface list for Settings, the thread and the CSS variables (lib/chat/fonts.ts).
+  const fontFamily = resolveChatFont(chatFont).stack;
   const fontSizePx = chatTextPx(textSize);
 
 
@@ -554,6 +547,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   }, [isConnected, connector, isSystemHandshake, reconnectAsync]);
 
   const [client, setClient] = useState<Client | null>(null);
+  // Latest client for listeners registered once (device-sync block changes).
+  const clientRef = useRef<Client | null>(null);
+  clientRef.current = client;
   const [isInitializing, setIsInitializing] = useState(false);
   const [isWaitingForSignature, setIsWaitingForSignatureState] = useState(false);
   /** The exact text XMTP asks the wallet to sign to unlock this device, shown before approval (SignaturePreview). */
@@ -1170,6 +1166,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const onSync = (e: Event) => {
       const d = (e as CustomEvent<DeviceSyncEventDetail>).detail;
       if (d?.account === me && d.keys.some(k => k.startsWith('pinned:') || k.startsWith('muted:'))) refreshPinMute();
+      const blockKeys = d?.account === me ? d.keys.filter(k => k.startsWith('blocked:')) : [];
+      if (blockKeys.length) {
+        const changes = blockKeys.map(k => [k.slice(8), getSynced(me, k) === true] as [string, boolean]);
+        applySyncedBlocks(changes, clientRef.current).then(list => {
+          if (!list) return;
+          const next = new Set(list);
+          blockedPeersRef.current = next;
+          setBlockedPeers(next);
+        }).catch(() => {});
+      }
     };
     window.addEventListener(DEVICE_SYNC_EVENT, onSync);
     return () => window.removeEventListener(DEVICE_SYNC_EVENT, onSync);
@@ -1191,7 +1197,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     next.add(peer.toLowerCase());
     blockedPeersRef.current = next;
     setBlockedPeers(next);
-    saveBlockList(Array.from(next)).catch(() => {});
+    applyPeerBlock(peer, true, { account: address, client }).catch(() => {});
     setActivePeer(null);
     toast.success(tr("{getDisplayName} is blocked", { getDisplayName: getDisplayName(peer) }));
   };
@@ -1595,7 +1601,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     if (wasBlocked) next.delete(p); else next.add(p);
     blockedPeersRef.current = next;
     setBlockedPeers(next);
-    saveBlockList(Array.from(next)).catch(() => {});
+    applyPeerBlock(p, !wasBlocked, { account: address, client }).catch(() => {});
     toast.success(wasBlocked ? tr("Unblocked") : tr("Blocked. Their messages and calls will no longer reach you."));
   };
 
@@ -1655,7 +1661,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const listLine = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === peerLower);
     const peerMsgs = messages.filter(m => (m.conversationId || '').toLowerCase() === dmId);
     const maxShown = peerMsgs.reduce((acc, m) => Math.max(acc, toMs(m.sentAtNs)), listLine?.lastMessage && listLine.lastAt ? toMs(listLine.lastAt) : 0);
-    const clearTs = clearCutoff(
+    // Network times actually seen, never this device's clock (lib/chat/incoming-revival.ts).
+    const clearTs = deletionWatermark(
       Date.now(),
       [
         ...peerMsgs.map(m => m.sentAtNs),
@@ -1671,6 +1678,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
     preClearMaxMsgMsRef.current.set(peerLower, maxShown);
     peerMsgs.forEach(m => { if (m.id) preClearIdsRef.current.add(String(m.id)); });
+    saveDeleteSnapshot(peerLower, [myAddr, address], peerMsgs.map(m => String(m.id || '')));
     clearRescuedMessages(peerLower, [myAddr, address]);
     if (myAddr) {
       try { setSynced(myAddr, { [`cleared:${peerLower}`]: clearTs }); } catch {}
@@ -1746,7 +1754,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const listLine = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === peerLower);
     const peerMsgs = messagesRef.current.filter(m => (m.conversationId || '').toLowerCase() === dmId);
     const maxShown = peerMsgs.reduce((acc, m) => Math.max(acc, toMs(m.sentAtNs)), listLine?.lastAt ? toMs(listLine.lastAt) : 0);
-    const cut = clearCutoff(Date.now(), [
+    // Watermark of network times seen, not Date.now(): a peer's reply right after the
+    // deletion must revive the chat even with clock skew (lib/chat/incoming-revival.ts).
+    const cut = deletionWatermark(Date.now(), [
       ...peerMsgs.map(m => m.sentAtNs),
       listLine?.lastAt,
     ]);
@@ -1757,8 +1767,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
     preClearMaxMsgMsRef.current.set(peerLower, maxShown);
     peerMsgs.forEach(m => { if (m.id) preClearIdsRef.current.add(String(m.id)); });
+    saveDeleteSnapshot(peerLower, [myAddr, address], peerMsgs.map(m => String(m.id || '')));
     clearRescuedMessages(peerLower, [myAddr, address]);
     knownPeersRef.current.delete(peerLower);
+    // XMTP consent is left untouched: Delete is not Block (Denied is reserved for blocking).
     forgetResolvedPeer(client, peerLower);
     if (myAddr) {
       try { setSynced(myAddr, { [`cleared:${peerLower}`]: cut, [`deleted:${peerLower}`]: cut }); } catch {}
@@ -1837,6 +1849,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const optimisticContentMap = useRef<Map<string, string>>(new Map()); // content -> optimisticId
   const preClearMaxMsgMsRef = useRef<Map<string, number>>(new Map());
   const preClearIdsRef = useRef<Set<string>>(new Set());
+  // A revived (previously deleted) chat is announced to the account's other devices.
+  const announceRevive = (peerLower: string) => {
+    if (address) { try { setSynced(address.toLowerCase(), { [`deleted:${peerLower}`]: null }); } catch {} }
+  };
   // Prune confirmedMsgIds to prevent unbounded growth in long sessions.
   // [FIX] Raised from 500/250 to 2000/1000 — fetchHistorical bulk-inserts all history IDs.
   // In conversations with 300-500 messages, the old threshold would prune IDs that are still
@@ -1993,7 +2009,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   // Every call signal of a conversation (from history and from the live
   // stream) is kept here, and the conversation's call bubbles are rebuilt from
   // them. Both people hold the same signals, so both see the same calls.
-  const callSignalsRef = useRef<Map<string, CallSignal[]>>(new Map());
+  // Call signals for the 8 most recent peers, 200 each (was every peer ever visited, 500 each).
+  const callSignalsRef = useRef(new BoundedLRU<string, CallSignal[]>({ max: 8, name: 'chat.callSignals' }));
   const addCallSignalsRef = useRef<(peer: string, sigs: CallSignal[]) => void>(() => {});
   addCallSignalsRef.current = (peer: string, sigs: CallSignal[]) => {
     // An empty `sigs` just re-derives (the clock may have turned Ringing into Missed).
@@ -2002,7 +2019,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     const list = callSignalsRef.current.get(p) || [];
     const known = new Set(list.map(s => s.id));
     for (const s of sigs) if (!known.has(s.id)) { list.push(s); known.add(s.id); }
-    callSignalsRef.current.set(p, list.slice(-500));
+    callSignalsRef.current.set(p, list.slice(-200));
     if (p !== activePeerRef.current?.toLowerCase()) return;
     const clearedAt = clearedAtMs(p, [effectiveAddress, address]);
     const msgs = callLogMessages(deriveCallLog(callSignalsRef.current.get(p) || []), {
@@ -3105,6 +3122,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const startCall = async (type: 'audio' | 'video', targetPeerOverride?: string) => {
     const targetPeer = targetPeerOverride || activePeer;
     if (!targetPeer) return;
+    if (blockedPeersRef.current.has(targetPeer.toLowerCase())) {
+      toast.error(tr("You blocked this contact. Unblock to call."));
+      return;
+    }
     setCallPeer(targetPeer.toLowerCase());
     callMetricsRef.current = startCallMetrics('caller', type);
     setCallTiming({});
@@ -4138,14 +4159,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                      if (!peer || blockedPeersRef.current.has(peer)) continue;
                      const ts = p.createdAt ? new Date(p.createdAt).getTime() : Date.now();
                      // Cleared or deleted here: it must not come back into the thread or the list line.
-                     if ((!survivesClear(ts, clearedAtMs(peer, [effectiveAddress, address])) && !(p.id && isRescuedMessage(peer, String(p.id), [effectiveAddress, address]))) || (p.id && isHidden(peer, String(p.id)))) continue;
-                     // A deleted chat only comes back if the message is newer than the deletion.
+                     if (p.id && isHidden(peer, String(p.id))) continue;
                      const peerDelAt = deletedAtMs(peer, [effectiveAddress, address]);
-                     if (peerDelAt > 0 && ts <= peerDelAt) continue;
-                     if (peerDelAt > 0) {
-                       unmarkDeleted(peer, [effectiveAddress, address]);
-                       try { setSynced(address.toLowerCase(), { [`deleted:${peer}`]: null }); } catch {}
-                     }
+                     const qVerdict = decideIncoming({
+                       blocked: false, msgMs: ts, deletedAt: peerDelAt,
+                       cutMs: Math.max(peerDelAt, clearedAtMs(peer, [effectiveAddress, address])),
+                       preDelete: isPreDeleteId(peer, p.id, [effectiveAddress, address]),
+                       rescued: !!(p.id && isRescuedMessage(peer, String(p.id), [effectiveAddress, address])),
+                     });
+                     if (qVerdict === 'suppress' || qVerdict === 'drop') continue;
+                     if (qVerdict === 'revive') reviveDeletedChat(peer, [effectiveAddress, address], announceRevive);
                      const existing = merged.find(c => c.peerAddress.toLowerCase() === peer);
                      if (!existing) {
                          merged.push({ peerAddress: peer, lastMessage: lastMessageOf(p.content).slice(0, 30), lastAt: new Date(ts) });
@@ -4561,13 +4584,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const isMeMsg = dm.sender?.toLowerCase() === address?.toLowerCase();
                 const peerAddress = isMeMsg ? dm.recipient : dm.sender;
                 const peerLower = peerAddress?.toLowerCase() ?? '';
-                if (!peerLower || blockedPeersRef.current.has(peerLower) || !survivesClear(dm.createdAt, clearedAtMs(peerLower, [effectiveAddress, address])) || isHidden(peerLower, dmId)) continue;
+                if (!peerLower || isHidden(peerLower, dmId)) continue;
                 const delAtDirect = deletedAtMs(peerLower, [effectiveAddress, address]);
-                if (delAtDirect > 0) {
-                  if (toMs(dm.createdAt) <= delAtDirect) continue;
-                  unmarkDeleted(peerLower, [effectiveAddress, address]);
-                  try { setSynced(address.toLowerCase(), { [`deleted:${peerLower}`]: null }); } catch {}
-                }
+                const dVerdict = decideIncoming({
+                  blocked: blockedPeersRef.current.has(peerLower), msgMs: dm.createdAt, deletedAt: delAtDirect,
+                  cutMs: Math.max(delAtDirect, clearedAtMs(peerLower, [effectiveAddress, address])),
+                  preDelete: isPreDeleteId(peerLower, dmId, [effectiveAddress, address]),
+                });
+                if (dVerdict === 'drop' || dVerdict === 'suppress') continue;
+                if (dVerdict === 'revive') reviveDeletedChat(peerLower, [effectiveAddress, address], announceRevive);
                 const activePeerLower = activePeerRef.current?.toLowerCase() ?? '';
                 const isFromActivePeer = peerLower === activePeerLower;
                 
@@ -4655,18 +4680,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   if (!raw.id || isHidden(pLower, String(raw.id))) return false;
                   if (burnAtNs && burnAtNs <= Date.now()) return false;
                   if (isSystemSignal(rawContent) && !rawContent.startsWith('__CALL_OFFER__')) return false;
-                  if (cutMs > 0) {
-                    return survivesClear(msgMs, cutMs) || isRescuedMessage(pLower, String(raw.id), [effectiveAddress, address]);
-                  }
-                  return true;
+                  return decideIncoming({
+                    blocked: false, msgMs, cutMs, deletedAt: delAt,
+                    preDelete: isPreDeleteId(pLower, raw.id, [effectiveAddress, address]),
+                    rescued: isRescuedMessage(pLower, String(raw.id), [effectiveAddress, address]),
+                  }) !== 'suppress';
                 });
 
               if (surviving.length > 0) {
                 const latest = surviving[surviving.length - 1];
-                if (delAt > 0) {
-                  unmarkDeleted(pLower, [effectiveAddress, address]);
-                  try { setSynced(address.toLowerCase(), { [`deleted:${pLower}`]: null }); } catch {}
-                }
+                if (delAt > 0) reviveDeletedChat(pLower, [effectiveAddress, address], announceRevive);
                 knownPeersRef.current.add(pLower);
 
                 const mappedMsgs = surviving.map(({ raw, mappedContent, burnAtNs, msgMs }) => ({
@@ -5023,18 +5046,16 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     if (blockedPeersRef.current.has(resolvedLower)) return;
                     if (isHidden(resolvedLower, realId)) return;
                     const lateDelAt = deletedAtMs(resolvedLower, [effectiveAddress, address]);
-                    const lateClearAt = clearedAtMs(resolvedLower, [effectiveAddress, address]);
-                    if (lateClearAt > 0 && !survivesClear(sentAtNs, lateClearAt)) {
-                      if (Date.now() - streamOpenedAtMs > 1500 && lateClearAt - sentAtNs < 180_000 && !isSystemSignal(content)) {
-                        markRescuedMessage(resolvedLower, realId, [effectiveAddress, address]);
-                      } else {
-                        return;
-                      }
-                    }
-                    if (lateDelAt > 0) {
-                      unmarkDeleted(resolvedLower, [effectiveAddress, address]);
-                      if (address) { try { setSynced(address.toLowerCase(), { [`deleted:${resolvedLower}`]: null }); } catch {} }
-                    }
+                    const lateVerdict = decideIncoming({
+                      blocked: false, msgMs: sentAtNs, deletedAt: lateDelAt,
+                      cutMs: Math.max(lateDelAt, clearedAtMs(resolvedLower, [effectiveAddress, address])),
+                      preDelete: isPreDeleteId(resolvedLower, realId, [effectiveAddress, address]),
+                      // A message resolved late on the live stream is new by definition.
+                      live: Date.now() - streamOpenedAtMs > 1500 && !isSystemSignal(content),
+                      rescued: isRescuedMessage(resolvedLower, realId, [effectiveAddress, address]),
+                    });
+                    if (lateVerdict === 'suppress') return;
+                    if (lateVerdict === 'revive') reviveDeletedChat(resolvedLower, [effectiveAddress, address], announceRevive);
                     knownPeersRef.current.add(resolvedLower);
                     // Cache it so future messages resolve instantly
                     if (convoId) convIdToPeer.current.set(convoId, resolvedLower);
@@ -5114,7 +5135,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             // Cleared or deleted on this device: keep old history hidden, but rescue fresh
             // post-delete live messages if local clock was ahead of the network clock.
             const clearCut = clearedAtMs(msgConvPeer, [effectiveAddress, address]);
-            const hiddenHere = isHidden(msgConvPeer, realId) || preClearIdsRef.current.has(realId);
+            const hiddenHere = isHidden(msgConvPeer, realId) || preClearIdsRef.current.has(realId) || isPreDeleteId(msgConvPeer, realId, [effectiveAddress, address]);
             let survivedHere = survivesClear(sentAtNs, clearCut) || isRescuedMessage(msgConvPeer, realId, [effectiveAddress, address]);
             if (!hiddenHere && !survivedHere && fromPeer && firstSight && clearCut > 0) {
               const preMaxMs = preClearMaxMsgMsRef.current.get(String(msgConvPeer).toLowerCase()) ?? 0;
@@ -5642,17 +5663,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               }
 
               const delAt = deletedAtMs(bgPeerLower, [effectiveAddress, address]);
-              const rescuedBg = isRescuedMessage(bgPeerLower, realId, [effectiveAddress, address]);
-              if (delAt > 0 && sentAtNs <= delAt && !rescuedBg) {
-                continue;
-              }
-              if (delAt > 0) {
-                // Revive deleted conversation permanently so it stays visible and persists across reloads
-                unmarkDeleted(bgPeerLower, [effectiveAddress, address]);
-                if (address) {
-                  try { setSynced(address.toLowerCase(), { [`deleted:${bgPeerLower}`]: null }); } catch {}
-                }
-              }
+              const bgVerdict = decideIncoming({
+                blocked: false, msgMs: sentAtNs, deletedAt: delAt, cutMs: delAt,
+                preDelete: isPreDeleteId(bgPeerLower, realId, [effectiveAddress, address]),
+                live: fromPeer && Date.now() - streamOpenedAtMs > 1500,
+                rescued: isRescuedMessage(bgPeerLower, realId, [effectiveAddress, address]),
+              });
+              if (bgVerdict === 'suppress' || bgVerdict === 'drop') continue;
+              // Revive the deleted conversation so it stays visible and persists across reloads.
+              if (bgVerdict === 'revive') reviveDeletedChat(bgPeerLower, [effectiveAddress, address], announceRevive);
               knownPeersRef.current.add(bgPeerLower);
 
               // CRITICAL FIX: Persist background / revived messages to IndexedDB so opening the chat
@@ -6349,6 +6368,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   // to the chat that was open before (another person rang) or nowhere.
   const executeSend = async (content: string, opts: { to?: string } = {}): Promise<boolean> => {
     const activePeer = opts.to || activePeerState;
+    // Blocked by me: nothing is sent until I unblock (fail closed).
+    if (activePeer && blockedPeersRef.current.has(activePeer.toLowerCase())) {
+      toast.error(tr("You blocked this contact. Unblock to send messages."));
+      return false;
+    }
     // 1. App Store Compliance: Content Moderation & Rate Limiting
     if (!checkRateLimit(address || 'anon', 60, 60000)) {
       toast.error(tr("You are sending messages too quickly. Wait a moment."));
@@ -6483,12 +6507,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     if (!isSignal && !isAgreementMsg && !isRecordMsg) {
       let chatTimer = 'off';
       try { chatTimer = localStorage.getItem('ledger_disappearing_' + activePeer.toLowerCase()) || 'off'; } catch {}
-      const globalTimer = (ledgerSettings as any)?.auto_delete_timer || 'off';
-      const SECONDS: Record<string, number> = {
-        '1 hour': 3600, '24 hours': 86400, '1 day': 86400, '1 week': 604800, '1 month': 2592000, '1 year': 31536000,
-        '24h': 86400, '7d': 604800, '90d': 7776000,
-      };
-      const secs = chatTimer !== 'off' ? SECONDS[chatTimer] : SECONDS[globalTimer];
+      const secs = sendBurnSeconds(chatTimer, ledgerSettings?.auto_delete_timer);
       if (secs) finalContent = `__BURN_${secs}__::${finalContent}`;
     }
 
@@ -7963,7 +7982,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             />
 
             {/* Dynamic Chat Background */}
-            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f4f5f7]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} data-wallpaper-tone={isSecretChat ? 'light' : canvasTone(chatTheme, activeWallpaper)} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : canvasStyle(chatTheme, activeWallpaper)), fontFamily, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
+            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f4f5f7]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} data-wallpaper-tone={isSecretChat ? 'light' : canvasTone(chatTheme, activeWallpaper)} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : canvasStyle(chatTheme, activeWallpaper)), fontFamily, letterSpacing: resolveChatFont(chatFont).letterSpacing, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -8398,6 +8417,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     </div>
                   )}
 
+                  {activePeer && blockedPeers.has(activePeer.toLowerCase()) && (
+                    <div role="status" className="mx-3 mt-2 px-3 py-2 min-h-[44px] bg-[#fdecec] text-[#912018] rounded-xl flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-medium">{tr("You blocked this contact. They cannot message or call you.")}</span>
+                      <button type="button" onClick={() => toggleBlock(activePeer)} className="shrink-0 min-h-[36px] px-3 rounded-lg bg-white text-[#15171c] text-[13px] font-semibold border border-black/10">
+                        {tr("Unblock")}
+                      </button>
+                    </div>
+                  )}
                   {/* ── Main input row ── */}
                   <div
                     className="flex items-end gap-2 px-3 pt-2 w-full relative z-40 bg-white md:bg-transparent md:gap-2.5 md:px-6 md:pt-3"

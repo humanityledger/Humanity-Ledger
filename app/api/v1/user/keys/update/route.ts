@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey, logApiRequest } from '@/lib/api-guard';
 import { createHash, randomBytes } from 'crypto';
+import { checkWebhookUrl, parseIpWhitelist } from '@/lib/security/webhookTarget';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,24 +27,24 @@ export async function POST(req: NextRequest) {
     const updateData: any = { updatedAt: new Date() };
 
     if (webhookUrl !== undefined) {
-      if (typeof webhookUrl !== 'string' || (!webhookUrl.startsWith('https://') && webhookUrl !== '')) {
-        return NextResponse.json({ error: 'webhookUrl must be a secure https:// URL or empty string.' }, { status: 400 });
+      if (typeof webhookUrl !== 'string') {
+        return NextResponse.json({ error: 'webhookUrl must be a string.' }, { status: 400 });
       }
-      if (webhookUrl.length > 512) {
-        return NextResponse.json({ error: 'webhookUrl too long (max 512 chars).' }, { status: 400 });
+      if (webhookUrl !== '') {
+        const target = await checkWebhookUrl(webhookUrl);
+        if (!target.ok) return NextResponse.json({ error: target.reason }, { status: 400 });
       }
       updateData.webhookUrl = webhookUrl;
     }
-    
+
     if (ipWhitelist !== undefined) {
-      if (!Array.isArray(ipWhitelist)) {
-        return NextResponse.json({ error: 'ipWhitelist must be an array of strings.' }, { status: 400 });
-      }
-      updateData.ipWhitelist = ipWhitelist;
+      const list = parseIpWhitelist(ipWhitelist);
+      if (!list.ok) return NextResponse.json({ error: list.reason }, { status: 400 });
+      updateData.ipWhitelist = list.value;
     }
 
     if (generateHmacSecret) {
-      if (subscription.tier !== 'Elite') {
+      if (String(subscription.tier ?? '').toLowerCase() !== 'elite') {
         return NextResponse.json({ error: 'HMAC Signing is an Elite exclusive.' }, { status: 403 });
       }
       updateData.hmacSecret = randomBytes(32).toString('hex');

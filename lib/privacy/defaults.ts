@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n/runtime';
 /**
  * lib/privacy/defaults.ts — privacy is the default; sharing is what a person turns on.
  *
@@ -16,5 +17,6 @@ export function hidesNotificationContent(settings: PrivacySettings): boolean {
 
 /** The text an OS notification may carry for a new message. */
 export function messageNotification(settings: PrivacySettings, sender: string, preview: string): { title: string; body: string } {
-  return hidesNotificationContent(settings) ? { title: 'Ledger Chat', body: 'New message' } : { title: `Ledger Chat: ${sender}`, body: preview };
+  // Translated in the user's language (lib/i18n/runtime.ts); the product name stays as is.
+  return hidesNotificationContent(settings) ? { title: 'Ledger Chat', body: t('New message') } : { title: `Ledger Chat: ${sender}`, body: preview };
 }

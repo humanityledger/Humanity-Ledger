@@ -105,7 +105,6 @@ const PUBLIC_PREFIXES = [
   '/api/aztec/derive-address',
   '/api/aztec/identity-status',
   '/api/aztec/restore-session',
-  '/api/payments/checkout',
   '/api/webhooks/stripe',
   '/api/webhooks/',
   '/api/health',
@@ -623,7 +622,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   // display-capture: screen sharing in calls; autoplay: the other person's voice and voice notes.
-  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self), autoplay=(self), geolocation=(self)');
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self), autoplay=(self), geolocation=(self), interest-cohort=()');
 
   // Community apps are untrusted code. Their document gets its own, stricter
   // policy (opaque-origin sandbox, no network) and may only be framed by us.

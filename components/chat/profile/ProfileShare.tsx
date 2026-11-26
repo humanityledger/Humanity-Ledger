@@ -21,6 +21,7 @@ import { PeerAvatar } from '@/components/chat/ui/kit';
 import { QR_COLORS, USERNAME_MAX, USERNAME_PROBLEM_TEXT, canonicalUsername, qrColor, usernameProblem, type QrColorId } from '@/lib/chat/usernames';
 import { UsernameError, useUsername, usernameAvailable } from '@/lib/chat/useUsername';
 import { t as tr, useT } from '@/lib/i18n/client';
+import { copyText } from '@/lib/ui/copyText';
 
 const INK = '#15171C';
 const INK_2 = '#5B606B';
@@ -28,12 +29,9 @@ const INK_3 = '#727A88';
 const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2754D6]';
 
 async function copy(text: string, what: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(tr("{what} copied", { what }));
-  } catch {
-    toast.error(tr("Could not copy. Select the text and copy it instead."));
-  }
+  // Works on iOS Safari and in-app wallet browsers too (lib/ui/copyText.ts).
+  if (await copyText(text)) toast.success(tr("{what} copied", { what: tr(what) }));
+  else toast.error(tr("Could not copy. Select the text and copy it instead."));
 }
 
 const shortAddr = (a: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '');
@@ -147,7 +145,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
           {tr("Your name and photo are visible to the people you message, your contacts and your groups.")}
         </p>
       ) : (
-        <Group footer="Your name and photo are visible to the people you message, your contacts and your groups.">
+        <Group footer={tr("Your name and photo are visible to the people you message, your contacts and your groups.")}>
           <Row icon={<User size={18} strokeWidth={1.8} style={{ color: INK }} />} onClick={onEditName} label={onEditName ? tr("Edit your name") : undefined}>
             {name}
           </Row>
@@ -157,7 +155,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
         </Group>
       )}
 
-      <Group footer="Your username, QR code and link are not shown on your profile. Share them only with people you trust: anyone who has one can start a chat with you.">
+      <Group footer={tr("Your username, QR code and link are not shown on your profile. Share them only with people you trust: anyone who has one can start a chat with you.")}>
         {!u.loaded ? (
           <Row icon={<LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" style={{ color: INK_3 }} />}>
             <span style={{ color: INK_3 }}>{tr("Loading")}</span>

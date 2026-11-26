@@ -1,11 +1,11 @@
 ﻿'use client';
-// @ts-nocheck
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { FEE_PRIVACY } from '@/lib/landing/content';
 import { hidesNotificationContent } from '@/lib/privacy/defaults';
 import { HistoryBackupSheet } from '@/components/chat/settings/HistoryBackupSheet';
 import { NodeChoiceSheet } from '@/components/chat/settings/NodeChoiceSheet';
 import { PaymentsSettingsSheet } from '@/components/chat/settings/PaymentsSettingsSheet';
+import { PublicTipTokenPicker } from '@/components/chat/settings/PublicTipTokenPicker';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -24,8 +24,6 @@ import { usePushNotifications } from '@/lib/push/usePushNotifications';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 
 import { ZkPrivacyScore } from '@/components/zk/ZkPrivacyScore';
-import { ZkShieldModal } from '@/components/zk/ZkShieldModal';
-import { ZkSettingsPanel } from '@/components/zk/ZkSettingsPanel';
 import { PrivateWalletStatus } from '@/components/zk/PrivateWalletStatus';
 import { PaymentsAvailability } from '@/components/beta/PaymentsAvailability';
 import { PaymentHistory } from '@/components/settings/PaymentHistory';
@@ -34,7 +32,12 @@ import { chatTextPx, textSizeLabel, DEFAULT_TEXT_SIZE_LEVEL } from '@/lib/chat/t
 import { useSystemSignOut } from '@/hooks/useSystemSignOut';
 import { exportableLocalStorage } from '@/lib/settings/exportSafety';
 import { wipeLocalChatData } from '@/lib/settings/localWipe';
-import { loadBlockList, saveBlockList } from '@/lib/chat/blockList';
+import { loadBlockList } from '@/lib/chat/blockList';
+import { applyPeerBlock } from '@/lib/chat/blockActions';
+import { CHAT_FONTS, resolveChatFont } from '@/lib/chat/fonts';
+import { AUTO_DELETE_OPTIONS } from '@/lib/chat/autoDelete';
+import { copyText } from '@/lib/ui/copyText';
+import { measureStorage, purgeCachedMedia, formatBytes, type StorageUsage } from '@/lib/storage/usage';
 import { downscaleAvatar, pushPublicProfile } from '@/lib/chat/profileSync';
 import { ThemePickerSheet, type AppearanceTab } from './ThemePickerSheet';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
@@ -208,7 +211,7 @@ const SETTINGS_SECTIONS = [
 // Profile screens opened from the card at the top of Settings (not listed as sections).
 const PROFILE_TABS: Record<string, string> = { profile: 'Profile', username: 'Username', share: 'QR code or link' };
 
-const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const BlockListModal: React.FC<{ onClose: () => void; account: string }> = ({ onClose, account }) => {
   const tr = useT();
   const [blocked, setBlocked] = useState<string[] | null>(null);
   useEffect(() => {
@@ -220,7 +223,8 @@ const BlockListModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const unblock = (addr: string) => {
     const updated = (blocked || []).filter(a => a !== addr);
     setBlocked(updated);
-    saveBlockList(updated).then(() => toast.success(tr("Unblocked"))).catch(() => toast.error(tr("Could not unblock. Try again.")));
+    // Same four layers as blocking: vault, device sync, XMTP consent, server.
+    applyPeerBlock(addr, false, { account }).then(() => toast.success(tr("Unblocked"))).catch(() => toast.error(tr("Could not unblock. Try again.")));
   };
   return (
     <div className="px-6 pb-6">
@@ -361,8 +365,17 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const { data: balance } = useBalance({ address: (address || myAddress) as `0x${string}` });
   const { settings, updateSetting } = useLedgerSettings(myAddress);
   const push = usePushNotifications(myAddress);
+  const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
+  const [storageTick, setStorageTick] = useState(0);
 
   const [activeTab, setActiveTab] = useState<string>('home');
+  // Storage numbers are measured off the render path, when the Storage screen or media sheet opens.
+  useEffect(() => {
+    let alive = true;
+    if (activeTab !== 'storage') return;
+    measureStorage().then(u => { if (alive) setStorageUsage(u); }).catch(() => {});
+    return () => { alive = false; };
+  }, [storageTick, activeTab]);
   // Two panes (list and section side by side, as Signal Desktop) only when the Settings panel
   // itself is wide enough, measured on the panel, not on the viewport (18 November 2026). On
   // phones whose browser reports a desktop-sized viewport (Chrome's "Desktop site", Safari's
@@ -459,29 +472,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   const [editingBio, setEditingBio] = useState(false);
 
 
-  const [showZkSettingsPanel, setShowZkSettingsPanel] = useState<boolean>(false);
-
-  /* TODO: use real wallet balances from getPrivateWallet().getState().balances */
-  const [zkBalances, setZkBalances] = useState<any[]>([]);
   const [currentZkTag, setCurrentZkTag] = useState(() => {
     // zk handle stored locally (not on-chain); resolveZkTag removed — read direct from localStorage
     try { return localStorage.getItem(`zkTag_${myAddress}`) || `zk:${myAddress.slice(2, 8).toLowerCase()}`; } catch { return ''; }
   });
   const [editingZkTag, setEditingZkTag] = useState(false);
   const [newZkTag, setNewZkTag] = useState('');
-  const [showZkShieldModal, setShowZkShieldModal] = useState(false);
-  const [zkShieldMode, setZkShieldMode] = useState<'shield' | 'unshield'>('shield');
-  const [isSyncingAztec, setIsSyncingAztec] = useState(false);
-
-  // balance sync now handled by ZkWalletPanel
-  useEffect(() => {
-    const onBalanceUpdate = () => {
-      /* TODO: use real wallet balances from getPrivateWallet().getState().balances */
-      setZkBalances([]);
-    };
-    window.addEventListener('ledger_zk_balance_updated', onBalanceUpdate);
-    return () => window.removeEventListener('ledger_zk_balance_updated', onBalanceUpdate);
-  }, [myAddress]);
 
   // Load saved profile info
   useEffect(() => {
@@ -513,7 +509,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
   }, [bio, publishProfile, updateSetting]);
 
   const copyAddress = useCallback(() => {
-    navigator.clipboard.writeText(myAddress).catch(() => {});
+    void copyText(myAddress).then(ok => { if (!ok) toast.error(tr("Could not copy. Select and copy it manually.")); });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success(tr("Address copied"));
@@ -558,7 +554,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         clearedDb = true;
     } catch(e) {}
 
-    toast.success(clearedDb ? tr("Message cache cleared. Reloading…") : tr("Cleared {count} cached item{value}", { count, value: count === 1 ? '' : 's' }));
+    setStorageTick(t => t + 1);
+    toast.success(clearedDb ? tr("Message cache cleared. Reloading…") : (count === 1 ? tr("Cleared 1 cached item") : tr("Cleared {count} cached items", { count })));
     setModal(null);
     setTimeout(() => window.location.reload(), 1000);
   }, []);
@@ -705,7 +702,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
   const accountGroups = (
     <>
-              <Group title={tr("Devices")} footer="Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.">
+              <Group title={tr("Devices")} footer={tr("Your phone holds your account. Link a computer by scanning the code shown on ledgerchat.org, like WhatsApp Web.")}>
                 <Row
                   icon={<Smartphone size={18} />}
                   label={tr("Linked devices")}
@@ -720,7 +717,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title={tr("Profile visibility")} footer="Your display name and bio are shared with people you message.">
+              <Group title={tr("Profile visibility")} footer={tr("Your display name and bio are shared with people you message.")}>
                 <Row
                   icon={<User size={18} />}
                   label={tr("Display name")}
@@ -933,12 +930,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           ════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'privacy' && (
             <>
-              <Group title={tr("Who can see")} footer="Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.">
-                <Row icon={<Clock size={18} />} label={tr("Last seen and online")} value={({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || tr("My contacts")} onTap={() => setModal('privacy_last_seen')} />
+              <Group title={tr("Who can see")} footer={tr("Last seen and online are only ever shown to contacts who added you back. If you choose Nobody, you won't see theirs either.")}>
+                <Row icon={<Clock size={18} />} label={tr("Last seen and online")} value={tr(({ everybody: 'My contacts', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[settings.privacy_last_seen || 'contacts'] || 'My contacts')} onTap={() => setModal('privacy_last_seen')} />
               </Group>
 
-              <Group title={tr("Disappearing messages")} footer="New messages in all chats will auto-delete after the chosen time.">
-                <Row icon={<Trash2 size={18} />} label={tr("Default timer")} value={settings.auto_delete_timer || tr("Off")} onTap={() => setModal('auto_delete')} />
+              <Group title={tr("Disappearing messages")} footer={tr("New messages in all chats will auto-delete after the chosen time.")}>
+                <Row icon={<Trash2 size={18} />} label={tr("Default timer")} value={!settings.auto_delete_timer || settings.auto_delete_timer === 'off' ? tr("Off") : tr(settings.auto_delete_timer)} onTap={() => setModal('auto_delete')} />
                 <Row
                   icon={<EyeOff size={18} />}
                   label={tr("Burn after reading")}
@@ -1093,7 +1090,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                   screen is enabled (lib/auth/pin-lock.ts, off by default). Without it the switch
                   changed nothing, so it is shown only when it can lock. */}
               {pinLockEnabled() && (
-                <Group title={tr("App lock")} footer="When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.">
+                <Group title={tr("App lock")} footer={tr("When it is on, Ledger Chat asks for your six digit PIN each time it opens. The PIN is checked by the server, with a limit on attempts. It needs a PIN on your account.")}>
                   <Row
                     icon={<Fingerprint size={18} />}
                     label={tr("Ask for my PIN")}
@@ -1104,7 +1101,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </Group>
               )}
 
-              <Group title={tr("Encryption")} footer="Direct messages use XMTP with MLS. Messages marked as sent through the server fallback are not end to end encrypted.">
+              <Group title={tr("Encryption")} footer={tr("Direct messages use XMTP with MLS. Messages marked as sent through the server fallback are not end to end encrypted.")}>
                 <Row
                   icon={<ShieldCheck size={18} />}
                   label={tr("How your chats are protected")}
@@ -1113,7 +1110,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title={tr("Network security")} footer="IP masking uses a TURN relay only when the server has one configured. If it does not, calls between different networks may fail. The switch does not create a relay by itself.">
+              <Group title={tr("Network security")} footer={tr("IP masking uses a TURN relay only when the server has one configured. If it does not, calls between different networks may fail. The switch does not create a relay by itself.")}>
                 <Row
                   icon={<Shield size={18} />}
                   label={tr("WebRTC IP masking")}
@@ -1124,7 +1121,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               </Group>
 
 
-              <Group title={tr("Records on this device")} footer="The passphrase wraps record keys on this device only. Other people in the chat keep their own copies. Locking drops the key from memory. A passkey, when this browser has one, is preferred over a passphrase.">
+              <Group title={tr("Records on this device")} footer={tr("The passphrase wraps record keys on this device only. Other people in the chat keep their own copies. Locking drops the key from memory. A passkey, when this browser has one, is preferred over a passphrase.")}>
                 <div className="px-4 py-3 flex flex-col gap-2">
                   <input
                     type="password"
@@ -1174,7 +1171,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 </div>
               </Group>
 
-              <Group title={tr("Danger zone")} footer="These actions are permanent and cannot be undone.">
+              <Group title={tr("Danger zone")} footer={tr("These actions are permanent and cannot be undone.")}>
                 <Row icon={<RefreshCw size={18} />} label={tr("Clear all caches")} onTap={() => setModal('clearCache')} />
                 <Row icon={<Trash2 size={18} />} label={tr("Delete all data")} danger onTap={() => setModal('nuke')} />
               </Group>
@@ -1197,13 +1194,13 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <Row
                   icon={<Sun size={18} />}
                   label={tr("Chat wallpaper")}
-                  value={(() => { const w = resolveWallpaper(settings.chat_background); return !w || w.id === 'default' ? 'Theme' : w.label; })()}
+                  value={(() => { const w = resolveWallpaper(settings.chat_background); return !w || w.id === 'default' ? tr("Theme") : tr(w.label); })()}
                   onTap={() => setStudio('wallpaper')}
                 />
                 <Row
                   icon={<FileText size={18} />}
                   label={tr("Font family")}
-                  value={settings.font_family ? (settings.font_family.charAt(0).toUpperCase() + settings.font_family.slice(1)) : tr("Inter")}
+                  value={tr(resolveChatFont(settings.font_family).label)}
                   onTap={() => setModal('font_family')}
                 />
                 <Row
@@ -1244,7 +1241,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title={tr("Writing help")} footer="Runs on this device. Your messages are not sent anywhere to be checked.">
+              <Group title={tr("Writing help")} footer={tr("Runs on this device. Your messages are not sent anywhere to be checked.")}>
                 <Row
                   icon={<Zap size={18} />}
                   label={tr("Soften strong language")}
@@ -1263,7 +1260,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
             <>
 
 
-              <Group title={tr("Privacy")} footer="IP masking uses a TURN relay when one is configured on the server. If none is set, calls between different networks may not connect. Voice and video stay encrypted with DTLS-SRTP either way.">
+              <Group title={tr("Privacy")} footer={tr("IP masking uses a TURN relay when one is configured on the server. If none is set, calls between different networks may not connect. Voice and video stay encrypted with DTLS-SRTP either way.")}>
                 <Row
                   icon={<Shield size={18} />}
                   label={tr("IP address masking")}
@@ -1291,39 +1288,26 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
           {activeTab === 'storage' && (
             <>
               {(() => {
-                let total = 0, count = 0;
-                try {
-                  for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i)!;
-                    const v = localStorage.getItem(k) || '';
-                    if (k.startsWith('ledger_')) { total += v.length * 2; count++; }
-                  }
-                } catch {}
-                const kb = (total / 1024).toFixed(1);
-                const mb = (total / 1024 / 1024).toFixed(2);
+                // Measured asynchronously in an effect (lib/storage/usage.ts), never during render.
+                const shown = formatBytes(storageUsage?.originBytes ?? storageUsage?.localBytes ?? 0);
+                const pct = storageUsage?.originBytes != null && storageUsage.quotaBytes ? Math.min(100, (storageUsage.originBytes / storageUsage.quotaBytes) * 100) : 0;
+                const count = storageUsage?.localCount ?? 0;
                 return (
-                  <div className="bg-white rounded-2xl border border-[#e6e8ec] p-5 mb-6">
+                  <div className="bg-white rounded-2xl border border-[#e6e8ec] p-5 mb-6" aria-busy={!storageUsage}>
                     <p className="text-[12px] text-[#727a88] font-semibold mb-3">{tr("Local storage used")}</p>
                     <div className="flex items-end gap-2 mb-3">
-                      <p className="text-[40px] font-semibold text-[#15171c] leading-none">
-                        {parseFloat(mb) < 0.1 ? kb : mb}
-                      </p>
-                      <p className="text-[16px] font-semibold text-[#727a88] mb-1">
-                        {parseFloat(mb) < 0.1 ? tr("KB") : tr("MB")}
-                      </p>
+                      <p className="text-[40px] font-semibold text-[#15171c] leading-none tabular-nums">{storageUsage ? shown.value : '…'}</p>
+                      <p className="text-[16px] font-semibold text-[#727a88] mb-1">{tr(shown.unit)}</p>
                     </div>
                     <div className="w-full bg-[#e4e7ec] rounded-full h-2">
-                      <div
-                        className="bg-[#15171c] h-2 rounded-full transition-all"
-                        style={{ width: `${Math.min((parseFloat(mb) / 50) * 100, 100)}%` }}
-                      />
+                      <div className="bg-[#15171c] h-2 rounded-full transition-all" style={{ width: `${Math.max(pct, storageUsage ? 1 : 0)}%` }} />
                     </div>
                     <p className="text-[12px] text-[#727a88] mt-2">{tr("About {count} Ledger Chat items in local storage. Private-wallet notes and keys are in this browser's origin storage, not in this number. Remove them from Payments.", { count })}</p>
                   </div>
                 );
               })()}
 
-              <Group title={tr("Manage")} footer="Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.">
+              <Group title={tr("Manage")} footer={tr("Clearing cache removes temporary data only. Your conversations are stored via XMTP and are safe.")}>
                 <Row icon={<RefreshCw size={18} />} label={tr("Clear cache")} sublabel={tr("Remove temporary files")} onTap={() => setModal('clearCache')} />
                 <Row icon={<HardDrive size={18} />} label={tr("Manage media")} sublabel={tr("Photos, videos, and files")} onTap={() => setModal('manage_media')} />
               </Group>
@@ -1352,15 +1336,16 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               <PaymentsAvailability />
 
               {/* Sovereign Aztec Identity */}
-              <Group title={tr("Your zk handle")} footer="Stored only on this device. It is not registered on Aztec and it is not a payment address.">
+              <Group title={tr("Your zk handle")} footer={tr("Stored only on this device. It is not registered on Aztec and it is not a payment address.")}>
                 <Row
                   icon={<Wallet size={18} />}
                   label={tr("zk handle")}
                   sublabel={tr("A local alias. Payments use your Aztec address, not this name.")}
                   value={currentZkTag}
                   onTap={() => {
-                    navigator.clipboard.writeText(currentZkTag);
-                    toast.success(tr("Handle copied. It is local to this device."));
+                    copyText(currentZkTag).then(ok => ok
+                      ? toast.success(tr("Handle copied. It is local to this device."))
+                      : toast.error(tr("Could not copy. Select and copy it manually.")));
                   }}
                 />
                 <div className="px-4 py-3 border-t border-black/[0.04]">
@@ -1433,24 +1418,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 />
               </Group>
 
-              <Group title={tr("Public tip token")} footer={`These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use ${PRIVATE_ASSET.phrase}. The network fee is Fee Juice from your own account, not USDC.`}>
-                <div className="px-4 pb-4">
-                  {/* The tokens the payment sheet can actually send; it opens on this one. */}
-                  {['ETH', 'USDC', 'USDT'].map((token) => (
-                    <button
-                      key={token}
-                      onClick={() => updateSetting('default_token', token)}
-                      className={"flex items-center justify-between w-full py-3 border-b border-black/5 last:border-0 " + ((settings.default_token || 'ETH') === token ? "text-[#15171c]" : "text-[#15171c]")}
-                    >
-                      <span className="font-semibold text-[14px]">{token}</span>
-                      {(settings.default_token || 'ETH') === token && (
-                        <div className="w-5 h-5 rounded-full bg-[#15171c] flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
+              <Group title={tr("Public tip token")} footer={tr("These are Ethereum mainnet coins for a public tip. Private payments on Aztec Alpha use {asset}. The network fee is Fee Juice from your own account, not USDC.", { asset: PRIVATE_ASSET.phrase })}>
+                <PublicTipTokenPicker
+                  value={settings.default_token}
+                  paymentsEnabled={settings.payments_enabled !== false}
+                  onChange={(symbol) => updateSetting('default_token', symbol)}
+                />
               </Group>
 
               {/* The private wallet's own activity on this device, with a CSV of all of it. */}
@@ -1473,7 +1446,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         currentThemeId={findChatTheme(settings.chat_theme).id}
         currentBubbleStyle={settings.bubble_style || 'default'}
         currentWallpaper={settings.chat_background || 'default'}
-        wallpaperScope="All chats (a chat's own wallpaper still wins)"
+        wallpaperScope={tr("All chats (a chat's own wallpaper still wins)")}
         onSelectTheme={(t) => updateSetting('chat_theme', t.id as any)}
         onSelectBubbleStyle={(id) => updateSetting('bubble_style', id as any)}
         onSelectWallpaper={(w) => updateSetting('chat_background', w.id as any)}
@@ -1521,7 +1494,7 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       would promise something the server never does. */}
                   {(modal === 'privacy_last_seen' ? ['contacts', 'nobody'] : ['everybody', 'contacts', 'nobody']).map(opt => {
                     const current = (settings as any)[modal!] === 'everybody' && modal === 'privacy_last_seen' ? 'contacts' : (settings as any)[modal!];
-                    const label = ({ everybody: 'Everybody', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[opt];
+                    const label = tr(({ everybody: 'Everybody', contacts: 'My contacts', nobody: 'Nobody' } as Record<string, string>)[opt]);
                     return (
                     <button
                       type="button"
@@ -1555,8 +1528,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     ['Payments', `Private payments run on Aztec Alpha in ${PRIVATE_ASSET.phrase}, with a cap per payment and no external audit. ${FEE_PRIVACY.long}`],
                   ].map(([t, d]) => (
                     <div key={t} className="py-3 border-t border-black/[0.05] first:border-0">
-                      <p className="text-[14px] font-semibold text-[#15171c]">{t}</p>
-                      <p className="text-[13px] text-[#4a505c] leading-relaxed mt-0.5">{d}</p>
+                      <p className="text-[14px] font-semibold text-[#15171c]">{tr(t)}</p>
+                      <p className="text-[13px] text-[#4a505c] leading-relaxed mt-0.5">{d.startsWith('Private payments run on Aztec Alpha') ? tr("Private payments run on Aztec Alpha in {asset}, with a cap per payment and no external audit.", { asset: PRIVATE_ASSET.phrase }) + ' ' + tr(FEE_PRIVACY.long) : tr(d)}</p>
                     </div>
                   ))}
                 </div>
@@ -1566,14 +1539,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
               {modal === 'auto_delete' && (
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-5">{tr("Disappearing messages")}</h3>
-                  {['off','1 hour','24 hours','1 week','1 month','1 year'].map(opt => (
+                  {AUTO_DELETE_OPTIONS.map(opt => (
                     <button
                       type="button"
                       key={opt}
-                      onClick={() => { updateSetting('auto_delete_timer', (opt === 'off' ? 'off' : opt) as any); setModal(null); toast.success(tr("Timer saved")); }}
+                      onClick={() => { updateSetting('auto_delete_timer', opt); setModal(null); toast.success(tr("Timer saved")); }}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${(settings.auto_delete_timer || 'off') === opt ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e4e7ec]'}`}
                     >
-                      <span className="font-semibold">{opt === 'off' ? tr("Disabled") : opt}</span>
+                      <span className="font-semibold">{opt === 'off' ? tr("Disabled") : tr(opt)}</span>
                       {(settings.auto_delete_timer || 'off') === opt && <Check size={18} />}
                     </button>
                   ))}
@@ -1611,16 +1584,8 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                 <div className="px-6 pb-6">
                   <h3 className="text-[20px] font-semibold text-[#15171c] mb-2">{tr("Font family")}</h3>
                   <p className="text-[13px] text-[#727a88] mb-5">{tr("Change the typeface used across all chat messages and transcripts.")}</p>
-                  {[
-                    { id: 'inter', label: tr("Inter"), desc: tr("Modern, highly readable sans-serif") },
-                    { id: 'mono', label: tr("JetBrains Mono"), desc: tr("Technical monospaced developer typeface") },
-                    { id: 'space-mono', label: tr("Space Mono"), desc: tr("Retro-futuristic fixed-width font") },
-                    { id: 'system', label: tr("System Native"), desc: tr("Native OS font (San Francisco / Segoe UI)") },
-                    { id: 'satoshi', label: tr("Satoshi"), desc: tr("Clean geometric contemporary sans") },
-                    { id: 'serif', label: tr("Merriweather Serif"), desc: tr("Editorial literary serif styling") },
-                    { id: 'dyslexic', label: tr("OpenDyslexic"), desc: tr("High contrast specialized accessibility typeface") },
-                  ].map(font => {
-                    const isSel = (settings.font_family || 'inter') === font.id;
+                  {CHAT_FONTS.map(font => {
+                    const isSel = resolveChatFont(settings.font_family).id === font.id;
                     return (
                       <button
                         type="button"
@@ -1628,14 +1593,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                         onClick={() => {
                           updateSetting('font_family', font.id as any);
                           setModal(null);
-                          toast.success(tr("Font set to {label}", { label: font.label }));
+                          toast.success(tr("Font set to {label}", { label: tr(font.label) }));
                         }}
                         className={`w-full flex items-center justify-between p-4 rounded-2xl mb-2 transition-colors ${
                           isSel ? 'bg-[#15171c] text-white' : 'bg-white border border-[#e4e7ec] text-[#15171c] hover:bg-[#e9ecf0]'
                         }`}
                       >
                         <div className="text-left">
-                          <p className="font-semibold text-[15px]">{tr(font.label)}</p>
+                          <p className="font-semibold text-[15px]" style={{ fontFamily: font.stack, letterSpacing: font.letterSpacing }}>{tr(font.label)}</p>
                           <p className={`text-[12px] mt-0.5 ${isSel ? 'text-white/70' : 'text-[#727a88]'}`}>{tr(font.desc)}</p>
                         </div>
                         {isSel && <Check size={18} />}
@@ -1693,12 +1658,11 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
 
 
               {/* ── Blocked Addresses ── */}
-              {modal === 'blocked_list' && <BlockListModal onClose={() => setModal(null)} />}
+              {modal === 'blocked_list' && <BlockListModal account={myAddress} onClose={() => setModal(null)} />}
 
               {/* ── Manage Media ── */}
               {modal === 'manage_media' && (() => {
-                let totalBytes = 0; let mediaCount = 0;
-                try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i)!; if (k.startsWith('ledger_')) { const v = localStorage.getItem(k) || ''; if (v.startsWith('data:')) { totalBytes += v.length * 0.75; mediaCount++; } } } } catch {}
+                const totalBytes = storageUsage?.mediaBytes ?? 0; const mediaCount = storageUsage?.mediaCount ?? 0;
                 const mb = (totalBytes / (1024 * 1024)).toFixed(2);
                 return (
                   <div className="px-6 pb-6">
@@ -1709,10 +1673,10 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                     <div className="bg-white border border-[#e4e7ec] rounded-2xl p-5 mb-5">
                       <p className="text-[13px] text-[#727a88] mb-1">{tr("Cached media storage")}</p>
                       <p className="text-[28px] font-semibold text-[#15171c]">{mb} <span className="text-[16px] font-medium text-[#727a88]">{tr("MB")}</span></p>
-                      <p className="text-[12px] text-[#727a88] mt-1">{tr("{mediaCount} media item{value}", { mediaCount, value: mediaCount !== 1 ? 's' : '' })}</p>
+                      <p className="text-[12px] text-[#727a88] mt-1">{(mediaCount === 1 ? tr("1 media item") : tr("{mediaCount} media items", { mediaCount }))}</p>
                       <div className="mt-3 h-2 bg-[#e4e7ec] rounded-full overflow-hidden"><div className="h-full bg-[#15171c] rounded-full" style={{ width: `${Math.min((parseFloat(mb) / 10) * 100, 100)}%` }} /></div>
                     </div>
-                    <button type="button" onClick={() => { let n = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i)!; if (k.startsWith('ledger_') && (localStorage.getItem(k) || '').startsWith('data:')) { localStorage.removeItem(k); n++; } } toast.success(tr("Cleared {n} item{value}", { n, value: n !== 1 ? 's' : '' })); setModal(null); }} className="w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px] mb-2">{tr("Clear media cache")}</button>
+                    <button type="button" onClick={() => { const n = purgeCachedMedia(); toast.success(n === 1 ? tr("Cleared 1 cached item") : tr("Cleared {count} cached items", { count: n })); setStorageTick(t => t + 1); setModal(null); }} className="w-full py-4 bg-[#e5484d] rounded-2xl text-white font-semibold text-[16px] mb-2">{tr("Clear media cache")}</button>
                     <button type="button" onClick={() => setModal(null)} className="w-full py-3 text-[#727a88] font-semibold text-[16px]">{tr("Cancel")}</button>
                   </div>
                 );
@@ -1723,31 +1687,6 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
         )}
       </AnimatePresence>
 
-      {/* ── ZkShieldModal for Settings ── */}
-      <AnimatePresence>
-        {showZkShieldModal && (
-          <ZkShieldModal
-            address={myAddress}
-            mode={zkShieldMode}
-            onClose={() => setShowZkShieldModal(false)}
-            onSuccess={() => {
-              setShowZkShieldModal(false);
-              // Balance refresh is handled by ZkWalletPanel's real wallet subscription
-              setZkBalances([]);
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Advanced zk.money Architecture Panel ── */}
-      <AnimatePresence>
-        {showZkSettingsPanel && (
-          <ZkSettingsPanel
-            userAddress={myAddress}
-            onClose={() => setShowZkSettingsPanel(false)}
-          />
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };

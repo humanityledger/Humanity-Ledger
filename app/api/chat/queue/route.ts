@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as prismaModule from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
+import { blockedCounterparties } from '@/lib/chat/blockFirewall';
 import { safeRedisGet, safeRedisSet, safeRedisDel } from '@/lib/redis/client';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +60,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ messages: [] });
     }
 
+    // Nothing crosses a block, in either direction (lib/chat/blockFirewall.ts).
+    if (messages.length > 0) {
+      const hidden = await blockedCounterparties(normalized);
+      if (hidden.size) messages = messages.filter(m => !hidden.has(String(m.sender ?? '').toLowerCase()));
+    }
     return NextResponse.json({ messages });
   } catch (e) {
     console.error('[queue GET]', e);

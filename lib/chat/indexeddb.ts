@@ -1,6 +1,22 @@
+const CONV_TIME_INDEX = 'conv_time';
+
+/** Milliseconds as a finite number (ns and date strings accepted); 0 when unknown. */
+export function normalizeSentAt(t: unknown): number {
+  let n: number;
+  if (typeof t === 'number') n = t;
+  else if (typeof t === 'bigint') n = Number(t);
+  else if (t instanceof Date) n = t.getTime();
+  else if (typeof t === 'string' && t.trim()) n = /^\d+$/.test(t.trim()) ? Number(t) : new Date(t).getTime();
+  else return 0;
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n > 1e14 ? Math.floor(n / 1e6) : n;
+}
+
 export class ChatDatabase {
   private dbName = 'HumanityLedgerChatDB';
-  private dbVersion = 1;
+  // v2 (26 Nov 2026): compound index ['conversationId', 'sentAtNs'] so a thread page is read with a
+  // reverse cursor that stops after `limit` rows, instead of loading the whole history to keep 50.
+  private dbVersion = 2;
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
@@ -21,12 +37,17 @@ export class ChatDatabase {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        const upgrade = (event.target as IDBOpenDBRequest).transaction;
         
         // Messages Store
         if (!db.objectStoreNames.contains('messages')) {
           const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
           messageStore.createIndex('conversationId', 'conversationId', { unique: false });
           messageStore.createIndex('sentAt', 'sentAt', { unique: false });
+        }
+        const messages = upgrade?.objectStore('messages');
+        if (messages && !messages.indexNames.contains(CONV_TIME_INDEX)) {
+          messages.createIndex(CONV_TIME_INDEX, ['conversationId', 'sentAtNs'], { unique: false });
         }
 
         // Conversations Store
@@ -45,7 +66,10 @@ export class ChatDatabase {
       const store = transaction.objectStore('messages');
       
       messages.forEach(msg => {
-        store.put(msg);
+        // A numeric time keeps every row in the compound index (a missing or string time would drop
+        // the row from it, or sort it after every number).
+        const t = normalizeSentAt(msg?.sentAtNs ?? msg?.sentAt);
+        store.put(msg && typeof msg === 'object' && msg.sentAtNs !== t ? { ...msg, sentAtNs: t } : msg);
       });
 
       transaction.oncomplete = () => resolve();
@@ -80,21 +104,51 @@ export class ChatDatabase {
     return this.saveMessages([formatted]);
   }
 
-  async getMessagesForConversation(conversationId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+  /**
+   * A page of a thread, oldest first. Reads with a reverse cursor on
+   * ['conversationId', 'sentAtNs'] and stops after `limit` rows: memory is
+   * O(limit), not O(history). `beforeSentAtNs` pages backwards from a time.
+   */
+  async getMessagesForConversation(conversationId: string, limit: number = 50, offset: number = 0, beforeSentAtNs?: number): Promise<any[]> {
     if (!this.db) await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['messages'], 'readonly');
-      const store = transaction.objectStore('messages');
-      const index = store.index('conversationId');
-      // Always store and query lowercase for consistency
-      const request = index.getAll(IDBKeyRange.only(conversationId.toLowerCase()));
-
-      request.onsuccess = () => {
-        // Sort by sentAtNs descending, then paginate
-        const msgs = request.result.sort((a, b) => (b.sentAtNs || 0) - (a.sentAtNs || 0));
-        resolve(msgs.slice(offset, offset + limit).reverse()); // Return chronological for UI
+    const conv = conversationId.toLowerCase();
+    const store = this.db!.transaction(['messages'], 'readonly').objectStore('messages');
+    if (!store.indexNames.contains(CONV_TIME_INDEX)) return this.getMessagesFullScan(conv, limit, offset);
+    const upper = typeof beforeSentAtNs === 'number' && Number.isFinite(beforeSentAtNs) ? [conv, beforeSentAtNs] : [conv, Infinity];
+    const range = IDBKeyRange.bound([conv, -Infinity], upper, false, upper[1] !== Infinity);
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      const out: any[] = [];
+      let skipped = offset <= 0;
+      const req = store.index(CONV_TIME_INDEX).openCursor(range, 'prev');
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (!cur) return resolve(out);
+        if (!skipped) { skipped = true; cur.advance(offset); return; }
+        out.push(cur.value);
+        if (out.length >= limit) return resolve(out);
+        cur.continue();
       };
-      
+      req.onerror = () => reject(req.error);
+    });
+    // Rows written by older builds without a numeric time are not in the index: if the thread holds
+    // more than the index returned and the page is short, fall back once to the full scan.
+    if (rows.length < limit && beforeSentAtNs === undefined) {
+      const total = await new Promise<number>((resolve) => {
+        const r = this.db!.transaction(['messages'], 'readonly').objectStore('messages').index('conversationId').count(IDBKeyRange.only(conv));
+        r.onsuccess = () => resolve(r.result); r.onerror = () => resolve(0);
+      });
+      if (total > rows.length + offset) return this.getMessagesFullScan(conv, limit, offset);
+    }
+    return rows.reverse();
+  }
+
+  private getMessagesFullScan(conv: string, limit: number, offset: number): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const request = this.db!.transaction(['messages'], 'readonly').objectStore('messages').index('conversationId').getAll(IDBKeyRange.only(conv));
+      request.onsuccess = () => {
+        const msgs = request.result.sort((a, b) => normalizeSentAt(b.sentAtNs) - normalizeSentAt(a.sentAtNs));
+        resolve(msgs.slice(offset, offset + limit).reverse());
+      };
       request.onerror = () => reject(request.error);
     });
   }

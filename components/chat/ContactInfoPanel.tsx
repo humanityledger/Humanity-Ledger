@@ -1,4 +1,5 @@
 'use client';
+import { BoundedLRU } from '@/lib/core/BoundedLRU';
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -54,7 +55,7 @@ export function countShared(messages: { content?: unknown }[]) {
 }
 
 type PeerProfile = { bio?: string; avatarUrl?: string; displayName?: string };
-const profileCache = new Map<string, PeerProfile | null>();
+const profileCache = new BoundedLRU<string, PeerProfile | null>({ max: 64, name: 'chat.profileCache' });
 
 /** The peer's public profile, fetched once per address per page load. */
 export function usePeerProfile(peerAddress: string): PeerProfile | null {
@@ -336,7 +337,7 @@ export function ContactInfoSections({
           <Row compact={compact} icon={<Palette {...ICON} />} label={tr("Chat wallpaper")} sublabel={tr("A background for this chat only")} onTap={() => setModal('wallpaper')} />
         </Group>
 
-        <Group title={tr("Privacy")} footer="Mute, timer and lock apply on every device signed in to this account." {...g}>
+        <Group title={tr("Privacy")} footer={tr("Mute, timer and lock apply on every device signed in to this account.")} {...g}>
           <Row compact={compact} icon={<Bell {...ICON} />} label={tr("Mute notifications")} toggle={isMuted} onTap={toggleMute} />
           <Row compact={compact} icon={<Clock {...ICON} />} label={tr("Disappearing messages")} value={tr(TIMER_LABEL[disappearing])} onTap={() => setModal('disappearing')} />
           <Row compact={compact} icon={<Lock {...ICON} />} label={tr("Lock chat with PIN")} toggle={lockChat} onTap={toggleLock} />

@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
-import { deriveAztecAddress } from '@/lib/aztec/zk-identity';
+import { isMutuallyBlocked } from '@/lib/chat/blockFirewall';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,18 +39,22 @@ export async function POST(
     }
 
     // Fetch and validate the request belongs to the caller as recipient
-    const request = await (prisma as any).chatContactRequest.findUnique({
+    const request = await prisma.chatContactRequest.findUnique({
       where: { id: requestId },
     }).catch(() => null);
 
     if (!request) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     
-    const aztecCaller = deriveAztecAddress(caller).toLowerCase();
-    if (request.toAddress !== caller && request.toAddress !== aztecCaller) {
+    if (request.toAddress !== caller) {
       return NextResponse.json({ error: 'Forbidden — you are not the recipient of this request' }, { status: 403 });
     }
     if (request.status !== 'PENDING') {
       return NextResponse.json({ ok: true, status: request.status, message: 'Already resolved' });
+    }
+
+    // Accepting across a block (either direction) is refused without saying who blocked.
+    if (action === 'accept' && await isMutuallyBlocked(caller, request.fromAddress)) {
+      return NextResponse.json({ error: 'Cannot accept this request' }, { status: 403 });
     }
 
     if (action === 'accept') {
@@ -66,7 +70,7 @@ export async function POST(
           update: { updatedAt: new Date() },
           create: { owner: request.fromAddress, peer: request.toAddress },
         }),
-        (prisma as any).chatContactRequest.update({
+        prisma.chatContactRequest.update({
           where: { id: requestId },
           data: { status: 'ACCEPTED', updatedAt: new Date() },
         }),
@@ -100,7 +104,7 @@ export async function POST(
       return NextResponse.json({ ok: true, status: 'ACCEPTED' });
     } else {
       // reject — silent for requester
-      await (prisma as any).chatContactRequest.update({
+      await prisma.chatContactRequest.update({
         where: { id: requestId },
         data: { status: 'REJECTED', updatedAt: new Date() },
       });

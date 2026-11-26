@@ -29,18 +29,13 @@ import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { toast } from 'sonner';
 import { checkEvmSend, parseAmount } from '@/lib/payments/rails';
 import { useT } from '@/lib/i18n/client';
+import { PUBLIC_TIP_TOKENS, resolveTipToken, type PublicTipSymbol } from '@/lib/payments/publicTipTokens';
 
 const MAINNET = 1;
 
 // ── Token config ──────────────────────────────────────────────────────────────
-const TOKENS = [
-  {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    decimals: 18,
-    address: null as Address | null, // native
-    iconColor: '#627EEA',
-    icon: (
+const TOKEN_ICONS: Record<PublicTipSymbol, React.ReactNode> = {
+  ETH: (
       <svg width="20" height="20" viewBox="0 0 256 417" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path fill="#627EEA" d="M127.961 0L125.802 7.22v269.995l2.159 2.155 127.962-75.638z"/>
         <path fill="#3C3C3B" d="M127.961 0L0 203.732l127.961 75.638V0z"/>
@@ -49,45 +44,27 @@ const TOKENS = [
         <path fill="#141414" d="M127.961 279.37L255.92 203.732l-127.959-58.206z"/>
         <path fill="#393939" d="M0 203.732l127.961 75.638V145.526z"/>
       </svg>
-    ),
-  },
-  {
-    symbol: 'USDC',
-    name: 'USD Coin',
-    decimals: 6,
-    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' as Address | null,
-    iconColor: '#2775CA',
-    icon: (
+  ),
+  USDC: (
       <div className="w-5 h-5 rounded-full bg-[#2775CA] flex items-center justify-center">
         <span className="text-white text-[12px] font-semibold">$</span>
       </div>
-    ),
-  },
-  {
-    symbol: 'USDT',
-    name: 'Tether USD',
-    decimals: 6,
-    address: '0xdAC17F958D2ee523a2206206994597C13D831ec7' as Address | null,
-    iconColor: '#26A17B',
-    icon: (
+  ),
+  USDT: (
       <div className="w-5 h-5 rounded-full bg-[#26A17B] flex items-center justify-center">
         <span className="text-white text-[12px] font-semibold">₮</span>
       </div>
-    ),
-  },
-  {
-    symbol: 'DAI',
-    name: 'Dai',
-    decimals: 18,
-    address: '0x6B175474E89094C44Da98b954EedeAC495271d0F' as Address | null,
-    iconColor: '#F5AC37',
-    icon: (
+  ),
+  DAI: (
       <div className="w-5 h-5 rounded-full bg-[#F5AC37] flex items-center justify-center">
         <span className="text-white text-[11px] font-semibold">D</span>
       </div>
-    ),
-  },
-];
+  ),
+};
+
+// Symbols, contracts and decimals come from lib/payments/publicTipTokens.ts,
+// the same list Settings → Payments offers as the default tip token.
+const TOKENS = PUBLIC_TIP_TOKENS.map(t => ({ ...t, address: t.address as Address | null, iconColor: t.color, icon: TOKEN_ICONS[t.symbol] }));
 
 const ERC20_ABI = [
   {
@@ -136,7 +113,7 @@ export function NativeCryptoSendModal({
   title = 'Send Crypto',
 }: NativeCryptoSendModalProps) {
   const tr = useT();
-  const [selectedToken, setSelectedToken] = useState(() => TOKENS.find(t => t.symbol === defaultToken) ?? TOKENS[0]);
+  const [selectedToken, setSelectedToken] = useState(() => TOKENS.find(t => t.symbol === resolveTipToken(defaultToken).symbol) ?? TOKENS[0]);
   const [amount, setAmount] = useState(presetAmount ?? '');
   const [showTokenPicker, setShowTokenPicker] = useState(false);
   const [showQR, setShowQR] = useState(false);

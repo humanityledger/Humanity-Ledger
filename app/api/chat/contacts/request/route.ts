@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVerifiedCaller } from '@/lib/security/verifiedCaller';
+import { isMutuallyBlocked, blockedCounterparties } from '@/lib/chat/blockFirewall';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { safeRedisDel } from '@/lib/redis/client';
 
@@ -48,9 +49,13 @@ export async function POST(req: NextRequest) {
     if (to === caller) {
       return NextResponse.json({ error: 'Cannot send request to yourself' }, { status: 400 });
     }
+    // A block in either direction: no request row, no notification, no hint of who blocked.
+    if (await isMutuallyBlocked(caller, to)) {
+      return NextResponse.json({ error: 'Cannot send contact request' }, { status: 403 });
+    }
 
     // Check if they are already contacts
-    const existing = await (prisma as any).chatContact.findUnique({
+    const existing = await prisma.chatContact.findUnique({
       where: { owner_peer: { owner: caller, peer: to } },
     }).catch(() => null);
     if (existing) {
@@ -58,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Upsert the request — if already sent, keep as PENDING (idempotent)
-    const existingRequest = await (prisma as any).chatContactRequest.findUnique({
+    const existingRequest = await prisma.chatContactRequest.findUnique({
       where: { fromAddress_toAddress: { fromAddress: caller, toAddress: to } },
     }).catch(() => null);
 
@@ -75,12 +80,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Request was declined. You can try again after 24 hours.' }, { status: 429 });
       }
       // Update back to PENDING
-      await (prisma as any).chatContactRequest.update({
+      await prisma.chatContactRequest.update({
         where: { fromAddress_toAddress: { fromAddress: caller, toAddress: to } },
         data: { status: 'PENDING', updatedAt: new Date() },
       });
     } else {
-      await (prisma as any).chatContactRequest.create({
+      await prisma.chatContactRequest.create({
         data: { fromAddress: caller, toAddress: to, status: 'PENDING' },
       });
     }
@@ -130,17 +135,17 @@ export async function GET(req: NextRequest) {
 
     const dir = new URL(req.url).searchParams.get('direction') ?? 'incoming';
     
-    // Import dynamically to avoid top-level issues if needed, or just import at top.
-    const { deriveAztecAddress } = await import('@/lib/aztec/zk-identity');
-    const aztecCaller = deriveAztecAddress(caller).toLowerCase();
-
-    const requests = await (prisma as any).chatContactRequest.findMany({
+    // Requests are keyed by the canonical session EVM address only (the old
+    // derived "Aztec address" was not a real Aztec address; CLAUDE.md §3).
+    const hidden = await blockedCounterparties(caller);
+    const allRequests = await prisma.chatContactRequest.findMany({
       where: dir === 'incoming'
-        ? { toAddress: { in: [caller, aztecCaller] }, status: 'PENDING' }
-        : { fromAddress: { in: [caller, aztecCaller] }, status: { in: ['PENDING', 'ACCEPTED', 'REJECTED'] } },
+        ? { toAddress: caller, status: 'PENDING' }
+        : { fromAddress: caller, status: { in: ['PENDING', 'ACCEPTED', 'REJECTED'] } },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+    const requests = allRequests.filter(r => !hidden.has(dir === 'incoming' ? r.fromAddress : r.toAddress));
 
     // Enrich with user profiles
     const addresses = dir === 'incoming'

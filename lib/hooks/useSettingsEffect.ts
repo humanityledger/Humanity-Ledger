@@ -10,6 +10,8 @@
 
 import { useEffect, useRef } from 'react';
 import { LedgerProtocolSettings } from '@/lib/wallet/SettingsEnginePXE';
+import { chatTextPx } from '@/lib/chat/textSize';
+import { resolveChatFont } from '@/lib/chat/fonts';
 
 const SOUND_CACHE: Record<string, HTMLAudioElement> = {};
 
@@ -72,33 +74,20 @@ export function useSettingsEffect(
     // ─────────────────────────────────────────────────────────────
     // FONT SIZE
     // ─────────────────────────────────────────────────────────────
-    if (!prev || prev.font_size !== settings.font_size) {
-      const sizes: Record<string, string> = {
-        small:   '13px',
-        medium:  '15px',
-        large:   '17px',
-        xl:      '19px',
-      };
-      document.documentElement.style.setProperty(
-        '--ledger-chat-font-size',
-        sizes[settings.font_size as string] || '15px'
-      );
+    // One scale (0..4) drives the settings preview and the chat (lib/chat/textSize.ts).
+    if (!prev || prev.text_size !== settings.text_size) {
+      const px = `${chatTextPx(settings.text_size)}px`;
+      document.documentElement.style.setProperty('--ledger-chat-font-size', px);
+      document.documentElement.style.setProperty('--ledger-text-size', px);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // FONT FAMILY
+    // FONT FAMILY (lib/chat/fonts.ts)
     // ─────────────────────────────────────────────────────────────
     if (!prev || prev.font_family !== settings.font_family) {
-      const fonts: Record<string, string> = {
-        system:   '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        mono:     '"SF Mono", "Fira Code", "Cascadia Code", monospace',
-        serif:    'Georgia, "Times New Roman", serif',
-        humanist: '"Inter", "Nunito", sans-serif',
-      };
-      document.documentElement.style.setProperty(
-        '--ledger-chat-font-family',
-        fonts[settings.font_family as string] || fonts.system
-      );
+      const font = resolveChatFont(settings.font_family);
+      document.documentElement.style.setProperty('--ledger-chat-font-family', font.stack);
+      document.documentElement.style.setProperty('--ledger-chat-letter-spacing', font.letterSpacing ?? 'normal');
     }
 
     // ─────────────────────────────────────────────────────────────
