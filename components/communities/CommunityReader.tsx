@@ -34,7 +34,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { BarChart3, Copy, Images, MessageCircle, Paperclip, Pin, Users, Wallet } from 'lucide-react';
+import { BarChart3, Copy, CornerUpRight, Forward, Images, MessageCircle, Mic, Paperclip, Pin, Search, SmilePlus, Square, Users, Wallet, X } from 'lucide-react';
+import { QUICK_REACTIONS, encodeReaction, encodeReply, encodeUnreact, plainSnippet, searchPosts, tallyReactions, unwrap } from '@/lib/communities/interactions';
+import { recordTiming } from '@/lib/perf/client-timings';
 import { CommunityMediaSheet } from '@/components/communities/CommunityMediaSheet';
 import { MemberSheet, MembersPanel, useCommunityMembers } from '@/components/communities/MemberSheet';
 import { PostBody, PollComposer } from '@/components/communities/PostBody';
@@ -75,6 +77,8 @@ type Shown = ReaderPost & { state?: 'sending' | 'failed'; error?: string };
 export interface CommunityReaderProps {
   /** Opens a private conversation and its Pay sheet (the member profile's "Pay"). */
   onPay?: (address: string) => void;
+  /** Forwards a post's content to another chat (the chat's own forward picker). */
+  onForward?: (content: string) => void;
   communityId: string;
   myAddress: string;
   /** Name for a wallet address, if the person saved one. Otherwise "A member". */
@@ -149,7 +153,7 @@ export function authorLabel(p: ReaderPost, me: string, nameFor?: (address: strin
   return { name, wallet: name === wallet ? '' : wallet, mine: false };
 }
 
-export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, onPay, fetchImpl, xmtpClient, onOpenCommunity }: CommunityReaderProps) {
+export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, onPay, onForward, fetchImpl, xmtpClient, onOpenCommunity }: CommunityReaderProps) {
   const tr = useT();
   // Stable across renders: the loaders below depend on it, and a new function each render would refetch in a loop.
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
@@ -184,6 +188,20 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [pollOpen, setPollOpen] = useState(false);
   const [attaching, setAttaching] = useState<string | null>(null);
   const filePick = useRef<HTMLInputElement>(null);
+  // Phase 2: replies, reactions, search and voice notes (all MLS application messages).
+  const [replyTo, setReplyTo] = useState<{ id: string; snippet: string } | null>(null);
+  const [reactFor, setReactFor] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [rec, setRec] = useState<{ started: number; recorder: MediaRecorder; chunks: Blob[]; stream: MediaStream } | null>(null);
+  const [recSecs, setRecSecs] = useState(0);
+  const reactions = useMemo(() => tallyReactions(rawMsgs, me), [rawMsgs, me]);
+  const sendControl = useCallback(async (msg: string) => {
+    if (!mlsGroup || !xmtpClient) return;
+    await postToGroup(xmtpClient, mlsGroup, msg).catch(() => toast.error(tr("Not sent. Check your connection and try again.")));
+    fetchPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mlsGroup, xmtpClient]);
   const memberRows = useCommunityMembers(communityId, peopleKey);
   const senders = useRef(new Map<string, string>());
   const listEnd = useRef<HTMLDivElement>(null);
@@ -297,7 +315,8 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   useEffect(() => { listEnd.current?.scrollIntoView?.({ block: 'end' }); }, [lastKey, failedKey]);
 
   const submit = async (text: string, retryId?: string) => {
-    const body = text.trim();
+    let body = text.trim();
+    if (body && !retryId && replyTo && mlsGroup) { body = encodeReply(replyTo.id, replyTo.snippet, body); setReplyTo(null); }
     if (!body) return;
     const localId = retryId ?? `local-${Date.now()}`;
     const pending: Shown = { id: localId, authorAddress: me, content: body, createdAt: Date.now(), state: 'sending' };
@@ -344,6 +363,58 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: sendFailure(status, serverError) } : p)));
   };
 
+  // Voice notes: recorded here, then the same encrypted path as files (isVoiceNote, duration).
+  useEffect(() => {
+    if (!rec) { setRecSecs(0); return; }
+    const t = setInterval(() => {
+      const s = Math.floor((Date.now() - rec.started) / 1000);
+      setRecSecs(s);
+      if (s >= 300) void stopVoice(); // 5 minutes at most
+    }, 250);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rec]);
+  useEffect(() => () => { rec?.stream.getTracks().forEach((tk) => tk.stop()); }, [rec]);
+
+  const startVoice = async () => {
+    if (!mlsGroup || rec) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const { pickRecordingMimeType } = await import('@/lib/chat/recording');
+      const mimeType = pickRecordingMimeType(typeof MediaRecorder !== 'undefined' ? MediaRecorder.isTypeSupported?.bind(MediaRecorder) : undefined);
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      recorder.start(250);
+      setRec({ started: Date.now(), recorder, chunks, stream });
+    } catch {
+      toast.error(tr("Microphone access was not allowed. Allow it in your browser settings to record."));
+    }
+  };
+
+  const stopVoice = async () => {
+    const r = rec;
+    if (!r) return;
+    setRec(null);
+    const durationSec = Math.max(1, Math.round((Date.now() - r.started) / 1000));
+    await new Promise<void>((done) => { r.recorder.onstop = () => done(); try { r.recorder.stop(); } catch { done(); } });
+    r.stream.getTracks().forEach((tk) => tk.stop());
+    const mime = (r.recorder.mimeType || 'audio/webm').split(';')[0];
+    const blob = new Blob(r.chunks, { type: mime });
+    if (blob.size < 512) return; // nothing was recorded
+    const { prepareAttachmentMessage } = await import('@/lib/chat/send-attachment');
+    const { extensionForRecording } = await import('@/lib/chat/recording');
+    setAttaching(tr("Encrypting voice message…"));
+    const t0 = performance.now();
+    try {
+      const prepared = await prepareAttachmentMessage(blob, { filename: `voice-${Date.now()}.${extensionForRecording(mime)}`, mimeType: mime, isVoiceNote: true, durationSec });
+      recordTiming('voice.encrypt+upload', performance.now() - t0, blob.size);
+      await submit(prepared.message);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : tr("Could not send the voice message"));
+    } finally { setAttaching(null); }
+  };
+
   /** Encrypts each file on this device, uploads only ciphertext, and posts the attachment message. */
   const attachFiles = async (files: File[]) => {
     if (!mlsGroup || !files.length) return;
@@ -351,7 +422,9 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     for (const file of files.slice(0, 10)) {
       setAttaching(tr("Encrypting {name}…", { name: file.name }));
       try {
+        const t0 = performance.now();
         const prepared = await prepareAttachmentMessage(file, { filename: file.name, mimeType: file.type || 'application/octet-stream' });
+        recordTiming('attachment.encrypt+upload', performance.now() - t0, file.size);
         await submit(prepared.message);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : tr("Could not send the file"));
@@ -428,9 +501,17 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       items.push({ label: mine ? 'Copy your wallet' : 'Copy wallet address', icon: <Wallet size={16} strokeWidth={1.9} />, onSelect: () => copy(addr, 'Wallet address copied.') });
       if (!mine && onMessage) items.push({ label: tr("Message privately"), icon: <MessageCircle size={16} strokeWidth={1.9} />, onSelect: () => onMessage(addr) });
     }
+    if (mlsGroup && !readOnly && !p.state && !p.id.startsWith('local-')) {
+      items.unshift({ label: tr("Reply"), icon: <CornerUpRight size={16} strokeWidth={1.9} />, onSelect: () => { setReplyTo({ id: p.id, snippet: plainSnippet(postText(p)) }); field.current?.focus(); } });
+      items.push({ label: tr("React"), icon: <SmilePlus size={16} strokeWidth={1.9} />, onSelect: () => setReactFor(p.id) });
+    }
+    if (onForward && !p.state) items.push({ label: tr("Forward to a chat"), icon: <Forward size={16} strokeWidth={1.9} />, onSelect: () => onForward(unwrap(postText(p)).body) });
     if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: tr("Pin"), icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
     return items;
   };
+
+  // In-community search runs on this device over decrypted posts; the query never leaves it.
+  const shownPosts = useMemo(() => (query.trim() ? searchPosts(posts, query, nameFor) : posts), [posts, query, nameFor]);
 
   const title = name || 'Community';
   const btn = 'min-h-[48px] min-w-[48px] px-4 rounded-2xl text-[18px] font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/25';
@@ -448,6 +529,9 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? tr("1 member") : tr("{members} members", { members })}</p>
           )}
         </div>
+        <button type="button" onClick={() => { setSearchOpen((o) => !o); setQuery(''); }} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Search in this community")} aria-pressed={searchOpen} title={tr("Search in this community")}>
+          <Search size={21} strokeWidth={1.9} aria-hidden="true" />
+        </button>
         <button type="button" onClick={() => setPanel('media')} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Shared media")} title={tr("Shared media")}>
           <Images size={21} strokeWidth={1.9} aria-hidden="true" />
         </button>
@@ -458,6 +542,14 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           {tr("Manage")}
         </button>
       </header>
+      {searchOpen && (
+        <div className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2 border-b border-[#d4d8de] bg-white">
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setSearchOpen(false); setQuery(''); } }}
+            placeholder={tr("Search posts, files and people")} aria-label={tr("Search in this community")}
+            className="flex-1 min-w-0 h-11 px-4 rounded-xl bg-[#f2f4f7] outline-none text-[16px]" style={{ color: INK }} />
+          {query && <span className="text-[14px] tabular-nums shrink-0" style={{ color: INK_SOFT }} role="status">{tr("{count} found", { count: shownPosts.length })}</span>}
+        </div>
+      )}
       {panel === 'media' && (
         <CommunityMediaSheet posts={posts.filter((p) => !p.state).map((p) => ({ id: p.id, content: postText(p), authorAddress: p.authorAddress, createdAt: p.createdAt }))} messages={rawMsgs} title={title} onClose={() => setPanel(null)} />
       )}
@@ -505,7 +597,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           </div>
         )}
         <ol className="flex flex-col gap-4 max-w-[720px] mx-auto">
-          {posts.map((p) => {
+          {shownPosts.map((p) => {
             const author = authorLabel(p, me, nameFor);
             const text = postText(p);
             const heading = p.title && !DEFAULT_TITLE.test(p.title.trim()) ? p.title.trim() : '';
@@ -513,6 +605,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             return (
               <PostItem
                 key={p.id}
+                anchor={`post-${p.id}`}
                 failed={p.state === 'failed'}
                 mine={author.mine}
                 label={tr("Post by {name}", { name: author.name })}
@@ -541,12 +634,40 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                   </p>
                 </div>
                 {heading && <p className="text-[19px] font-semibold mt-2" style={{ color: INK }}>{heading}</p>}
-                <PostBody
-                  content={text}
-                  messages={rawMsgs}
-                  me={me}
-                  onVote={mlsGroup && !readOnly ? (vote) => postToGroup(xmtpClient, mlsGroup, vote).then(() => fetchPosts()) : undefined}
-                />
+                {(() => {
+                  const u = unwrap(text);
+                  const r = reactions.get(p.id);
+                  return (
+                    <>
+                      {u.forwardedFrom && <p className="mt-2 text-[13.5px] italic" style={{ color: INK_SOFT }}>{tr("Forwarded from {from}", { from: u.forwardedFrom })}</p>}
+                      {u.reply && (
+                        <button type="button" onClick={() => document.getElementById(`post-${u.reply!.id}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                          className="mt-2 w-full text-left border-l-[3px] border-[#15171c] bg-[#f2f4f7] rounded-r-xl px-3 py-1.5 text-[14.5px] truncate" style={{ color: INK_SOFT }}>
+                          {u.reply.snippet || tr("Message")}
+                        </button>
+                      )}
+                      <PostBody content={u.body} author={p.authorAddress} messages={rawMsgs} me={me} onVote={mlsGroup && !readOnly ? sendControl : undefined} />
+                      {(r || reactFor === p.id) && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          {r && [...r.counts].map(([emoji, n]) => (
+                            <button key={emoji} type="button" disabled={!mlsGroup || readOnly} onClick={() => void sendControl(r.mine === emoji ? encodeUnreact(p.id) : encodeReaction(p.id, emoji))}
+                              className={`h-8 px-2.5 rounded-full text-[14px] inline-flex items-center gap-1 border ${r.mine === emoji ? 'border-[#15171c] bg-[#eef2fb]' : 'border-[#d4d8de] bg-white'}`} aria-pressed={r.mine === emoji}>
+                              <span>{emoji}</span><span className="tabular-nums text-[13px]" style={{ color: INK }}>{n}</span>
+                            </button>
+                          ))}
+                          {reactFor === p.id && (
+                            <span className="inline-flex items-center gap-0.5 h-9 px-1.5 rounded-full border border-[#d4d8de] bg-white" role="group" aria-label={tr("React")}>
+                              {QUICK_REACTIONS.map((e) => (
+                                <button key={e} type="button" onClick={() => { setReactFor(null); void sendControl(r?.mine === e ? encodeUnreact(p.id) : encodeReaction(p.id, e)); }} className="w-8 h-8 grid place-items-center rounded-full text-[18px] hover:bg-[#f2f4f7]" aria-label={e}>{e}</button>
+                              ))}
+                              <button type="button" onClick={() => setReactFor(null)} className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#f2f4f7]" aria-label={tr("Close")}><X size={15} /></button>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 {p.state === 'sending' && <p className="text-[16px] mt-2" style={{ color: INK_SOFT }} role="status">{tr("Sending…")}</p>}
                 {p.state === 'failed' && (
                   <div className="mt-2" role="alert">
@@ -613,6 +734,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           <label htmlFor={`community-write-${communityId}`} className="block text-[18px] font-semibold mb-2" style={{ color: INK }}>
             {tr("Write a post")}
           </label>
+          {replyTo && (
+            <div className="flex items-center gap-2 mb-2 border-l-[3px] border-[#15171c] bg-[#f2f4f7] rounded-r-xl pl-3 pr-1 py-1.5">
+              <span className="flex-1 min-w-0 text-[14.5px] truncate" style={{ color: INK_SOFT }}>{tr("Replying to: {text}", { text: replyTo.snippet || tr("Message") })}</span>
+              <button type="button" onClick={() => setReplyTo(null)} className="w-9 h-9 grid place-items-center rounded-full hover:bg-white" aria-label={tr("Cancel reply")}><X size={16} /></button>
+            </div>
+          )}
           <textarea
             id={`community-write-${communityId}`}
             ref={field}
@@ -634,6 +761,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 <button type="button" onClick={() => filePick.current?.click()} disabled={!!attaching} className={`${btn} px-3 hover:bg-[#eff1f4] disabled:opacity-50`} style={{ color: INK }} aria-label={tr("Attach photos or files")} title={tr("Attach photos or files")}>
                   <Paperclip size={21} strokeWidth={1.9} aria-hidden="true" />
                 </button>
+                <button type="button" onClick={() => void (rec ? stopVoice() : startVoice())} disabled={!!attaching && !rec}
+                  className={`${btn} px-3 ${rec ? 'bg-[#fdecec] text-[#b42318]' : 'hover:bg-[#eff1f4]'} disabled:opacity-50`} style={rec ? undefined : { color: INK }}
+                  aria-label={rec ? tr("Stop and send voice message") : tr("Record a voice message")} title={rec ? tr("Stop and send voice message") : tr("Record a voice message")} aria-pressed={!!rec}>
+                  {rec ? <Square size={18} strokeWidth={2.2} aria-hidden="true" /> : <Mic size={21} strokeWidth={1.9} aria-hidden="true" />}
+                  {rec && <span className="tabular-nums text-[15px]">{Math.floor(recSecs / 60)}:{String(recSecs % 60).padStart(2, '0')}</span>}
+                </button>
                 <button type="button" onClick={() => setPollOpen(true)} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Create a poll")} title={tr("Create a poll")}>
                   <BarChart3 size={21} strokeWidth={1.9} aria-hidden="true" />
                 </button>
@@ -652,11 +785,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
 }
 
 /** One post. Right click, or a long press on a touch screen, opens its actions. */
-function PostItem({ failed, mine, label, onMenu, children }: { failed: boolean; mine: boolean; label: string; onMenu: (at: MenuAt) => void; children: React.ReactNode }) {
+function PostItem({ anchor, failed, mine, label, onMenu, children }: { anchor?: string; failed: boolean; mine: boolean; label: string; onMenu: (at: MenuAt) => void; children: React.ReactNode }) {
   const { handlers } = useContextMenuTrigger(onMenu);
   return (
     <li
       {...handlers}
+      id={anchor}
       aria-label={label}
       className={`rounded-2xl border px-4 py-3 ${failed ? 'border-[#9b1c16] bg-[#fdf3f2]' : mine ? 'border-[#c9d6f2] bg-[#f4f7fe]' : 'border-[#d4d8de] bg-white'}`}
       style={{ WebkitTouchCallout: 'none' }}

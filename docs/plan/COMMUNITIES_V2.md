@@ -1,6 +1,6 @@
 # Communities V2 — architecture, UX and roadmap
 
-Status: Phase 1 shipped in `feat/communities-v2` (27 Nov 2026). Phases 2–4 are plans, not features.
+Status: Phase 1 shipped in `feat/communities-v2`; Phase 2 core in `feat/communities-phase2` (27 Nov 2026). Items marked *design* are not built.
 
 ## 1. Where Communities stood (analysis)
 
@@ -47,7 +47,7 @@ Principles:
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Reliable creation (waits for encryption), invite link + QR, rich posts (photos, videos, files, voice playback, GIFs, polls with live results, links), Shared Media gallery, member profiles and list, role matrix, Pay from a profile | **Shipped** |
-| 2 | Composer parity: voice recording, GIF search (privacy-preserving proxy, no third-party tracking), reactions, replies, forwards, pins inline, in-community search over decrypted posts, typing indicators over MLS, mute/archive per community | Planned |
+| 2 | Voice notes recorded in the community; reactions; replies; forward to a chat; in-community search (on device); polls with “hide results until closed” and Close poll; client timings for encrypt+upload | **Shipped (core)** — GIF search, typing over MLS, mute/archive: *design* (§8) |
 | 3 | Discovery and management: trending/recommended from public metadata only, join requests for private communities, invite links with expiry and usage limits, admin analytics from server-side metadata only (member counts, joins) | Planned |
 | 4 | Scale: channels as separate MLS groups, large public channels as a hybrid (broadcast group + read-only fan-out), installation hygiene so one person does not grow the ratchet tree | Research |
 
@@ -70,3 +70,19 @@ Phase 1 needs **no migration**: it uses `Community`, `CommunityMember.role/joine
 - Legacy communities remain read-only; their posts were stored by our server and are never presented as encrypted.
 - GIFs and links load from their own sites when shown (that site sees the viewer's IP), with `referrerPolicy="no-referrer"`. A privacy-preserving proxy is Phase 2.
 - Membership (who is in a community) is known to our server; the screen says so.
+
+## 8. Phase 2 details and designs
+
+**Shipped.** All of these are MLS application messages in the private-chat formats; the server sees none of them.
+- Reactions: `__REACT__<post>__::<emoji>`; one reaction per member per post, the same emoji again (or `-`) removes it; last message wins (`lib/communities/interactions.ts`).
+- Replies: `__REPLY__<post>__SNIPPET__<≤80 chars>__::<body>`; the quote scrolls to the original. Forward: to any private chat through the chat's own picker.
+- Search: over decrypted posts on the device (text, file names, poll questions, author names). The query is never sent anywhere.
+- Voice notes: recorded with MediaRecorder (≤ 5 min), sent through the encrypted attachment path with `isVoiceNote` and duration.
+- Polls stay non-anonymous by design. “Hide results until I close the poll” hides totals on screen only; members can still read votes in the group, and the composer says so. Only the poll's author can close it (`__POLL_CLOSE__`).
+- Measurement: `lib/perf/client-timings.ts` keeps encrypt+upload times for files and voice on the device; Settings → Storage → Memory shows the medians.
+
+**Design: privacy-preserving GIF search (not built).** Options, in order of preference: (1) a curated, bundled set served from our own origin (no third party sees the viewer); (2) an on-demand fetch through a non-logging proxy on our origin that strips IP and headers, with a client cache; (3) direct provider fetch, labelled “the provider sees your IP”. Build (1) first; (2) only with a written no-log configuration.
+
+**Design: private group payment requests (not built).** “Request payment from selected members”: the requester picks members and an amount (equal split or per member); the client creates one private payment request per member in each member's private chat, using the existing request format, so each payment is proven on the payer's device and settles individually on Aztec. No pooled account is needed. A community treasury (a private account controlled by admins) comes later and needs a multi-party policy; it stays client-proven. Each flow records proving time, memory and failures (`scripts/benchmark-ram.ts`) for an internal technical note before anything is published.
+
+**Notes: membership changes as MLS commits.** Role changes live on our server and never touch the group (no commit). Adding or removing members is one commit per batch: the admin client reconciles the whole member list in one pass (`syncGroupMembers`). Batching several adds into one commit and measuring commit size against group size is the next measurement.

@@ -13,6 +13,7 @@ import { parseLargeFileMessage } from '@/lib/chat/large-file';
 import { RemoteAttachmentBubble } from '@/components/chat/RemoteAttachmentBubble';
 import { LargeFileBubble } from '@/components/chat/LargeFileBubble';
 import { encodePoll, encodeVote, parsePoll, tallyVotes, type IndexInput } from '@/lib/communities/media-index';
+import { encodePollClose, isPollClosed } from '@/lib/communities/interactions';
 
 const INK = '#15171c';
 const URL_SPLIT = /(\bhttps?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)\]])/gi;
@@ -38,17 +39,22 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
   );
 }
 
-export function PollCard({ pollId, question, options, messages, me, onVote }: {
-  pollId: string; question: string; options: string[]; messages: IndexInput[]; me: string; onVote?: (encodedVote: string) => Promise<unknown>;
+export function PollCard({ pollId, question, options, hideResults, author, messages, me, onVote }: {
+  pollId: string; question: string; options: string[]; hideResults?: boolean; author?: string; messages: IndexInput[]; me: string; onVote?: (encodedMessage: string) => Promise<unknown>;
 }) {
   const t = useT();
-  const { counts, voters } = useMemo(() => tallyVotes(messages, pollId, options.length), [messages, pollId, options.length]);
+  const { counts: rawCounts, voters } = useMemo(() => tallyVotes(messages, pollId, options.length), [messages, pollId, options.length]);
+  const closed = useMemo(() => isPollClosed(messages, pollId, author), [messages, pollId, author]);
+  const isAuthor = !!author && author.toLowerCase() === me.toLowerCase();
+  // "Hide results until closed": everyone but the author sees only their own choice until then.
+  const hidden = !!hideResults && !closed && !isAuthor;
+  const counts = rawCounts;
   const mine = voters.get(me.toLowerCase());
   const [pending, setPending] = useState<number | null>(null);
   const shown = pending ?? mine;
   const total = counts.reduce((a, b) => a + b, 0) + (pending !== null && pending !== mine ? (mine === undefined ? 1 : 0) : 0);
   const vote = async (k: number) => {
-    if (!onVote || k === shown) return;
+    if (!onVote || k === shown || closed) return;
     setPending(k);
     try { await onVote(encodeVote(pollId, k)); } finally { setPending(null); }
   };
@@ -62,24 +68,30 @@ export function PollCard({ pollId, question, options, messages, me, onVote }: {
           const pct = total ? Math.round((Math.max(0, c) / total) * 100) : 0;
           const chosen = shown === k;
           return (
-            <button key={k} type="button" role="radio" aria-checked={chosen} disabled={!onVote} onClick={() => void vote(k)}
+            <button key={k} type="button" role="radio" aria-checked={chosen} disabled={!onVote || closed} onClick={() => void vote(k)}
               className={`relative w-full min-h-[46px] rounded-xl mb-1.5 overflow-hidden text-left border ${chosen ? 'border-[#15171c]' : 'border-transparent'} bg-[#f2f3f5] disabled:cursor-default`}>
-              {shown !== undefined && <span className="absolute inset-y-0 left-0 bg-[#dfe7ff] transition-[width] duration-300" style={{ width: `${pct}%` }} aria-hidden="true" />}
+              {(shown !== undefined || closed) && !hidden && <span className="absolute inset-y-0 left-0 bg-[#dfe7ff] transition-[width] duration-300" style={{ width: `${pct}%` }} aria-hidden="true" />}
               <span className="relative flex items-center gap-2 px-3 py-2 text-[15.5px]" style={{ color: INK }}>
                 {chosen && <Check size={16} strokeWidth={2.6} aria-hidden="true" />}
                 <span className="flex-1 min-w-0 break-words">{o}</span>
-                {shown !== undefined && <span className="tabular-nums font-semibold text-[14px]">{pct}%</span>}
+                {(shown !== undefined || closed) && !hidden && <span className="tabular-nums font-semibold text-[14px]">{pct}%</span>}
               </span>
             </button>
           );
         })}
       </div>
-      <p className="text-[13px] text-[#5b6270] mt-1">{total === 1 ? t('1 vote') : t('{count} votes', { count: total })}{shown === undefined && onVote ? ` · ${t('Tap an option to vote')}` : ''}</p>
+      <p className="text-[13px] text-[#5b6270] mt-1">
+        {hidden ? t('Results are shown when the poll closes') : total === 1 ? t('1 vote') : t('{count} votes', { count: total })}
+        {closed ? ` · ${t('Closed')}` : shown === undefined && onVote ? ` · ${t('Tap an option to vote')}` : ''}
+      </p>
+      {isAuthor && !closed && onVote && (
+        <button type="button" onClick={() => void onVote(encodePollClose(pollId))} className="mt-2 min-h-[40px] px-3 rounded-xl text-[13.5px] font-semibold text-[#15171c] border border-[#d5d9e0] hover:bg-[#f2f3f5]">{t('Close poll')}</button>
+      )}
     </div>
   );
 }
 
-export function PostBody({ content, messages, me, onVote }: { content: string; messages: IndexInput[]; me: string; onVote?: (encodedVote: string) => Promise<unknown> }) {
+export function PostBody({ content, author, messages, me, onVote }: { content: string; author?: string; messages: IndexInput[]; me: string; onVote?: (encodedMessage: string) => Promise<unknown> }) {
   const [light, setLight] = useState<string | null>(null);
   const c = content.trim();
   const att = parseAttachmentMessage(c);
@@ -98,7 +110,7 @@ export function PostBody({ content, messages, me, onVote }: { content: string; m
   }
   if (c.startsWith('__AUDIO__data:audio/')) return <audio src={c.slice(9)} controls preload="none" className="mt-2 w-full max-w-[340px]" />;
   const poll = parsePoll(c);
-  if (poll) return <PollCard {...poll} messages={messages} me={me} onVote={onVote} />;
+  if (poll) return <PollCard {...poll} author={author} messages={messages} me={me} onVote={onVote} />;
   return <Linkified text={c} />;
 }
 
@@ -107,6 +119,7 @@ export function PollComposer({ onSend, onClose }: { onSend: (encoded: string) =>
   const t = useT();
   const [q, setQ] = useState('');
   const [opts, setOpts] = useState(['', '']);
+  const [hide, setHide] = useState(false);
   const valid = q.trim() && opts.filter((o) => o.trim()).length >= 2;
   const field = 'w-full px-4 py-3 rounded-2xl bg-[#f4f5f7] border border-transparent text-[16px] text-[#15171c] placeholder:text-[#8a919c] outline-none focus:bg-white focus:border-[#15171c]';
   return (
@@ -125,8 +138,12 @@ export function PollComposer({ onSend, onClose }: { onSend: (encoded: string) =>
           </div>
         ))}
         {opts.length < 10 && <button type="button" onClick={() => setOpts([...opts, ''])} className="min-h-[44px] px-3 rounded-xl text-[14.5px] font-semibold text-[#15171c] hover:bg-[#f2f3f5] inline-flex items-center gap-1.5"><Plus size={17} />{t('Add an option')}</button>}
+        <label className="mt-3 flex items-start gap-3 cursor-pointer select-none">
+          <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} className="mt-1 w-5 h-5 accent-[#15171c]" />
+          <span><span className="block text-[14.5px] font-medium text-[#15171c]">{t('Hide results until I close the poll')}</span><span className="block text-[12.5px] text-[#727a88]">{t('Members still see each other’s votes in the group; this only hides the totals on screen.')}</span></span>
+        </label>
         <p className="text-[12.5px] text-[#727a88] mt-2">{t('Members see who voted for what: votes are posts in this encrypted community.')}</p>
-        <button type="button" disabled={!valid} onClick={() => onSend(encodePoll(q, opts.filter((o) => o.trim())))} className="mt-4 w-full min-h-[52px] rounded-2xl bg-[#15171c] text-white text-[16px] font-semibold disabled:opacity-40">{t('Send poll')}</button>
+        <button type="button" disabled={!valid} onClick={() => onSend(encodePoll(q, opts.filter((o) => o.trim()), undefined, { hideResults: hide }))} className="mt-4 w-full min-h-[52px] rounded-2xl bg-[#15171c] text-white text-[16px] font-semibold disabled:opacity-40">{t('Send poll')}</button>
       </div>
     </div>
   );

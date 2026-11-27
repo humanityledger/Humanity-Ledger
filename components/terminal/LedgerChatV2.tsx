@@ -7923,6 +7923,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   setShowList(false);
                   setTimeout(() => setShowZkModal(true), 0);
                 }}
+                onForward={(content) => setForwardMsg({ id: `community:${activeCommunity}`, content })}
               />
             )
           ) : (
