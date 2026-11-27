@@ -7914,6 +7914,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   setActivePeer(addr);
                   setShowList(false);
                 }}
+                onPay={(addr) => {
+                  // A member's profile → Pay: their private chat opens with the private payment sheet.
+                  setActiveCommunity(null);
+                  setCommunityManage(false);
+                  setSidebarTab('chats');
+                  setActivePeer(addr);
+                  setShowList(false);
+                  setTimeout(() => setShowZkModal(true), 0);
+                }}
               />
             )
           ) : (

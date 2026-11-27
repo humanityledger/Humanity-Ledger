@@ -34,7 +34,11 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, MessageCircle, Pin, Wallet } from 'lucide-react';
+import { BarChart3, Copy, Images, MessageCircle, Paperclip, Pin, Users, Wallet } from 'lucide-react';
+import { CommunityMediaSheet } from '@/components/communities/CommunityMediaSheet';
+import { MemberSheet, MembersPanel, useCommunityMembers } from '@/components/communities/MemberSheet';
+import { PostBody, PollComposer } from '@/components/communities/PostBody';
+import { isControlMessage, type IndexInput } from '@/lib/communities/media-index';
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
 import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
@@ -69,6 +73,8 @@ export interface ReaderPost {
 type Shown = ReaderPost & { state?: 'sending' | 'failed'; error?: string };
 
 export interface CommunityReaderProps {
+  /** Opens a private conversation and its Pay sheet (the member profile's "Pay"). */
+  onPay?: (address: string) => void;
   communityId: string;
   myAddress: string;
   /** Name for a wallet address, if the person saved one. Otherwise "A member". */
@@ -143,7 +149,7 @@ export function authorLabel(p: ReaderPost, me: string, nameFor?: (address: strin
   return { name, wallet: name === wallet ? '' : wallet, mine: false };
 }
 
-export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, fetchImpl, xmtpClient, onOpenCommunity }: CommunityReaderProps) {
+export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, onPay, fetchImpl, xmtpClient, onOpenCommunity }: CommunityReaderProps) {
   const tr = useT();
   // Stable across renders: the loaders below depend on it, and a new function each render would refetch in a loop.
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
@@ -168,6 +174,17 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [about, setAbout] = useState<{ description: string; isPrivate: boolean }>({ description: '', isPrivate: true });
   const [moving, setMoving] = useState<'idle' | 'confirm' | 'working'>('idle');
   const [moveError, setMoveError] = useState('');
+  // Communities V2 (docs/plan/COMMUNITIES_V2.md): every group message (votes included) for poll
+  // results and Shared Media; member list and profiles; attachments and polls from the composer.
+  const [rawMsgs, setRawMsgs] = useState<IndexInput[]>([]);
+  const [ownerAddress, setOwnerAddress] = useState<string | null>(null);
+  const [peopleKey, setPeopleKey] = useState(0);
+  const [openMember, setOpenMember] = useState<string | null>(null);
+  const [panel, setPanel] = useState<'media' | 'members' | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [attaching, setAttaching] = useState<string | null>(null);
+  const filePick = useRef<HTMLInputElement>(null);
+  const memberRows = useCommunityMembers(communityId, peopleKey);
   const senders = useRef(new Map<string, string>());
   const listEnd = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -184,6 +201,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       // Same rule as the server (PATCH /api/chat/communities PIN_MESSAGE): owner, admin, or a member where members may pin.
       const mine = (Array.isArray(c?.members) ? c.members : []).find((m: any) => String(m?.walletAddress || '').toLowerCase() === me);
       const owner = String(c?.ownerAddress || '').toLowerCase() === me;
+      setOwnerAddress(typeof c?.ownerAddress === 'string' ? c.ownerAddress.toLowerCase() : null);
       setMayPin(owner || mine?.role === 'ADMIN' || (!!mine && c?.permissions?.pinMessages === true));
       setIsAdmin(owner || mine?.role === 'ADMIN');
       setReadOnly(c?.postsReadOnly === true);
@@ -215,10 +233,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           }
           incoming.push({ id: m.id, authorAddress: addr || undefined, content: m.content, createdAt: m.createdAt });
         }
+        // Votes, reactions and receipts are kept for poll results and media, never shown as posts.
+        setRawMsgs(incoming.map((x) => ({ id: x.id, content: x.content, authorAddress: x.authorAddress, createdAt: x.createdAt })));
+        const visible = incoming.filter((x) => !isControlMessage(x.content));
         setPosts((prev) => {
           const local = prev.filter((p) => p.state);
-          const ids = new Set(incoming.map((p) => p.id));
-          return [...incoming, ...local.filter((p) => !ids.has(p.id))].sort((a, b) => time(a) - time(b));
+          const ids = new Set(visible.map((p) => p.id));
+          return [...visible, ...local.filter((p) => !ids.has(p.id))].sort((a, b) => time(a) - time(b));
         });
         setLoad('ready');
       } catch {
@@ -323,6 +344,22 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: sendFailure(status, serverError) } : p)));
   };
 
+  /** Encrypts each file on this device, uploads only ciphertext, and posts the attachment message. */
+  const attachFiles = async (files: File[]) => {
+    if (!mlsGroup || !files.length) return;
+    const { prepareAttachmentMessage } = await import('@/lib/chat/send-attachment');
+    for (const file of files.slice(0, 10)) {
+      setAttaching(tr("Encrypting {name}…", { name: file.name }));
+      try {
+        const prepared = await prepareAttachmentMessage(file, { filename: file.name, mimeType: file.type || 'application/octet-stream' });
+        await submit(prepared.message);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : tr("Could not send the file"));
+      }
+    }
+    setAttaching(null);
+  };
+
   const recreate = async () => {
     setMoving('working');
     setMoveError('');
@@ -411,10 +448,37 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? tr("1 member") : tr("{members} members", { members })}</p>
           )}
         </div>
+        <button type="button" onClick={() => setPanel('media')} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Shared media")} title={tr("Shared media")}>
+          <Images size={21} strokeWidth={1.9} aria-hidden="true" />
+        </button>
+        <button type="button" onClick={() => setPanel('members')} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Members")} title={tr("Members")}>
+          <Users size={21} strokeWidth={1.9} aria-hidden="true" />
+        </button>
         <button type="button" onClick={onManage} className={`${btn} border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`} style={{ color: INK }}>
           {tr("Manage")}
         </button>
       </header>
+      {panel === 'media' && (
+        <CommunityMediaSheet posts={posts.filter((p) => !p.state).map((p) => ({ id: p.id, content: postText(p), authorAddress: p.authorAddress, createdAt: p.createdAt }))} messages={rawMsgs} title={title} onClose={() => setPanel(null)} />
+      )}
+      {panel === 'members' && (
+        <MembersPanel people={{ communityId, ownerAddress, members: memberRows ?? [] }} me={me} nameFor={nameFor} onOpen={(a) => setOpenMember(a)} onClose={() => setPanel(null)} />
+      )}
+      {openMember && (
+        <MemberSheet
+          people={{ communityId, ownerAddress, members: memberRows ?? [] }}
+          address={openMember}
+          me={me}
+          nameFor={nameFor}
+          onClose={() => setOpenMember(null)}
+          onMessage={onMessage}
+          onPay={onPay}
+          onChanged={() => { setPeopleKey((k) => k + 1); fetchCommunity(); }}
+        />
+      )}
+      {pollOpen && mlsGroup && (
+        <PollComposer onClose={() => setPollOpen(false)} onSend={(encoded) => { setPollOpen(false); void submit(encoded); }} />
+      )}
 
       <p className="shrink-0 px-4 sm:px-6 py-3 text-[18px] leading-snug bg-[#f2f4f7] border-b border-[#d4d8de]" style={{ color: INK }} role="note">
         {tr(mlsGroup ? MLS_VISIBILITY_SENTENCE : readOnly ? LEGACY_VISIBILITY_SENTENCE : VISIBILITY_SENTENCE)}
@@ -455,7 +519,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 onMenu={(at) => setMenu({ at, post: p })}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  {isWalletAddress(p.authorAddress) ? <UserAvatar address={p.authorAddress} size={36} /> : (
+                  {isWalletAddress(p.authorAddress) ? (
+                    <button type="button" onClick={() => setOpenMember(p.authorAddress!.toLowerCase())} className="shrink-0 rounded-[12px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#15171c]" aria-label={tr("Profile of {name}", { name: author.name })}>
+                      <UserAvatar address={p.authorAddress} size={36} />
+                    </button>
+                  ) : (
                   <span
                     className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0 select-none"
                     style={tintFor(p.authorAddress)}
@@ -465,13 +533,20 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                   </span>
                   )}
                   <p className="min-w-0 flex-1 text-[16px] leading-tight">
-                    <span className="font-semibold" style={{ color: INK }}>{author.name}</span>
+                    {isWalletAddress(p.authorAddress)
+                      ? <button type="button" onClick={() => setOpenMember(p.authorAddress!.toLowerCase())} className="font-semibold hover:underline underline-offset-2 text-left" style={{ color: INK }}>{author.name}</button>
+                      : <span className="font-semibold" style={{ color: INK }}>{author.name}</span>}
                     {author.wallet ? <span className="ml-1.5 tabular-nums" style={{ color: INK_SOFT }}>{author.wallet}</span> : null}
                     {when ? <span className="block text-[15px] mt-0.5" style={{ color: INK_SOFT }}>{when}</span> : null}
                   </p>
                 </div>
                 {heading && <p className="text-[19px] font-semibold mt-2" style={{ color: INK }}>{heading}</p>}
-                <p className="text-[18px] leading-relaxed mt-2 whitespace-pre-wrap break-words" style={{ color: INK }}>{text}</p>
+                <PostBody
+                  content={text}
+                  messages={rawMsgs}
+                  me={me}
+                  onVote={mlsGroup && !readOnly ? (vote) => postToGroup(xmtpClient, mlsGroup, vote).then(() => fetchPosts()) : undefined}
+                />
                 {p.state === 'sending' && <p className="text-[16px] mt-2" style={{ color: INK_SOFT }} role="status">{tr("Sending…")}</p>}
                 {p.state === 'failed' && (
                   <div className="mt-2" role="alert">
@@ -550,9 +625,22 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             className="w-full rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] leading-relaxed resize-none placeholder:text-[#4a505c] bg-white"
             style={{ color: INK }}
           />
-          {/* Send is the only action here. */}
-          <div className="flex justify-end gap-2 mt-2">
-            <button type="submit" disabled={!draft.trim()} className={`${btn} px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
+          {/* Attach (encrypted, same pipeline as private chats) and Poll exist only where posts are
+              end-to-end encrypted (an MLS community); Send is always last. */}
+          <div className="flex items-center gap-2 mt-2">
+            {mlsGroup && (
+              <>
+                <input ref={filePick} type="file" className="hidden" multiple onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; void attachFiles(fs); }} />
+                <button type="button" onClick={() => filePick.current?.click()} disabled={!!attaching} className={`${btn} px-3 hover:bg-[#eff1f4] disabled:opacity-50`} style={{ color: INK }} aria-label={tr("Attach photos or files")} title={tr("Attach photos or files")}>
+                  <Paperclip size={21} strokeWidth={1.9} aria-hidden="true" />
+                </button>
+                <button type="button" onClick={() => setPollOpen(true)} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Create a poll")} title={tr("Create a poll")}>
+                  <BarChart3 size={21} strokeWidth={1.9} aria-hidden="true" />
+                </button>
+                {attaching && <span className="text-[14px] truncate" style={{ color: INK_SOFT }} role="status">{attaching}</span>}
+              </>
+            )}
+            <button type="submit" disabled={!draft.trim()} className={`${btn} ml-auto px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
               {tr("Send")}
             </button>
           </div>
