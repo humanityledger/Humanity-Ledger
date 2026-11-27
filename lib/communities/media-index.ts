@@ -118,7 +118,7 @@ export function searchMedia(items: MediaItem[], q: string): MediaItem[] {
   return items.filter((it) => {
     const hay =
       it.tab === 'files' || it.tab === 'music' ? it.name :
-      it.tab === 'links' ? `${it.url} ${it.host} ${it.text}` :
+      it.tab === 'links' ? `${it.url} ${it.host}` :
       it.tab === 'polls' ? `${it.question} ${it.options.join(' ')}` :
       it.tab === 'media' ? it.att.filename :
       it.tab === 'gifs' ? it.url :
