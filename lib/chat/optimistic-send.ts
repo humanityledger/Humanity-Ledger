@@ -132,3 +132,112 @@ export function adoptOptimistic<T extends { id: string; clientKey?: string; sent
     status: strongerStatus(strongerStatus(optimistic.status === 'sending' ? undefined : optimistic.status, confirmed.status), 'sent'),
   } as T;
 }
+
+export interface IncomingReconcileOptions {
+  /** True when the incoming message was authored by the local user (`senderInboxId === selfInboxId`). */
+  isOwnMessage: boolean;
+  /** Optimistic id looked up by `optimisticContentMap`, if still present. */
+  knownOptimisticId?: string;
+  /** Prefix of temporary optimistic ids (`'optimistic-'` in chat, `'local-'` in communities). */
+  optimisticPrefix?: string;
+  /** Transform applied to the confirmed record when adopting an optimistic twin (e.g. applyEarlyReceipt). */
+  onAdopt?: <T>(msg: T) => T;
+}
+
+/** Matches an in-flight optimistic placeholder for the same conversation and content. */
+export function findMatchingOptimisticIndex<T extends { id: string; conversationId?: string; content?: unknown }>(
+  list: readonly T[],
+  incoming: { conversationId?: string; content?: unknown },
+  opts: IncomingReconcileOptions,
+): number {
+  const prefix = opts.optimisticPrefix ?? 'optimistic-';
+  const convLower = typeof incoming.conversationId === 'string' ? incoming.conversationId.toLowerCase() : '';
+  const sameConv = (m: T) => !convLower || !m.conversationId || String(m.conversationId).toLowerCase() === convLower;
+
+  if (opts.knownOptimisticId) {
+    const idx = list.findIndex((m) => m.id === opts.knownOptimisticId && sameConv(m));
+    if (idx !== -1) return idx;
+  }
+
+  const content = typeof incoming.content === 'string' ? incoming.content : undefined;
+  if (content !== undefined) {
+    const exactIdx = list.findIndex(
+      (m) => typeof m.id === 'string' && m.id.startsWith(prefix) && sameConv(m) && m.content === content,
+    );
+    if (exactIdx !== -1) return exactIdx;
+
+    const burnIdx = list.findIndex(
+      (m) =>
+        typeof m.id === 'string' &&
+        m.id.startsWith(prefix) &&
+        sameConv(m) &&
+        typeof m.content === 'string' &&
+        m.content.startsWith('__BURN_') &&
+        m.content.endsWith('__::' + content),
+    );
+    if (burnIdx !== -1) return burnIdx;
+  }
+
+  return -1;
+}
+
+/**
+ * Reconciles a single confirmed/streamed message into `prev`:
+ * - skips if `incoming.id` is already present,
+ * - swaps a matching optimistic twin in place when `isOwnMessage` is true (never duplicating),
+ * - otherwise inserts in timestamp order.
+ */
+export function reconcileIncomingMessage<
+  T extends { id: string; clientKey?: string; conversationId?: string; content?: unknown; sentAtNs: number; status?: string },
+>(prev: T[], incoming: T, opts: IncomingReconcileOptions): T[] {
+  if (prev.some((m) => m.id === incoming.id)) return prev;
+  const finish = opts.onAdopt ?? ((x: T) => x);
+
+  if (opts.isOwnMessage) {
+    const idx = findMatchingOptimisticIndex(prev, incoming, opts);
+    if (idx !== -1) {
+      const next = [...prev];
+      next[idx] = finish(adoptOptimistic(prev[idx], incoming));
+      return next.sort((a, b) => a.sentAtNs - b.sentAtNs);
+    }
+  }
+
+  return [...prev, incoming].sort((a, b) => a.sentAtNs - b.sentAtNs);
+}
+
+/**
+ * Reconciles a batch of confirmed/polled messages into `prev`:
+ * deduplicates existing ids AND atomically replaces matching optimistic twins authored by self.
+ */
+export function reconcileIncomingBatch<
+  T extends {
+    id: string;
+    clientKey?: string;
+    conversationId?: string;
+    content?: unknown;
+    senderInboxId?: string;
+    sentAtNs: number;
+    status?: string;
+  },
+>(
+  prev: T[],
+  incomingList: readonly T[],
+  opts: { selfInboxId?: string; optimisticPrefix?: string; onAdopt?: (msg: any) => any } = {},
+): T[] {
+  const existingIds = new Set(prev.map((m) => m.id));
+  const newItems = incomingList.filter((m) => m?.id && !existingIds.has(m.id));
+  if (newItems.length === 0) return prev;
+
+  const selfLower = (opts.selfInboxId ?? '').toLowerCase();
+  let cur = [...prev];
+  for (const item of newItems) {
+    const senderLower = String(item.senderInboxId ?? '').toLowerCase();
+    const isOwn = !!selfLower && senderLower === selfLower;
+    cur = reconcileIncomingMessage(cur, item, {
+      isOwnMessage: isOwn,
+      optimisticPrefix: opts.optimisticPrefix,
+      onAdopt: opts.onAdopt,
+    });
+  }
+  return cur;
+}
