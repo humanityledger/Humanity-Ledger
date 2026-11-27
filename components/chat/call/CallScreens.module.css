@@ -240,7 +240,7 @@
   position: absolute;
   width: 136px;
   height: 136px;
-  border-radius: 999px;
+  border-radius: 43px;
   border: 1px solid rgba(21, 23, 28, 0.1);
   animation: ripple 3s cubic-bezier(0.2, 0, 0, 1) infinite;
 }
@@ -297,7 +297,7 @@
   position: relative;
   width: 128px;
   height: 128px;
-  border-radius: 999px;
+  border-radius: 39px;
   display: grid;
   place-items: center;
   overflow: hidden;

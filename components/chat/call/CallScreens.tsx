@@ -59,14 +59,15 @@ export function CallAvatar({
 }) {
   if (isWalletAddress(address)) {
     // The same avatar as everywhere else (photo, else the 10 × 10 mosaic), at the call's size.
+    // .avatar is 128px border-box with 4px white border, so its inner content box is 120×120.
     return (
-      <div className={s.avatar} style={{ background: 'transparent', transform: `scale(${scale})`, borderRadius: photo ? undefined : 32 }} aria-hidden="true">
-        <UserAvatar address={address} photo={photo} size={128} />
+      <div className={s.avatar} style={{ background: 'transparent', transform: `scale(${scale})`, borderRadius: 39 }} aria-hidden="true">
+        <UserAvatar address={address} photo={photo} size={120} />
       </div>
     );
   }
   return (
-    <div className={s.avatar} style={{ ...peerTint(address), transform: `scale(${scale})` }} aria-hidden="true">
+    <div className={s.avatar} style={{ ...peerTint(address), transform: `scale(${scale})`, borderRadius: 39 }} aria-hidden="true">
       {photo ? <img src={photo} alt="" /> : initialsFor(name, address)}
     </div>
   );

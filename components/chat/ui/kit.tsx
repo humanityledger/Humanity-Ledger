@@ -13,7 +13,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
-import { UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
+import { AVATAR_RADIUS, UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
 export const shortAddr = (addr?: string | null) => (addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '');
 
@@ -35,15 +35,16 @@ export function initials(name?: string | null, address?: string | null) {
 
 export function PeerAvatar({ address, name, photo, size = 44 }: { address?: string | null; name?: string | null; photo?: string | null; size?: number }) {
   // A person: the one avatar of Ledger Chat (photo, else the 10 × 10 mosaic). Not a wallet (a
-  // group, a community): initials on a tint, as before.
+  // group, a community): initials on a tint, using the same rounded-square frame.
   if (isWalletAddress(address)) return <UserAvatar address={address} photo={photo} size={size} />;
   return (
     <span
-      className="rounded-full flex items-center justify-center shrink-0 overflow-hidden font-semibold select-none"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.36), ...tintFor(address || name) }}
+      className="relative flex items-center justify-center shrink-0 overflow-hidden font-semibold select-none"
+      style={{ width: size, height: size, borderRadius: AVATAR_RADIUS, fontSize: Math.round(size * 0.36), ...tintFor(address || name) }}
       aria-hidden="true"
     >
-      {photo ? <img src={photo} alt="" className="w-full h-full object-cover" /> : initials(name, address)}
+      {photo ? <img src={photo} alt="" className="block w-full h-full object-cover object-center" /> : initials(name, address)}
+      <span className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/[0.08]" style={{ borderRadius: 'inherit' }} />
     </span>
   );
 }

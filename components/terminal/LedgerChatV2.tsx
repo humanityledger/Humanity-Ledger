@@ -118,7 +118,7 @@ import { AlphaNetworkBanner } from '@/components/zk/AlphaNetworkBanner';
 import { attachmentPreview, isAttachmentMessage, parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { formatBytes, parseLargeFileMessage } from '@/lib/chat/large-file';
 import { isRecordMessage, legacyPreview, parseLegacyMessage, parseRecordMessage, recordPreview } from '@/vendor/ledger-record/src/index';
-import { UserAvatar } from '@/components/chat/UserAvatar';
+import { AVATAR_RADIUS, UserAvatar } from '@/components/chat/UserAvatar';
 import { RecordSendError, sealFileMessage, sealNoteInsideMessage, sealNoteMessage } from '@/lib/chat/seal-record';
 import { epochForPeer, RecordEpochError, setRecordEpochProvider } from '@/lib/chat/record-epoch';
 import { installRecordWorker } from '@/lib/chat/record-worker';
@@ -1504,7 +1504,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     username: profile.chatName ? profile.chatName : "", 
                     avatar_url: profile.avatarUrl || "", 
                     bio: profile.bio || "" 
-                  }); 
+                  });
+                  if (profile.avatarUrl) {
+                    try { localStorage.setItem('ledger_avatar', profile.avatarUrl); } catch {}
+                    window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: profile.avatarUrl } }));
+                  }
                 } 
               } 
             } catch (e) {} 
@@ -7385,7 +7389,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         <button type="button" onClick={() => setShowFullSettings(true)} aria-label={tr("Settings")} title={tr("Settings")} className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
           <SettingsIcon />
         </button>
-        <button type="button" onClick={() => setShowFullSettings(true)} aria-label={tr("Your profile")} title={effectiveAddress || tr("Your profile")} className="relative mt-1 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
+        <button type="button" onClick={() => setShowFullSettings(true)} aria-label={tr("Your profile")} title={effectiveAddress || tr("Your profile")} className="relative mt-1 flex items-center justify-center leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]" style={{ borderRadius: AVATAR_RADIUS }}>
           <Avatar address={effectiveAddress} isMe={true} size={40} />
           <span className="absolute -right-px -bottom-px w-[11px] h-[11px] rounded-full bg-[#12a150] border-2 border-white" aria-hidden="true" />
         </button>
@@ -7723,10 +7727,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     className={`w-full md:w-[calc(100%-20px)] md:mx-2.5 text-left px-4 py-3 md:px-3 md:py-2.5 md:rounded-2xl transition-colors ${isActive ? 'bg-[#f1f2f4]' : 'hover:bg-[#f7f8fa]'}`}
                   >
                     <div className="flex items-center gap-3 w-full">
-                      <div className="relative shrink-0">
+                      <div className="relative shrink-0 flex items-center justify-center leading-none">
                         <Avatar address={conv.peerAddress} size={48} />
                         {peerStatus.status === 'online' && activePeer?.toLowerCase() === conv.peerAddress.toLowerCase() && (
-                          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#1f9d55] border-2 border-white" aria-label={tr("Online")} />
+                          <span className="absolute -bottom-px -right-px w-3 h-3 rounded-full bg-[#1f9d55] border-2 border-white" aria-label={tr("Online")} />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -7949,7 +7953,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
                 <button type="button" onClick={openContactInfo} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={tr("Contact info for {getDisplayName}", { getDisplayName: getDisplayName(activePeer!) })}>
-                  <div className="relative shrink-0">
+                  <div className="relative shrink-0 flex items-center justify-center leading-none">
                     <Avatar address={activePeer!} size={42} />
                     <OnlineDot online={peerStatus.status === 'online'} />
                   </div>

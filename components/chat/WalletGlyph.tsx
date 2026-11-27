@@ -1,12 +1,14 @@
+import { useId } from 'react';
+
 /**
  * The avatar of a wallet with no photo: a geometric glyph derived from its address, never initials.
  *
  * A 10 × 10 grid (100 squares, 21 November 2026; it was 5 × 5) mirrored around its middle: 50
  * free cells, one per bit of the first 50 bits of the address. Every one of the 100 squares is
- * drawn: a set bit in the ink, a clear bit in a light tint of the same ink, so the whole mosaic
- * shows even at 32 px. The ink's hue comes from the address, darkened for contrast on white. The
- * same address always gives the same glyph; two addresses that differ in their first 50 bits
- * differ.
+ * drawn edge-to-edge inside a rounded square (rx=7 on 24×24): a set bit in the ink, a clear bit
+ * in a light tint of the same ink, so the mosaic fills the entire tile seamlessly at any size.
+ * The ink's hue comes from the address, darkened for contrast on white. The same address always
+ * gives the same glyph; two addresses that differ in their first 50 bits differ.
  */
 export const GLYPH_SIDE = 10;
 const HALF = GLYPH_SIDE / 2;
@@ -33,26 +35,55 @@ export function walletInk(address: string): string {
 }
 
 export function WalletGlyph({ address, size = 44 }: { address: string; size?: number }) {
+  const rawId = useId();
+  const clipId = `wg-${rawId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const cells = walletCells(address);
   const ink = walletInk(address);
-  const pad = 3.2;
-  const cell = (24 - pad * 2) / GLYPH_SIDE;
-  const gap = size >= 36 ? 0.22 : 0.16;
+  const gap = size >= 48 ? 0.22 : size >= 32 ? 0.18 : 0.14;
+  const step = (24 + gap) / GLYPH_SIDE;
+  const cell = step - gap;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ flexShrink: 0, display: 'block' }} shapeRendering="geometricPrecision">
-      <rect x="0.5" y="0.5" width="23" height="23" rx="7" fill="#FFFFFF" stroke="#E4E7EC" />
-      {cells.map((on, i) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      style={{ flexShrink: 0, display: 'block', width: '100%', height: '100%' }}
+      shapeRendering="geometricPrecision"
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <rect x="0" y="0" width="24" height="24" rx="7" />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${clipId})`}>
+        <rect x="0" y="0" width="24" height="24" fill="#FFFFFF" />
+        {cells.map((on, i) => (
+          <rect
+            key={i}
+            x={(i % GLYPH_SIDE) * step}
+            y={Math.floor(i / GLYPH_SIDE) * step}
+            width={cell}
+            height={cell}
+            rx="0.25"
+            fill={ink}
+            fillOpacity={on ? 1 : 0.13}
+          />
+        ))}
+        {/* Exact 1px inset hairline inside the rounded square at every render size */}
         <rect
-          key={i}
-          x={pad + (i % GLYPH_SIDE) * cell + gap / 2}
-          y={pad + Math.floor(i / GLYPH_SIDE) * cell + gap / 2}
-          width={cell - gap}
-          height={cell - gap}
-          rx="0.35"
-          fill={ink}
-          fillOpacity={on ? 1 : 0.13}
+          x="0"
+          y="0"
+          width="24"
+          height="24"
+          rx="7"
+          fill="none"
+          stroke="rgba(16, 24, 40, 0.09)"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
         />
-      ))}
+      </g>
     </svg>
   );
 }

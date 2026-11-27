@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import path from 'path';
-import { isWalletAddress } from '@/components/chat/UserAvatar';
+import { AVATAR_RADIUS, isWalletAddress } from '@/components/chat/UserAvatar';
 
 const root = path.resolve(__dirname, '../../..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
@@ -12,7 +12,8 @@ describe('one avatar everywhere', () => {
       'components/chat/ui/kit.tsx', 'components/terminal/LedgerChatV2.tsx', 'components/chat/LedgerChatStatusBar.tsx',
       'components/chat/LedgerChatCallHistory.tsx', 'components/chat/LedgerChatProfile.tsx', 'components/chat/ContactInfoPanel.tsx',
       'components/chat/LedgerSettingsFull.tsx', 'components/chat/call/CallScreens.tsx', 'components/communities/CommunityReader.tsx',
-      'components/zk/wallet/WalletUI.tsx',
+      'components/zk/wallet/WalletUI.tsx', 'components/chat/LedgerChatUserSearch.tsx', 'components/chat/ContactRequestsPanel.tsx',
+      'components/terminal/LedgerChatSettings.tsx',
     ]) expect(read(f)).toMatch(/<UserAvatar /);
     // No more initials-on-a-colour for a wallet address in these screens.
     expect(read('components/chat/LedgerSettingsFull.tsx')).not.toMatch(/myAddress\.slice\(2, 4\)\.toUpperCase\(\)/);
@@ -20,6 +21,29 @@ describe('one avatar everywhere', () => {
     const ua = read('components/chat/UserAvatar.tsx');
     expect(ua).toMatch(/<WalletGlyph /);
     expect(ua).toMatch(/ledger_settings_update/); // your new photo shows everywhere at once
+  });
+
+  it('integrates both photos and the 10 × 10 mosaic inside the unified rounded-square frame everywhere', () => {
+    expect(AVATAR_RADIUS).toBe('29.17%');
+    const ua = read('components/chat/UserAvatar.tsx');
+    expect(ua).not.toMatch(/rounded-full/);
+    expect(ua).toMatch(/borderRadius:\s*AVATAR_RADIUS/);
+    expect(ua).toMatch(/object-cover object-center/);
+
+    const wg = read('components/chat/WalletGlyph.tsx');
+    expect(wg).toMatch(/clipPath/);
+    expect(wg).toMatch(/rx="7"/);
+    expect(wg).toMatch(/step = \(24 \+ gap\) \/ GLYPH_SIDE/);
+
+    const kit = read('components/chat/ui/kit.tsx');
+    expect(kit.slice(kit.indexOf('export function PeerAvatar'), kit.indexOf('export function SectionLabel'))).not.toMatch(/rounded-full/);
+
+    const cs = read('components/chat/call/CallScreens.tsx');
+    expect(cs.slice(cs.indexOf('export function CallAvatar'), cs.indexOf('function hueOf'))).toMatch(/borderRadius:\s*39/);
+    expect(cs.slice(cs.indexOf('export function CallAvatar'), cs.indexOf('function hueOf'))).toMatch(/size=\{120\}/);
+
+    expect(read('components/chat/LedgerChatOnboarding.tsx')).toMatch(/borderRadius:\s*AVATAR_RADIUS/);
+    expect(read('components/chat/LedgerUpdatesTab.tsx')).not.toMatch(/rounded-full p-\[2px\]/);
   });
   it('recognises wallet addresses only', () => {
     expect(isWalletAddress('0x' + 'aB'.repeat(20))).toBe(true);

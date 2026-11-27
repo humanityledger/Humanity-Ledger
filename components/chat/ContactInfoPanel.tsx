@@ -499,7 +499,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
         <div className="flex-1 overflow-y-auto overscroll-contain">
           <div className="bg-white pt-7 pb-6 px-4 flex flex-col items-center border-b border-[#e4e7ec] mb-5">
-            <div className="mb-4"><UserAvatar address={peerAddress} photo={profile?.avatarUrl} size={112} /></div>
+            <div className="mb-4 flex items-center justify-center leading-none"><UserAvatar address={peerAddress} photo={profile?.avatarUrl} size={112} /></div>
             <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-[#15171c] text-center">{displayName}</h1>
             {displayName !== shortAddr(peerAddress) && <p className="text-[14px] text-[#727a88] font-mono tabular-nums mt-1">{shortAddr(peerAddress)}</p>}
             <div className="mt-5 grid grid-cols-3 gap-2 w-full max-w-[300px]">

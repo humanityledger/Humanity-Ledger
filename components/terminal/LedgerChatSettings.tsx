@@ -24,6 +24,7 @@ import {
 import { useAppKit } from '@reown/appkit/react';
 import { useWalletStore } from '@/lib/store/wallet-store';
 import { useT } from '@/lib/i18n/client';
+import { AVATAR_RADIUS, UserAvatar } from '@/components/chat/UserAvatar';
 
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -146,12 +147,7 @@ function RootView({ onNavigate, address, s }: any) {
   return (
     <div className="w-full pb-20 px-6">
       <button onClick={() => onNavigate('profile')} className="w-full py-6 border-b border-black/8 flex items-center gap-5 text-left group">
-        <div className="w-14 h-14 bg-black flex items-center justify-center shrink-0 overflow-hidden shadow-md">
-          {s.avatar_url
-            ? <img src={s.avatar_url} alt={t("avatar")} className="w-full h-full object-cover" />
-            : <span className="text-white font-serif italic text-2xl">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
-          }
-        </div>
+        <UserAvatar address={address} photo={s.avatar_url || undefined} isMe size={56} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <span className="text-[18px] font-bold text-black tracking-tight truncate">{s.displayName}</span>
           <span className="text-[12px] font-mono text-black/40 truncate">{address}</span>
@@ -186,12 +182,7 @@ function RootView({ onNavigate, address, s }: any) {
 
         {/* Sticky profile footer */}
         <div className="sticky bottom-0 mt-10 pt-4 pb-6 bg-white/95 backdrop-blur-md border-t border-black/8 flex items-center gap-3 w-full">
-          <div className="w-10 h-10 bg-black flex items-center justify-center shrink-0 overflow-hidden">
-            {s.avatar_url
-              ? <img src={s.avatar_url} alt={t("avatar")} className="w-full h-full object-cover" />
-              : <span className="text-white font-black text-lg">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
-            }
-          </div>
+          <UserAvatar address={address} photo={s.avatar_url || undefined} isMe size={40} />
           <div className="flex flex-col flex-1 overflow-hidden">
             <span className="text-[13px] font-bold text-black truncate">{s.displayName || t("My Profile")}</span>
             <span className="text-[10px] font-mono text-black/40 truncate">{address}</span>
@@ -212,11 +203,8 @@ function ProfileView({ address, s }: any) {
   return (
     <div className="w-full flex flex-col pb-20">
       <div className="w-full bg-black p-8 flex flex-col items-center text-white relative">
-        <div className="w-28 h-28 bg-white border-[4px] border-zinc-700 mb-4 flex items-center justify-center overflow-hidden">
-          {s.avatar_url
-            ? <img src={s.avatar_url} alt={t("avatar")} className="w-full h-full object-cover" />
-            : <span className="text-black font-black text-5xl">{(s.displayName || '?').charAt(0).toUpperCase()}</span>
-          }
+        <div className="mb-4 flex items-center justify-center">
+          <UserAvatar address={address} photo={s.avatar_url || undefined} isMe size={112} />
         </div>
         <h2 className="text-2xl font-black uppercase text-center max-w-[90%] break-words">{s.displayName}</h2>
         <span className="text-zinc-400 text-sm font-bold mt-1">@{s.username}</span>
@@ -318,11 +306,12 @@ function EditProfileView({ address, s, update, updateBatch, goBack }: any) {
   return (
     <div className="p-4 space-y-6 pb-20">
       <div className="flex justify-center">
-        <button onClick={() => fileRef.current?.click()} className="w-24 h-24 bg-white border-[3px] border-black flex items-center justify-center relative cursor-pointer group shadow-[4px_4px_0_0_#000] overflow-hidden">
-          {s.avatar_url
-            ? <img src={s.avatar_url} alt="" className="w-full h-full object-cover group-hover:opacity-60 transition-opacity" />
-            : <Camera size={28} className="text-black" />
-          }
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="w-24 h-24 flex items-center justify-center relative cursor-pointer group overflow-hidden p-0 leading-none"
+          style={{ borderRadius: AVATAR_RADIUS }}
+        >
+          <UserAvatar address={address} photo={s.avatar_url || undefined} isMe size={96} />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <Camera size={20} className="text-white" />
           </div>

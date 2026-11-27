@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LocalContact } from '@/lib/wallet/localAddressBook';
 import { useT } from '@/lib/i18n/client';
-import { UserAvatar } from '@/components/chat/UserAvatar';
+import { AVATAR_RADIUS, UserAvatar } from '@/components/chat/UserAvatar';
 
 interface LedgerStatus {
   peerAddress: string;
@@ -132,7 +132,8 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
           >
             <div className="relative">
               <div
-                className={`w-[50px] h-[50px] rounded-full flex items-center justify-center border-2 ${myStatuses.length > 0 ? 'border-[#2754d6]' : 'border-black/20 border-dashed'}`}
+                className={`w-[50px] h-[50px] flex items-center justify-center border-2 ${myStatuses.length > 0 ? 'border-[#2754d6]' : 'border-black/20 border-dashed'}`}
+                style={{ borderRadius: AVATAR_RADIUS }}
               >
                 <AddressAvatar address={address} size={42} showSaved={true} />
               </div>
@@ -154,13 +155,16 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
               >
                 <div className="relative">
                   <div
-                    className="w-[50px] h-[50px] rounded-full flex items-center justify-center border-2 border-[#30d158]"
+                    className="w-[50px] h-[50px] flex items-center justify-center"
                     style={{
+                      borderRadius: AVATAR_RADIUS,
                       background: `conic-gradient(#30d158 ${((Date.now() - status.postedAt) / (24 * 60 * 60 * 1000)) * 360}deg, #e5e5ea 0deg)`,
                       padding: 2,
                     }}
                   >
-                    <AddressAvatar address={contact.peerAddress} size={42} />
+                    <div className="w-full h-full bg-white flex items-center justify-center" style={{ borderRadius: '27%' }}>
+                      <AddressAvatar address={contact.peerAddress} size={42} />
+                    </div>
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 text-[14px]">{status.emoji}</div>
                 </div>

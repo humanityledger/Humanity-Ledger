@@ -49,7 +49,7 @@ import { checkPost, effectivePermissions, encodePin, isPrivileged, mayPinFor, ra
 import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
 import { useT } from '@/lib/i18n/client';
-import { UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
+import { AVATAR_RADIUS, UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
 export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';
 /** For a community whose posts live in an XMTP MLS group (lib/communities/mls.ts). */
@@ -654,13 +654,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   {isWalletAddress(p.authorAddress) ? (
-                    <button type="button" onClick={() => setOpenMember(p.authorAddress!.toLowerCase())} className="shrink-0 rounded-[12px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#15171c]" aria-label={tr("Profile of {name}", { name: author.name })}>
+                    <button type="button" onClick={() => setOpenMember(p.authorAddress!.toLowerCase())} className="shrink-0 flex items-center justify-center leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#15171c]" style={{ borderRadius: AVATAR_RADIUS }} aria-label={tr("Profile of {name}", { name: author.name })}>
                       <UserAvatar address={p.authorAddress} size={36} />
                     </button>
                   ) : (
                   <span
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0 select-none"
-                    style={tintFor(p.authorAddress)}
+                    className="w-9 h-9 flex items-center justify-center text-[14px] font-semibold shrink-0 select-none"
+                    style={{ borderRadius: AVATAR_RADIUS, ...tintFor(p.authorAddress) }}
                     aria-hidden="true"
                   >
                     {initials(author.mine ? '' : author.name, p.authorAddress)}

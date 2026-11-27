@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShieldCheck, Check, UserX, Bell, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 
 interface ContactRequest {
   id: string;
@@ -99,8 +100,6 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
     }
   };
 
-  const hueFor = (addr: string) => parseInt(addr.slice(2, 8), 16) % 360;
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -154,8 +153,6 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
               </motion.div>
             ) : (
               requests.map(req => {
-                const hue = hueFor(req.user.address);
-                const initials = req.user.nickname.replace('@', '').slice(0, 2).toUpperCase();
                 const isProcessing = processingIds.has(req.id);
 
                 return (
@@ -167,13 +164,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                     exit={{ opacity: 0, x: 20, height: 0 }}
                     className="flex items-center gap-3 p-4 border-b border-black/[0.05] last:border-b-0"
                   >
-                    {/* Avatar */}
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-[15px] shrink-0"
-                      style={{ background: `hsl(${hue},60%,48%)` }}
-                    >
-                      {initials}
-                    </div>
+                    <UserAvatar address={req.user.address} photo={req.user.avatarUrl} size={48} />
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">

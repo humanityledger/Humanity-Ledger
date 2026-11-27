@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { AVATAR_RADIUS } from '@/components/chat/UserAvatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Message {
@@ -169,8 +170,8 @@ export function LedgerChatSearchModal({
               >
                 {/* Sender avatar */}
                 <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black text-white shrink-0 mt-0.5"
-                  style={{ background: isSelf ? '#2754d6' : `hsl(${parseInt(msg.senderInboxId.slice(0, 6) || '0', 16) % 360},65%,45%)` }}
+                  className="w-9 h-9 flex items-center justify-center text-[11px] font-black text-white shrink-0 mt-0.5"
+                  style={{ borderRadius: AVATAR_RADIUS, background: isSelf ? '#2754d6' : `hsl(${parseInt(msg.senderInboxId.slice(0, 6) || '0', 16) % 360},65%,45%)` }}
                 >
                   {isSelf ? 'Me' : msg.senderInboxId.slice(0, 2).toUpperCase()}
                 </div>

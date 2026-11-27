@@ -50,7 +50,7 @@ import { setStickerEffectsEnabled, stickerEffectsEnabled } from './StickerSceneH
 import { LinkedDevicesPanel } from '@/components/link/LinkedDevicesPanel';
 import { ProfileHeaderCard, ProfilePanel, ProfileSharePanel, UsernameEditor } from './profile/ProfileShare';
 import { useT } from '@/lib/i18n/client';
-import { UserAvatar } from '@/components/chat/UserAvatar';
+import { AVATAR_RADIUS, UserAvatar } from '@/components/chat/UserAvatar';
 
 function downloadSettingsBackup(): void {
   const data = exportableLocalStorage();
@@ -488,7 +488,14 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
     try {
       setDisplayName((settings as any)?.displayName || localStorage.getItem('ledger_displayName') || myName || '');
       setBio((settings as any)?.bio ?? localStorage.getItem('ledger_bio') ?? '');
-      setAvatarUrl((settings as any)?.avatar_url || localStorage.getItem('ledger_avatar') || '');
+      const syncedAvatar = (settings as any)?.avatar_url;
+      const storedAvatar = localStorage.getItem('ledger_avatar') || '';
+      const resolvedAvatar = syncedAvatar || storedAvatar;
+      setAvatarUrl(resolvedAvatar);
+      if (syncedAvatar && !storedAvatar) {
+        localStorage.setItem('ledger_avatar', syncedAvatar);
+        window.dispatchEvent(new CustomEvent('ledger_settings_update', { detail: { avatarUrl: syncedAvatar } }));
+      }
     } catch {}
   }, [myAddress, myName, (settings as any)?.displayName, (settings as any)?.bio, (settings as any)?.avatar_url]);
 
@@ -612,11 +619,12 @@ export const LedgerSettingsFull: React.FC<LedgerSettingsFullProps> = ({ myAddres
                       className="hidden"
                       onChange={handleAvatarChange}
                     />
-                    {/* Avatar circle */}
+                    {/* Avatar frame */}
                     <button
                       type="button"
                       onClick={() => avatarFileRef.current?.click()}
-                      className={`w-[88px] h-[88px] overflow-hidden transition-all active:scale-95 ${avatarUrl ? 'rounded-full shadow-lg ring-4 ring-black/[0.08] hover:ring-black/20' : 'rounded-[26px] hover:opacity-90'}`}
+                      className="w-[88px] h-[88px] flex items-center justify-center p-0 leading-none overflow-hidden transition-all active:scale-95 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
+                      style={{ borderRadius: AVATAR_RADIUS }}
                       title={tr("Change profile photo")}
                     >
                       {/* The same avatar as everywhere else: your photo, else the 10 × 10 mosaic. */}

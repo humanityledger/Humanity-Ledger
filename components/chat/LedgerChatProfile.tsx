@@ -51,7 +51,7 @@ export function LedgerChatProfile({
       <div className="flex-1 overflow-y-auto">
         {/* Avatar Section */}
         <div className="flex flex-col items-center py-8 border-b border-black/5">
-          <div className="mb-4"><UserAvatar address={peerAddress} size={112} /></div>
+          <div className="mb-4 flex items-center justify-center leading-none"><UserAvatar address={peerAddress} size={112} /></div>
           <h1 className="text-[24px] font-semibold tracking-tight text-black">{displayName}</h1>
           
           <button 

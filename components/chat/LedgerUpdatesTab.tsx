@@ -245,7 +245,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 onClick={() => setViewing(author)}
                 className="w-full flex items-start gap-3 px-2 py-2.5 rounded-xl hover:bg-[#f7f8fa] text-left transition-colors"
               >
-                <span className="rounded-full p-[2px] ring-2 ring-[#5200FF] shrink-0">
+                <span className="inline-flex items-center justify-center leading-none p-[2px] ring-2 ring-[#5200FF] shrink-0" style={{ borderRadius: '14.5px' }}>
                   <PeerAvatar address={author} name={nameOf(author)} size={42} />
                 </span>
                 <span className="flex-1 min-w-0">

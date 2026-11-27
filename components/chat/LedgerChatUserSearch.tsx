@@ -6,6 +6,8 @@ import { Search, X, UserPlus, ShieldCheck, MapPin, Check, Clock, MessageCircle, 
 import { getLocalContacts, saveLocalContact } from '@/lib/wallet/localAddressBook';
 import { toast } from 'sonner';
 import { useT } from '@/lib/i18n/client';
+import { UserAvatar } from '@/components/chat/UserAvatar';
+import { setPeerProfile } from '@/lib/chat/peerProfiles';
 
 interface LedgerChatUserSearchProps {
   myAddress: string;
@@ -114,9 +116,10 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
       }
 
       const chosenName = user.nickname || user.name || (user.address.slice(0, 6) + '…' + user.address.slice(-4));
-      saveLocalContact(myAddress, { peerAddress: addr, name: chosenName, avatar: user.avatar || '' });
+      saveLocalContact(myAddress, { peerAddress: addr, name: chosenName, avatar: user.avatarUrl || user.avatar || '' });
+      setPeerProfile(addr, { avatarUrl: user.avatarUrl || user.avatar || '', displayName: chosenName });
       try {
-        localStorage.setItem(`peer_profile_${addr}`, JSON.stringify({ displayName: chosenName, avatarUrl: user.avatar || '' }));
+        localStorage.setItem(`peer_profile_${addr}`, JSON.stringify({ displayName: chosenName, avatarUrl: user.avatarUrl || user.avatar || '' }));
       } catch {}
 
       if (data.status === 'ALREADY_CONNECTED') {
@@ -248,8 +251,6 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
               >
                 {results.map(user => {
                   const tier = tierInfo(user.tier);
-                  const initials = (user.name || user.nickname || user.address.slice(2)).replace('@', '').slice(0, 2).toUpperCase();
-                  const hue = parseInt(user.address.slice(2, 8), 16) % 360;
                   const addr = user.address.toLowerCase();
                   const reqStatus = requestStatuses[addr] ?? 'none';
 
@@ -259,13 +260,7 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                       className="flex items-center justify-between p-4 rounded-2xl border border-black/[0.06] hover:border-[#15171c] hover:bg-[#eff1f4] transition-all group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Avatar */}
-                        <div
-                          className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-[15px] shadow-sm shrink-0"
-                          style={{ background: `hsl(${hue},60%,48%)` }}
-                        >
-                          {initials}
-                        </div>
+                        <UserAvatar address={user.address} photo={user.avatarUrl || user.avatar || undefined} size={44} />
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[15px] font-semibold text-black truncate">{user.name}</span>
@@ -299,9 +294,10 @@ export function LedgerChatUserSearch({ myAddress, onClose, onAddContact }: Ledge
                         <button
                           onClick={() => {
                             const chosenName = user.nickname || user.name || (user.address.slice(0, 6) + '…' + user.address.slice(-4));
-                            saveLocalContact(myAddress, { peerAddress: user.address.toLowerCase(), name: chosenName, avatar: user.avatar || '' });
+                            saveLocalContact(myAddress, { peerAddress: user.address.toLowerCase(), name: chosenName, avatar: user.avatarUrl || user.avatar || '' });
+                            setPeerProfile(user.address.toLowerCase(), { avatarUrl: user.avatarUrl || user.avatar || '', displayName: chosenName });
                             try {
-                              localStorage.setItem(`peer_profile_${user.address.toLowerCase()}`, JSON.stringify({ displayName: chosenName, avatarUrl: user.avatar || '' }));
+                              localStorage.setItem(`peer_profile_${user.address.toLowerCase()}`, JSON.stringify({ displayName: chosenName, avatarUrl: user.avatarUrl || user.avatar || '' }));
                             } catch {}
                             onAddContact(user.address);
                             onClose();

@@ -6,6 +6,8 @@ import { Camera, ChevronRight, Check, MapPin, AtSign, User, Shield, Bell, Lock, 
 import { useLedgerSettings } from '@/lib/hooks/useLedgerSettings';
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { useT } from '@/lib/i18n/client';
+import { AVATAR_RADIUS } from '@/components/chat/UserAvatar';
+import { downscaleAvatar } from '@/lib/chat/profileSync';
 
 interface OnboardingProps {
   address: string;
@@ -40,41 +42,14 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
 
   if (!isLoaded) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_SIZE = 256;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > MAX_SIZE) {
-                height *= MAX_SIZE / width;
-                width = MAX_SIZE;
-              }
-            } else {
-              if (height > MAX_SIZE) {
-                width *= MAX_SIZE / height;
-                height = MAX_SIZE;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            setAvatar(canvas.toDataURL('image/jpeg', 0.8));
-          };
-          img.src = ev.target.result as string;
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const dataUrl = await downscaleAvatar(file, 256);
+      setAvatar(dataUrl);
+    } catch {}
   };
 
   const handleNext = () => {
@@ -262,11 +237,12 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
 
                 <div className="flex flex-col items-center mb-8">
                   <div
-                    className="w-24 h-24 rounded-full bg-black/5 border-2 border-dashed border-black/20 flex flex-col items-center justify-center relative cursor-pointer hover:border-[#15171c] hover:bg-[#eff1f4] transition-all overflow-hidden group"
+                    className={`w-24 h-24 flex flex-col items-center justify-center relative cursor-pointer transition-all overflow-hidden group ${avatar ? 'bg-[#f2f4f7] ring-1 ring-inset ring-black/[0.09]' : 'bg-black/5 border-2 border-dashed border-black/20 hover:border-[#15171c] hover:bg-[#eff1f4]'}`}
+                    style={{ borderRadius: AVATAR_RADIUS }}
                     onClick={() => fileRef.current?.click()}
                   >
                     {avatar ? (
-                      <img src={avatar} alt={t("Avatar")} className="w-full h-full object-cover" />
+                      <img src={avatar} alt={t("Avatar")} className="block w-full h-full object-cover object-center" />
                     ) : (
                       <>
                         <Camera size={28} className="text-black/30 group-hover:text-[#15171c] transition-colors mb-1" />
