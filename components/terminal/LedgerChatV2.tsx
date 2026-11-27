@@ -5263,6 +5263,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               const route = await classifyStreamConversation({
                 convoId,
                 msgConversation: (msg as any).conversation,
+                senderInboxId: msg.senderInboxId,
                 client,
                 standaloneGroupIds: standaloneGroupIdsRef.current,
                 communityGroupIds: communityGroupIdsRef.current,

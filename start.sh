@@ -44,4 +44,10 @@ echo "[start.sh] Booting Ledger Network - ledgerchat.org / www.ledgerchat.org"
 echo "[start.sh] NODE_ENV=${NODE_ENV:-production}"
 echo "[start.sh] Binding Next.js server to port ${APP_PORT} on 0.0.0.0..."
 
+# scripts/serve.js: Next.js as a direct child, with a graceful stop on SIGTERM (no request cut
+# off at each deploy). Falls back to npx if the script is missing.
+export PORT="${APP_PORT}"
+if [ -f scripts/serve.js ]; then
+  exec node scripts/serve.js
+fi
 exec npx next start -p "${APP_PORT}" -H "0.0.0.0"

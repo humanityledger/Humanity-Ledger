@@ -3,12 +3,10 @@
  *
  * Pure classification & routing helpers for XMTP conversations and streams.
  *
- * Critical invariant:
- *   A message from an XMTP Group (or an unresolved conversation whose type has
- *   not been confirmed as a 1:1 DM yet) MUST NEVER fall back to resolving
- *   `msg.senderInboxId` into a DM wallet row in the Chats list. Violating that
- *   invariant turned every active speaker in a group or community into a
- *   separate phantom wallet chat row in the user's sidebar.
+ * Keeps community MLS channels in CommunityReader, routes standalone groups to
+ * their group thread, routes 1:1 DMs cleanly without dropping on transient worker
+ * errors, and prevents unresolved group conversations from spawning phantom DM
+ * wallet rows for every speaker.
  */
 
 import { hasSyncGroupName } from '@/lib/sync/xmtpSyncChannel';
@@ -22,9 +20,10 @@ export function isXmtpConversationId(v: unknown): v is string {
 
 /** True when an XMTP Conversation wrapper represents a Group rather than a DM. */
 export function isGroupConversation(conv: any): boolean {
-  if (!conv) return false;
+  if (!conv || typeof conv !== 'object') return false;
   if (typeof conv.peerInboxId === 'function') return false;
   if (conv?.metadata?.conversationType === 'group') return true;
+  if (conv?.conversationType === 'group') return true;
   if (typeof conv.addMembersByIdentifiers === 'function' || typeof conv.addMembers === 'function') return true;
   if (typeof conv.updateName === 'function' || typeof conv.isAdmin === 'function') return true;
   return false;
@@ -75,6 +74,7 @@ export type StreamConversationRoute =
 export async function classifyStreamConversation(params: {
   convoId: string;
   msgConversation?: any;
+  senderInboxId?: string;
   client: any;
   standaloneGroupIds: Set<string>;
   communityGroupIds: Set<string>;
@@ -86,6 +86,7 @@ export async function classifyStreamConversation(params: {
   const {
     convoId,
     msgConversation,
+    senderInboxId,
     client,
     standaloneGroupIds,
     communityGroupIds,
@@ -100,7 +101,6 @@ export async function classifyStreamConversation(params: {
   }
 
   if (!convoIdLower) {
-    // Legacy or mock message without conversationId: allow DM path as before.
     return { kind: 'dm', dmConvo: msgConversation };
   }
 
@@ -119,7 +119,6 @@ export async function classifyStreamConversation(params: {
   };
 
   if (standaloneGroupIds.has(convoIdLower) || visibleGroupIds.has(convoIdLower)) {
-    // Even if previously seen in UI, still suppress if it is now known to belong to a community.
     if (communityGroupIds.has(convoIdLower)) return { kind: 'skip', reason: 'community' };
     return { kind: 'group', groupId: convoIdLower };
   }
@@ -135,17 +134,36 @@ export async function classifyStreamConversation(params: {
     return { kind: 'dm', dmConvo: msgConversation };
   }
 
-  // Resolve conversation object from XMTP local DB (and after a quick sync if missing).
   const convs = client?.conversations;
-  let convObj: any = await convs?.getConversationById?.(convoId).catch(() => null);
-  if (!convObj && typeof convs?.listGroups === 'function') {
-    const groups: any[] = await convs.listGroups({ consentStates: [0, 1] }).catch(() => convs.listGroups().catch(() => []));
-    convObj = groups.find((g) => String(g?.id ?? '').toLowerCase() === convoIdLower) ?? null;
-  }
-  if (!convObj && typeof convs?.listDms === 'function') {
-    const dms: any[] = await convs.listDms({ consentStates: [0, 1] }).catch(() => convs.listDms().catch(() => []));
-    convObj = dms.find((d) => String(d?.id ?? '').toLowerCase() === convoIdLower) ?? null;
-  }
+  let lookupFailed = false;
+  const safeGetConv = async (): Promise<any | null> => {
+    if (typeof convs?.getConversationById !== 'function') return null;
+    try {
+      const hit = await convs.getConversationById(convoId);
+      if (hit) return hit;
+      return convoIdLower !== convoId ? await convs.getConversationById(convoIdLower) : null;
+    } catch {
+      lookupFailed = true;
+      return null;
+    }
+  };
+  const scanLists = async (): Promise<any | null> => {
+    if (typeof convs?.listGroups === 'function') {
+      const groups: any[] = await convs.listGroups({ consentStates: [0, 1] }).catch(() => convs.listGroups().catch(() => []));
+      const grp = groups.find((g) => String(g?.id ?? '').toLowerCase() === convoIdLower);
+      if (grp) return grp;
+    }
+    if (typeof convs?.listDms === 'function') {
+      const dms: any[] = await convs.listDms({ includeDuplicateDms: true, consentStates: [0, 1] }).catch(() => convs.listDms().catch(() => []));
+      const dm = dms.find((d) => String(d?.id ?? '').toLowerCase() === convoIdLower);
+      if (dm) return dm;
+    }
+    return null;
+  };
+
+  let convObj: any = await safeGetConv();
+  if (!convObj) convObj = await scanLists();
+
   if (!convObj && (typeof convs?.syncAll === 'function' || typeof convs?.sync === 'function')) {
     try {
       if (typeof convs.syncAll === 'function') {
@@ -154,14 +172,14 @@ export async function classifyStreamConversation(params: {
         await convs.sync();
       }
     } catch { /* best-effort */ }
-    convObj = await convs?.getConversationById?.(convoId).catch(() => null);
-    if (!convObj && typeof convs?.listGroups === 'function') {
-      const groups: any[] = await convs.listGroups({ consentStates: [0, 1] }).catch(() => convs.listGroups().catch(() => []));
-      convObj = groups.find((g) => String(g?.id ?? '').toLowerCase() === convoIdLower) ?? null;
-    }
-    if (!convObj && typeof convs?.listDms === 'function') {
-      const dms: any[] = await convs.listDms({ consentStates: [0, 1] }).catch(() => convs.listDms().catch(() => []));
-      convObj = dms.find((d) => String(d?.id ?? '').toLowerCase() === convoIdLower) ?? null;
+    convObj = (await safeGetConv()) ?? (await scanLists());
+  }
+
+  // Fallback by sender inbox only when its DM conversation id matches this stream convoId.
+  if (!convObj && senderInboxId && typeof convs?.getDmByInboxId === 'function') {
+    const dmBySender = await convs.getDmByInboxId(senderInboxId).catch(() => null);
+    if (dmBySender && !isGroupConversation(dmBySender) && (!dmBySender.id || String(dmBySender.id).toLowerCase() === convoIdLower)) {
+      return { kind: 'dm', dmConvo: dmBySender };
     }
   }
 
@@ -174,12 +192,14 @@ export async function classifyStreamConversation(params: {
     const name = typeof convObj?.name === 'string' && convObj.name.trim() ? convObj.name.trim() : undefined;
     return { kind: 'group', groupId: convoIdLower, groupName: name };
   }
-  if (isDmConversation(convObj)) {
+  if (convObj && !isGroupConversation(convObj)) {
     return { kind: 'dm', dmConvo: convObj };
   }
 
-  // ConvoId exists, yet even after sync XMTP could not classify it as a 1:1 DM.
-  // NEVER fall back to resolving msg.senderInboxId as a wallet DM: doing so would spawn
-  // phantom wallet chats for every group or community speaker while welcomes catch up.
+  // If the worker threw on lookup without returning list results, do not drop a DM.
+  if (lookupFailed) {
+    return { kind: 'dm' };
+  }
+
   return { kind: 'skip', reason: 'unresolved_group_or_conv' };
 }
