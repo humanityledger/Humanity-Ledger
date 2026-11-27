@@ -326,7 +326,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   /** The rule check for what this person is about to send (lib/communities/settings.ts checkPost). */
   const lastOwnPostAt = useMemo(() => {
     let at: number | null = null;
-    for (const m of rawMsgs) if ((m.authorAddress || '').toLowerCase() === me && !isControlMessage(m.content) && (m.createdAt ?? 0) > (at ?? 0)) at = m.createdAt ?? null;
+    for (const m of rawMsgs) {
+      const when = typeof m.createdAt === 'number' ? m.createdAt : Date.parse(String(m.createdAt ?? '')) || 0;
+      if ((m.authorAddress || '').toLowerCase() === me && !isControlMessage(m.content) && when > (at ?? 0)) at = when;
+    }
     return at;
   }, [rawMsgs, me]);
   const allowed = (kind: PostKind, text = ''): boolean => {
@@ -338,7 +341,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const kindOf = (text: string): PostKind => (text.startsWith('__POLL__') ? 'poll' : /^\s*\{\s*"type"\s*:\s*"hl\.(attachment|largefile)"/.test(text) || text.startsWith('__AUDIO__') ? 'media' : 'text');
   const mayWrite = !mlsGroup || checkPost(rules, myRank, 'text', '', null).ok;
   // Spam filter: on every member's app, posts it catches are hidden (never for privileged people).
-  const spam = useMemo(() => (mlsGroup && rules.antiSpam ? spamIds(posts.filter((p) => !p.state), (a) => rankIn(roleInfo, a)) : new Set<string>()), [mlsGroup, rules.antiSpam, posts, roleInfo]);
+  const spam = useMemo(() => (mlsGroup && rules.antiSpam ? spamIds(posts.filter((p) => !p.state).map((p) => ({ id: p.id, content: postText(p), authorAddress: p.authorAddress, createdAt: time(p) })), (a) => rankIn(roleInfo, a)) : new Set<string>()), [mlsGroup, rules.antiSpam, posts, roleInfo]);
 
   const submit = async (text: string, retryId?: string) => {
     let body = text.trim();
