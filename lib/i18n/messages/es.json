@@ -4795,5 +4795,14 @@
  "Not listed in Discover. Only people with your invite link or a personal invite can join.": "No aparece en Descubrir. Solo puede entrar quien tenga tu enlace de invitación o una invitación personal.",
  "Listed in Discover with its name and description. Anyone can join and read new posts.": "Aparece en Descubrir con su nombre y descripción. Cualquiera puede unirse y leer las publicaciones nuevas.",
  "These rules apply to new posts in this community.": "Estas reglas se aplican a las publicaciones nuevas de esta comunidad.",
- "Not sent.": "No enviado."
+ "Not sent.": "No enviado.",
+ "Not sent. The encrypted group did not accept it. Check your connection and try again.": "No enviado. El grupo cifrado no lo aceptó. Revisa tu conexión e inténtalo de nuevo.",
+ "Not sent. This post is too long. Make it shorter and try again.": "No enviado. Esta publicación es demasiado larga. Acórtala e inténtalo de nuevo.",
+ "Not sent. This device is offline. Connect to the internet and try again.": "No enviado. Este dispositivo está sin conexión. Conéctate a internet e inténtalo de nuevo.",
+ "Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.": "No enviado. Este dispositivo aún no ha recibido acceso al grupo cifrado. Si acabas de unirte o de vincular este dispositivo, abre la comunidad en un dispositivo conectado que ya sea miembro e inténtalo de nuevo.",
+ "Not sent. You are no longer a member of this encrypted group.": "No enviado. Ya no eres miembro de este grupo cifrado.",
+ "Not sent. This encrypted group needs a newer app version. Reload the page and try again.": "No enviado. Este grupo cifrado necesita una versión más reciente de la aplicación. Recarga la página e inténtalo de nuevo.",
+ "Not sent. Encrypted sync for this group fell behind on this device. Reload the page or open the community on another device.": "No enviado. La sincronización cifrada de este grupo se quedó atrás en este dispositivo. Recarga la página o abre la comunidad en otro dispositivo.",
+ "Not sent. Your account cannot post to this encrypted group.": "No enviado. Tu cuenta no puede publicar en este grupo cifrado.",
+ "Not sent. Could not reach the encrypted group. Check your connection and try again.": "No enviado. No se pudo llegar al grupo cifrado. Revisa tu conexión e inténtalo de nuevo."
 }

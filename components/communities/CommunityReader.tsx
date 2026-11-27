@@ -204,7 +204,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const reactions = useMemo(() => tallyReactions(rawMsgs, me), [rawMsgs, me]);
   const sendControl = useCallback(async (msg: string) => {
     if (!mlsGroup || !xmtpClient) return;
-    await postToGroup(xmtpClient, mlsGroup, msg).catch(() => toast.error(tr("Not sent. Check your connection and try again.")));
+    try {
+      await postToGroup(xmtpClient, mlsGroup, msg);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : typeof (e as any)?.message === 'string' ? (e as any).message : '';
+      toast.error(tr(m.startsWith('Not sent.') ? m : 'Not sent. Check your connection and try again.'));
+    }
     fetchPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mlsGroup, xmtpClient]);
@@ -248,7 +253,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       try {
         // Not in the group yet: a member who is online adds people who joined (lib/communities/mls.ts).
         await xmtpClient.conversations?.sync?.().catch?.(() => {});
-        const inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
+        let inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
+        if (!inGroup && typeof xmtpClient.conversations?.syncAll === 'function') {
+          await xmtpClient.conversations.syncAll([0, 1]).catch(() => {});
+          inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
+        }
         if (!inGroup) { setLoad((st) => (st === 'ready' ? 'ready' : 'waiting')); return; }
         const list = await readGroupPosts(xmtpClient, mlsGroup);
         const incoming: ReaderPost[] = [];
@@ -314,7 +323,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     setPosts([]);
     fetchCommunity();
     fetchPosts();
-    const t = setInterval(() => { if (typeof document === 'undefined' || document.visibilityState === 'visible') fetchPosts(); }, 15_000);
+    let ticks = 0;
+    const t = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        fetchPosts();
+        if (++ticks % 2 === 0) fetchCommunity();
+      }
+    }, 15_000);
     return () => clearInterval(t);
   }, [fetchCommunity, fetchPosts]);
 
@@ -361,7 +376,8 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: undefined } : p)));
         fetchPosts();
       } catch (e) {
-        const text = e instanceof Error && e.message.startsWith('Not sent.') ? e.message : 'Not sent. The encrypted group did not accept it. Check your connection and try again.';
+        const msg = e instanceof Error ? e.message : typeof (e as any)?.message === 'string' ? (e as any).message : typeof e === 'string' ? e : '';
+        const text = msg.startsWith('Not sent.') ? tr(msg) : tr('Not sent. The encrypted group did not accept it. Check your connection and try again.');
         setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: text } : p)));
       }
       return;

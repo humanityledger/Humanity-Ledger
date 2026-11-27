@@ -43,12 +43,148 @@ function sanitizeGroupMetadata(input: string): string {
     .slice(0, 128);                    // Hard limit: 128 chars max
 }
 
+const ADDR = /^0x[a-fA-F0-9]{40}$/;
+const GROUP_SERIAL_WAIT_MS = 15_000;
+const PUBLISH_WAIT_MS = 18_000;
+const MAX_GROUP_PUBLISH_RETRIES = 20;
+const groupChains = new Map<string, Promise<void>>();
+const failedGroupMsgIds = new Set<string>();
+/** Maps `${groupId}\0${content}` -> locally queued optimistic msgId so Retrying never duplicates a post. */
+const pendingContentMsgIds = new Map<string, string>();
+const groupPublishRetries = new Map<string, { group: any; attempt: number; timer: ReturnType<typeof setTimeout> | null; client?: Client }>();
+let groupFlushListenersInstalled = false;
+
+function errorText(e: unknown): string {
+  if (typeof e === 'string') return e;
+  if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: unknown }).message === 'string') {
+    return (e as { message: string }).message;
+  }
+  return String(e ?? '');
+}
+
+function reportGroupDelivery(kind: 'group_failed' | 'publish_paused' | 'publish_pending' | 'publish_retrying', err: unknown): void {
+  if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+  void import('./client').then((m) => m.reportDelivery?.(kind, err)).catch(() => {});
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(label)), ms);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+function installGroupFlushListeners(): void {
+  if (groupFlushListenersInstalled || typeof window === 'undefined' || typeof document === 'undefined') return;
+  groupFlushListenersInstalled = true;
+  const flush = () => {
+    for (const [groupId, entry] of [...groupPublishRetries.entries()]) {
+      if (entry.timer) clearTimeout(entry.timer);
+      groupPublishRetries.delete(groupId);
+      scheduleGroupPublishRetry(groupId, entry.group, 0, entry.client);
+    }
+  };
+  window.addEventListener('online', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') flush();
+  });
+  window.addEventListener('pageshow', flush);
+}
+
+function scheduleGroupPublishRetry(groupId: string, group: any, attempt = 0, client?: Client): void {
+  if (typeof group?.publishMessages !== 'function') return;
+  installGroupFlushListeners();
+  const existing = groupPublishRetries.get(groupId);
+  if (attempt === 0 && existing) {
+    existing.group = group;
+    if (client) existing.client = client;
+    return;
+  }
+  if (attempt >= MAX_GROUP_PUBLISH_RETRIES) {
+    groupPublishRetries.delete(groupId);
+    reportGroupDelivery('group_failed', 'group background publish retries exhausted');
+    return;
+  }
+  if (attempt === 3) reportGroupDelivery('publish_retrying', `group attempt ${attempt}`);
+  const entry = { group, attempt, timer: null as ReturnType<typeof setTimeout> | null, client };
+  groupPublishRetries.set(groupId, entry);
+  const delay = attempt === 0 ? 1_500 : Math.min(1_500 * 2 ** attempt, 30_000);
+  entry.timer = setTimeout(() => {
+    runGroupSerial(groupId, () => withTimeout(Promise.resolve(entry.group.publishMessages()), PUBLISH_WAIT_MS, 'publish timeout'))
+      .then(() => {
+        groupPublishRetries.delete(groupId);
+      })
+      .catch(async (err: unknown) => {
+        if (isSyncWaitError(err) || /epoch|intent|lock|commit/i.test(errorText(err))) {
+          await runGroupSerial(groupId, () => withTimeout(Promise.resolve(entry.group.sync?.()), 6_000, 'group sync timeout')).catch(() => {});
+          if (entry.client) {
+            await withTimeout(Promise.resolve((entry.client as any)?.conversations?.sync?.()), 6_000, 'conv sync timeout').catch(() => {});
+          }
+        }
+        const active = typeof entry.group.isActive === 'function' ? await entry.group.isActive().catch(() => true) : true;
+        if (active === false) {
+          groupPublishRetries.delete(groupId);
+          return;
+        }
+        scheduleGroupPublishRetry(groupId, entry.group, attempt + 1, entry.client);
+      });
+  }, delay);
+}
+
+/** Serialize WASM operations (`sync`, `publishMessages`, `send`) per group so concurrent calls never collide. */
+export function runGroupSerial<T>(groupId: string, task: () => Promise<T>): Promise<T> {
+  const prev = groupChains.get(groupId) ?? Promise.resolve();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const waitPrev = Promise.race([
+    prev.catch(() => {}),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, GROUP_SERIAL_WAIT_MS);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+  const result = waitPrev.then(() => task());
+  const tail = result.then(() => undefined, () => undefined);
+  groupChains.set(groupId, tail);
+  tail.then(() => {
+    if (groupChains.get(groupId) === tail) groupChains.delete(groupId);
+  });
+  return result;
+}
+
+/** Look up a group by id; if absent locally, sync welcomes (including unknown consent) and check again. */
+export async function resolveGroupForClient(client: Client, groupId: string): Promise<any | null> {
+  const convs = (client as any)?.conversations;
+  if (!convs || !groupId) return null;
+  let group = await convs.getConversationById?.(groupId).catch(() => null);
+  if (group) return group;
+  try {
+    if (typeof convs.syncAll === 'function') {
+      await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 8_000, 'syncAll timeout').catch(() => convs.sync?.());
+    } else if (typeof convs.sync === 'function') {
+      await withTimeout(Promise.resolve(convs.sync()), 8_000, 'sync timeout');
+    }
+  } catch { /* best-effort sync before failing */ }
+  group = await convs.getConversationById?.(groupId).catch(() => null);
+  if (group) return group;
+  if (typeof convs.listGroups === 'function') {
+    const list: any[] = await convs.listGroups().catch(() => []);
+    group = list.find((g) => g?.id === groupId) ?? null;
+  }
+  return group ?? null;
+}
+
 /**
  * Validates an Ethereum address is a properly checksummed EIP-55 address.
  * Rejects all other input silently at the gate.
  */
 function isValidEthAddress(addr: string): boolean {
-  return /^0x[a-fA-F0-9]{40}$/.test(addr);
+  return ADDR.test(addr);
 }
 
 async function checksumAddr(addr: string): Promise<string> {
@@ -138,7 +274,11 @@ export async function createSecureGroup(
     const conv = client.conversations as any;
     if (typeof conv.newGroupOptimistic === 'function') {
       const group = await conv.newGroupOptimistic({ groupName: safeName, groupDescription: safeDescription });
-      Promise.resolve(group.publishMessages?.()).catch(() => { /* published with the first post */ });
+      // Serialize the initial publish per group so an immediate first post waits cleanly in line
+      // instead of colliding in the WASM worker.
+      void runGroupSerial(group.id, async () => {
+        await withTimeout(Promise.resolve(group.publishMessages?.()), 15_000, 'publish timeout');
+      }).catch(() => { /* published with the first post or first member */ });
       console.log(`[GroupChat] Group "${safeName}" created on this device with ID: ${group.id}`);
       return group.id;
     }
@@ -216,29 +356,225 @@ export async function listUserGroups(client: Client): Promise<GroupInfo[]> {
 
 // ── Send Group Message ─────────────────────────────────────────────────────
 
+function isOnline(): boolean {
+  return typeof navigator === 'undefined' || navigator.onLine !== false;
+}
+
+async function classifyStaticFatalError(group: any, err: unknown): Promise<string | null> {
+  const text = errorText(err);
+  if (/paused/i.test(text)) {
+    reportGroupDelivery('publish_paused', err);
+    return 'Not sent. This encrypted group needs a newer app version. Reload the page and try again.';
+  }
+  if (typeof group?.pausedForVersion === 'function') {
+    const paused = await withTimeout<any>(Promise.resolve(group.pausedForVersion()), 4_000, 'paused timeout').catch(() => null);
+    if (typeof paused === 'string' && paused) {
+      reportGroupDelivery('publish_paused', `needs libxmtp ${paused.slice(0, 24)}`);
+      return 'Not sent. This encrypted group needs a newer app version. Reload the page and try again.';
+    }
+  }
+  if (/fork/i.test(text)) {
+    return 'Not sent. Encrypted sync for this group fell behind on this device. Reload the page or open the community on another device.';
+  }
+  if (/TooManyCharacters|InsufficientPermissions|ActorNotMember/i.test(text)) {
+    return 'Not sent. Your account cannot post to this encrypted group.';
+  }
+  return null;
+}
+
+async function ensureGroupActive(client: Client, group: any): Promise<void> {
+  if (typeof group?.isActive !== 'function') return;
+  const active = await group.isActive().catch(() => true);
+  if (active !== false) return;
+  await withTimeout(Promise.resolve((client as any)?.conversations?.sync?.()), 6_000, 'conv sync timeout').catch(() => {});
+  await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+  let activeAfter = await group.isActive().catch(() => true);
+  if (activeAfter === false && typeof group.publishMessages === 'function') {
+    // Optimistic creator-only groups can report inactive before their initial commit publishes.
+    await withTimeout(Promise.resolve(group.publishMessages()), 8_000, 'publish timeout').catch(() => {});
+    await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+    activeAfter = await group.isActive().catch(() => true);
+  }
+  if (activeAfter === false) {
+    throw new Error('Not sent. You are no longer a member of this encrypted group.');
+  }
+}
+
+async function findExistingOptimisticMsg(
+  group: any,
+  key: string
+): Promise<{ status: 'published' | 'unpublished'; id: string } | null> {
+  const existingId = pendingContentMsgIds.get(key);
+  if (!existingId) return null;
+  const msgs: any[] = (await group?.messages?.().catch(() => [])) ?? [];
+  const match = msgs.find((m) => String(m?.id ?? '') === existingId);
+  if (!match || match?.deliveryStatus === 2 || match?.deliveryStatus === 'failed') {
+    pendingContentMsgIds.delete(key);
+    return null;
+  }
+  if (match?.deliveryStatus === 1 || match?.deliveryStatus === 'published') {
+    pendingContentMsgIds.delete(key);
+    failedGroupMsgIds.delete(existingId);
+    return { status: 'published', id: existingId };
+  }
+  return { status: 'unpublished', id: existingId };
+}
+
 /**
  * Sends a message to a group by group ID.
- * SECURITY: Uses getConversationById which requires the caller to be a current
- * member of the group. Non-members cannot inject messages.
+ * SECURITY: Resolves the group via the authenticated XMTP client so only current
+ * members can post. Serializes WASM operations per group to prevent intent-lock collisions.
  */
 export async function sendGroupMessage(
   client: Client,
   groupId: string,
   content: string
-): Promise<void> {
+): Promise<string | undefined> {
   if (!groupId || !content) throw new Error('[GroupChat] groupId and content are required.');
 
   // Validate content length to prevent oversized payloads
   if (content.length > 10_000) {
-    throw new Error('[GroupChat] Message too long. Max 10,000 characters.');
+    throw new Error('Not sent. This post is too long. Make it shorter and try again.');
   }
 
-  const group = await (client.conversations as any).getConversationById(groupId);
+  if (!isOnline()) {
+    throw new Error('Not sent. This device is offline. Connect to the internet and try again.');
+  }
+
+  const group = await resolveGroupForClient(client, groupId);
   if (!group) {
-    throw new Error('[GroupChat] Group not found or access denied.');
+    throw new Error(
+      'Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.'
+    );
   }
 
-  await group.send(content);
+  return runGroupSerial(groupId, async () => {
+    // Allow this group if its consent state is still unknown/denied when explicitly posting to it.
+    if (typeof group.consentState === 'function' && typeof group.updateConsentState === 'function') {
+      const state = await group.consentState().catch(() => 1);
+      if (state !== 1) await group.updateConsentState(1).catch(() => {});
+    }
+
+    await ensureGroupActive(client, group);
+
+    // Prefer exactly-once sendOptimistic + publishMessages (matching client.ts for DMs) so network
+    // timeouts or sync retries never create duplicate posts.
+    if (typeof group.sendOptimistic === 'function' && typeof group.publishMessages === 'function') {
+      const pendingKey = `${groupId}\0${content}`;
+      const existing = await findExistingOptimisticMsg(group, pendingKey);
+      if (existing?.status === 'published') return existing.id;
+
+      let msgId: string | undefined = existing?.id;
+      if (msgId === undefined) {
+        try {
+          msgId = await withTimeout<string>(Promise.resolve(group.sendOptimistic(content)), 8_000, 'prepare timeout');
+        } catch (prepErr) {
+          console.warn(`[GroupChat] sendOptimistic failed for ${groupId}, syncing and falling back:`, redactXmtpError(prepErr));
+          await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+          msgId = undefined;
+        }
+      }
+
+      if (msgId !== undefined) {
+        const idStr = String(msgId);
+        let lastErr: unknown = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await withTimeout(Promise.resolve(group.publishMessages()), PUBLISH_WAIT_MS, 'publish timeout');
+            failedGroupMsgIds.delete(idStr);
+            pendingContentMsgIds.delete(pendingKey);
+            groupPublishRetries.delete(groupId);
+            return idStr;
+          } catch (err) {
+            lastErr = err;
+            const errStr = errorText(err);
+            console.warn(`[GroupChat] publish attempt ${attempt + 1} failed for ${groupId}:`, redactXmtpError(err));
+
+            const staticFatal = await classifyStaticFatalError(group, err);
+            if (staticFatal) {
+              failedGroupMsgIds.add(idStr);
+              pendingContentMsgIds.delete(pendingKey);
+              throw new Error(staticFatal);
+            }
+
+            await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+            if (typeof group.isActive === 'function' && (await group.isActive().catch(() => true)) === false) {
+              failedGroupMsgIds.add(idStr);
+              pendingContentMsgIds.delete(pendingKey);
+              reportGroupDelivery('group_failed', 'group became inactive');
+              throw new Error('Not sent. You are no longer a member of this encrypted group.');
+            }
+
+            if (!isOnline()) {
+              failedGroupMsgIds.add(idStr);
+              pendingContentMsgIds.set(pendingKey, idStr);
+              throw new Error('Not sent. This device is offline. Connect to the internet and try again.');
+            }
+
+            if (isSyncWaitError(err) || errStr === 'publish timeout' || /epoch|intent|lock|commit|welcome/i.test(errStr)) {
+              await withTimeout(Promise.resolve((client as any)?.conversations?.sync?.()), 6_000, 'conv sync timeout').catch(() => {});
+            }
+
+            // SyncFailedToWait means the commit was published and libxmtp timed out waiting for its
+            // receipt; a full publish timeout while online likewise stays queued in XMTP storage.
+            // Schedule background retry once we have tried syncing rather than blocking for 60 s+.
+            if (attempt >= 1 && (isSyncWaitError(err) || errStr === 'publish timeout')) {
+              failedGroupMsgIds.delete(idStr);
+              pendingContentMsgIds.delete(pendingKey);
+              reportGroupDelivery('publish_pending', err);
+              scheduleGroupPublishRetry(groupId, group, 0, client);
+              return idStr;
+            }
+            if (attempt < 2) await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          }
+        }
+
+        if (isSyncWaitError(lastErr) || errorText(lastErr) === 'publish timeout') {
+          failedGroupMsgIds.delete(idStr);
+          pendingContentMsgIds.delete(pendingKey);
+          reportGroupDelivery('publish_pending', lastErr);
+          scheduleGroupPublishRetry(groupId, group, 0, client);
+          return idStr;
+        }
+        failedGroupMsgIds.add(idStr);
+        pendingContentMsgIds.set(pendingKey, idStr);
+        reportGroupDelivery('group_failed', lastErr);
+        throw new Error('Not sent. Could not reach the encrypted group. Check your connection and try again.');
+      }
+    }
+
+    // Direct .send() fallback (for wrappers/mocks without sendOptimistic).
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await withTimeout<any>(Promise.resolve(group.send(content)), PUBLISH_WAIT_MS, 'group send timeout');
+        return typeof res === 'string' ? res : undefined;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`[GroupChat] send attempt ${attempt + 1} failed for ${groupId}:`, redactXmtpError(err));
+        const staticFatal = await classifyStaticFatalError(group, err);
+        if (staticFatal) throw new Error(staticFatal);
+        if (!isOnline()) throw new Error('Not sent. This device is offline. Connect to the internet and try again.');
+        if (attempt < 2) {
+          await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+          if (typeof group.isActive === 'function' && (await group.isActive().catch(() => true)) === false) {
+            reportGroupDelivery('group_failed', 'group became inactive');
+            throw new Error('Not sent. You are no longer a member of this encrypted group.');
+          }
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        }
+      }
+    }
+    if (isSyncWaitError(lastErr)) {
+      reportGroupDelivery('publish_pending', lastErr);
+      setTimeout(() => {
+        void runGroupSerial(groupId, () => Promise.resolve(group.publishMessages?.() ?? group.sync?.())).catch(() => {});
+      }, 2_000);
+      return undefined;
+    }
+    reportGroupDelivery('group_failed', lastErr);
+    throw new Error('Not sent. Could not reach the encrypted group. Check your connection and try again.');
+  });
 }
 
 // ── Member Management ──────────────────────────────────────────────────────
@@ -258,13 +594,15 @@ export async function addGroupMember(
   }
 
   const checksummed = await checksumAddr(memberAddress);
-  const group = await (client.conversations as any).getConversationById(groupId);
+  const group = await resolveGroupForClient(client, groupId);
   if (!group) throw new Error('[GroupChat] Group not found or access denied.');
 
-  await group.addMembersByIdentifiers([{
-    identifier: checksummed,
-    identifierKind: 'Ethereum',
-  }]);
+  await runGroupSerial(groupId, () =>
+    group.addMembersByIdentifiers([{
+      identifier: checksummed,
+      identifierKind: 'Ethereum',
+    }])
+  );
 
   console.log(`[GroupChat] Added ${checksummed} to group ${groupId}`);
 }
@@ -284,13 +622,15 @@ export async function removeGroupMember(
   }
 
   const checksummed = await checksumAddr(memberAddress);
-  const group = await (client.conversations as any).getConversationById(groupId);
+  const group = await resolveGroupForClient(client, groupId);
   if (!group) throw new Error('[GroupChat] Group not found or access denied.');
 
-  await group.removeMembersByIdentifiers([{
-    identifier: checksummed,
-    identifierKind: 'Ethereum',
-  }]);
+  await runGroupSerial(groupId, () =>
+    group.removeMembersByIdentifiers([{
+      identifier: checksummed,
+      identifierKind: 'Ethereum',
+    }])
+  );
 
   console.log(`[GroupChat] Removed ${checksummed} from group ${groupId}. New MLS epoch started.`);
 }
@@ -299,9 +639,9 @@ export async function removeGroupMember(
  * Leaves a group voluntarily.
  */
 export async function leaveGroup(client: Client, groupId: string): Promise<void> {
-  const group = await (client.conversations as any).getConversationById(groupId);
+  const group = await resolveGroupForClient(client, groupId);
   if (!group) throw new Error('[GroupChat] Group not found.');
-  await group.requestRemoval();
+  await runGroupSerial(groupId, () => group.requestRemoval());
 }
 
 /**
@@ -309,13 +649,17 @@ export async function leaveGroup(client: Client, groupId: string): Promise<void>
  */
 export async function getGroupMessages(client: Client, groupId: string): Promise<any[]> {
   try {
-    const group = await (client.conversations as any).getConversationById(groupId);
+    const group = await resolveGroupForClient(client, groupId);
     if (!group) return [];
-    await group.sync();
-    const msgs = await group.messages();
-    return msgs ?? [];
+    return await runGroupSerial(groupId, async () => {
+      await withTimeout(Promise.resolve(group.sync?.()), 10_000, 'group sync timeout').catch(() => {});
+      const msgs: any[] = (await group.messages?.()) ?? [];
+      return msgs.filter(
+        (m) => m?.deliveryStatus !== 2 && m?.deliveryStatus !== 'failed' && !failedGroupMsgIds.has(String(m?.id ?? ''))
+      );
+    });
   } catch (e) {
-    console.warn('[GroupChat] getGroupMessages failed:', e);
+    console.warn('[GroupChat] getGroupMessages failed:', redactXmtpError(e));
     return [];
   }
 }

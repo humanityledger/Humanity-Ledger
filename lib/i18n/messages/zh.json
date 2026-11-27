@@ -4795,5 +4795,14 @@
  "Not listed in Discover. Only people with your invite link or a personal invite can join.": "不在“发现”中展示。只有持有你的邀请链接或个人邀请的人才能加入。",
  "Listed in Discover with its name and description. Anyone can join and read new posts.": "在“发现”中展示名称和简介。任何人都可以加入并阅读新帖子。",
  "These rules apply to new posts in this community.": "这些规则适用于此社区的新帖子。",
- "Not sent.": "未发送。"
+ "Not sent.": "未发送。",
+ "Not sent. The encrypted group did not accept it. Check your connection and try again.": "未发送。加密群组未接受该消息。请检查网络连接后重试。",
+ "Not sent. This post is too long. Make it shorter and try again.": "未发送。此帖子过长。请缩短后重试。",
+ "Not sent. This device is offline. Connect to the internet and try again.": "未发送。此设备处于离线状态。请联网后重试。",
+ "Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.": "未发送。此设备尚未收到加密群组的访问权限。如果你刚加入或刚关联此设备，请先在在线成员设备上打开该社区，然后再试。",
+ "Not sent. You are no longer a member of this encrypted group.": "未发送。你已不再是此加密群组的成员。",
+ "Not sent. This encrypted group needs a newer app version. Reload the page and try again.": "未发送。此加密群组需要更新版本的应用。请刷新页面后重试。",
+ "Not sent. Encrypted sync for this group fell behind on this device. Reload the page or open the community on another device.": "未发送。此设备上该群组的加密同步已落后。请刷新页面或在另一台设备上打开该社区。",
+ "Not sent. Your account cannot post to this encrypted group.": "未发送。你的账户无法向此加密群组发帖。",
+ "Not sent. Could not reach the encrypted group. Check your connection and try again.": "未发送。无法连接到加密群组。请检查网络连接后重试。"
 }

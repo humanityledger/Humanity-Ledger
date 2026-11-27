@@ -4795,5 +4795,14 @@
  "Not listed in Discover. Only people with your invite link or a personal invite can join.": "Не показывается в «Обзоре». Вступить могут только люди с вашей ссылкой-приглашением или личным приглашением.",
  "Listed in Discover with its name and description. Anyone can join and read new posts.": "Показывается в «Обзоре» с названием и описанием. Любой может вступить и читать новые публикации.",
  "These rules apply to new posts in this community.": "Эти правила применяются к новым публикациям в этом сообществе.",
- "Not sent.": "Не отправлено."
+ "Not sent.": "Не отправлено.",
+ "Not sent. The encrypted group did not accept it. Check your connection and try again.": "Не отправлено. Зашифрованная группа не приняла сообщение. Проверьте подключение и попробуйте снова.",
+ "Not sent. This post is too long. Make it shorter and try again.": "Не отправлено. Публикация слишком длинная. Сократите её и попробуйте снова.",
+ "Not sent. This device is offline. Connect to the internet and try again.": "Не отправлено. Это устройство не в сети. Подключитесь к интернету и попробуйте снова.",
+ "Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.": "Не отправлено. Это устройство ещё не получило доступ к зашифрованной группе. Если вы только что присоединились или привязали это устройство, откройте сообщество на подключённом устройстве участника и попробуйте снова.",
+ "Not sent. You are no longer a member of this encrypted group.": "Не отправлено. Вы больше не являетесь участником этой зашифрованной группы.",
+ "Not sent. This encrypted group needs a newer app version. Reload the page and try again.": "Не отправлено. Для этой зашифрованной группы требуется более новая версия приложения. Обновите страницу и попробуйте снова.",
+ "Not sent. Encrypted sync for this group fell behind on this device. Reload the page or open the community on another device.": "Не отправлено. Зашифрованная синхронизация этой группы на устройстве отстала. Обновите страницу или откройте сообщество на другом устройстве.",
+ "Not sent. Your account cannot post to this encrypted group.": "Не отправлено. Ваш аккаунт не может публиковать в этой зашифрованной группе.",
+ "Not sent. Could not reach the encrypted group. Check your connection and try again.": "Не отправлено. Не удалось связаться с зашифрованной группой. Проверьте подключение и попробуйте снова."
 }

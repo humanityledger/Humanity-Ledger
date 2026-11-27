@@ -4795,5 +4795,14 @@
  "Not listed in Discover. Only people with your invite link or a personal invite can join.": "Nicht in Entdecken gelistet. Nur Personen mit deinem Einladungslink oder einer persönlichen Einladung können beitreten.",
  "Listed in Discover with its name and description. Anyone can join and read new posts.": "In Entdecken mit Name und Beschreibung gelistet. Jede Person kann beitreten und neue Beiträge lesen.",
  "These rules apply to new posts in this community.": "Diese Regeln gelten für neue Beiträge in dieser Community.",
- "Not sent.": "Nicht gesendet."
+ "Not sent.": "Nicht gesendet.",
+ "Not sent. The encrypted group did not accept it. Check your connection and try again.": "Nicht gesendet. Die verschlüsselte Gruppe hat die Nachricht nicht angenommen. Prüfe deine Verbindung und versuche es erneut.",
+ "Not sent. This post is too long. Make it shorter and try again.": "Nicht gesendet. Dieser Beitrag ist zu lang. Kürze ihn und versuche es erneut.",
+ "Not sent. This device is offline. Connect to the internet and try again.": "Nicht gesendet. Dieses Gerät ist offline. Verbinde dich mit dem Internet und versuche es erneut.",
+ "Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.": "Nicht gesendet. Dieses Gerät hat noch keinen Zugriff auf die verschlüsselte Gruppe erhalten. Wenn du gerade beigetreten bist oder dieses Gerät verknüpft hast, öffne die Community auf einem verbundenen Mitgliedsgerät und versuche es erneut.",
+ "Not sent. You are no longer a member of this encrypted group.": "Nicht gesendet. Du bist kein Mitglied dieser verschlüsselten Gruppe mehr.",
+ "Not sent. This encrypted group needs a newer app version. Reload the page and try again.": "Nicht gesendet. Diese verschlüsselte Gruppe erfordert eine neuere App-Version. Lade die Seite neu und versuche es erneut.",
+ "Not sent. Encrypted sync for this group fell behind on this device. Reload the page or open the community on another device.": "Nicht gesendet. Die verschlüsselte Synchronisierung dieser Gruppe ist auf diesem Gerät zurückgefallen. Lade die Seite neu oder öffne die Community auf einem anderen Gerät.",
+ "Not sent. Your account cannot post to this encrypted group.": "Nicht gesendet. Dein Konto kann in dieser verschlüsselten Gruppe keine Beiträge posten.",
+ "Not sent. Could not reach the encrypted group. Check your connection and try again.": "Nicht gesendet. Die verschlüsselte Gruppe konnte nicht erreicht werden. Prüfe deine Verbindung und versuche es erneut."
 }
