@@ -51,12 +51,14 @@ describe('Manage', () => {
     expect(chat).not.toMatch(/<CommunityView\b/);
   });
 
-  it('the reading screen has one field and Send is its only action', () => {
+  it('the reading screen has one field; Attach and Poll only where posts are encrypted; Send is last', () => {
+    // Communities V2 (27 Nov 2026, docs/plan/COMMUNITIES_V2.md): photos, files and polls are posted
+    // like in private chats, through the same encrypted-attachment pipeline, only in MLS communities.
     const src = read('components/communities/CommunityReader.tsx');
     expect(src).toContain("export const VISIBILITY_SENTENCE = 'People in this community can read what you write here. It is not a private conversation.';");
     const form = src.slice(src.indexOf('<form'), src.indexOf('</form>'));
-    expect(form.match(/<button/g)?.length).toBe(1);
-    expect(form).toMatch(/type="submit"[\s\S]*Send/);
+    expect(form).toMatch(/\{mlsGroup && \(/);
+    expect(form).toMatch(/Attach photos or files[\s\S]*Create a poll[\s\S]*type="submit"[\s\S]*Send/);
     expect((src.match(/<textarea/g) || []).length).toBe(1);
     // A failed post stays, says why, and offers Try again and Remove.
     expect(src).toMatch(/Try again<\/button>[\s\S]*Remove<\/button>/);
@@ -64,12 +66,13 @@ describe('Manage', () => {
     expect(code('components/communities/CommunityReader.tsx')).not.toMatch(/pinned/i);
   });
 
-  it('Start one asks for a name and whether it is private, then opens it; joining opens it too', () => {
+  it('Create: name, optional description, who can join, optional welcome; waits for encryption; then opens; joining opens too', () => {
     const src = read('components/chat/LedgerCommunitiesTab.tsx');
-    const sheet = src.slice(src.indexOf('title="New community"'), src.indexOf('title="Join a community"'));
-    expect(sheet).toContain('Name');
-    expect(sheet).toContain('Is it private?');
-    expect(sheet).not.toMatch(/Description/);
+    expect(src).toMatch(/<CreateCommunitySheet[\s\S]*getClient=\{\(\) => xmtpClient \?\? getOpenXmtpClient\(myAddress\)\}/);
+    const sheet = read('components/communities/CreateCommunitySheet.tsx');
+    for (const s of ['Name', 'Description', 'Who can join?', 'Welcome message', 'Create community', 'Share invite']) expect(sheet).toContain(s);
+    expect(sheet).toMatch(/await waitForClient\(getClient\)/);
+    expect(sheet).toMatch(/mls: true, xmtpGroupId: groupId/);
     expect(src).toMatch(/const id: string \| undefined = d\?\.community\?\.id;[\s\S]*if \(id\) onOpenCommunity\(id\);/);
     expect(src.match(/onOpenCommunity\(id\)/g)?.length).toBe(2);
   });

@@ -188,3 +188,4 @@ export function RemoteAttachmentBubble({
     </button>
   );
 }
+export const loadAttachment = load;

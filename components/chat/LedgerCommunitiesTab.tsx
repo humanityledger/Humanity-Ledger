@@ -6,6 +6,8 @@ import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '
 import { toast } from 'sonner';
 import { SectionLabel, EmptyState, PrimaryButton, SecondaryButton, SearchField, Sheet, tintFor } from './ui/kit';
 import { t, useT } from '@/lib/i18n/client';
+import { CreateCommunitySheet } from '@/components/communities/CreateCommunitySheet';
+import { getOpenXmtpClient } from '@/lib/xmtp/client';
 
 interface Community {
   id: string;
@@ -92,12 +94,9 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
   const [view, setView] = useState<'mine' | 'discover'>('mine');
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newDesc, setNewDesc] = useState('');
   const [isPrivate, setIsPrivate] = useState(true);
   const [joinLink, setJoinLink] = useState('');
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
   const [publicOnes, setPublicOnes] = useState<Community[]>([]);
   const [search, setSearch] = useState('');
@@ -119,47 +118,6 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
   }, [myAddress]);
 
   useEffect(() => { fetchMine(); fetchPublic(); }, [fetchMine, fetchPublic]);
-
-  const create = async () => {
-    if (!newName.trim() || creating) return;
-    setCreating(true);
-    try {
-      // The first channel's XMTP group, made here, so the server stores its id and never the posts.
-      // If XMTP is not ready the server refuses (MLS_REQUIRED) unless the operator turned
-      // COMMUNITY_MLS_NEW off (lib/communities/legacy.ts).
-      let xmtpGroupId: string | null = null;
-      if (xmtpClient) {
-        try {
-          const { createCommunityGroup } = await import('@/lib/communities/mls');
-          xmtpGroupId = await createCommunityGroup(xmtpClient, newName.trim());
-        } catch { /* falls back to a server-stored community */ }
-      }
-      const res = await fetch('/api/chat/communities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-web3-address': myAddress },
-        credentials: 'include',
-        body: JSON.stringify({ name: newName.trim(), description: newDesc.trim(), isPrivate, ...(xmtpGroupId ? { mls: true, xmtpGroupId } : {}) }),
-      });
-      if (res.ok) {
-        const d = await res.json().catch(() => ({}));
-        const id: string | undefined = d?.community?.id;
-        await fetchMine();
-        if (!isPrivate) fetchPublic();
-        setNewName(''); setNewDesc(''); setIsPrivate(true); setShowCreate(false);
-        // Start one: name, private or not, then it opens.
-        if (id) onOpenCommunity(id);
-      } else {
-        const d = await res.json().catch(() => ({}));
-        // MLS_REQUIRED: legacy communities are read-only (lib/communities/legacy.ts), so a community
-        // without an encrypted group is not created; XMTP was not ready on this device yet.
-        toast.error(d.code === 'MLS_REQUIRED' ? t("Encrypted messaging is not ready on this device yet, so the community was not created. Wait a moment and try again.") : d.error || t("Could not create the community"));
-      }
-    } catch {
-      toast.error(t("Could not reach the server. Try again."));
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const join = async () => {
     let code = joinLink.trim();
@@ -259,48 +217,16 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
         </>
       )}
 
-      <Sheet
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        title={t("New community")}
-        subtitle={t("A name, and who can join. Everything else is in Manage.")}
-        footer={
-          <div className="flex justify-end gap-2">
-            <SecondaryButton onClick={() => setShowCreate(false)} className="min-h-[48px] text-[18px] px-5">{t("Cancel")}</SecondaryButton>
-            <PrimaryButton onClick={create} disabled={!newName.trim() || creating} className="min-h-[48px] text-[18px] px-5">{creating ? t("Starting") : t("Start it")}</PrimaryButton>
-          </div>
-        }
-      >
-        <div className="px-5 pb-4 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[18px] font-semibold text-[#15171c]">{t("Name")}</span>
-            <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') create(); }} placeholder={t("Design team")} maxLength={64} autoFocus className={field} />
-          </label>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-[18px] font-semibold text-[#15171c] mb-1.5">{t("Is it private?")}</legend>
-            {([
-              [true, 'Private', 'Only people with an invite can join'],
-              [false, 'Public', 'Anyone can find it and join'],
-            ] as const).map(([priv, title, text]) => (
-              <button
-                key={title}
-                type="button"
-                role="radio"
-                aria-checked={isPrivate === priv}
-                onClick={() => setIsPrivate(priv)}
-                className={`min-h-[56px] flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-colors ${isPrivate === priv ? 'border-[#15171c] bg-white' : 'border-[#d4d8de] hover:bg-[#f7f8fa]'}`}
-              >
-                <span className="flex-1">
-                  <span className="block text-[18px] font-semibold text-[#15171c]">{title}</span>
-                  <span className="block text-[16px] text-[#3d424b]">{text}</span>
-                </span>
-                <span className={`text-[16px] font-semibold ${isPrivate === priv ? 'text-[#15171c]' : 'text-[#3d424b]'}`}>{isPrivate === priv ? t("Selected") : t("Choose")}</span>
-              </button>
-            ))}
-          </fieldset>
-          <p className="text-[16px] text-[#3d424b] leading-relaxed">{t("People in a community can read what is written there, and the posts are stored on our server. It is not a private conversation.")}</p>
-        </div>
-      </Sheet>
+      {showCreate && (
+        <CreateCommunitySheet
+          // The client is read each time: encrypted messaging may still be starting (the sheet waits).
+          getClient={() => xmtpClient ?? getOpenXmtpClient(myAddress)}
+          defaultPublic={!isPrivate}
+          onClose={() => { setShowCreate(false); setIsPrivate(true); }}
+          onCreated={(_id, priv) => { void fetchMine(); if (!priv) void fetchPublic(); }}
+          onOpen={(id) => onOpenCommunity(id)}
+        />
+      )}
 
       <Sheet
         open={showJoin}
