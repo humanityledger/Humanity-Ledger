@@ -173,8 +173,9 @@ export async function resolveGroupForClient(client: Client, groupId: string): Pr
   group = await convs.getConversationById?.(groupId).catch(() => null);
   if (group) return group;
   if (typeof convs.listGroups === 'function') {
-    const list: any[] = await convs.listGroups().catch(() => []);
-    group = list.find((g) => g?.id === groupId) ?? null;
+    const list: any[] = await convs.listGroups({ consentStates: [0, 1] }).catch(() => convs.listGroups().catch(() => []));
+    const target = groupId.toLowerCase();
+    group = list.find((g) => String(g?.id ?? '').toLowerCase() === target) ?? null;
   }
   return group ?? null;
 }
@@ -273,7 +274,11 @@ export async function createSecureGroup(
   if (validatedIdentifiers.length === 0) {
     const conv = client.conversations as any;
     if (typeof conv.newGroupOptimistic === 'function') {
-      const group = await conv.newGroupOptimistic({ groupName: safeName, groupDescription: safeDescription });
+      const group = await conv.newGroupOptimistic({
+        name: safeName,
+        description: safeDescription,
+        permissions: 0,
+      });
       // Serialize the initial publish per group so an immediate first post waits cleanly in line
       // instead of colliding in the WASM worker.
       void runGroupSerial(group.id, async () => {
@@ -290,8 +295,9 @@ export async function createSecureGroup(
     group = await (client.conversations as any).newGroupWithIdentifiers(
       validatedIdentifiers,
       {
-        groupName: safeName,
-        groupDescription: safeDescription,
+        name: safeName,
+        description: safeDescription,
+        permissions: 0,
       }
     );
   } catch (e) {
@@ -386,7 +392,12 @@ async function ensureGroupActive(client: Client, group: any): Promise<void> {
   if (typeof group?.isActive !== 'function') return;
   const active = await group.isActive().catch(() => true);
   if (active !== false) return;
-  await withTimeout(Promise.resolve((client as any)?.conversations?.sync?.()), 6_000, 'conv sync timeout').catch(() => {});
+  const convs = (client as any)?.conversations;
+  if (typeof convs?.syncAll === 'function') {
+    await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 6_000, 'syncAll timeout').catch(() => convs?.sync?.());
+  } else {
+    await withTimeout(Promise.resolve(convs?.sync?.()), 6_000, 'conv sync timeout').catch(() => {});
+  }
   await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
   let activeAfter = await group.isActive().catch(() => true);
   if (activeAfter === false && typeof group.publishMessages === 'function') {
@@ -455,6 +466,10 @@ export async function sendGroupMessage(
       if (state !== 1) await group.updateConsentState(1).catch(() => {});
     }
 
+    // Sync the latest MLS epoch BEFORE preparing an optimistic message so newly welcomed members
+    // and multi-device senders never prepare an application message against a stale epoch.
+    await withTimeout(Promise.resolve(group.sync?.()), 5_000, 'pre-send group sync timeout').catch(() => {});
+
     await ensureGroupActive(client, group);
 
     // Prefer exactly-once sendOptimistic + publishMessages (matching client.ts for DMs) so network
@@ -469,9 +484,19 @@ export async function sendGroupMessage(
         try {
           msgId = await withTimeout<string>(Promise.resolve(group.sendOptimistic(content)), 8_000, 'prepare timeout');
         } catch (prepErr) {
-          console.warn(`[GroupChat] sendOptimistic failed for ${groupId}, syncing and falling back:`, redactXmtpError(prepErr));
+          console.warn(`[GroupChat] sendOptimistic failed for ${groupId}, syncing welcomes/epoch and retrying:`, redactXmtpError(prepErr));
+          const convs = (client as any)?.conversations;
+          if (typeof convs?.syncAll === 'function') {
+            await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 6_000, 'syncAll timeout').catch(() => {});
+          }
           await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
-          msgId = undefined;
+          await ensureGroupActive(client, group);
+          try {
+            msgId = await withTimeout<string>(Promise.resolve(group.sendOptimistic(content)), 8_000, 'prepare timeout');
+          } catch (prepErr2) {
+            console.warn(`[GroupChat] second sendOptimistic failed for ${groupId}, falling back:`, redactXmtpError(prepErr2));
+            msgId = undefined;
+          }
         }
       }
 
@@ -555,11 +580,23 @@ export async function sendGroupMessage(
         const staticFatal = await classifyStaticFatalError(group, err);
         if (staticFatal) throw new Error(staticFatal);
         if (!isOnline()) throw new Error('Not sent. This device is offline. Connect to the internet and try again.');
+        const errStr = errorText(err);
         if (attempt < 2) {
+          if (isSyncWaitError(err) || errStr === 'group send timeout' || /epoch|intent|lock|commit|welcome/i.test(errStr)) {
+            const convs = (client as any)?.conversations;
+            if (typeof convs?.syncAll === 'function') {
+              await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 6_000, 'syncAll timeout').catch(() => {});
+            }
+          }
           await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
           if (typeof group.isActive === 'function' && (await group.isActive().catch(() => true)) === false) {
             reportGroupDelivery('group_failed', 'group became inactive');
             throw new Error('Not sent. You are no longer a member of this encrypted group.');
+          }
+          if (attempt >= 1 && (isSyncWaitError(err) || errStr === 'group send timeout')) {
+            reportGroupDelivery('publish_pending', err);
+            scheduleGroupPublishRetry(groupId, group, 0, client);
+            return undefined;
           }
           await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         }
@@ -597,12 +634,42 @@ export async function addGroupMember(
   const group = await resolveGroupForClient(client, groupId);
   if (!group) throw new Error('[GroupChat] Group not found or access denied.');
 
-  await runGroupSerial(groupId, () =>
-    group.addMembersByIdentifiers([{
-      identifier: checksummed,
-      identifierKind: 'Ethereum',
-    }])
-  );
+  await runGroupSerial(groupId, async () => {
+    if (typeof group.consentState === 'function' && typeof group.updateConsentState === 'function') {
+      const st = await group.consentState().catch(() => 1);
+      if (st !== 1) await group.updateConsentState(1).catch(() => {});
+    }
+    await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+    if (typeof group.isActive === 'function' && (await group.isActive().catch(() => true)) === false) {
+      await withTimeout(Promise.resolve(group.publishMessages?.()), 8_000, 'publish timeout').catch(() => {});
+      await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+    }
+    try {
+      await group.addMembersByIdentifiers([{
+        identifier: checksummed,
+        identifierKind: 'Ethereum',
+      }]);
+    } catch (err) {
+      if (isSyncWaitError(err)) {
+        await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+        return;
+      }
+      const lower = checksummed.toLowerCase();
+      if (lower !== checksummed) {
+        try {
+          await group.addMembersByIdentifiers([{ identifier: lower, identifierKind: 'Ethereum' }]);
+          return;
+        } catch (err2) {
+          if (isSyncWaitError(err2)) {
+            await withTimeout(Promise.resolve(group.sync?.()), 6_000, 'group sync timeout').catch(() => {});
+            return;
+          }
+          throw err2;
+        }
+      }
+      throw err;
+    }
+  });
 
   console.log(`[GroupChat] Added ${checksummed} to group ${groupId}`);
 }

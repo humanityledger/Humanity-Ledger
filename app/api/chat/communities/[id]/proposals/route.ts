@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { memberNames } from '@/lib/communities/member-names';
+import {
+  durationDays, effectiveStatus, isPrivilegedRole, isVoteChoice, quorumFor, roleIn, tally, type CreatorRole,
+} from '@/lib/communities/governance';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,13 +52,43 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (access.status === 404) return NextResponse.json({ error: 'Community not found' }, { status: 404 });
     if (access.status === 403) return NextResponse.json({ error: 'Join the community to see its proposals.' }, { status: 403 });
 
-    const proposals = await prisma.marketProposal.findMany({
-      where: { OR: [{ category: `COMMUNITY_${communityId}` }, { category: communityId }] },
-      include: { votes: { select: { id: true, voterAddress: true, vote: true, votedAt: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+    const [proposals, rows, community] = await Promise.all([
+      prisma.marketProposal.findMany({
+        where: { OR: [{ category: `COMMUNITY_${communityId}` }, { category: communityId }] },
+        include: { votes: { select: { id: true, voterAddress: true, vote: true, votedAt: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.communityMember.findMany({ where: { communityId }, select: { walletAddress: true, role: true } }),
+      prisma.community.findUnique({ where: { id: communityId }, select: { ownerAddress: true } }),
+    ]);
+    // Roles as they are now: a moderator's proposal is marked as such while they hold the role.
+    const roles = new Map<string, string>(rows.map((r) => [String(r.walletAddress).toLowerCase(), String(r.role)]));
+    const owner = community?.ownerAddress ?? null;
+    const membersCount = new Set([...roles.keys(), String(owner || '').toLowerCase()].filter(Boolean)).size;
+    const names = await memberNames(proposals.map((p) => p.creatorAddress));
+    const now = Date.now();
+    return NextResponse.json({
+      callerRole: roleIn(wallet, owner, roles),
+      membersCount,
+      proposals: proposals.map((p) => {
+        const t = tally(p.votes);
+        const creator = String(p.creatorAddress || '').toLowerCase();
+        const mine = p.votes.find((v) => String(v.voterAddress).toLowerCase() === wallet);
+        return {
+          ...p,
+          votesFor: t.for,
+          votesAgainst: t.against,
+          votesAbstain: t.abstain,
+          totalVotes: t.total,
+          eligibleMembers: membersCount,
+          creatorRole: roleIn(creator, owner, roles),
+          creatorName: names.get(creator) ?? null,
+          myVote: mine ? String(mine.vote).toUpperCase() : null,
+          effectiveStatus: effectiveStatus(p, t, now),
+        };
+      }),
     });
-    return NextResponse.json({ proposals });
   } catch (error: any) {
     console.error('[community proposals GET]', error?.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -90,8 +124,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // ── VOTE ──
     if (action === 'VOTE') {
       const normalizedVote = String(vote ?? '').toUpperCase();
-      if (typeof proposalId !== 'string' || !proposalId || (normalizedVote !== 'FOR' && normalizedVote !== 'AGAINST')) {
-        return NextResponse.json({ error: 'A proposal and a vote (FOR or AGAINST) are required.' }, { status: 400 });
+      if (typeof proposalId !== 'string' || !proposalId || !isVoteChoice(normalizedVote)) {
+        return NextResponse.json({ error: 'A proposal and a vote (For, Against or Abstain) are required.' }, { status: 400 });
       }
 
       const proposal = await prisma.marketProposal.findUnique({ where: { id: proposalId } });
@@ -149,6 +183,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'The description must be between 10 and 5000 characters.' }, { status: 400 });
     }
 
+    const [rows, community] = await Promise.all([
+      prisma.communityMember.findMany({ where: { communityId }, select: { walletAddress: true, role: true } }),
+      prisma.community.findUnique({ where: { id: communityId }, select: { ownerAddress: true } }),
+    ]);
+    const roles = new Map<string, string>(rows.map((r) => [String(r.walletAddress).toLowerCase(), String(r.role)]));
+    const creatorRole: CreatorRole = roleIn(wallet, community?.ownerAddress, roles);
+    // A proposal published as a moderators' proposal must come from the owner, an admin or a moderator.
+    if ((body?.official === true || body?.officialOnly === true) && !isPrivilegedRole(creatorRole)) {
+      return NextResponse.json({ error: 'Only moderators, admins and the owner can publish a moderators’ proposal.' }, { status: 403 });
+    }
+    const membersCount = new Set([...roles.keys(), String(community?.ownerAddress || '').toLowerCase()].filter(Boolean)).size;
+    const days = durationDays(body?.durationDays);
+
     const newProposal = await prisma.marketProposal.create({
       data: {
         question: cleanTitle,
@@ -156,12 +203,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         category: `COMMUNITY_${communityId}`,
         creatorAddress: wallet,
         status: 'VOTING',
-        outcomes: ['FOR', 'AGAINST'],
-        votingEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        votingThreshold: 10,
+        outcomes: ['FOR', 'AGAINST', 'ABSTAIN'],
+        votingEndsAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
+        votingThreshold: quorumFor(membersCount, body?.quorumCount),
       },
     });
-    return NextResponse.json({ success: true, proposal: newProposal }, { status: 201 });
+    return NextResponse.json({ success: true, proposal: { ...newProposal, creatorRole } }, { status: 201 });
   } catch (error: any) {
     console.error('[community proposals POST]', error?.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

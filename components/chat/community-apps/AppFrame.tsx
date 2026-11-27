@@ -15,6 +15,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { APP_FRAME_SANDBOX } from '@/lib/community-apps/framePolicy';
+import { isExtensionNoiseMessage } from '@/lib/community-apps/sdk';
 import { useT } from '@/lib/i18n/client';
 
 interface Identity { id: string; label: string }
@@ -149,6 +150,7 @@ export function AppFrame({ communityId, appId, version, title, onRuntimeError, o
 
       if (m.op === 'error') {
         const message = String(m.data?.message || 'Unknown error').slice(0, 500);
+        if (isExtensionNoiseMessage(message, String(m.data?.stack || ''))) return;
         callbacks.current.onRuntimeError?.(message);
         return;
       }

@@ -5,6 +5,8 @@ import {
   resolveCommunityAccess, appSummary, appVisibleTo, MAX_PUBLISHED_APPS,
 } from '@/lib/community-apps/access';
 import { appsRoute } from '@/lib/community-apps/routeErrors';
+import { validateAppHtml } from '@/lib/community-apps/validate';
+import { normalizeFragment } from '@/lib/community-apps/sdk';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +33,11 @@ export const GET = appsRoute('app GET', async (req: NextRequest, ctx: Ctx) => {
   );
 });
 
-/** { action: 'publish' | 'unpublish' } or { title }. Creator only. */
+/**
+ * { action: 'publish' | 'unpublish' }, { title }, or { html } (the creator's own edit of the code).
+ * Creator only. Edited code passes the same checks as a model's (validateAppHtml) and bumps the
+ * version, so open frames reload it; the app's data is kept.
+ */
 export const PATCH = appsRoute('app PATCH', async (req: NextRequest, ctx: Ctx) => {
   const r = await load(req, ctx);
   if ('error' in r) return r.error;
@@ -53,6 +59,17 @@ export const PATCH = appsRoute('app PATCH', async (req: NextRequest, ctx: Ctx) =
     data.status = 'draft';
   }
   if (typeof body.title === 'string' && body.title.trim()) data.title = body.title.trim().slice(0, 60);
+  if (body.html !== undefined) {
+    if (typeof body.html !== 'string') return NextResponse.json({ error: 'The code must be text.' }, { status: 400 });
+    const html = normalizeFragment(body.html);
+    const check = validateAppHtml(html);
+    if (!check.ok) return NextResponse.json({ error: 'The code did not pass the safety checks.', problems: check.problems }, { status: 400 });
+    if (html !== app.html) {
+      data.html = html;
+      data.version = { increment: 1 };
+      data.source = 'manual';
+    }
+  }
   if (!Object.keys(data).length) return NextResponse.json({ error: 'Nothing to change.' }, { status: 400 });
 
   const updated = await (prisma as any).communityApp.update({ where: { id: app.id }, data });

@@ -17,6 +17,7 @@
  * (app/api/chat/communities/route.ts POST). Existing communities are not migrated.
  */
 
+import { isSyncWaitError } from '@/lib/xmtp/syncErrors';
 import {
   addGroupMember,
   createSecureGroup,
@@ -32,6 +33,15 @@ export { isMlsCommunity, membersComplete, mlsGroupOf, reconcileMembers, serverMe
 
 const ADDR = /^0x[0-9a-fA-F]{40}$/;
 const normInst = (x: unknown): string => String(x ?? '').replace(/^0x/i, '').toLowerCase();
+
+async function checksumIdentifiers(list: readonly string[]): Promise<{ identifier: string; identifierKind: 'Ethereum' }[]> {
+  try {
+    const { getAddress } = await import('viem');
+    return list.map((a) => ({ identifier: getAddress(a), identifierKind: 'Ethereum' as const }));
+  } catch {
+    return list.map((a) => ({ identifier: a, identifierKind: 'Ethereum' as const }));
+  }
+}
 
 export interface GroupPost {
   id: string;
@@ -150,18 +160,43 @@ async function syncMemberInstallations(client: any, groupId: string, group: any,
  * person removed by another admin kept reading new posts until the owner opened the community.
  */
 export async function syncGroupMembers(client: any, groupId: string, c: CommunityLike, self: string): Promise<{ added: number; removed: number }> {
+  const group = await resolveGroupForClient(client, groupId);
+  if (!group) return { added: 0, removed: 0 };
+
+  await runGroupSerial(groupId, async () => {
+    if (typeof group.consentState === 'function' && typeof group.updateConsentState === 'function') {
+      const st = await group.consentState().catch(() => 1);
+      if (st !== 1) await group.updateConsentState(1).catch(() => {});
+    }
+    await Promise.resolve(group.sync?.()).catch(() => {});
+    if (typeof group.isActive === 'function' && (await group.isActive().catch(() => true)) === false) {
+      await Promise.resolve(group.publishMessages?.()).catch(() => {});
+      await Promise.resolve(group.sync?.()).catch(() => {});
+    }
+  }).catch(() => {});
+
   const server = serverMembers(c);
   const plan = reconcileMembers(server, await groupMemberAddresses(client, groupId), self);
   // Removing needs a complete list (membersComplete): a partial answer from the server must never
   // empty the group.
   const remove = membersComplete(c) ? plan.remove : [];
-  const group = await resolveGroupForClient(client, groupId);
-  if (!group) return { added: 0, removed: 0 };
   const ids = (list: string[]) => list.map((a) => ({ identifier: a, identifierKind: 'Ethereum' as const }));
   let added = 0, removed = 0;
   if (plan.add.length) {
-    try { await runGroupSerial(groupId, () => group.addMembersByIdentifiers(ids(plan.add))); added = plan.add.length; }
-    catch { for (const a of plan.add) { try { await addGroupMember(client, groupId, a); added++; } catch { /* not on XMTP yet */ } } }
+    const addIds = await checksumIdentifiers(plan.add);
+    try {
+      await runGroupSerial(groupId, () => group.addMembersByIdentifiers(addIds));
+      added = plan.add.length;
+    } catch (err) {
+      if (isSyncWaitError(err)) {
+        await runGroupSerial(groupId, () => Promise.resolve(group.sync?.())).catch(() => {});
+        added = plan.add.length;
+      } else {
+        for (const a of plan.add) {
+          try { await addGroupMember(client, groupId, a); added++; } catch { /* not on XMTP yet */ }
+        }
+      }
+    }
   }
   if (remove.length) {
     try { await runGroupSerial(groupId, () => group.removeMembersByIdentifiers(ids(remove))); removed = remove.length; }
@@ -191,13 +226,101 @@ async function grantAdmins(client: any, group: any, c: CommunityLike): Promise<v
 
 /** Non-admin members: add the server's members missing from the group, never remove anyone. */
 export async function addMissingMembers(client: any, groupId: string, c: CommunityLike, self: string): Promise<number> {
+  const group = await resolveGroupForClient(client, groupId);
+  if (!group) return 0;
   const server = serverMembers(c);
   const plan = reconcileMembers(server, await groupMemberAddresses(client, groupId), self);
   let n = 0;
   for (const a of plan.add) { try { await addGroupMember(client, groupId, a); n++; } catch { /* not on XMTP yet */ } }
-  const group = await resolveGroupForClient(client, groupId);
-  if (group) await syncMemberInstallations(client, groupId, group, server).catch(() => {});
+  await syncMemberInstallations(client, groupId, group, server).catch(() => {});
   return n;
+}
+
+/** Sync membership across EVERY MLS channel in a community. */
+export async function syncAllCommunityChannels(client: any, c: CommunityLike, self: string, isAdmin: boolean): Promise<void> {
+  if (!client || !c || c.communityMls !== true) return;
+  const seen = new Set<string>();
+  for (const ch of c.channels ?? []) {
+    const gid = typeof ch?.xmtpGroupId === 'string' ? ch.xmtpGroupId.trim() : '';
+    if (!gid || seen.has(gid)) continue;
+    seen.add(gid);
+    if (isAdmin) await syncGroupMembers(client, gid, c, self).catch(() => {});
+    else await addMissingMembers(client, gid, c, self).catch(() => {});
+  }
+}
+
+const mlsSyncInFlight = new Map<string, Promise<Set<string>>>();
+const mlsSyncLastAt = new Map<string, number>();
+const mlsKnownGroupIds = new Map<string, Set<string>>();
+
+/**
+ * Background community MLS sync (throttled per account to once every 20s).
+ * Keeps owners/admins welcoming newly joined members even while they are on Chats, Manage, or Invite
+ * instead of inside CommunityReader. Also returns all known community XMTP channel groupIds so
+ * standalone Group Chat discovery can keep community MLS channels separate.
+ */
+export async function syncCommunitiesMlsMembership(
+  client: any,
+  myAddress: string,
+  fetchImpl: typeof fetch = fetch,
+  minIntervalMs = 20_000,
+): Promise<Set<string>> {
+  const me = (myAddress || '').trim().toLowerCase();
+  const cached = mlsKnownGroupIds.get(me) ?? new Set<string>();
+  if (!client || !ADDR.test(me)) return cached;
+  const now = Date.now();
+  const prev = mlsSyncLastAt.get(me) ?? 0;
+  if (now - prev < minIntervalMs) return cached;
+  const running = mlsSyncInFlight.get(me);
+  if (running) return running;
+
+  const task = (async (): Promise<Set<string>> => {
+    const groupIds = new Set<string>(cached);
+    try {
+      const headers = { 'x-web3-address': me, 'x-verified-session-address': me };
+      const listRes = await fetchImpl('/api/chat/communities', { credentials: 'include', headers, cache: 'no-store' });
+      if (!listRes.ok) return groupIds;
+      const listJson = await listRes.json().catch(() => ({}));
+      const list: any[] = Array.isArray(listJson?.communities) ? listJson.communities : [];
+      const mlsOnes = list.filter((c) => c?.communityMls === true && c?.id && Array.isArray(c?.channels) && c.channels.some((ch: any) => ch?.xmtpGroupId));
+      for (const summary of mlsOnes) {
+        for (const ch of summary.channels ?? []) {
+          if (typeof ch?.xmtpGroupId === 'string' && ch.xmtpGroupId.trim()) {
+            groupIds.add(ch.xmtpGroupId.trim().toLowerCase());
+          }
+        }
+        try {
+          const detRes = await fetchImpl(`/api/chat/communities/${encodeURIComponent(summary.id)}`, { credentials: 'include', headers, cache: 'no-store' });
+          if (!detRes.ok) continue;
+          const detJson = await detRes.json().catch(() => ({}));
+          const full = detJson?.community ?? detJson;
+          if (!full || full.communityMls !== true) continue;
+          for (const ch of full.channels ?? []) {
+            if (typeof ch?.xmtpGroupId === 'string' && ch.xmtpGroupId.trim()) {
+              groupIds.add(ch.xmtpGroupId.trim().toLowerCase());
+            }
+          }
+          const isOwner = String(full.ownerAddress || '').toLowerCase() === me;
+          const mine = Array.isArray(full.members)
+            ? full.members.find((m: any) => String(m?.walletAddress || '').toLowerCase() === me)
+            : null;
+          const isAdmin = isOwner || mine?.role === 'ADMIN';
+          if (isOwner || mine) {
+            await syncAllCommunityChannels(client, full, me, isAdmin);
+          }
+        } catch { /* retry on next tick */ }
+      }
+      mlsKnownGroupIds.set(me, groupIds);
+      mlsSyncLastAt.set(me, Date.now());
+    } catch {
+      /* background best-effort */
+    } finally {
+      mlsSyncInFlight.delete(me);
+    }
+    return groupIds;
+  })();
+  mlsSyncInFlight.set(me, task);
+  return task;
 }
 
 /** The first channel's group of a community being created: the creator only, members join later. */
@@ -205,9 +328,28 @@ export async function createCommunityGroup(client: any, communityName: string): 
   return createSecureGroup(client, [], `${communityName} · general`.slice(0, 100), '', { allowCreatorOnly: true });
 }
 
-/** Creates the group for a new channel of an MLS community, with every current member but `self`. */
+/**
+ * Creates the group for a new channel of an MLS community with every current member.
+ * If batch creation fails because one member does not have an XMTP inbox yet, creates the
+ * group optimistically and adds every reachable member individually (periodic sync adds the rest).
+ */
 export async function createChannelGroup(client: any, c: CommunityLike, channelName: string, self: string): Promise<string> {
-  const others = serverMembers(c).filter((a) => a !== self.toLowerCase());
-  if (!others.length) throw new Error('Invite at least one member before adding an encrypted channel.');
-  return createSecureGroup(client, others, channelName);
+  const me = self.toLowerCase();
+  const others = serverMembers(c).filter((a) => a !== me);
+  let groupId: string;
+  try {
+    groupId = await createSecureGroup(client, others, channelName, '', { allowCreatorOnly: true });
+  } catch (err) {
+    if (!others.length) throw err;
+    groupId = await createSecureGroup(client, [], channelName, '', { allowCreatorOnly: true });
+    for (const a of others) {
+      try { await addGroupMember(client, groupId, a); } catch { /* not on XMTP yet; periodic sync welcomes them later */ }
+    }
+  }
+  const group = await resolveGroupForClient(client, groupId).catch(() => null);
+  if (group) {
+    await syncMemberInstallations(client, groupId, group, serverMembers(c)).catch(() => {});
+    await runGroupSerial(groupId, () => grantAdmins(client, group, c)).catch(() => {});
+  }
+  return groupId;
 }

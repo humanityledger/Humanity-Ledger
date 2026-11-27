@@ -13,7 +13,7 @@ import { UserAvatar } from '@/components/chat/UserAvatar';
 import { ROLE_LABEL, ROLE_RANK, assignableRoles, canActOn, roleOf, type CommunityRole } from '@/lib/communities/roles';
 import { saveLocalContact } from '@/lib/wallet/localAddressBook';
 
-export interface MemberRow { walletAddress: string; role?: string; joinedAt?: string | number; name?: string | null }
+export interface MemberRow { walletAddress: string; role?: string; joinedAt?: string | number; name?: string | null; /** Ledger Chat's verified flag (User.isZkVerified), from the members API. */ isZkVerified?: boolean }
 export interface CommunityPeople { communityId: string; ownerAddress?: string | null; members: MemberRow[] }
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -96,6 +96,11 @@ export function MemberSheet({ people, address, me, nameFor, onClose, onMessage, 
           <p className="text-[13px] text-[#727a88] font-mono mt-0.5">{short(a)}</p>
           <div className="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
             {role && <RoleBadge role={role} />}
+            {row?.isZkVerified === true && (
+              <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-[#157347] text-[11.5px] font-semibold text-[#157347]" title={t('Verified in Ledger Chat')}>
+                <ShieldCheck size={12} aria-hidden="true" />{t('ZK verified')}
+              </span>
+            )}
             {joined && !Number.isNaN(joined.getTime()) && <span className="text-[12.5px] text-[#727a88]">{t('Joined {date}', { date: joined.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' }) })}</span>}
           </div>
         </div>

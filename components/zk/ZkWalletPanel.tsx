@@ -39,6 +39,9 @@ import { PasskeyCard, PasskeyOpen } from './wallet/PasskeyCard';
 import { ReceiversCard } from './wallet/ReceiversCard';
 import { SecurityCenter } from './wallet/SecurityCenter';
 import { useAztecWallet } from '@/lib/aztec/wallet/useAztecWallet';
+import { AztecFeeBadge } from '@/components/zk/AztecFeeBadge';
+import { NemiDexPanel } from '@/components/zk/NemiDexPanel';
+import { ExternalAztecWallets } from '@/components/zk/ExternalAztecWallets';
 import { humanError, type TokenBalance } from '@/lib/aztec/wallet/client';
 import {
   AZTEC_WALLET_CONFIG, FAUCET_AMOUNT, NO_PRIVATE_TOKENS_MESSAGE, hasPrivateTokens, isWalletConfigured, networkLabel, type TokenKey,
@@ -355,6 +358,15 @@ export function ZkWalletPanel({ address, onClose, className, initialSheet = null
                   </Section>
 
                   <ReceiversCard address={address} ready={ready} />
+
+                  <Section title={tr("Fees and other wallets")}>
+                    <div className="px-1 py-2 flex flex-col gap-3">
+                      <AztecFeeBadge explain />
+                      <ExternalAztecWallets />
+                    </div>
+                  </Section>
+
+                  {ready && <NemiDexPanel aztecAddress={state.aztecAddress} balances={state.balances} onRefresh={async () => { await wallet?.refresh(); }} />}
 
                   {AZTEC_WALLET_CONFIG.faucet && <Faucet disabled={state.busy} />}
                   {ALPHA && ready && typeof window !== 'undefined' && window.location.hash === '#r1' && <FirstPayment disabled={state.busy} />}

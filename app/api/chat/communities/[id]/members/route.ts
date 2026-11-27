@@ -3,6 +3,7 @@ import { legacyPostsClosed } from '@/lib/communities/legacy';
 import { prisma } from '@/lib/prisma';
 import { resolveVerifiedCaller } from '@/lib/security/resolveCaller';
 import { memberNames } from '@/lib/communities/member-names';
+import { zkVerifiedWallets } from '@/lib/communities/identity';
 import { listJoinRequests, removeJoinRequest } from '@/lib/communities/join-requests';
 
 export const dynamic = 'force-dynamic';
@@ -44,9 +45,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const community = await (prisma as any).community.findUnique({ where: { id: communityId }, select: { ownerAddress: true } });
     const manager = String(community?.ownerAddress || '').toLowerCase() === caller || mine.role === 'ADMIN';
     const requests = manager ? await listJoinRequests(communityId).catch(() => []) : [];
-    const names = await memberNames([...members.map((m: any) => m.walletAddress), ...requests.map((r) => r.address)]);
+    const [names, verified] = await Promise.all([
+      memberNames([...members.map((m: any) => m.walletAddress), ...requests.map((r) => r.address)]),
+      zkVerifiedWallets(members.map((m: any) => m.walletAddress)),
+    ]);
     return NextResponse.json({
-      members: members.map((m: any) => ({ ...m, name: names.get(String(m.walletAddress || '').toLowerCase()) ?? null })),
+      members: members.map((m: any) => {
+        const a = String(m.walletAddress || '').toLowerCase();
+        return { ...m, name: names.get(a) ?? null, isZkVerified: verified.has(a) };
+      }),
       ...(manager ? { requests: requests.map((r) => ({ walletAddress: r.address, at: r.at, name: names.get(r.address) ?? null })) } : {}),
     });
   } catch (e: any) {

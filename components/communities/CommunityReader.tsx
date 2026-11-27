@@ -43,11 +43,12 @@ import { PostBody, PollComposer } from '@/components/communities/PostBody';
 import { isControlMessage, type IndexInput } from '@/lib/communities/media-index';
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
-import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
+import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncAllCommunityChannels, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
 import { createCommunityGroup } from '@/lib/communities/mls';
 import { checkPost, effectivePermissions, encodePin, isPrivileged, mayPinFor, rankIn, spamIds, type CommunityPermissions, type PostKind, type Rank } from '@/lib/communities/settings';
 import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
+import { resolveGroupForClient } from '@/lib/xmtp/groups';
 import { useT } from '@/lib/i18n/client';
 import { AVATAR_RADIUS, UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
@@ -94,6 +95,39 @@ export interface CommunityReaderProps {
   xmtpClient?: any;
   /** Opens another community (the encrypted re-creation of a read-only one). */
   onOpenCommunity?: (id: string) => void;
+  /** Channel to open first (Manage → Channels → Open). Falls back to the main channel when unknown. */
+  initialChannelId?: string | null;
+}
+
+/** A channel as the reading screen shows it: the server's metadata, never its posts. */
+export interface ReaderChannel {
+  id: string;
+  name: string;
+  xmtpGroupId: string | null;
+}
+
+/**
+ * The channels a reader can open. In an encrypted community only channels whose MLS group exists
+ * are listed (a channel still being created has nowhere to read from or post to).
+ */
+export function readerChannels(c: { channels?: unknown } | null | undefined, mls: boolean): ReaderChannel[] {
+  const raw = Array.isArray(c?.channels) ? (c!.channels as Array<Record<string, unknown>>) : [];
+  const out: ReaderChannel[] = [];
+  for (const ch of raw) {
+    const id = typeof ch?.id === 'string' ? ch.id : '';
+    if (!id) continue;
+    const gid = typeof ch?.xmtpGroupId === 'string' && ch.xmtpGroupId.trim() ? ch.xmtpGroupId.trim() : null;
+    if (mls && !gid) continue;
+    out.push({ id, name: typeof ch?.name === 'string' && ch.name ? ch.name : 'general', xmtpGroupId: gid });
+  }
+  return out;
+}
+
+/** Which channel is open: the one asked for if it exists, else the current one, else the first. */
+export function pickChannel(list: readonly ReaderChannel[], current: string | null, wanted?: string | null): string | null {
+  if (current && list.some((c) => c.id === current)) return current;
+  if (wanted && list.some((c) => c.id === wanted)) return wanted;
+  return list[0]?.id ?? null;
 }
 
 /** Why a legacy community no longer takes posts, in one place for the screen and its tests. */
@@ -154,7 +188,7 @@ export function authorLabel(p: ReaderPost, me: string, nameFor?: (address: strin
   return { name, wallet: name === wallet ? '' : wallet, mine: false };
 }
 
-export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, onPay, onForward, fetchImpl, xmtpClient, onOpenCommunity }: CommunityReaderProps) {
+export function CommunityReader({ communityId, myAddress, nameFor, onBack, onManage, onMessage, onPay, onForward, fetchImpl, xmtpClient, onOpenCommunity, initialChannelId }: CommunityReaderProps) {
   const tr = useT();
   // Stable across renders: the loaders below depend on it, and a new function each render would refetch in a loop.
   const f = useMemo<typeof fetch>(() => fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), [fetchImpl]);
@@ -169,7 +203,17 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [load, setLoad] = useState<'loading' | 'ready' | 'error' | 'waiting'>('loading');
   const [draft, setDraft] = useState('');
   // Set from the community: the XMTP group that carries the posts, when the community is on MLS.
-  const [mlsGroup, setMlsGroup] = useState<string | null>(null);
+  const [mlsOn, setMlsOn] = useState(false);
+  const [channels, setChannels] = useState<ReaderChannel[]>([]);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(initialChannelId ?? null);
+  const [checking, setChecking] = useState(false);
+  /** The group a read is in flight for: one read per group at a time, and a stale read never lands in another channel. */
+  const fetchingPosts = useRef<string | null>(null);
+  const openGroup = useRef<string | null>(null);
+  const activeChannel = useMemo(() => channels.find((c) => c.id === activeChannelId) ?? channels[0] ?? null, [channels, activeChannelId]);
+  // The open channel's MLS group: posts are read from and written to that group only.
+  const mlsGroup = mlsOn ? activeChannel?.xmtpGroupId ?? null : null;
+  openGroup.current = mlsGroup;
   const [mlsAdmin, setMlsAdmin] = useState<CommunityLike | null>(null);
   const [mlsMember, setMlsMember] = useState<CommunityLike | null>(null);
   // A legacy community: read-only, with the community it was re-created as, if any.
@@ -233,32 +277,46 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       setOwnerAddress(typeof c?.ownerAddress === 'string' ? c.ownerAddress.toLowerCase() : null);
       const p = effectivePermissions(c?.permissions);
       setRules(p);
-      setRoleInfo({ ownerAddress: c?.ownerAddress, members: Array.isArray(c?.members) ? c.members : [] });
-      setMayPin(mayPinFor(p, rankIn(c, me)));
+      const memberRowsList: { walletAddress?: string | null; role?: string | null }[] = Array.isArray(c?.members) ? [...c.members] : [];
+      if (!owner && !mine && c?.isMember === true) {
+        memberRowsList.push({ walletAddress: me, role: c?.myRole || 'MEMBER' });
+      }
+      const nextRoleInfo = { ownerAddress: c?.ownerAddress, members: memberRowsList };
+      setRoleInfo(nextRoleInfo);
+      setMayPin(mayPinFor(p, rankIn(nextRoleInfo, me)));
       setIsAdmin(owner || mine?.role === 'ADMIN');
       setReadOnly(c?.postsReadOnly === true);
       setSuccessorId(typeof c?.successorId === 'string' && c.successorId ? c.successorId : null);
       setAbout({ description: typeof c?.description === 'string' ? c.description : '', isPrivate: c?.isPrivate !== false });
       const group = mlsGroupOf(c);
-      setMlsGroup(group);
-      setMlsAdmin(group && (owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
-      setMlsMember(group && mine && !(owner || mine?.role === 'ADMIN') ? (c as CommunityLike) : null);
+      const list = readerChannels(c, group !== null);
+      setMlsOn(group !== null);
+      setChannels((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list));
+      setActiveChannelId((cur) => pickChannel(list, cur, initialChannelId));
+      const effectiveCommunity = memberRowsList.length !== (c?.members?.length ?? 0) ? { ...c, members: memberRowsList } : c;
+      setMlsAdmin(group && (owner || mine?.role === 'ADMIN') ? (effectiveCommunity as CommunityLike) : null);
+      setMlsMember(group && (mine || c?.isMember === true) && !(owner || mine?.role === 'ADMIN') ? (effectiveCommunity as CommunityLike) : null);
     } catch { /* the header falls back to "Community" */ }
-  }, [communityId, f, headers, me]);
+  }, [communityId, f, headers, me, initialChannelId]);
 
   const fetchPosts = useCallback(async () => {
     if (mlsGroup) {
       // Posts live in the XMTP group: read them there, never from the server.
       if (!xmtpClient) { setLoad('error'); return; }
+      if (fetchingPosts.current === mlsGroup) return;
+      fetchingPosts.current = mlsGroup;
       try {
         // Not in the group yet: a member who is online adds people who joined (lib/communities/mls.ts).
+        // resolveGroupForClient syncs welcomes of unknown consent and matches the id case-insensitively.
         await xmtpClient.conversations?.sync?.().catch?.(() => {});
-        let inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
-        if (!inGroup && typeof xmtpClient.conversations?.syncAll === 'function') {
-          await xmtpClient.conversations.syncAll([0, 1]).catch(() => {});
-          inGroup = await xmtpClient.conversations?.getConversationById?.(mlsGroup).catch?.(() => null);
-        }
+        const inGroup = await resolveGroupForClient(xmtpClient, mlsGroup).catch(() => null);
+        if (openGroup.current !== mlsGroup) return;
         if (!inGroup) { setLoad((st) => (st === 'ready' ? 'ready' : 'waiting')); return; }
+        // The server lists this person as a member: a welcome still marked Unknown is theirs to accept.
+        if (typeof inGroup.consentState === 'function' && typeof inGroup.updateConsentState === 'function') {
+          const st = await Promise.resolve(inGroup.consentState()).catch(() => 1);
+          if (st !== 1) await Promise.resolve(inGroup.updateConsentState(1)).catch(() => {});
+        }
         const list = await readGroupPosts(xmtpClient, mlsGroup);
         const incoming: ReaderPost[] = [];
         for (const m of list) {
@@ -269,6 +327,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           }
           incoming.push({ id: m.id, authorAddress: addr || undefined, content: m.content, createdAt: m.createdAt });
         }
+        if (openGroup.current !== mlsGroup) return;
         // Votes, reactions and receipts are kept for poll results and media, never shown as posts.
         setRawMsgs(incoming.map((x) => ({ id: x.id, content: x.content, authorAddress: x.authorAddress, createdAt: x.createdAt })));
         const visible = incoming.filter((x) => !isControlMessage(x.content));
@@ -280,11 +339,14 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         setLoad('ready');
       } catch {
         setLoad((st) => (st === 'ready' ? 'ready' : 'error'));
+      } finally {
+        if (fetchingPosts.current === mlsGroup) fetchingPosts.current = null;
       }
       return;
     }
     try {
-      const res = await f(`/api/chat/communities/${encodeURIComponent(communityId)}/posts`, { headers, credentials: 'include', cache: 'no-store' });
+      const q = channels.length > 1 && activeChannel ? `?channelId=${encodeURIComponent(activeChannel.id)}` : '';
+      const res = await f(`/api/chat/communities/${encodeURIComponent(communityId)}/posts${q}`, { headers, credentials: 'include', cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
       // 410 COMMUNITY_MLS: the posts live in an XMTP group; the community's details are still loading.
       if (res.status === 410 && d?.code === 'COMMUNITY_MLS') return;
@@ -305,18 +367,54 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     } catch {
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
-  }, [communityId, f, headers, mlsGroup, xmtpClient]);
+  }, [communityId, f, headers, mlsGroup, xmtpClient, channels.length, activeChannel]);
 
-  // An admin's client keeps the MLS group's members equal to the server's list (MLS_MIGRATION.md, step 2).
+  /** One click for a member still waiting: fetch welcomes, add anyone missing, read again. */
+  const checkAccess = useCallback(async () => {
+    if (!xmtpClient) {
+      toast.error(tr("Encrypted messaging is still starting on this device. Try again in a few seconds."));
+      return;
+    }
+    setChecking(true);
+    try {
+      await Promise.resolve(xmtpClient.conversations?.syncAll?.([0, 1])).catch(() => {});
+      const c = mlsAdmin ?? mlsMember;
+      if (c && mlsGroup) await addMissingMembers(xmtpClient, mlsGroup, c, me).catch(() => 0);
+      fetchingPosts.current = null;
+      await fetchPosts();
+    } finally {
+      setChecking(false);
+    }
+  }, [xmtpClient, mlsAdmin, mlsMember, mlsGroup, me, fetchPosts, tr]);
+
+  // Switching channel: a reply belongs to the channel it was started in.
+  useEffect(() => { setReplyTo(null); setRawMsgs([]); }, [activeChannelId]);
+
+  // An admin's client keeps every encrypted channel's members equal to the server's list (MLS_MIGRATION.md, step 2).
   useEffect(() => {
     if (!mlsGroup || !mlsAdmin || !xmtpClient) return;
-    syncGroupMembers(xmtpClient, mlsGroup, mlsAdmin, me).catch(() => { /* retried next time the community opens */ });
+    syncGroupMembers(xmtpClient, mlsGroup, mlsAdmin, me)
+      .then(() => syncAllCommunityChannels(xmtpClient, mlsAdmin, me, true))
+      .catch(() => { /* retried next time the community opens */ });
   }, [mlsGroup, mlsAdmin, xmtpClient, me]);
   // Any other member's client adds people who joined while no admin was online (never removes).
   useEffect(() => {
     if (!mlsGroup || !mlsMember || !xmtpClient) return;
-    addMissingMembers(xmtpClient, mlsGroup, mlsMember, me).catch(() => { /* retried next time the community opens */ });
+    addMissingMembers(xmtpClient, mlsGroup, mlsMember, me)
+      .then(() => syncAllCommunityChannels(xmtpClient, mlsMember, me, false))
+      .catch(() => { /* retried next time the community opens */ });
   }, [mlsGroup, mlsMember, xmtpClient, me]);
+
+  // While waiting for an online member's encrypted welcome, poll every 4 s so writing unlocks immediately.
+  useEffect(() => {
+    if (!mlsGroup || load !== 'waiting') return;
+    const fast = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void fetchPosts();
+      }
+    }, 4_000);
+    return () => clearInterval(fast);
+  }, [mlsGroup, load, fetchPosts]);
 
   useEffect(() => {
     setLoad('loading');
@@ -373,6 +471,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       try {
         if (!xmtpClient) throw new Error('Not sent. Encrypted messaging is not connected on this device yet. Try again in a moment.');
         await postToGroup(xmtpClient, mlsGroup, body);
+        setLoad('ready');
         setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: undefined } : p)));
         fetchPosts();
       } catch (e) {
@@ -387,7 +486,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title: tr("Community post"), content: body }),
+        body: JSON.stringify({ title: tr("Community post"), content: body, ...(activeChannel ? { channelId: activeChannel.id } : {}) }),
       });
       status = res.status;
       const d = await res.json().catch(() => ({}));
@@ -596,6 +695,24 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           {tr("Manage")}
         </button>
       </header>
+      {channels.length > 1 && (
+        <nav className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2 border-b border-[#d4d8de] bg-white overflow-x-auto" aria-label={tr("Channels")}>
+          {channels.map((ch) => {
+            const on = ch.id === activeChannel?.id;
+            return (
+              <button
+                key={ch.id}
+                type="button"
+                onClick={() => { if (!on) { setActiveChannelId(ch.id); } }}
+                aria-pressed={on}
+                className={`shrink-0 min-h-[44px] px-4 rounded-full text-[16px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/25 ${on ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec]'}`}
+              >
+                #{ch.name}
+              </button>
+            );
+          })}
+        </nav>
+      )}
       {searchOpen && (
         <div className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2 border-b border-[#d4d8de] bg-white">
           <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setSearchOpen(false); setQuery(''); } }}
@@ -637,6 +754,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         {load === 'waiting' && posts.length === 0 && (
           <div className="py-10 text-center" role="status" data-testid="mls-waiting">
             <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.")}</p>
+            <button type="button" onClick={() => { void checkAccess(); }} disabled={checking} aria-busy={checking} className={`${btn} mx-auto mt-4 border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7] disabled:opacity-60`} style={{ color: INK }}>
+              {checking ? tr("Checking…") : tr("Check encrypted access now")}
+            </button>
+            {!xmtpClient && (
+              <p className="mt-3 text-[16px] leading-snug" style={{ color: INK_SOFT }}>{tr("Encrypted messaging is still starting on this device. Try again in a few seconds.")}</p>
+            )}
           </div>
         )}
         {load === 'error' && posts.length === 0 && (

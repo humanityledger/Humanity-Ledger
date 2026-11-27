@@ -23,7 +23,8 @@ import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
 import { OTHER_TAB_NOTICE, watchOtherTabs } from '@/lib/xmtp/tab-presence';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages, getOpenXmtpClient } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, scanGroupsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages, getOpenXmtpClient } from '@/lib/xmtp/client';
+import { syncCommunitiesMlsMembership } from '@/lib/communities/mls';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -673,9 +674,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const [communityManage, setCommunityManage] = useState(false);
   // Another community opens on its posts, unless it was opened with right click > Manage.
   const manageOnOpen = useRef<string | null>(null);
+  // Manage → Channels → Open: the reading screen opens on that channel.
+  const [communityChannel, setCommunityChannel] = useState<string | null>(null);
   useEffect(() => {
     setCommunityManage(activeCommunity !== null && manageOnOpen.current === activeCommunity);
     manageOnOpen.current = null;
+    setCommunityChannel(null);
   }, [activeCommunity]);
   const [localContacts, setLocalContacts] = useState<LocalContact[]>([]);
   const push = usePushNotifications(address || undefined);
@@ -782,6 +786,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     }
   }, [address]);
 
+  const communityGroupIdsRef = useRef<Set<string>>(new Set());
+  const standaloneGroupIdsRef = useRef<Set<string>>(new Set());
   const [profileNames, setProfileNames] = useState<Record<string, string>>(() => {
     if (typeof window === 'undefined') return {};
     try {
@@ -814,7 +820,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
   // Auto-resolve remote user profile display name
   useEffect(() => {
-    if (!activePeer || activePeer === '0x0') return;
+    if (!activePeer || activePeer === '0x0' || /^[0-9a-f]{32}$/i.test(activePeer)) return;
     const lower = activePeer.toLowerCase();
     if (profileNames[lower]) return;
 
@@ -2048,22 +2054,53 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         ));
       }
       // A chat deleted (or revived by a newer message) on another device: mirror locally.
+      // FIX (mobile↔PC sync): pass both [me, address] as owners so the keys written by
+      // deleteConversation (which uses [myAddr, address]) are found on the receiving device.
+      const owners: [string, string] = [me, address];
       const deleted = keys.filter(k => k.startsWith('deleted:'));
       for (const k of deleted) {
         const peerKey = k.slice(8);
         const val = store.get(k);
         if (val === null) {
-          unmarkDeleted(peerKey, [me]);
+          unmarkDeleted(peerKey, owners);
         } else {
           const ts = Number(val || 0);
-          if (ts > 0) markDeleted(peerKey, [me], ts);
+          // Mirror cleared cut-off too — mobile deletes write both keys together.
+          if (ts > 0) {
+            markDeleted(peerKey, owners, ts);
+            // Also apply the clear cut-off so messages stay hidden on this device.
+            markCleared(peerKey, owners, ts);
+          }
         }
       }
-      if (deleted.length) setConversations(prev => prev.filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, [me]))));
+      if (deleted.length) {
+        setConversations(prev => prev.filter(c => !hiddenAfterDelete(c, deletedAtMs(c.peerAddress, owners))));
+        // If the active chat was deleted on the other device, close it here too.
+        const active = activePeerRef.current?.toLowerCase();
+        if (active && deleted.includes(`deleted:${active}`)) {
+          const delAt = deletedAtMs(active, owners);
+          if (delAt > 0) {
+            activeXmtpDmIdRef.current = null;
+            activePeerInboxIdRef.current = '';
+            setActivePeer(null);
+            setMessages(prev => prev.filter(m => (m.conversationId || '').toLowerCase() !== `dm-${active}`));
+          }
+        }
+      }
       // A chat cleared on another device: its list line is re-checked against the cut-off.
-      if (keys.some(k => k.startsWith('cleared:'))) setConversations(prev => [...prev]);
+      const clearedKeys = keys.filter(k => k.startsWith('cleared:'));
+      if (clearedKeys.length) {
+        // Apply the cut-off locally using the same owner pair so the keys are found.
+        for (const k of clearedKeys) {
+          const peerKey = k.slice(8);
+          const val = store.get(k);
+          const ts = Number(val || 0);
+          if (ts > 0) markCleared(peerKey, owners, ts);
+        }
+        setConversations(prev => [...prev]);
+      }
       const active = activePeerRef.current?.toLowerCase();
-      if (active && keys.includes(`cleared:${active}`)) {
+      if (active && clearedKeys.includes(`cleared:${active}`)) {
         const ts = Number(store.get(`cleared:${active}`) || 0);
         // sentAtNs holds milliseconds after mapping (see the clear filter in fetchHistorical).
         if (ts > 0) setMessages(prev => prev.filter(m => m.conversationId !== `dm-${active}` || (m.sentAtNs || 0) > ts));
@@ -4652,6 +4689,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
       const runIndex = syncCount++;
       try {
         if (address) await syncOfflineQueue(client, address);
+        if (address) {
+          const commGids = await syncCommunitiesMlsMembership(client, address).catch(() => null);
+          if (commGids && commGids.size > 0) {
+            communityGroupIdsRef.current = commGids;
+          }
+        }
         
         // /api/chat/direct no longer accepts new messages (POST answers 410:
         // direct messages go over MLS only). Its GET can only hand back
@@ -4894,6 +4937,106 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           // Keep discoverNewPeers cache warm if needed
           await discoverNewPeers(client, address, knownPeersRef.current);
         }
+
+        // Discover standalone XMTP encrypted group chats (excluding community MLS channels) so
+        // non-owner members automatically receive groups they were added to and their messages.
+        try {
+          const groupEntries = await scanGroupsForActivity(client, communityGroupIdsRef.current);
+          if (!cancelled && groupEntries.length > 0) {
+            const visibleGroupSet = new Set(conversationsRef.current.map(c => (c.peerAddress || '').toLowerCase()).filter(Boolean));
+            const myInboxId = String((client as any).inboxId ?? '').toLowerCase();
+            const newGroupNames: Record<string, string> = {};
+            const groupAdds: ConversationMeta[] = [];
+            const groupUpdates = new Map<string, { lastMessage: string; lastAt: Date; bumpUnread: boolean }>();
+
+            for (const ge of groupEntries) {
+              const gid = ge.groupId.toLowerCase();
+              standaloneGroupIdsRef.current.add(gid);
+              if (ge.name && ge.name !== 'Group Chat') newGroupNames[gid] = ge.name;
+
+              const delAt = deletedAtMs(gid, [effectiveAddress, address]);
+              const clearAt = clearedAtMs(gid, [effectiveAddress, address]);
+              const cutMs = Math.max(delAt, clearAt);
+
+              if (!visibleGroupSet.has(gid)) {
+                const surviving = ge.messages.filter((m: any) => {
+                  const rawC = contentText(m);
+                  if (!m?.id || isHidden(gid, String(m.id))) return false;
+                  if (rawC.includes('initiatedByInboxId') || rawC.includes('addedInboxes') || rawC.includes('groupUpdated') || rawC.includes('group is inactive')) return false;
+                  if (isSystemSignal(rawC)) return false;
+                  const msgMs = toMs(m.sentAtNs ?? m.sentAt ?? m.sent);
+                  return decideIncoming({
+                    blocked: false, msgMs, cutMs, deletedAt: delAt,
+                    preDelete: isPreDeleteId(gid, m.id, [effectiveAddress, address]),
+                    rescued: isRescuedMessage(gid, String(m.id), [effectiveAddress, address]),
+                  }) !== 'suppress';
+                });
+                if (surviving.length > 0 || (delAt === 0 && clearAt === 0)) {
+                  const latest = surviving[surviving.length - 1];
+                  const latestMs = latest ? toMs(latest.sentAtNs ?? latest.sentAt ?? latest.sent) : Date.now();
+                  const latestLabel = latest ? lastMessageOf(contentText(latest)).slice(0, 80) : (ge.name || 'Group Chat');
+                  const readTs = address ? Number(getSynced(address, `read:${gid}`) || 0) : 0;
+                  const isFromPeer = latest ? String(latest.senderInboxId ?? '').toLowerCase() !== myInboxId : false;
+                  const isActive = activePeerRef.current?.toLowerCase() === gid;
+                  groupAdds.push({
+                    peerAddress: gid,
+                    lastMessage: latestLabel,
+                    lastAt: new Date(latestMs || Date.now()),
+                    unreadCount: isFromPeer && !isActive && readTs < latestMs ? 1 : 0,
+                  });
+                }
+              } else if (ge.lastMessage) {
+                const m = ge.lastMessage;
+                const rawC = contentText(m);
+                if (m.id && !isHidden(gid, String(m.id)) && !isSystemSignal(rawC) && !rawC.includes('initiatedByInboxId') && !rawC.includes('addedInboxes')) {
+                  const msgMs = toMs(m.sentAtNs ?? m.sentAt ?? m.sent);
+                  const okClear = cutMs === 0 || survivesClear(msgMs, cutMs) || isRescuedMessage(gid, String(m.id), [effectiveAddress, address]);
+                  const curConv = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === gid);
+                  const curMs = curConv?.lastAt ? new Date(curConv.lastAt).getTime() : 0;
+                  if (okClear && msgMs > curMs + 500) {
+                    const isFromPeer = String(m.senderInboxId ?? '').toLowerCase() !== myInboxId;
+                    const readTs = address ? Number(getSynced(address, `read:${gid}`) || 0) : 0;
+                    const isActive = activePeerRef.current?.toLowerCase() === gid;
+                    groupUpdates.set(gid, {
+                      lastMessage: lastMessageOf(rawC).slice(0, 80),
+                      lastAt: new Date(msgMs),
+                      bumpUnread: isFromPeer && !isActive && readTs < msgMs,
+                    });
+                  }
+                }
+              }
+            }
+
+            if (Object.keys(newGroupNames).length > 0) {
+              setProfileNames(prev => {
+                const next = { ...prev, ...newGroupNames };
+                idleStorage.set('ledger_profile_names', () => JSON.stringify(next));
+                return next;
+              });
+            }
+            if (groupAdds.length > 0 || groupUpdates.size > 0) {
+              setConversations(prev => {
+                const prevMap = new Map(prev.map(c => [c.peerAddress.toLowerCase(), c]));
+                const adds = groupAdds.filter(a => !prevMap.has(a.peerAddress.toLowerCase()));
+                const merged = prev.map(c => {
+                  const u = groupUpdates.get(c.peerAddress.toLowerCase());
+                  if (!u) return c;
+                  return {
+                    ...c,
+                    lastMessage: toMs(u.lastAt) >= toMs(c.lastAt) ? (u.lastMessage || c.lastMessage) : c.lastMessage,
+                    lastAt: newerLastAt(c.lastAt, u.lastAt) as Date,
+                    unreadCount: u.bumpUnread ? Math.max(c.unreadCount || 0, 1) : c.unreadCount,
+                  };
+                });
+                const updated = [...adds, ...merged];
+                persistToLocal(updated);
+                return updated;
+              });
+            }
+          }
+        } catch (groupScanErr) {
+          console.warn('[LedgerChat] Group scan error:', groupScanErr);
+        }
         
         // --- 10000% GUARANTEE FALLBACK POLL FOR ACTIVE PEER ---
         if (activePeerRef.current) {
@@ -5036,13 +5179,39 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               const content = contentText(msg);
               const sentAtNs = nsToDate(msg.sentAtNs ?? msg.sentAt).getTime();
               const currentActivePeer = activePeerRef.current?.toLowerCase();
+              const convoId = String(msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id || '');
+              const convoIdLower = convoId.toLowerCase();
+
+              // Community MLS channel posts stay in CommunityReader, never in DM/standalone chats.
+              if (convoIdLower && communityGroupIdsRef.current.has(convoIdLower)) {
+                continue;
+              }
               
-              // [CRITICAL FIX v7] FAST PATH: If the message sender's inboxId is the currently
-              // active peer's known inboxId, resolve instantly without ANY network calls.
-              // This is the case for 99% of messages in an active conversation.
+              // [CRITICAL FIX v7] FAST PATH: If the message belongs to a standalone group chat, route
+              // directly to that group's conversation ID so all members stay in the group thread.
               let resolvedPeerAddr = '';
+              if (convoIdLower) {
+                let isGroupConvo =
+                  standaloneGroupIdsRef.current.has(convoIdLower) ||
+                  (msg.conversation as any)?.metadata?.conversationType === 'group' ||
+                  typeof (msg.conversation as any)?.addMembersByIdentifiers === 'function' ||
+                  conversationsRef.current.some(c => /^[0-9a-f]{32}$/i.test(c.peerAddress) && c.peerAddress.toLowerCase() === convoIdLower);
+                if (!isGroupConvo && /^[0-9a-f]{32}$/i.test(convoIdLower) && !convIdToPeer.current.has(convoId)) {
+                  const convObj = await (client.conversations as any)?.getConversationById?.(convoId).catch(() => null);
+                  if (convObj && (typeof convObj.addMembersByIdentifiers === 'function' || (convObj as any)?.metadata?.conversationType === 'group')) {
+                    isGroupConvo = true;
+                  }
+                }
+                if (isGroupConvo) {
+                  if (communityGroupIdsRef.current.has(convoIdLower)) continue;
+                  standaloneGroupIdsRef.current.add(convoIdLower);
+                  resolvedPeerAddr = convoIdLower;
+                }
+              }
               
-              if (fromPeer && msg.senderInboxId && activePeerInboxIdRef.current &&
+              // DM FAST PATH: If the message sender's inboxId is the currently
+              // active peer's known inboxId, resolve instantly without ANY network calls.
+              if (!resolvedPeerAddr && fromPeer && msg.senderInboxId && activePeerInboxIdRef.current &&
                   msg.senderInboxId.toLowerCase() === activePeerInboxIdRef.current.toLowerCase()) {
                 resolvedPeerAddr = currentActivePeer || '';
               }
@@ -5075,7 +5244,6 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             }
 
             // Ultimate fallback (works for both sender and recipient in v5.3.0)
-            const convoId = msg.convoId || msg.conversationId || msg.groupId || msg.conversation?.id || '';
             if (!resolvedPeerAddr && convoId) {
               try {
                 // Check convIdToPeer cache first (populated by fetchHistorical)
@@ -6408,7 +6576,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             setIsStartingConversation(false);
             return;
           }
-        } else if (!peer.startsWith('0x') || (peer.length !== 42 && peer.length !== 66)) {
+        } else if (!/^[0-9a-fA-F]{32}$/.test(peer) && (!peer.startsWith('0x') || (peer.length !== 42 && peer.length !== 66))) {
           if (!looksLikeUsername(peer)) {
             toast.error(tr("Enter an exact @username, a Ledger Chat link, or a wallet address that starts with 0x."));
             setIsStartingConversation(false);
@@ -6429,14 +6597,19 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           }
         }
 
-        // Accept both EVM (42 chars: 0x + 40) and Aztec (66 chars: 0x + 64) addresses
-        if (!/^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(peer)) {
+        // Accept EVM (0x+40), Aztec (0x+64), or XMTP group conversation IDs (32 hex chars).
+        const isGroupId = /^[0-9a-fA-F]{32}$/.test(peer);
+        if (!isGroupId && !/^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(peer)) {
             toast.error(tr("Enter a wallet address that starts with 0x, or a @username."));
             setIsStartingConversation(false);
             return;
         }
+        if (isGroupId) {
+            peer = peer.toLowerCase();
+            standaloneGroupIdsRef.current.add(peer);
+        }
 
-        if (peer) {
+        if (peer && !isGroupId) {
             let canMsg = canReceiveCache.current.get(peer.toLowerCase());
             if (canMsg !== true) {
                 canMsg = await canReceiveMessages(client, peer);
@@ -6462,7 +6635,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             persistToLocal(updated);
             return updated;
         });
-        if (needsSync) {
+        if (needsSync && !isGroupId) {
             syncToAddressBook(peer);
         }
 
@@ -7893,6 +8066,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 xmtpClient={client}
                 nameFor={(addr) => resolveContactName(address || '', addr) || undefined}
                 onBack={() => setCommunityManage(false)}
+                onOpenChannel={(channelId) => {
+                  setCommunityChannel(channelId);
+                  setCommunityManage(false);
+                }}
                 onGone={() => {
                   setActiveCommunity(null);
                   setShowList(true);
@@ -7903,6 +8080,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 communityId={activeCommunity}
                 myAddress={address || ''}
                 xmtpClient={client}
+                initialChannelId={communityChannel}
                 nameFor={(addr) => resolveContactName(address || '', addr) || undefined}
                 onBack={() => {
                   setActiveCommunity(null);
@@ -9996,6 +10174,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           myAddress={address}
           onClose={() => setShowCreateGroup(false)}
           onGroupCreated={(groupId, groupName) => {
+            const gid = groupId.toLowerCase();
+            standaloneGroupIdsRef.current.add(gid);
+            if (groupName) {
+              setProfileNames(prev => {
+                const next = { ...prev, [gid]: groupName };
+                idleStorage.set('ledger_profile_names', () => JSON.stringify(next));
+                return next;
+              });
+            }
             handleStartConversationWithPeer(groupId);
           }}
         />,

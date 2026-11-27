@@ -871,6 +871,18 @@ export async function sendMessage(
     return undefined;
   }
 
+  // Group chat conversation (32-hex XMTP group ID): delegate to sendGroupMessage so consent
+  // promotion (Unknown -> Allowed), per-group WASM serialization, epoch sync, and optimistic
+  // publish retries work identically for owners and members (never through DM-only dmHealth).
+  if (route.kind === 'ref' && CONVERSATION_ID_RE.test(finalTo)) {
+    const conv = await withTimeout(openDm(), 8000, 'openGroup timeout').catch(() => null);
+    if (conv && (typeof (conv as any).addMembersByIdentifiers === 'function' || typeof (conv as any).addMembers === 'function' || typeof (conv as any).peerInboxId !== 'function')) {
+      if (ephemeral) return undefined;
+      const { sendGroupMessage } = await import('./groups');
+      return sendGroupMessage(client, String((conv as any).id || finalTo), content);
+    }
+  }
+
   let lastError: any = null;
 
   // ── Exactly-once send ─────────────────────────────────────────────────────
@@ -1001,7 +1013,13 @@ export async function routeFor(client: Client, key: string): Promise<SendRoute> 
       open: async () => {
         let convo = await conversations.getConversationById?.(convId);
         if (!convo) {
-          try { await conversations.sync(); } catch { /* the local copy may still be enough */ }
+          try {
+            if (typeof conversations.syncAll === 'function') {
+              await conversations.syncAll([0, 1]).catch(() => conversations.sync?.());
+            } else {
+              await conversations.sync?.();
+            }
+          } catch { /* the local copy may still be enough */ }
           convo = await conversations.getConversationById?.(convId);
         }
         if (!convo) throw new Error('This conversation is not on this device any more. Start a new chat with their address.');
@@ -1367,6 +1385,18 @@ export async function extractPeerAddress(dm: any, selfInboxId: string, selfEthAd
  */
 export async function getMessages(client: Client, peerAddress: string): Promise<any[]> {
   try {
+    const trimmed = (peerAddress || '').trim();
+    if (CONVERSATION_ID_RE.test(trimmed)) {
+      const convId = trimmed.toLowerCase();
+      const convo = await (client.conversations as any)?.getConversationById?.(convId).catch(() => null);
+      if (convo && typeof (convo as any).peerInboxId === 'function') {
+        await (convo as any).sync?.().catch(() => {});
+        return (await (convo as any).messages?.()) ?? [];
+      }
+      const { getGroupMessages } = await import('./groups');
+      return getGroupMessages(client, convId);
+    }
+
     // 1. Sync conversations globally — ensures DM list is up to date
     await client.conversations.sync().catch(console.warn);
 
@@ -1608,6 +1638,46 @@ export async function scanDmsForActivity(
     return entries;
   } catch (e) {
     console.warn('[XMTP] scanDmsForActivity failed:', e);
+    return [];
+  }
+}
+
+export interface GroupScanEntry {
+  groupId: string;
+  name: string;
+  messages: any[];
+  lastMessage: any | null;
+}
+
+/**
+ * Syncs and returns non-sync, non-community XMTP group chats so members (not just the creator)
+ * discover and receive messages in encrypted group conversations cleanly.
+ */
+export async function scanGroupsForActivity(
+  client: Client,
+  excludedGroupIds?: Set<string>,
+): Promise<GroupScanEntry[]> {
+  try {
+    const convs = client.conversations as any;
+    const { hasSyncGroupName } = await import('@/lib/sync/xmtpSyncChannel');
+    const groups: any[] = await (convs.listGroups?.({ consentStates: [0, 1] })?.catch?.(() => convs.listGroups?.()) ?? convs.listGroups?.() ?? []);
+    if (!Array.isArray(groups) || groups.length === 0) return [];
+    const entries: GroupScanEntry[] = [];
+    for (const g of groups) {
+      if (!g?.id || hasSyncGroupName(g)) continue;
+      const gid = String(g.id).toLowerCase();
+      if (excludedGroupIds?.has(gid)) continue;
+      try {
+        if (typeof g.sync === 'function') await g.sync().catch(() => {});
+        const msgs: any[] = typeof g.messages === 'function'
+          ? ((await g.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !_isXmtpSystemMsg(m))
+          : [];
+        const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+        entries.push({ groupId: gid, name: String(g.name || 'Group Chat'), messages: msgs, lastMessage: last });
+      } catch { /* skip transient group failure */ }
+    }
+    return entries;
+  } catch {
     return [];
   }
 }
