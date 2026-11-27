@@ -23,7 +23,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
 import { OTHER_TAB_NOTICE, watchOtherTabs } from '@/lib/xmtp/tab-presence';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, scanGroupsForActivity, forgetResolvedPeer, streamMessages, streamGroupCreations, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages, getOpenXmtpClient } from '@/lib/xmtp/client';
+import { getXMTPClient, peerRegistration, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, scanGroupsForActivity, forgetResolvedPeer, streamMessages, streamGroupCreations, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages, getOpenXmtpClient } from '@/lib/xmtp/client';
 import { classifyStreamConversation, isGroupConversation, isXmtpConversationId, loadCachedCommunityGroupIds, saveCachedCommunityGroupIds } from '@/lib/xmtp/group-routing';
 import { hasSyncGroupName } from '@/lib/sync/xmtpSyncChannel';
 import { syncCommunitiesMlsMembership } from '@/lib/communities/mls';
@@ -5144,6 +5144,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     // Run immediate sync when network returns or user returns to tab (critical after offline/mobile sleep)
     const onResumeSync = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      // Force a full sync on resume so messages missed during sleep/offline arrive immediately.
+      syncCount = 0;
       syncGlobal();
     };
     window.addEventListener('online', onResumeSync);
@@ -5425,9 +5427,20 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                       });
                     }
                     // Fix the message's conversationId in state so it shows in the right chat
-                    setMessages(prev => prev.map(m =>
-                      m.id === realId ? { ...m, conversationId: `dm-${resolvedLower}` } : m
-                    ));
+                    if (activePeerRef.current?.toLowerCase() === resolvedLower) {
+                      // Active chat: insert the message if it was skipped earlier.
+                      setMessages(prev => {
+                        if (prev.some(m => m.id === realId)) {
+                          return prev.map(m => m.id === realId ? { ...m, conversationId: `dm-${resolvedLower}` } : m);
+                        }
+                        // Insert the missing message.
+                        return [...prev, { id: realId, senderInboxId: msg.senderInboxId ?? '', senderAddress: resolvedLower, content, sentAtNs, conversationId: `dm-${resolvedLower}`, status: 'sent' as const }].sort((a: any, b: any) => (a.sentAtNs || 0) - (b.sentAtNs || 0));
+                      });
+                    } else {
+                      setMessages(prev => prev.map(m =>
+                        m.id === realId ? { ...m, conversationId: `dm-${resolvedLower}` } : m
+                      ));
+                    }
                     // Persist to IndexedDB with the correct peer
                     if (!isSystemSignal(content)) {
                       chatDB.saveMessages([{ id: realId, senderInboxId: msg.senderInboxId ?? '', senderAddress: resolvedLower, content, sentAtNs, conversationId: `dm-${resolvedLower}`, status: 'sent' }]).catch(() => {});
@@ -6687,11 +6700,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         if (peer && !isGroupId) {
             let canMsg = canReceiveCache.current.get(peer.toLowerCase());
             if (canMsg !== true) {
-                canMsg = await canReceiveMessages(client, peer);
-                if (canMsg) canReceiveCache.current.set(peer.toLowerCase(), true);
-            }
-            if (!canMsg) {
-                toast.info(tr("This person has not turned on Ledger Chat yet, so messages cannot reach them. Ask them to open ledgerchat.org and sign in once."));
+                const reg = await peerRegistration(peer);
+                if (reg === 'yes') {
+                    canReceiveCache.current.set(peer.toLowerCase(), true);
+                } else if (reg === 'no') {
+                    toast.info(tr("This person has not turned on Ledger Chat yet, so messages cannot reach them. Ask them to open ledgerchat.org and sign in once."));
+                }
             }
         }
 
@@ -8152,6 +8166,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               />
             ) : (
               <CommunityReader
+                key={activeCommunity}
                 communityId={activeCommunity}
                 myAddress={address || ''}
                 xmtpClient={client}

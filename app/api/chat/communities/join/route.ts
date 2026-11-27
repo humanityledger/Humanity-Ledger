@@ -117,6 +117,19 @@ export async function POST(req: NextRequest) {
           code: 'LINK_EXPIRED'
         }, { status: 404 });
       }
+    }
+    // ── PATH C: Direct communityId for public communities (Discover 1-click Join) ─
+    else if (body?.communityId && typeof body.communityId === 'string') {
+      community = await (prisma as any).community.findUnique({
+        where: { id: body.communityId },
+        include: { _count: { select: { members: true } } },
+      });
+      if (!community) {
+        return NextResponse.json({ error: 'Community not found', code: 'COMMUNITY_NOT_FOUND' }, { status: 404 });
+      }
+      if (community.isPrivate) {
+        return NextResponse.json({ error: 'joinCode or invite token is required' }, { status: 400 });
+      }
     } else {
       return NextResponse.json({ error: 'joinCode or invite token is required' }, { status: 400 });
     }

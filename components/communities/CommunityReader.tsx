@@ -224,6 +224,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   // and shows, because posts of an encrypted community never reach our server.
   const [rules, setRules] = useState<CommunityPermissions>(effectivePermissions(null));
   const [roleInfo, setRoleInfo] = useState<{ ownerAddress?: string | null; members?: { walletAddress?: string | null; role?: string | null }[] } | null>(null);
+  const [communityLoaded, setCommunityLoaded] = useState(false);
   const myRank: Rank | null = useMemo(() => rankIn(roleInfo, me), [roleInfo, me]);
   const [about, setAbout] = useState<{ description: string; isPrivate: boolean }>({ description: '', isPrivate: true });
   const [moving, setMoving] = useState<'idle' | 'confirm' | 'working'>('idle');
@@ -237,6 +238,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [panel, setPanel] = useState<'media' | 'members' | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [attaching, setAttaching] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
   const filePick = useRef<HTMLInputElement>(null);
   // Phase 2: replies, reactions, search and voice notes (all MLS application messages).
   const [replyTo, setReplyTo] = useState<{ id: string; snippet: string } | null>(null);
@@ -277,14 +279,20 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       setOwnerAddress(typeof c?.ownerAddress === 'string' ? c.ownerAddress.toLowerCase() : null);
       const p = effectivePermissions(c?.permissions);
       setRules(p);
-      const memberRowsList: { walletAddress?: string | null; role?: string | null }[] = Array.isArray(c?.members) ? [...c.members] : [];
+      const memberRowsList: { walletAddress?: string | null; role?: string | null }[] = Array.isArray(c?.members)
+        ? c.members.map((m: any) => ({ ...m, role: typeof m?.role === 'string' ? m.role.toUpperCase() : m?.role }))
+        : [];
+      const fallbackRole = typeof c?.myRole === 'string' && c.myRole.trim() ? c.myRole.trim().toUpperCase() : 'MEMBER';
       if (!owner && !mine && c?.isMember === true) {
-        memberRowsList.push({ walletAddress: me, role: c?.myRole || 'MEMBER' });
+        memberRowsList.push({ walletAddress: me, role: fallbackRole });
       }
       const nextRoleInfo = { ownerAddress: c?.ownerAddress, members: memberRowsList };
       setRoleInfo(nextRoleInfo);
+      setCommunityLoaded(true);
+      const myRoleUpper = typeof (mine?.role ?? c?.myRole) === 'string' ? String(mine?.role ?? c?.myRole).toUpperCase() : '';
+      const isOwnerOrAdmin = owner || myRoleUpper === 'ADMIN';
       setMayPin(mayPinFor(p, rankIn(nextRoleInfo, me)));
-      setIsAdmin(owner || mine?.role === 'ADMIN');
+      setIsAdmin(isOwnerOrAdmin);
       setReadOnly(c?.postsReadOnly === true);
       setSuccessorId(typeof c?.successorId === 'string' && c.successorId ? c.successorId : null);
       setAbout({ description: typeof c?.description === 'string' ? c.description : '', isPrivate: c?.isPrivate !== false });
@@ -294,17 +302,19 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       setChannels((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list));
       setActiveChannelId((cur) => pickChannel(list, cur, initialChannelId));
       const effectiveCommunity = memberRowsList.length !== (c?.members?.length ?? 0) ? { ...c, members: memberRowsList } : c;
-      setMlsAdmin(group && (owner || mine?.role === 'ADMIN') ? (effectiveCommunity as CommunityLike) : null);
-      setMlsMember(group && (mine || c?.isMember === true) && !(owner || mine?.role === 'ADMIN') ? (effectiveCommunity as CommunityLike) : null);
+      setMlsAdmin(group && isOwnerOrAdmin ? (effectiveCommunity as CommunityLike) : null);
+      setMlsMember(group && (mine || c?.isMember === true) && !isOwnerOrAdmin ? (effectiveCommunity as CommunityLike) : null);
     } catch { /* the header falls back to "Community" */ }
   }, [communityId, f, headers, me, initialChannelId]);
 
+  const pendingRefetch = useRef(false);
   const fetchPosts = useCallback(async () => {
     if (mlsGroup) {
       // Posts live in the XMTP group: read them there, never from the server.
-      if (!xmtpClient) { setLoad('error'); return; }
-      if (fetchingPosts.current === mlsGroup) return;
+      if (!xmtpClient) { setLoad((s) => (s === 'ready' ? 'ready' : 'loading')); return; }
+      if (fetchingPosts.current === mlsGroup) { pendingRefetch.current = true; return; }
       fetchingPosts.current = mlsGroup;
+      pendingRefetch.current = false;
       try {
         // Not in the group yet: a member who is online adds people who joined (lib/communities/mls.ts).
         // resolveGroupForClient syncs welcomes of unknown consent and matches the id case-insensitively.
@@ -334,17 +344,37 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         setPosts((prev) => {
           const local = prev.filter((p) => p.state);
           const ids = new Set(visible.map((p) => p.id));
-          return [...visible, ...local.filter((p) => !ids.has(p.id))].sort((a, b) => time(a) - time(b));
+          // 1-to-1 match any in-flight 'sending' placeholder against an incoming confirmed copy from me
+          const available = visible.map((v, i) => ({ v, i })).filter(({ v }) => (v.authorAddress || '').toLowerCase() === me);
+          const consumedIdx = new Set<number>();
+          const remainingLocal = local.filter((p) => {
+            if (ids.has(p.id)) return false;
+            if (p.state === 'sending') {
+              const hit = available.find(
+                ({ v, i }) => !consumedIdx.has(i) && (v.content || '') === (p.content || ''),
+              );
+              if (hit) { consumedIdx.add(hit.i); return false; }
+            }
+            return true;
+          });
+          return [...visible, ...remainingLocal].sort((a, b) => time(a) - time(b));
         });
         setLoad('ready');
       } catch {
         setLoad((st) => (st === 'ready' ? 'ready' : 'error'));
       } finally {
+        const queued = pendingRefetch.current;
         if (fetchingPosts.current === mlsGroup) fetchingPosts.current = null;
+        if (queued && openGroup.current === mlsGroup) {
+          pendingRefetch.current = false;
+          queueMicrotask(() => { void fetchPosts(); });
+        }
       }
       return;
     }
     try {
+      // If the community metadata hasn't loaded yet and we know it's MLS, skip the server call.
+      if (!mlsGroup && mlsOn) return;
       const q = channels.length > 1 && activeChannel ? `?channelId=${encodeURIComponent(activeChannel.id)}` : '';
       const res = await f(`/api/chat/communities/${encodeURIComponent(communityId)}/posts${q}`, { headers, credentials: 'include', cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
@@ -367,7 +397,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     } catch {
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
-  }, [communityId, f, headers, mlsGroup, xmtpClient, channels.length, activeChannel]);
+  }, [communityId, f, headers, mlsGroup, mlsOn, xmtpClient, channels.length, activeChannel]);
 
   /** One click for a member still waiting: fetch welcomes, add anyone missing, read again. */
   const checkAccess = useCallback(async () => {
@@ -387,6 +417,29 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     }
   }, [xmtpClient, mlsAdmin, mlsMember, mlsGroup, me, fetchPosts, tr]);
 
+  /** Join a public community from Discover / Reader without a join code. */
+  const joinCommunity = useCallback(async () => {
+    setJoining(true);
+    try {
+      const res = await f('/api/chat/communities/join', {
+        method: 'POST', credentials: 'include',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ communityId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok && d?.code !== 'ALREADY_MEMBER' && d?.status !== 'ALREADY_MEMBER') {
+        toast.error(tr(d?.error || 'Could not join'));
+        return;
+      }
+      await fetchCommunity();
+      await fetchPosts();
+    } catch {
+      toast.error(tr('Could not join'));
+    } finally {
+      setJoining(false);
+    }
+  }, [communityId, f, headers, fetchCommunity, fetchPosts, tr]);
+
   // Switching channel: a reply belongs to the channel it was started in.
   useEffect(() => { setReplyTo(null); setRawMsgs([]); }, [activeChannelId]);
 
@@ -405,31 +458,159 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       .catch(() => { /* retried next time the community opens */ });
   }, [mlsGroup, mlsMember, xmtpClient, me]);
 
-  // While waiting for an online member's encrypted welcome, poll every 4 s so writing unlocks immediately.
+  // While waiting for an online member's encrypted welcome, poll every 2.5 s so writing unlocks immediately.
   useEffect(() => {
     if (!mlsGroup || load !== 'waiting') return;
     const fast = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') {
         void fetchPosts();
       }
-    }, 4_000);
+    }, 2_500);
     return () => clearInterval(fast);
   }, [mlsGroup, load, fetchPosts]);
 
+  const mlsReady = load === 'ready';
   useEffect(() => {
+    if (!mlsGroup || !xmtpClient || !mlsReady) return;
+    let cancelled = false;
+    const ac = new AbortController();
+    let activeStream: { return?: () => Promise<any>; close?: () => any } | null = null;
+
+    const run = async () => {
+      // Self-healing reconnect loop: restart the stream on transient errors.
+      while (!cancelled && !ac.signal.aborted && openGroup.current === mlsGroup) {
+        try {
+          const grp = await resolveGroupForClient(xmtpClient, mlsGroup).catch(() => null);
+          if (cancelled || openGroup.current !== mlsGroup) return;
+          const iterator =
+            grp && typeof (grp as any).stream === 'function'
+              ? await (grp as any).stream()
+              : typeof xmtpClient.conversations?.streamAllGroupMessages === 'function'
+                ? await xmtpClient.conversations.streamAllGroupMessages()
+                : null;
+          if (!iterator || cancelled) {
+            try { await iterator?.return?.(); } catch {}
+            return;
+          }
+          activeStream = iterator;
+          const selfInbox = String((xmtpClient as any)?.inboxId || '').toLowerCase();
+          for await (const m of iterator) {
+            if (cancelled || ac.signal.aborted || openGroup.current !== mlsGroup) break;
+            if (!m) continue;
+            const tId = String((m as any).contentType?.typeId || '');
+            if (
+              (m as any).kind === 1 ||
+              (m as any).kind === 'membership_change' ||
+              tId === 'group_updated' ||
+              tId === 'group_membership_change'
+            ) continue;
+
+            const msgConvId = String((m as any).conversationId || (m as any).groupId || (m as any).conversation?.id || mlsGroup).toLowerCase();
+            if (msgConvId !== mlsGroup.toLowerCase()) continue;
+
+            const rawContent = (m as any).content;
+            const content =
+              typeof rawContent === 'string'
+                ? rawContent
+                : typeof rawContent?.text === 'string'
+                  ? rawContent.text
+                  : typeof (m as any).fallback === 'string'
+                    ? (m as any).fallback
+                    : '';
+            if (!content || content.includes('initiatedByInboxId') || content.includes('addedInboxes') || content.includes('removedInboxes')) continue;
+
+            const id = String((m as any).id || '');
+            if (!id) continue;
+            const senderInbox = String((m as any).senderInboxId || '');
+            let addr = senders.current.get(senderInbox);
+            if (addr === undefined && senderInbox) {
+              addr = (await resolveInboxIdToAddress(senderInbox, xmtpClient).catch(() => null)) ?? '';
+              senders.current.set(senderInbox, addr);
+            }
+            if (cancelled || openGroup.current !== mlsGroup) return;
+            const authorAddr = (addr || '').toLowerCase() || undefined;
+            const isMineStream =
+              (!!senderInbox && !!selfInbox && senderInbox.toLowerCase() === selfInbox) ||
+              authorAddr === me;
+            const createdAt =
+              typeof (m as any).sentAtNs === 'bigint'
+                ? Number((m as any).sentAtNs / BigInt(1_000_000))
+                : typeof (m as any).sentAtNs === 'number'
+                  ? ((m as any).sentAtNs > 1e14 ? Math.floor((m as any).sentAtNs / 1e6) : (m as any).sentAtNs)
+                  : (m as any).sentAt
+                    ? new Date((m as any).sentAt).getTime()
+                    : Date.now();
+
+            const nextEntry: ReaderPost = { id, authorAddress: authorAddr || (isMineStream ? me : undefined), content, createdAt };
+            setLoad('ready');
+            setRawMsgs((prev) => (prev.some((x) => x.id === id) ? prev : [...prev, { id, content, authorAddress: nextEntry.authorAddress, createdAt }]));
+            if (!isControlMessage(content)) {
+              setPosts((prev) => {
+                if (prev.some((p) => p.id === id)) return prev;
+                const sendingIdx = isMineStream
+                  ? prev.findIndex(
+                      (p) =>
+                        p.state === 'sending' &&
+                        (p.content || '') === content &&
+                        (p.authorAddress || '').toLowerCase() === me,
+                    )
+                  : -1;
+                const base = sendingIdx !== -1 ? prev.filter((_, idx) => idx !== sendingIdx) : prev;
+                return [...base, nextEntry].sort((a, b) => time(a) - time(b));
+              });
+            }
+          }
+        } catch {
+          // Transient stream error — wait 3 s then reconnect.
+        }
+        activeStream = null;
+        if (!cancelled && openGroup.current === mlsGroup) {
+          await new Promise((r) => setTimeout(r, 3_000));
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+      ac.abort();
+      try { activeStream?.return?.(); } catch {}
+      try { activeStream?.close?.(); } catch {}
+    };
+  }, [mlsGroup, xmtpClient, mlsReady, me]);
+
+  const prevChannelGroupRef = useRef<string | null>(null);
+  useEffect(() => {
+    prevChannelGroupRef.current = null;
+    setCommunityLoaded(false);
     setLoad('loading');
     setPosts([]);
-    fetchCommunity();
-    fetchPosts();
-    let ticks = 0;
+    void fetchCommunity();
+    const cTimer = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void fetchCommunity();
+      }
+    }, 12_000);
+    return () => clearInterval(cTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset state only when communityId changes
+  }, [communityId]);
+
+  // Fetch posts when community metadata, active channel group, or XMTP client becomes ready.
+  useEffect(() => {
+    const prevGroup = prevChannelGroupRef.current;
+    if (prevGroup && mlsGroup && prevGroup !== mlsGroup) {
+      setLoad('loading');
+      setPosts([]);
+    }
+    prevChannelGroupRef.current = mlsGroup;
+    void fetchPosts();
     const t = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-        fetchPosts();
-        if (++ticks % 2 === 0) fetchCommunity();
+        void fetchPosts();
       }
     }, 15_000);
     return () => clearInterval(t);
-  }, [fetchCommunity, fetchPosts]);
+  }, [communityId, mlsGroup, communityLoaded, xmtpClient, fetchPosts]);
 
   // Follow the newest post, and bring a post that just failed into view: its error must be seen.
   const lastKey = posts.length ? `${posts[posts.length - 1].id}:${posts[posts.length - 1].state ?? ''}` : '';
@@ -447,12 +628,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   }, [rawMsgs, me]);
   const allowed = (kind: PostKind, text = ''): boolean => {
     if (!mlsGroup) return true;
-    const r = checkPost(rules, myRank, kind, text, lastOwnPostAt);
+    const r = checkPost(rules, myRank ?? (!communityLoaded ? 'MEMBER' : null), kind, text, lastOwnPostAt);
     if (!r.ok) toast.error(tr(r.reason || 'Not sent.', { seconds: r.waitSec ?? 0 }));
     return r.ok;
   };
   const kindOf = (text: string): PostKind => (text.startsWith('__POLL__') ? 'poll' : /^\s*\{\s*"type"\s*:\s*"hl\.(attachment|largefile)"/.test(text) || text.startsWith('__AUDIO__') ? 'media' : 'text');
-  const mayWrite = !mlsGroup || checkPost(rules, myRank, 'text', '', null).ok;
+  const mayWrite = !mlsGroup || !communityLoaded || checkPost(rules, myRank, 'text', '', null).ok;
   // Spam filter: on every member's app, posts it catches are hidden (never for privileged people).
   const spam = useMemo(() => (mlsGroup && rules.antiSpam ? spamIds(posts.filter((p) => !p.state).map((p) => ({ id: p.id, content: postText(p), authorAddress: p.authorAddress, createdAt: time(p) })), (a) => rankIn(roleInfo, a)) : new Set<string>()), [mlsGroup, rules.antiSpam, posts, roleInfo]);
 
@@ -470,9 +651,14 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     if (mlsGroup) {
       try {
         if (!xmtpClient) throw new Error('Not sent. Encrypted messaging is not connected on this device yet. Try again in a moment.');
-        await postToGroup(xmtpClient, mlsGroup, body);
+        const sentId = await postToGroup(xmtpClient, mlsGroup, body);
         setLoad('ready');
-        setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: undefined } : p)));
+        setPosts((prev) => {
+          if (sentId && prev.some((p) => p.id === sentId && p.id !== localId)) {
+            return prev.filter((p) => p.id !== localId);
+          }
+          return prev.map((p) => (p.id === localId ? { ...p, id: sentId || p.id, state: undefined } : p));
+        });
         fetchPosts();
       } catch (e) {
         const msg = e instanceof Error ? e.message : typeof (e as any)?.message === 'string' ? (e as any).message : typeof e === 'string' ? e : '';
@@ -754,6 +940,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         {load === 'waiting' && posts.length === 0 && (
           <div className="py-10 text-center" role="status" data-testid="mls-waiting">
             <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.")}</p>
+            {communityLoaded && myRank === null && !about.isPrivate && (
+              <button type="button" disabled={joining} onClick={() => void joinCommunity()} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:opacity-60`}>
+                {joining ? tr("Joining...") : tr("Join community")}
+              </button>
+            )}
             <button type="button" onClick={() => { void checkAccess(); }} disabled={checking} aria-busy={checking} className={`${btn} mx-auto mt-4 border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7] disabled:opacity-60`} style={{ color: INK }}>
               {checking ? tr("Checking…") : tr("Check encrypted access now")}
             </button>
@@ -920,7 +1111,13 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
               <button type="button" onClick={() => setReplyTo(null)} className="w-9 h-9 grid place-items-center rounded-full hover:bg-white" aria-label={tr("Cancel reply")}><X size={16} /></button>
             </div>
           )}
-          {!mayWrite && (
+          {!mayWrite && communityLoaded && myRank === null && !about.isPrivate && (
+            <button type="button" disabled={joining} onClick={() => void joinCommunity()} className="mb-2 w-full min-h-[44px] rounded-2xl bg-[#15171c] text-white text-[15px] font-semibold disabled:opacity-50">{joining ? tr("Joining...") : tr("Join community")}</button>
+          )}
+          {!mayWrite && communityLoaded && myRank === null && about.isPrivate && (
+            <p className="mb-2 text-[16px] leading-snug" style={{ color: INK_SOFT }} role="note">{tr("Only members can post here.")}</p>
+          )}
+          {!mayWrite && (!communityLoaded || myRank !== null) && (
             <p className="mb-2 text-[16px] leading-snug" style={{ color: INK_SOFT }} role="note">{tr("Only the owner, admins and moderators can post in this community.")}</p>
           )}
           {mlsGroup && rules.slowModeSeconds > 0 && !isPrivileged(myRank) && (

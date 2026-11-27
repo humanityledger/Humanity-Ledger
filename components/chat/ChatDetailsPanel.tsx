@@ -50,12 +50,13 @@ export function ChatDetailsPanel({
 }) {
   const t = useT();
   const selfInboxId: string | undefined = client?.inboxId;
+  const isGroup = /^[0-9a-f]{32}$/i.test((peerAddress || '').trim());
   const [glyphs, setGlyphs] = useState<string[] | null>(null);
   const [glyphState, setGlyphState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
   useEffect(() => {
     setGlyphs(null);
-    if (!client || !selfInboxId) {
+    if (!client || !selfInboxId || isGroup) {
       setGlyphState('unavailable');
       return;
     }
@@ -136,6 +137,7 @@ export function ChatDetailsPanel({
         ))}
       </div>
 
+      {!isGroup && (
       <section aria-label={t("Safety glyphs")} className="rounded-[20px] bg-[#f4f5f7] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h4 className="text-[13px] font-semibold text-[#15171c]">{t("Safety glyphs")}</h4>
@@ -162,6 +164,7 @@ export function ChatDetailsPanel({
         )}
         <p className="text-[12px] leading-relaxed text-[#4a4f59]">{t("Compare it with {peerName}’s screen. It changes if a device is added to either account.", { peerName })}</p>
       </section>
+      )}
 
       <ContactInfoSections
         variant="column"

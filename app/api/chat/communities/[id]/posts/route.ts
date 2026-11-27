@@ -51,6 +51,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    // MLS communities store posts in XMTP groups, not on the server.
+    if (community.communityMls === true) {
+      return NextResponse.json(
+        { error: 'This community keeps posts in an XMTP group. The server does not store them.', code: 'COMMUNITY_MLS' },
+        { status: 410 }
+      );
+    }
+
     // Posts of the reading screen = community posts (with a title).
     // ?pinned=1 returns only the posts a person pinned, newest pin first. An empty list is an
     // empty list: the client must show nothing, not the previous result.

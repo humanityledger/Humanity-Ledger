@@ -608,6 +608,7 @@ export function destroyXMTPClient(address: string): void {
   inboxIdToAddressCache.clear();
   registeredAddressCache.clear();
   activeDmCache.clear();
+  activeDmLastSync.clear();
   resolvedDmIds.clear();
   dmIdToPeerCache.clear();
 }
@@ -721,6 +722,7 @@ const registeredAddressCache = new Map<string, string>();
 // Cache for active DM conversation objects by inboxId:peerAddress to avoid re-creating MLS sessions per message
 // Live DM handles (SDK proxies): bounded so long sessions do not pin every chat ever opened.
 const activeDmCache = new BoundedLRU<string, any>({ max: 24, name: 'xmtp.activeDm' });
+const activeDmLastSync = new Map<string, number>();
 /** The open (find or create) of a conversation's DM still running, per conversation. */
 const dmOpenInFlight = new Map<string, Promise<any>>();
 
@@ -876,10 +878,11 @@ export async function sendMessage(
   // publish retries work identically for owners and members (never through DM-only dmHealth).
   if (route.kind === 'ref' && CONVERSATION_ID_RE.test(finalTo)) {
     const conv = await withTimeout(openDm(), 8000, 'openGroup timeout').catch(() => null);
-    if (conv && (typeof (conv as any).addMembersByIdentifiers === 'function' || typeof (conv as any).addMembers === 'function' || typeof (conv as any).peerInboxId !== 'function')) {
+    const { sendGroupMessage, resolveGroupForClient } = await import('./groups');
+    const resolvedConv = conv ?? await resolveGroupForClient(client, finalTo).catch(() => null);
+    if (resolvedConv && (typeof (resolvedConv as any).addMembersByIdentifiers === 'function' || typeof (resolvedConv as any).addMembers === 'function' || typeof (resolvedConv as any).peerInboxId !== 'function')) {
       if (ephemeral) return undefined;
-      const { sendGroupMessage } = await import('./groups');
-      return sendGroupMessage(client, String((conv as any).id || finalTo), content);
+      return sendGroupMessage(client, String((resolvedConv as any).id || finalTo), content);
     }
   }
 
@@ -900,10 +903,18 @@ export async function sendMessage(
     try {
       if (!dm) {
         dm = await withTimeout(openDm(), 8000, 'newDm timeout');
+        activeDmLastSync.set(cacheKey, Date.now());
         // Not awaited (it added up to 3 s to the first message), but queued in the same per-
         // conversation order as the publishes: a sync racing the first publish of a new
         // conversation is the kind of collision the serial queue exists to prevent.
         { const fresh = dm; runSerial(cacheKey, () => withTimeout(fresh.sync(), 3000, 'sync timeout')).catch(() => {}); }
+      } else {
+        const lastSyncAt = activeDmLastSync.get(cacheKey) ?? 0;
+        if (Date.now() - lastSyncAt > 45_000 && typeof dm.sync === 'function') {
+          activeDmLastSync.set(cacheKey, Date.now());
+          const staleDm = dm;
+          await runSerial(cacheKey, () => withTimeout(staleDm.sync(), 4000, 'sync timeout')).catch(() => {});
+        }
       }
       if (!sentId) {
         const usable = await ensureSendableDm(client, cacheKey, dm, selfInbox, route.kind === 'address' ? identifier : null, ephemeral);
@@ -1192,14 +1203,31 @@ function schedulePublishRetry(cacheKey: string, dm: any, attempt = 0, client?: C
         if (attempt > 0) diag('publish_recovered', { conv: short(entry.dm?.id), attempt });
       })
       .catch(async (err: unknown) => {
-        // "Sync failed to wait for intent": the publish intent is waiting for the group's state.
-        // A sync processes the pending commits that intent waits on; then the next publish can
-        // finish instead of waiting on the same intent again (production log, 20/11/2026).
-        if (isSyncWaitError(err)) {
+        // Sync the DM and inbox welcomes on sync-wait, epoch, intent, lock, commit, welcome, or timeout
+        // errors (and periodically every 3 attempts) so stale epochs/commits never retry blindly.
+        const errStr = String((err as any)?.message ?? err ?? '');
+        if (isSyncWaitError(err) || /sync|epoch|intent|lock|commit|welcome|timeout/i.test(errStr) || attempt % 3 === 0) {
           await runSerial(cacheKey, () => withTimeout(entry.dm.sync(), 5000, 'sync timeout')).catch(() => {});
           // The welcomes too: a DM the other person created with us is processed, and stitched in.
           if (entry.client) {
             try { await withTimeout(entry.client.conversations.sync(), 5000, 'sync timeout'); } catch { /* next retry */ }
+            if (attempt > 0 && attempt % 4 === 0) {
+              try {
+                const selfInb = String((entry.client as any).inboxId || '');
+                forgetDmHealth(selfInb, entry.dm?.id);
+                if ((await dmHealth(entry.dm, selfInb)) === 'peer_missing') {
+                  const pInb = String((await entry.dm?.peerInboxId?.()) ?? '');
+                  if (pInb) {
+                    const healed = await findReadableDuplicate(entry.client.conversations as any, pInb, selfInb, entry.dm?.id).catch(() => null);
+                    if (healed) {
+                      activeDmCache.set(cacheKey, healed);
+                      activeDmLastSync.set(cacheKey, Date.now());
+                      diag('dm_heal_duplicate', { conv: short((healed as any)?.id) });
+                    }
+                  }
+                }
+              } catch { /* best-effort health check */ }
+            }
           }
           if (attempt === 2) void explainStuckPublish(entry.dm, entry.client);
         }
@@ -1412,12 +1440,13 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
     // can occasionally return a freshly-created (empty) conversation instead of the existing one.
     // Using the existing DM object from listDms() gives us reliable message access.
     let dm: any = null;
+    let peerInboxId: string | undefined;
     const selfInboxId = (client as any).inboxId ?? '';
     // Fast path: the peer's inbox, then the DM with that inbox, straight from
     // the local database. The scan below resolved the peer of every DM on
     // every open, which grew with the number of conversations.
     try {
-      const peerInboxId = await client.findInboxIdByIdentifier(identifier);
+      peerInboxId = await client.findInboxIdByIdentifier(identifier);
       if (peerInboxId) dm = (await client.conversations.getDmByInboxId(peerInboxId)) ?? null;
     } catch (fastErr) {
       console.warn('[XMTP] getDmByInboxId failed, scanning DMs', fastErr);
@@ -1435,6 +1464,30 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       console.warn('[XMTP] listDms failed, falling back to newDmWithIdentifier', listErr);
     }
 
+    // If not found locally yet, sync welcomes once (without creating a competing DM) in case
+    // the peer just opened this conversation from their device.
+    if (!dm) {
+      try {
+        if (typeof (client.conversations as any).syncAll === 'function') {
+          await withTimeout((client.conversations as any).syncAll([0, 1]), 6000, 'syncAll timeout');
+        } else {
+          await withTimeout(client.conversations.sync(), 6000, 'sync timeout');
+        }
+        if (!peerInboxId) peerInboxId = await client.findInboxIdByIdentifier(identifier).catch(() => undefined);
+        if (peerInboxId) dm = (await client.conversations.getDmByInboxId(peerInboxId)) ?? null;
+        if (!dm) {
+          const dmsAfter: any[] = (await (client.conversations as any).listDms?.({ includeDuplicateDms: true }).catch(() => client.conversations.listDms())) || [];
+          for (const d of dmsAfter) {
+            const peerAddr = await extractPeerAddress(d, selfInboxId, (client as any).accountAddress, client).catch(() => null);
+            if (peerAddr && peerAddr.toLowerCase() === normalizedPeer.toLowerCase()) {
+              dm = d;
+              break;
+            }
+          }
+        }
+      } catch { /* best-effort welcome sync */ }
+    }
+
     // Reading never creates a conversation (26 November 2026). This used to call
     // newDmWithIdentifier here, on every poll of the open chat (every 10 s, on the receiving side
     // too): each call that found nothing locally created a DM of our own with the other person,
@@ -1446,6 +1499,38 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       return [];
     }
 
+    const readAllHandles = async (): Promise<any[]> => {
+      const dups: any[] = typeof dm.getDuplicateDms === 'function'
+        ? (await dm.getDuplicateDms().catch(() => [])) || []
+        : [];
+      const extras = dups.filter((d) => d && (!d.id || d.id !== dm.id));
+      const primary: any[] = (await dm.messages()) ?? [];
+      if (extras.length === 0) return primary;
+      const seen = new Map<string, any>();
+      const unkeyed: any[] = [];
+      const add = (list: any[]) => {
+        for (const m of list) {
+          const id = m?.id ? String(m.id) : '';
+          if (id) { if (!seen.has(id)) seen.set(id, m); }
+          else unkeyed.push(m);
+        }
+      };
+      add(primary);
+      for (const d of extras) {
+        if (typeof d.sync === 'function') await d.sync().catch(() => {});
+        add((await d.messages?.().catch(() => [])) ?? []);
+      }
+      return [...seen.values(), ...unkeyed].sort((a, b) => {
+        try {
+          const ta = BigInt(a?.sentAtNs ?? 0);
+          const tb = BigInt(b?.sentAtNs ?? 0);
+          return ta < tb ? -1 : ta > tb ? 1 : 0;
+        } catch {
+          return Number(a?.sentAtNs ?? 0) - Number(b?.sentAtNs ?? 0);
+        }
+      });
+    };
+
     // 3. CRITICAL: Sync the specific DM from the network (not just local cache)
     // First sync — pulls network state
     try {
@@ -1454,8 +1539,8 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       console.warn('[XMTP] dm.sync() first attempt failed:', syncErr);
     }
 
-    // 4. Fetch messages (now from properly synced state)
-    const msgs = await dm.messages();
+    // 4. Fetch messages (now from properly synced state, merging any duplicate DM handles)
+    const msgs = await readAllHandles();
 
     // 5. If we got 0 messages but this is an existing DM, do a second sync and retry
     // (XMTP MLS sometimes needs two syncs on first open or after key rotation)
@@ -1463,7 +1548,7 @@ export async function getMessages(client: Client, peerAddress: string): Promise<
       try {
         await client.conversations.sync();
         await dm.sync();
-        const retryMsgs = await dm.messages();
+        const retryMsgs = await readAllHandles();
         return retryMsgs ?? [];
       } catch (retryErr) {
         console.warn('[XMTP] Retry sync/messages failed:', retryErr);
@@ -1541,7 +1626,7 @@ export async function scanDmsForActivity(
       await convs.sync().catch(() => {});
     }
 
-    let dms: any[] = (await convs.listDms?.()) || [];
+    let dms: any[] = (await convs.listDms?.({ includeDuplicateDms: true }).catch(() => convs.listDms?.())) || (await convs.listDms?.()) || [];
     if (dms.length > 1) {
       // Prioritize recently active DMs first when timestamps exist so massive accounts surface latest activity fastest.
       dms = [...dms].sort((a, b) => {
@@ -1588,6 +1673,17 @@ export async function scanDmsForActivity(
       } catch {}
     }
 
+    const isNonChatSignal = (m: any): boolean => {
+      if (_isXmtpSystemMsg(m)) return true;
+      const txt = typeof m?.content === 'string'
+        ? m.content
+        : typeof m?.content?.text === 'string'
+          ? m.content.text
+          : '';
+      if (!txt) return false;
+      return isEphemeralSignal(txt) || /^__(VOTE|EDIT|REVOKE|PIN|UNPIN|CALL_ACK|CALL_CANDIDATE|CALL_HANGUP|CALL_DECLINE|CALL_BUSY)__/.test(txt);
+    };
+
     const entries: DmScanEntry[] = [];
     const CONCURRENCY = 6;
     let cursor = 0;
@@ -1615,16 +1711,22 @@ export async function scanDmsForActivity(
               await dm.sync().catch(() => {});
             }
             const msgs: any[] = typeof dm.messages === 'function'
-              ? ((await dm.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !_isXmtpSystemMsg(m))
+              ? ((await dm.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !isNonChatSignal(m))
               : [];
             const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
             entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: msgs, lastMessage: last });
           } else {
-            // Visible chat: lightweight local read after sync/syncAll to catch missed previews.
+            // Visible chat: check lastMessage; if it is a receipt/typing signal (or empty), walk recent
+            // messages backwards so an ephemeral signal never masks a real incoming DM when stream drops.
             let last: any = null;
             if (typeof dm.lastMessage === 'function') {
               const candidate = await dm.lastMessage().catch(() => null);
-              if (candidate && !_isXmtpSystemMsg(candidate)) last = candidate;
+              if (candidate && !isNonChatSignal(candidate)) last = candidate;
+            }
+            if (!last && typeof dm.messages === 'function') {
+              const recent: any[] = (await dm.messages({ limit: 15 }).catch(() => [])) || [];
+              const realMsgs = recent.filter((m: any) => !isNonChatSignal(m));
+              if (realMsgs.length > 0) last = realMsgs[realMsgs.length - 1];
             }
             if (last) {
               entries.push({ peerAddress: peerLower, dmId: dm.id || '', messages: [], lastMessage: last });
@@ -1656,10 +1758,16 @@ export interface GroupScanEntry {
 export async function scanGroupsForActivity(
   client: Client,
   excludedGroupIds?: Set<string>,
+  opts?: { fullSync?: boolean },
 ): Promise<GroupScanEntry[]> {
   try {
     const convs = client.conversations as any;
     const { hasSyncGroupName } = await import('@/lib/sync/xmtpSyncChannel');
+    if (opts?.fullSync && typeof convs.syncAll === 'function') {
+      await convs.syncAll([0, 1]).catch(() => convs.sync?.());
+    } else if (typeof convs.sync === 'function') {
+      await convs.sync().catch(() => {});
+    }
     const groups: any[] = await (convs.listGroups?.({ consentStates: [0, 1] })?.catch?.(() => convs.listGroups?.()) ?? convs.listGroups?.() ?? []);
     if (!Array.isArray(groups) || groups.length === 0) return [];
     const entries: GroupScanEntry[] = [];
@@ -1670,7 +1778,9 @@ export async function scanGroupsForActivity(
       try {
         if (typeof g.sync === 'function') await g.sync().catch(() => {});
         const msgs: any[] = typeof g.messages === 'function'
-          ? ((await g.messages({ limit: 30 }).catch(() => [])) || []).filter((m: any) => !_isXmtpSystemMsg(m))
+          ? ((await g.messages({ limit: 30 }).catch(() => [])) || []).filter(
+              (m: any) => m?.deliveryStatus !== 2 && m?.deliveryStatus !== 'failed' && !_isXmtpSystemMsg(m),
+            )
           : [];
         const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
         entries.push({ groupId: gid, name: String(g.name || 'Group Chat'), messages: msgs, lastMessage: last });
@@ -1737,13 +1847,33 @@ export async function discoverNewPeers(
  */
 function _isXmtpSystemMsg(msg: any): boolean {
   if (!msg) return true;
+  if (msg.kind === 'membership_change' || msg.kind === 'group_updated' || msg.kind === 1) return true;
+  const typeId = String(msg.contentType?.typeId ?? '').toLowerCase();
+  if (typeId === 'group_membership_change' || typeId === 'group_updated') return true;
   const c = msg.content;
   if (c && typeof c === 'object') {
-    if ('initiatedByInboxId' in c || 'addedInboxes' in c || 'groupUpdated' in c) return true;
+    if (
+      'initiatedByInboxId' in c ||
+      'addedInboxes' in c ||
+      'removedInboxes' in c ||
+      'groupUpdated' in c ||
+      'metadataFieldChanges' in c ||
+      'metadataFieldChanged' in c ||
+      'addedAdminInboxes' in c ||
+      'removedAdminInboxes' in c
+    ) return true;
   }
   const s = typeof c === 'string' ? c : (c && typeof c === 'object' ? JSON.stringify(c) : '');
-  if (s.includes('initiatedByInboxId') || s.includes('addedInboxes') || s.includes('groupUpdated') || s.includes('group is inactive') || s === '{}' || s === '') return true;
-  if (msg.kind === 'membership_change' || msg.kind === 'group_updated') return true;
+  if (
+    s.includes('initiatedByInboxId') ||
+    s.includes('addedInboxes') ||
+    s.includes('removedInboxes') ||
+    s.includes('groupUpdated') ||
+    s.includes('metadataFieldChanges') ||
+    s.includes('group is inactive') ||
+    s === '{}' ||
+    s === ''
+  ) return true;
   return false;
 }
 
@@ -1862,6 +1992,34 @@ export async function* streamMessages(client: Client, signal?: AbortSignal) {
     if (signal) signal.removeEventListener('abort', onAbort);
     try { if (streamCloser && typeof streamCloser.end === 'function') streamCloser.end(); } catch {}
     try { if (streamCloser && typeof streamCloser.close === 'function') streamCloser.close(); } catch {}
+  }
+}
+
+/** Async generator streaming newly joined/created XMTP groups in real time. */
+export async function* streamGroupCreations(client: Client, signal?: AbortSignal) {
+  const convs = client?.conversations as any;
+  if (!convs || typeof convs.streamGroups !== 'function') return;
+  let streamResult: any;
+  try {
+    streamResult = await convs.streamGroups();
+  } catch {
+    return;
+  }
+  if (!streamResult || typeof streamResult[Symbol.asyncIterator] !== 'function') return;
+  const onAbort = () => {
+    try { if (typeof streamResult.return === 'function') streamResult.return(); } catch {}
+  };
+  if (signal) signal.addEventListener('abort', onAbort);
+  try {
+    for await (const group of streamResult) {
+      if (signal?.aborted) break;
+      const gName = typeof (group as any)?.name === 'string' ? (group as any).name.trim() : '';
+      if (!group || gName === 'hl.device-sync.v1') continue;
+      yield group;
+    }
+  } finally {
+    if (signal) signal.removeEventListener('abort', onAbort);
+    try { if (typeof streamResult.return === 'function') streamResult.return(); } catch {}
   }
 }
 

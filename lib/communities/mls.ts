@@ -54,13 +54,24 @@ export interface GroupPost {
 export async function readGroupPosts(client: any, groupId: string): Promise<GroupPost[]> {
   const msgs = await getGroupMessages(client, groupId);
   return msgs
-    .filter((m: any) => typeof m?.content === 'string' && m.content.trim() && m?.deliveryStatus !== 2 && m?.deliveryStatus !== 'failed')
-    .map((m: any) => ({
-      id: String(m.id),
-      senderInboxId: String(m.senderInboxId ?? ''),
-      content: String(m.content),
-      createdAt: m.sentAtNs !== undefined ? Number(BigInt(m.sentAtNs) / 1_000_000n) : Date.now(),
-    }))
+    .filter((m: any) => {
+      if (m?.deliveryStatus === 2 || m?.deliveryStatus === 'failed') return false;
+      const c = m?.content;
+      if (typeof c === 'string') return c.trim().length > 0;
+      if (c && typeof c === 'object' && typeof c.text === 'string') return c.text.trim().length > 0;
+      if (typeof m?.fallback === 'string') return m.fallback.trim().length > 0;
+      return false;
+    })
+    .map((m: any) => {
+      const c = m.content;
+      const text = typeof c === 'string' ? c : (c?.text ?? m?.fallback ?? '');
+      return {
+        id: String(m.id),
+        senderInboxId: String(m.senderInboxId ?? ''),
+        content: String(text),
+        createdAt: m.sentAtNs !== undefined ? Number(BigInt(m.sentAtNs) / 1_000_000n) : Date.now(),
+      };
+    })
     .sort((a: GroupPost, b: GroupPost) => a.createdAt - b.createdAt);
 }
 
@@ -253,8 +264,17 @@ const mlsSyncInFlight = new Map<string, Promise<Set<string>>>();
 const mlsSyncLastAt = new Map<string, number>();
 const mlsKnownGroupIds = new Map<string, Set<string>>();
 
+/** Clears the 20 s sync cooldown so newly created/joined community channels refresh immediately. */
+export function invalidateCommunityMlsCache(myAddress?: string): void {
+  if (myAddress) {
+    mlsSyncLastAt.delete(myAddress.trim().toLowerCase());
+  } else {
+    mlsSyncLastAt.clear();
+  }
+}
+
 /**
- * Background community MLS sync (throttled per account to once every 20s).
+ * Background community MLS sync (throttled per account to once every 20s unless `force` is set).
  * Keeps owners/admins welcoming newly joined members even while they are on Chats, Manage, or Invite
  * instead of inside CommunityReader. Also returns all known community XMTP channel groupIds so
  * standalone Group Chat discovery can keep community MLS channels separate.
@@ -264,13 +284,14 @@ export async function syncCommunitiesMlsMembership(
   myAddress: string,
   fetchImpl: typeof fetch = fetch,
   minIntervalMs = 20_000,
+  force = false,
 ): Promise<Set<string>> {
   const me = (myAddress || '').trim().toLowerCase();
   const cached = mlsKnownGroupIds.get(me) ?? new Set<string>();
   if (!client || !ADDR.test(me)) return cached;
   const now = Date.now();
   const prev = mlsSyncLastAt.get(me) ?? 0;
-  if (now - prev < minIntervalMs) return cached;
+  if (!force && now - prev < minIntervalMs) return cached;
   const running = mlsSyncInFlight.get(me);
   if (running) return running;
 

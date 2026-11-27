@@ -5019,5 +5019,8 @@
  "Answer them in Manage → Members.": "请在“管理 → 成员”中处理。",
  "1 proposal is open for votes": "有 1 个提案正在投票",
  "{count} proposals are open for votes": "有 {count} 个提案正在投票",
- "See them in Manage → Governance.": "请在“管理 → 治理”中查看。"
+ "See them in Manage → Governance.": "请在“管理 → 治理”中查看。",
+ "Join community": "加入社区",
+ "Joining...": "正在加入...",
+ "Could not join": "无法加入"
 }

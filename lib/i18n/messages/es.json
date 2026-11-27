@@ -5019,5 +5019,8 @@
  "Answer them in Manage → Members.": "Respóndelas en Gestionar → Miembros.",
  "1 proposal is open for votes": "Hay 1 propuesta abierta a votación",
  "{count} proposals are open for votes": "Hay {count} propuestas abiertas a votación",
- "See them in Manage → Governance.": "Míralas en Gestionar → Gobernanza."
+ "See them in Manage → Governance.": "Míralas en Gestionar → Gobernanza.",
+ "Join community": "Unirse a la comunidad",
+ "Joining...": "Uniéndote...",
+ "Could not join": "No se pudo unir"
 }

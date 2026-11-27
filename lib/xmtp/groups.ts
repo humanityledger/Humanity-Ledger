@@ -163,11 +163,17 @@ export async function resolveGroupForClient(client: Client, groupId: string): Pr
   if (!convs || !groupId) return null;
   let group = await convs.getConversationById?.(groupId).catch(() => null);
   if (group) return group;
+  // Fast sync first (< 2 s), then re-check before falling back to slow syncAll.
+  try {
+    if (typeof convs.sync === 'function') {
+      await withTimeout(Promise.resolve(convs.sync()), 4_000, 'sync timeout');
+    }
+  } catch { /* best-effort */ }
+  group = await convs.getConversationById?.(groupId).catch(() => null);
+  if (group) return group;
   try {
     if (typeof convs.syncAll === 'function') {
-      await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 8_000, 'syncAll timeout').catch(() => convs.sync?.());
-    } else if (typeof convs.sync === 'function') {
-      await withTimeout(Promise.resolve(convs.sync()), 8_000, 'sync timeout');
+      await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 8_000, 'syncAll timeout');
     }
   } catch { /* best-effort sync before failing */ }
   group = await convs.getConversationById?.(groupId).catch(() => null);
@@ -711,6 +717,18 @@ export async function leaveGroup(client: Client, groupId: string): Promise<void>
   await runGroupSerial(groupId, () => group.requestRemoval());
 }
 
+function isXmtpGroupControlMsg(m: any): boolean {
+  if (!m) return true;
+  if (m.kind === 'membership_change' || m.kind === 'group_updated' || m.kind === 1) return true;
+  const typeId = String(m.contentType?.typeId ?? '').toLowerCase();
+  if (typeId === 'group_membership_change' || typeId === 'group_updated') return true;
+  const c = m.content;
+  if (c && typeof c === 'object') {
+    if ('initiatedByInboxId' in c || 'addedInboxes' in c || 'removedInboxes' in c || 'groupUpdated' in c || 'metadataFieldChanges' in c) return true;
+  }
+  return false;
+}
+
 /**
  * Fetches group message history.
  */
@@ -722,7 +740,11 @@ export async function getGroupMessages(client: Client, groupId: string): Promise
       await withTimeout(Promise.resolve(group.sync?.()), 10_000, 'group sync timeout').catch(() => {});
       const msgs: any[] = (await group.messages?.()) ?? [];
       return msgs.filter(
-        (m) => m?.deliveryStatus !== 2 && m?.deliveryStatus !== 'failed' && !failedGroupMsgIds.has(String(m?.id ?? ''))
+        (m) =>
+          m?.deliveryStatus !== 2 &&
+          m?.deliveryStatus !== 'failed' &&
+          !failedGroupMsgIds.has(String(m?.id ?? '')) &&
+          !isXmtpGroupControlMsg(m)
       );
     });
   } catch (e) {

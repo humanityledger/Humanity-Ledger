@@ -73,7 +73,7 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
       const client = await waitForClient(getClient);
       if (!client) throw new Error(t('Encrypted messaging did not start on this device. Check your connection and try again.'));
       setStatus(t('Creating the encrypted group…'));
-      const { createCommunityGroup, postToGroup } = await import('@/lib/communities/mls');
+      const { createCommunityGroup, postToGroup, invalidateCommunityMlsCache } = await import('@/lib/communities/mls');
       const groupId = await createCommunityGroup(client, name.trim());
       setStatus(t('Saving the community…'));
       const r = await fetch('/api/chat/communities', {
@@ -83,6 +83,7 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d?.community?.id) throw new Error(d?.error || t('Could not create the community'));
       if (welcome.trim()) await postToGroup(client, groupId, welcome.trim()).catch(() => {});
+      invalidateCommunityMlsCache();
       setCreated({ id: d.community.id, joinCode: d.community.joinCode });
       onCreated?.(d.community.id, isPrivate);
       setStep('done');

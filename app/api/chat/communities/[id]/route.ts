@@ -56,6 +56,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const isMember =
         mem.ownerAddress?.toLowerCase() === caller ||
         mem.members.some((m) => m.walletAddress?.toLowerCase() === caller);
+      const myRole =
+        mem.ownerAddress?.toLowerCase() === caller
+          ? 'OWNER'
+          : mem.members.find((m) => m.walletAddress?.toLowerCase() === caller)?.role ?? null;
 
       if (mem.isPrivate && !isMember) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -65,6 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         community: {
           ...mem,
           isMember,
+          myRole,
           membersCount: mem.membersCount,
           postsCount: 0,
           ...(isMember ? {} : { members: [], joinCode: undefined }),
@@ -72,9 +77,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       });
     }
 
-    const isMember =
-      community.ownerAddress?.toLowerCase() === caller ||
-      (community.members || []).some((m: any) => String(m.walletAddress).toLowerCase() === caller);
+    const myMembership = (community.members || []).find((m: any) => String(m.walletAddress).toLowerCase() === caller);
+    const isMember = community.ownerAddress?.toLowerCase() === caller || !!myMembership;
+    const myRole = community.ownerAddress?.toLowerCase() === caller ? 'OWNER' : (myMembership?.role ?? null);
 
     if (community.isPrivate && !isMember) {
       // Same answer as a missing community, so ids cannot be probed.
@@ -91,6 +96,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ...rest,
         ...(isMember ? { members, joinCode } : { members: [] }),
         isMember,
+        myRole,
         membersCount: community._count?.members ?? (members || []).length,
         postsCount,
         // Legacy (posts stored here) and read-only: lib/communities/legacy.ts.

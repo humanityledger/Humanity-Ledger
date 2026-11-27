@@ -115,6 +115,8 @@ export interface MessageProps {
   onJoinGroupCall?: (roomId: string, password: string) => void;
   /** The other person's XMTP inbox when this is a direct conversation; agreements need it. */
   dmPeerInboxId?: string;
+  /** Display name or shortened wallet of the author in multi-member group chats. */
+  senderLabel?: string;
   /** Addresses a record was sealed for. Ledger Record checks this set before it decrypts. */
   recordMembers?: string[];
   /**
@@ -633,7 +635,7 @@ MessageTicks.displayName = 'MessageTicks';
 export const MessageBubble = React.memo(({
   msg, isMe, showDate, dateStr, fontFamily, fontSizePx, bubbleStyle = 'default',
   clientInboxId, onReply, onReact, onContextMenu, onOpenLightbox,
-  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, recordMembers, enter = false, onRetry,
+  formatMessagePreview, onVotePoll, onJoinGroupCall, dmPeerInboxId, senderLabel, recordMembers, enter = false, onRetry,
 }: MessageProps) => {
   const tr = useT();
   const controls = useAnimation();
@@ -899,6 +901,11 @@ export const MessageBubble = React.memo(({
             <span className="flex items-center gap-1.5 text-[12.5px] text-[#727a88] mb-1 px-1.5">
               <Forward size={12} strokeWidth={2} aria-hidden="true" />
               {forwardFrom ? tr("Forwarded from {shortAddress}", { shortAddress: shortAddress(forwardFrom) }) : tr("Forwarded")}
+            </span>
+          )}
+          {!isMe && senderLabel && (
+            <span className="text-[12px] font-semibold text-[#5b606b] mb-0.5 px-1.5 truncate max-w-full">
+              {senderLabel}
             </span>
           )}
           {isThread && (

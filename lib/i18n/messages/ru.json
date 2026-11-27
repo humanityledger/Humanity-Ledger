@@ -5019,5 +5019,8 @@
  "Answer them in Manage → Members.": "Ответьте в «Управление» → «Участники».",
  "1 proposal is open for votes": "Открыто 1 предложение для голосования",
  "{count} proposals are open for votes": "Открыто предложений для голосования: {count}",
- "See them in Manage → Governance.": "Смотрите в «Управление» → «Управление сообществом»."
+ "See them in Manage → Governance.": "Смотрите в «Управление» → «Управление сообществом».",
+ "Join community": "Присоединиться к сообществу",
+ "Joining...": "Вступление...",
+ "Could not join": "Не удалось присоединиться"
 }

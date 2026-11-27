@@ -35,7 +35,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id: communityId } = await params;
     const mine = await (prisma as any).communityMember.findFirst({ where: { communityId, walletAddress: caller } });
-    if (!mine) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // Allow the owner even if they lack a CommunityMember row.
+    if (!mine) {
+      const comm = await (prisma as any).community.findUnique({ where: { id: communityId }, select: { ownerAddress: true } });
+      if (!comm || String(comm.ownerAddress || '').toLowerCase() !== caller) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+    }
 
     const members = await (prisma as any).communityMember.findMany({
       where: { communityId },

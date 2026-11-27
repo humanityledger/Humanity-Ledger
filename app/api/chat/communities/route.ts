@@ -61,12 +61,31 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        dbCommunities = memberships.map((m: any) => ({
-          ...m.community,
-          membersCount: m.community._count?.members || 1,
-          myRole: m.role,
-          postsReadOnly: legacyPostsClosed(m.community),
-        }));
+        // Include communities the caller owns even without a CommunityMember row.
+        const memberCommunityIds = new Set(memberships.map((m: any) => m.communityId));
+        const ownedWithoutMembership = await (prisma as any).community.findMany({
+          where: { ownerAddress: caller.toLowerCase(), id: { notIn: Array.from(memberCommunityIds) } },
+          include: {
+            _count: { select: { members: true } },
+            channels: { orderBy: { position: 'asc' } },
+            permissions: true,
+          },
+        }).catch(() => []);
+
+        dbCommunities = [
+          ...memberships.map((m: any) => ({
+            ...m.community,
+            membersCount: m.community._count?.members || 1,
+            myRole: m.role,
+            postsReadOnly: legacyPostsClosed(m.community),
+          })),
+          ...ownedWithoutMembership.map((c: any) => ({
+            ...c,
+            membersCount: c._count?.members || 1,
+            myRole: 'OWNER',
+            postsReadOnly: legacyPostsClosed(c),
+          })),
+        ];
       }
     } catch {}
 
