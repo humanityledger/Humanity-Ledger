@@ -45,7 +45,7 @@ export function loadCachedCommunityGroupIds(address: string | null | undefined, 
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.map((x) => String(x || '').trim().toLowerCase()).filter(Boolean));
+    return new Set(parsed.map((x) => String(x || '').trim().toLowerCase()).filter((x) => isXmtpConversationId(x)));
   } catch {
     return new Set();
   }
@@ -61,7 +61,7 @@ export function saveCachedCommunityGroupIds(
   const s = storage ?? (typeof window !== 'undefined' ? window.localStorage : undefined);
   if (!s) return;
   try {
-    const clean = Array.from(new Set(Array.from(ids, (x) => String(x || '').trim().toLowerCase()).filter(Boolean))).slice(0, 500);
+    const clean = Array.from(new Set(Array.from(ids, (x) => String(x || '').trim().toLowerCase()).filter((x) => isXmtpConversationId(x)))).slice(0, 500);
     s.setItem(`${COMM_CACHE_PREFIX}${addr}`, JSON.stringify(clean));
   } catch { /* storage unavailable */ }
 }
@@ -112,10 +112,11 @@ export async function classifyStreamConversation(params: {
     if (communityGroupIds.has(convoIdLower)) return true;
     if (!refreshCommunityGroupIds) return false;
     const updated = await refreshCommunityGroupIds().catch(() => null);
-    if (updated) {
-      for (const gid of updated) communityGroupIds.add(gid.toLowerCase());
+    if (!updated) return false;
+    for (const gid of updated) {
+      if (String(gid || '').trim().toLowerCase() === convoIdLower) return true;
     }
-    return communityGroupIds.has(convoIdLower);
+    return false;
   };
 
   if (standaloneGroupIds.has(convoIdLower) || visibleGroupIds.has(convoIdLower)) {
