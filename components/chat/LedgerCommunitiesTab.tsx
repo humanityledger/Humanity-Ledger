@@ -1,7 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { communityInviteUrl, countLabel } from '@/lib/ui/format';
-import { Copy, Link2, MessageSquare, Settings2 } from 'lucide-react';
+import { Copy, Link2, LogOut, MessageSquare, Settings2, Trash2 } from 'lucide-react';
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from './ui/ContextMenu';
 import { toast } from 'sonner';
 import { SectionLabel, EmptyState, PrimaryButton, SecondaryButton, SearchField, Sheet, tintFor } from './ui/kit';
@@ -29,6 +29,8 @@ interface LedgerCommunitiesTabProps {
   onOpenCommunity: (id: string) => void;
   /** Opens the community straight on Manage (right click > Manage). */
   onManageCommunity?: (id: string) => void;
+  /** Called after a community is deleted or left so the caller can clean up group-chat entries. */
+  onCommunityRemoved?: (id: string) => void;
 }
 
 function CommunityMark({ c, size = 44 }: { c: Community; size?: number }) {
@@ -54,23 +56,26 @@ async function copyText(text: string, done: string) {
 }
 
 /** Right click (long press on a phone) on a community: open it, manage it, copy its invite link or name. */
-function rowMenu(c: Community, onOpen: () => void, onManage?: () => void): MenuItem[] {
+function rowMenu(c: Community, onOpen: () => void, onManage?: () => void, onLeave?: () => void, onDelete?: () => void): MenuItem[] {
   const items: MenuItem[] = [{ label: 'Open', icon: <MessageSquare size={16} strokeWidth={1.9} />, onSelect: onOpen }];
   if (onManage) items.push({ label: 'Manage', icon: <Settings2 size={16} strokeWidth={1.9} />, onSelect: onManage });
   const link = communityInviteUrl(c.joinCode);
   if (link) items.push({ label: 'Copy invite link', icon: <Link2 size={16} strokeWidth={1.9} />, onSelect: () => copyText(link, 'Invite link copied.') });
   items.push({ label: 'Copy name', icon: <Copy size={16} strokeWidth={1.9} />, onSelect: () => copyText(c.name, 'Name copied.') });
+  // ── Danger zone ─────────────────────────────────────────────────────────────
+  if (onLeave) items.push({ label: 'Leave community', icon: <LogOut size={16} strokeWidth={1.9} />, danger: true, onSelect: onLeave });
+  if (onDelete) items.push({ label: 'Delete community', icon: <Trash2 size={16} strokeWidth={1.9} />, danger: true, onSelect: onDelete });
   return items;
 }
 
-function CommunityRow({ c, onOpen, onManage }: { c: Community; onOpen: () => void; onManage?: () => void }) {
+function CommunityRow({ c, onOpen, onManage, onLeave, onDelete }: { c: Community; onOpen: () => void; onManage?: () => void; onLeave?: () => void; onDelete?: () => void }) {
   const t = useT();
   const members = c.membersCount || 1;
   const [menu, setMenu] = useState<MenuAt | null>(null);
   const { handlers, consumeLongPress } = useContextMenuTrigger(setMenu);
   return (
     <li>
-      {menu && <ContextMenu at={menu} items={rowMenu(c, onOpen, onManage)} label={t("{name} actions", { name: c.name })} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu at={menu} items={rowMenu(c, onOpen, onManage, onLeave, onDelete)} label={t("{name} actions", { name: c.name })} onClose={() => setMenu(null)} />}
       <button type="button" {...handlers} style={{ WebkitTouchCallout: 'none' }} onClick={() => { if (!consumeLongPress()) onOpen(); }} aria-label={t("Open {name}", { name: c.name })} className="w-full min-h-[72px] flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/20 transition-colors text-left">
         <CommunityMark c={c} size={48} />
         <span className="flex-1 min-w-0">
@@ -88,7 +93,7 @@ function CommunityRow({ c, onOpen, onManage }: { c: Community; onOpen: () => voi
   );
 }
 
-export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, xmtpClient, onOpenCommunity, onManageCommunity }) => {
+export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAddress, xmtpClient, onOpenCommunity, onManageCommunity, onCommunityRemoved }) => {
   const t = useT();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [view, setView] = useState<'mine' | 'discover'>('mine');
@@ -118,6 +123,57 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
   }, [myAddress]);
 
   useEffect(() => { fetchMine(); fetchPublic(); }, [fetchMine, fetchPublic]);
+
+  /** Leave a community (member flow): DELETE /api/chat/communities/:id/members then also leave the XMTP group if present. */
+  const handleLeave = useCallback(async (communityId: string) => {
+    try {
+      const res = await fetch(`/api/chat/communities/${communityId}/members`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'x-web3-address': myAddress },
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d?.error || t("Could not leave. Try again."));
+        return;
+      }
+      // Also leave the XMTP MLS group if the client is open.
+      try {
+        const client = xmtpClient ?? getOpenXmtpClient(myAddress);
+        if (client) {
+          const groups: any[] = await (client.conversations as any).listGroups?.() ?? [];
+          const group: any = groups.find((g: any) => g.id === communityId || g.topic === communityId);
+          if (group?.leave) await (group as any).leave();
+        }
+      } catch { /* XMTP leave is best-effort */ }
+      toast.success(t("You left the community."));
+      setCommunities(prev => prev.filter(c => c.id !== communityId));
+      onCommunityRemoved?.(communityId);
+    } catch {
+      toast.error(t("Could not reach the server. Try again."));
+    }
+  }, [myAddress, xmtpClient, t, onCommunityRemoved]);
+
+  /** Delete a community (owner/admin flow): DELETE /api/chat/communities/:id. */
+  const handleDelete = useCallback(async (communityId: string) => {
+    try {
+      const res = await fetch(`/api/chat/communities/${communityId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'x-web3-address': myAddress },
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d?.error || t("Could not delete. Try again."));
+        return;
+      }
+      toast.success(t("Community deleted."));
+      setCommunities(prev => prev.filter(c => c.id !== communityId));
+      onCommunityRemoved?.(communityId);
+    } catch {
+      toast.error(t("Could not reach the server. Try again."));
+    }
+  }, [myAddress, t, onCommunityRemoved]);
 
   const join = async () => {
     let code = joinLink.trim();
@@ -202,7 +258,19 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
           />
         ) : (
           <ul className="px-2 py-2">
-            {communities.map(c => <CommunityRow key={c.id} c={c} onOpen={() => onOpenCommunity(c.id)} onManage={onManageCommunity ? () => onManageCommunity(c.id) : undefined} />)}
+            {communities.map(c => {
+              const isOwnerOrAdmin = c.myRole === 'ADMIN' || !c.myRole;
+              return (
+                <CommunityRow
+                  key={c.id}
+                  c={c}
+                  onOpen={() => onOpenCommunity(c.id)}
+                  onManage={onManageCommunity ? () => onManageCommunity(c.id) : undefined}
+                  onLeave={!isOwnerOrAdmin ? () => handleLeave(c.id) : undefined}
+                  onDelete={isOwnerOrAdmin ? () => handleDelete(c.id) : undefined}
+                />
+              );
+            })}
           </ul>
         )
       ) : (

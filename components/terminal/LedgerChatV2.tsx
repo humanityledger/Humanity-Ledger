@@ -6,7 +6,7 @@ import { BellIcon, CallsIcon, ChatsIcon, CommunitiesIcon, ContactsIcon, NewGroup
 import { pinLockEnabled } from '@/lib/auth/pin-lock';
 import { walletAddressFromQr } from '@/lib/chat/wallet-qr';
 import { BootMark } from '@/components/layout/BootMark';
-import { MoreVertical, MapPin, Copy, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
+import { MoreVertical, MapPin, Copy, LogOut, Trash2, UserPlus, Download, Slash, Settings, Clock, Lock, PieChart, Bell, Users, AlertTriangle, ChevronRight, Wifi, Zap, X, Bookmark } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { parseValueHandoff, VALUE_HANDOFF_EVENT, type ValueHandoff } from '@/lib/chat/value-handoff';
@@ -23,7 +23,7 @@ import { useAppKit } from '@reown/appkit/react';
 import { diag, short } from '@/lib/xmtp/diag';
 import { reportDelivery } from '@/lib/xmtp/client';
 import { OTHER_TAB_NOTICE, watchOtherTabs } from '@/lib/xmtp/tab-presence';
-import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages } from '@/lib/xmtp/client';
+import { getXMTPClient, canReceiveMessages, sendMessage, getMessages, destroyXMTPClient, nsToDate, discoverNewPeers, scanDmsForActivity, forgetResolvedPeer, streamMessages, resolveSenderAddress, extractPeerAddress, revokeXMTPInstallations, syncOfflineQueue, installPublishFlushListeners, flushPendingPublishes, recentDmMessages, getOpenXmtpClient } from '@/lib/xmtp/client';
 import { completeSessionHandshake } from '@/lib/scan/sessionHandshake';
 import { PadlockLoader, isWalletInitError } from '@/components/terminal/PadlockLoader';
 import { HLLogo } from '@/components/shared/HLLogo';
@@ -9630,6 +9630,18 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              <button role="menuitem" type="button" onClick={() => deleteConversation(sidebarMenu.peer)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#d93036] text-left">
                <Trash2 size={16} strokeWidth={1.8} />{" "}{tr("Delete chat")}
              </button>
+             {/* Group-specific actions: shown when peerAddress is not a plain ETH address (i.e. it is a group/community topic id) */}
+             {!/^0x[0-9a-f]{40}$/i.test(sidebarMenu.peer) && (<>
+               <button role="menuitem" type="button" onClick={() => { const p = sidebarMenu.peer; setSidebarMenu(null); try { navigator.clipboard.writeText(resolveContactName(effectiveAddress, p) || shortAddr(p)); } catch {} }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#15171c] text-left">
+                 <Copy size={16} strokeWidth={1.8} className="text-[#4a505c]" />{" "}{tr("Copy name")}
+               </button>
+               <button role="menuitem" type="button" onClick={async () => { const p = sidebarMenu.peer; setSidebarMenu(null); try { const client = getOpenXmtpClient(address || ''); if (client) { const groups = await (client.conversations as any).listGroups?.() ?? []; const g: any = (groups as any[]).find((g: any) => g.id === p || g.topic === p); if (g?.leave) await (g as any).leave(); } deleteConversation(p); } catch { deleteConversation(p); } }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#d93036] text-left">
+                 <LogOut size={16} strokeWidth={1.8} />{" "}{tr("Leave group")}
+               </button>
+               <button role="menuitem" type="button" onClick={() => { const p = sidebarMenu.peer; setSidebarMenu(null); deleteConversation(p); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f2f4f7] text-[14.5px] text-[#d93036] text-left">
+                 <Trash2 size={16} strokeWidth={1.8} />{" "}{tr("Delete group")}
+               </button>
+             </>)}
            </div>
          </div>,
          document.body

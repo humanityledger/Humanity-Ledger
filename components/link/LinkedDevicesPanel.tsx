@@ -11,7 +11,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Laptop, Loader2, QrCode, ShieldCheck, Smartphone, X } from 'lucide-react';
+import { Laptop, Loader2, QrCode, Smartphone, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { clearSelfLink, removePeer } from '@/lib/link/channel';
 import { useT } from '@/lib/i18n/client';
@@ -121,8 +121,7 @@ export function LinkedDevicesPanel({ address, onClose }: { address?: string | nu
         </ul>
       )}
 
-      <p className="text-[12px] text-[#727a88] flex items-start gap-1.5 leading-relaxed">
-        <ShieldCheck size={14} className="shrink-0 mt-0.5" />
+      <p className="text-[12px] text-[#727a88] leading-relaxed">
         {t("Linking uses a one-time code encrypted end to end between the two devices. Unlinking signs the computer out immediately. A linked computer stays signed in for 7 days; scan again to renew it.")}
       </p>
 

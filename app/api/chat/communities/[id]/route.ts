@@ -173,8 +173,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // In-memory DELETE (no-op for seeded communities)
     const mem = getInMemoryCommunityBySlugOrId(communityId);
     if (mem) {
-      if (mem.ownerAddress?.toLowerCase() !== caller)
-        return NextResponse.json({ error: 'Only owner can delete' }, { status: 403 });
+      const isMemAdmin =
+        mem.ownerAddress?.toLowerCase() === caller ||
+        mem.members.some((m) => m.walletAddress?.toLowerCase() === caller && m.role === 'ADMIN');
+      if (!isMemAdmin)
+        return NextResponse.json({ error: 'Only owner or admin can delete' }, { status: 403 });
       // In-memory communities cannot be permanently deleted (they reseed on restart).
       return NextResponse.json({ ok: true });
     }
@@ -187,8 +190,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (community.ownerAddress?.toLowerCase() !== caller)
-      return NextResponse.json({ error: 'Only owner can delete' }, { status: 403 });
+
+    const membership = await (prisma as any).communityMember.findFirst({
+      where: { communityId, walletAddress: caller },
+    }).catch(() => null);
+    const isAdmin = community.ownerAddress?.toLowerCase() === caller || membership?.role === 'ADMIN';
+    if (!isAdmin)
+      return NextResponse.json({ error: 'Only owner or admin can delete' }, { status: 403 });
 
     await (prisma as any).community.delete({ where: { id: communityId } });
     return NextResponse.json({ ok: true });

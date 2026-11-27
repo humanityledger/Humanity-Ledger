@@ -10,7 +10,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccount, useSignMessage, useSignTypedData } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
-import { Laptop, Loader2, ShieldCheck, X } from 'lucide-react';
+import { Laptop, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPeers, getSelfLink, hasPeers, open as openSealed, removePeer, seal, SIGN_PURPOSE, type SignPayload } from '@/lib/link/channel';
 import { isMobileDevice, openMobileWalletApp } from '@/lib/wallet/mobileWallet';
@@ -126,7 +126,7 @@ export function LinkedDeviceApprover({ wallet }: { wallet?: string | null }) {
         <h2 id="link-approve-title" className="mt-3 text-[17px] font-semibold text-[#15171c]">{tr(purpose.title)}</h2>
         <p className="mt-1 text-[13px] text-[#4a505c]">{tr("{0} · linked computer", { 0: <strong>{current.req.deviceLabel}</strong> })}</p>
         <p className="mt-3 text-[14px] leading-[1.55] text-[#4a505c]">{tr(purpose.body)}</p>
-        <p className="mt-3 text-[12px] text-[#727a88] flex items-center gap-1.5"><ShieldCheck size={13} />{" "}{tr("Sent end-to-end encrypted. Not this computer? Decline and unlink it in Settings → Linked devices.")}</p>
+        <p className="mt-3 text-[12px] text-[#727a88]">{tr("Sent end-to-end encrypted. Not this computer? Decline and unlink it in Settings → Linked devices.")}</p>
         <div className="mt-5 flex gap-2">
           <button type="button" onClick={decline} disabled={busy} className="flex-1 h-11 rounded-xl border border-[#e4e7ec] text-[14px] hover:bg-[#f2f4f7]">{tr("Decline")}</button>
           <button type="button" onClick={approve} disabled={busy} className="flex-1 h-11 rounded-xl bg-[#15171c] text-white text-[14px] font-medium flex items-center justify-center gap-2">
