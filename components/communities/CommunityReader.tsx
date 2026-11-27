@@ -45,6 +45,7 @@ import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '
 import { tintFor, initials } from '@/components/chat/ui/kit';
 import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
 import { createCommunityGroup } from '@/lib/communities/mls';
+import { checkPost, effectivePermissions, encodePin, isPrivileged, mayPinFor, rankIn, spamIds, type CommunityPermissions, type PostKind, type Rank } from '@/lib/communities/settings';
 import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
 import { useT } from '@/lib/i18n/client';
@@ -175,6 +176,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const [readOnly, setReadOnly] = useState(false);
   const [successorId, setSuccessorId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // The community's rules and roles (lib/communities/settings.ts): applied by this app to what it sends
+  // and shows, because posts of an encrypted community never reach our server.
+  const [rules, setRules] = useState<CommunityPermissions>(effectivePermissions(null));
+  const [roleInfo, setRoleInfo] = useState<{ ownerAddress?: string | null; members?: { walletAddress?: string | null; role?: string | null }[] } | null>(null);
+  const myRank: Rank | null = useMemo(() => rankIn(roleInfo, me), [roleInfo, me]);
   const [about, setAbout] = useState<{ description: string; isPrivate: boolean }>({ description: '', isPrivate: true });
   const [moving, setMoving] = useState<'idle' | 'confirm' | 'working'>('idle');
   const [moveError, setMoveError] = useState('');
@@ -220,7 +226,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       const mine = (Array.isArray(c?.members) ? c.members : []).find((m: any) => String(m?.walletAddress || '').toLowerCase() === me);
       const owner = String(c?.ownerAddress || '').toLowerCase() === me;
       setOwnerAddress(typeof c?.ownerAddress === 'string' ? c.ownerAddress.toLowerCase() : null);
-      setMayPin(owner || mine?.role === 'ADMIN' || (!!mine && c?.permissions?.pinMessages === true));
+      const p = effectivePermissions(c?.permissions);
+      setRules(p);
+      setRoleInfo({ ownerAddress: c?.ownerAddress, members: Array.isArray(c?.members) ? c.members : [] });
+      setMayPin(mayPinFor(p, rankIn(c, me)));
       setIsAdmin(owner || mine?.role === 'ADMIN');
       setReadOnly(c?.postsReadOnly === true);
       setSuccessorId(typeof c?.successorId === 'string' && c.successorId ? c.successorId : null);
@@ -314,8 +323,26 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const failedKey = posts.filter((p) => p.state === 'failed').map((p) => p.id).join(',');
   useEffect(() => { listEnd.current?.scrollIntoView?.({ block: 'end' }); }, [lastKey, failedKey]);
 
+  /** The rule check for what this person is about to send (lib/communities/settings.ts checkPost). */
+  const lastOwnPostAt = useMemo(() => {
+    let at: number | null = null;
+    for (const m of rawMsgs) if ((m.authorAddress || '').toLowerCase() === me && !isControlMessage(m.content) && (m.createdAt ?? 0) > (at ?? 0)) at = m.createdAt ?? null;
+    return at;
+  }, [rawMsgs, me]);
+  const allowed = (kind: PostKind, text = ''): boolean => {
+    if (!mlsGroup) return true;
+    const r = checkPost(rules, myRank, kind, text, lastOwnPostAt);
+    if (!r.ok) toast.error(tr(r.reason || 'Not sent.', { seconds: r.waitSec ?? 0 }));
+    return r.ok;
+  };
+  const kindOf = (text: string): PostKind => (text.startsWith('__POLL__') ? 'poll' : /^\s*\{\s*"type"\s*:\s*"hl\.(attachment|largefile)"/.test(text) || text.startsWith('__AUDIO__') ? 'media' : 'text');
+  const mayWrite = !mlsGroup || checkPost(rules, myRank, 'text', '', null).ok;
+  // Spam filter: on every member's app, posts it catches are hidden (never for privileged people).
+  const spam = useMemo(() => (mlsGroup && rules.antiSpam ? spamIds(posts.filter((p) => !p.state), (a) => rankIn(roleInfo, a)) : new Set<string>()), [mlsGroup, rules.antiSpam, posts, roleInfo]);
+
   const submit = async (text: string, retryId?: string) => {
     let body = text.trim();
+    if (body && !retryId && !allowed(kindOf(body), body)) return;
     if (body && !retryId && replyTo && mlsGroup) { body = encodeReply(replyTo.id, replyTo.snippet, body); setReplyTo(null); }
     if (!body) return;
     const localId = retryId ?? `local-${Date.now()}`;
@@ -378,6 +405,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
 
   const startVoice = async () => {
     if (!mlsGroup || rec) return;
+    if (!allowed('media')) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       const { pickRecordingMimeType } = await import('@/lib/chat/recording');
@@ -418,6 +446,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   /** Encrypts each file on this device, uploads only ciphertext, and posts the attachment message. */
   const attachFiles = async (files: File[]) => {
     if (!mlsGroup || !files.length) return;
+    if (!allowed('media')) return;
     const { prepareAttachmentMessage } = await import('@/lib/chat/send-attachment');
     for (const file of files.slice(0, 10)) {
       setAttaching(tr("Encrypting {name}…", { name: file.name }));
@@ -478,6 +507,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   };
 
   const pin = async (id: string) => {
+    if (mlsGroup) {
+      if (!xmtpClient) { toast.error(tr("Encrypted messaging is not connected on this device yet. Try again in a moment.")); return; }
+      try { await postToGroup(xmtpClient, mlsGroup, encodePin(id)); toast.success(tr("Pin added. You find it in Manage.")); fetchPosts(); }
+      catch { toast.error(tr("The pin was not added. Try again.")); }
+      return;
+    }
     try {
       const res = await f('/api/chat/communities', {
         method: 'PATCH',
@@ -506,7 +541,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       items.push({ label: tr("React"), icon: <SmilePlus size={16} strokeWidth={1.9} />, onSelect: () => setReactFor(p.id) });
     }
     if (onForward && !p.state) items.push({ label: tr("Forward to a chat"), icon: <Forward size={16} strokeWidth={1.9} />, onSelect: () => onForward(unwrap(postText(p)).body) });
-    if (mayPin && !mlsGroup && !p.state && !p.id.startsWith('local-')) items.push({ label: tr("Pin"), icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
+    if (mayPin && !p.state && !p.id.startsWith('local-')) items.push({ label: tr("Pin"), icon: <Pin size={16} strokeWidth={1.9} />, onSelect: () => pin(p.id) });
     return items;
   };
 
@@ -596,8 +631,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             <p className="text-[18px] leading-snug" style={{ color: INK }}>{readOnly ? tr("There are no old posts in this community.") : tr("No posts yet. Write the first one below.")}</p>
           </div>
         )}
+        {spam.size > 0 && (
+          <p className="max-w-[720px] mx-auto mb-3 text-[15px] leading-snug text-center" style={{ color: INK_SOFT }} role="note">{tr("The spam filter hid {count} posts in this community.", { count: spam.size })}</p>
+        )}
         <ol className="flex flex-col gap-4 max-w-[720px] mx-auto">
-          {shownPosts.map((p) => {
+          {shownPosts.filter((p) => !spam.has(p.id)).map((p) => {
             const author = authorLabel(p, me, nameFor);
             const text = postText(p);
             const heading = p.title && !DEFAULT_TITLE.test(p.title.trim()) ? p.title.trim() : '';
@@ -740,7 +778,14 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
               <button type="button" onClick={() => setReplyTo(null)} className="w-9 h-9 grid place-items-center rounded-full hover:bg-white" aria-label={tr("Cancel reply")}><X size={16} /></button>
             </div>
           )}
+          {!mayWrite && (
+            <p className="mb-2 text-[16px] leading-snug" style={{ color: INK_SOFT }} role="note">{tr("Only the owner, admins and moderators can post in this community.")}</p>
+          )}
+          {mlsGroup && rules.slowModeSeconds > 0 && !isPrivileged(myRank) && (
+            <p className="mb-2 text-[15px] leading-snug" style={{ color: INK_SOFT }}>{tr("Slow mode: one post every {time}.", { time: rules.slowModeSeconds >= 3600 ? tr('1 hour') : rules.slowModeSeconds >= 60 ? tr('{n} min', { n: rules.slowModeSeconds / 60 }) : tr('{n} s', { n: rules.slowModeSeconds }) })}</p>
+          )}
           <textarea
+            disabled={!mayWrite}
             id={`community-write-${communityId}`}
             ref={field}
             value={draft}
@@ -767,7 +812,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                   {rec ? <Square size={18} strokeWidth={2.2} aria-hidden="true" /> : <Mic size={21} strokeWidth={1.9} aria-hidden="true" />}
                   {rec && <span className="tabular-nums text-[15px]">{Math.floor(recSecs / 60)}:{String(recSecs % 60).padStart(2, '0')}</span>}
                 </button>
-                <button type="button" onClick={() => setPollOpen(true)} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Create a poll")} title={tr("Create a poll")}>
+                <button type="button" onClick={() => { if (allowed('poll')) setPollOpen(true); }} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Create a poll")} title={tr("Create a poll")}>
                   <BarChart3 size={21} strokeWidth={1.9} aria-hidden="true" />
                 </button>
                 {attaching && <span className="text-[14px] truncate" style={{ color: INK_SOFT }} role="status">{attaching}</span>}

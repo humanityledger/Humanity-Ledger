@@ -87,7 +87,7 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
       onCreated?.(d.community.id, isPrivate);
       setStep('done');
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('Could not create the community'));
+      setError(e instanceof Error && e.message && !e.message.startsWith('[') ? t(e.message) : t('Could not create the community'));
       setStep('privacy');
     }
   };

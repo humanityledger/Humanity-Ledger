@@ -65,3 +65,9 @@ Plan completo: docs/plan/MASTER_PROMPT_5_ESTRELLAS.md · Protocolo de tokens: do
 | 9 | g8/09-human-gate | HumanGate on /connect (avatar mosaic), Zero-Passport Level 2 | 13 + SIWE 5 |
 
 Open: Level 2 (Zero-Passport: bounded ZK vouches + in-browser zkTLS/DKIM proof of a long-lived account; no documents, no NFC) needs its issuer service and the reviewed circuit pinned in `G8_CIRCUIT`. `lib/prisma.ts(284)` type error is pre-existing (regenerate Prisma client).
+
+## 27/11/2026 — Communities: settings, security and community creation (fix/communities-settings)
+- Creating a community no longer fails with "The group may still be on its way": the first group (creator only) is made on the device (newGroupOptimistic).
+- Security: role hierarchy on the members API (an admin can no longer demote/remove another admin; nobody but the owner makes admins); POST no longer overwrites roles; settings writes no longer answer ok on failure; main channel protected; changeInfo honoured; retired join-by-id route refuses in its handler; owner's app makes community admins XMTP admins so their removals reach the encrypted group.
+- Every setting works and explains itself: defaults shown, help line per row and switch, MLS-aware texts, posting rules + slow mode + spam filter applied by every app, encrypted pins, moderators, join approval (requests in Redis), es/de/ru/zh.
+- Tests: test/unit/communities/settings-and-security.test.ts.

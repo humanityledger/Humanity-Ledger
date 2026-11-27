@@ -30,8 +30,13 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { communityInviteUrl } from '@/lib/ui/format';
-import { authorLabel, postText, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
-import { createChannelGroup, isMlsCommunity } from '@/lib/communities/mls';
+import { authorLabel, postText, MLS_VISIBILITY_SENTENCE, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
+import { createChannelGroup, isMlsCommunity, mlsGroupOf, readGroupPosts, postToGroup, syncGroupMembers } from '@/lib/communities/mls';
+import {
+  ENFORCEMENT_NOTE_MLS, MODERATION_SETTINGS, PERMISSION_SETTINGS, ROW_HELP, SLOW_MODE_HELP, SLOW_MODE_OPTIONS,
+  effectivePermissions, encodeUnpin, isPrivileged, mayPinFor, pinnedIds, rankIn, type Rank, type SettingInfo,
+} from '@/lib/communities/settings';
+import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
 import { useT } from '@/lib/i18n/client';
 
 const CommunityApps = React.lazy(() => import('@/components/chat/community-apps/CommunityApps').then((m) => ({ default: m.CommunityApps })));
@@ -83,19 +88,8 @@ export function canPin(role: { isOwner: boolean; isAdmin: boolean; isMember: boo
   return role.isOwner || role.isAdmin || (role.isMember && pinMessages === true);
 }
 
-const PERMISSIONS: Array<[key: string, label: string]> = [
-  ['sendMessages', 'Members can write posts'],
-  ['sendMedia', 'Members can share photos and audio'],
-  ['sendPolls', 'Members can start polls'],
-  ['embedLinks', 'Members can share links'],
-  ['pinMessages', 'Members can pin posts'],
-  ['changeInfo', 'Members can change the name and description'],
-];
-const MODERATION: Array<[key: string, label: string]> = [
-  ['antiSpam', 'Filter spam'],
-  ['requireApproval', 'Approve new members before they join'],
-];
-const SLOW: Array<[seconds: number, label: string]> = [[0, 'Off'], [10, '10 seconds'], [30, '30 seconds'], [60, '1 minute'], [300, '5 minutes'], [3600, '1 hour']];
+/** Who can pin, from the community's answer: owner, admins, moderators, or members when allowed. */
+export { mayPinFor };
 
 export interface CommunityManageProps {
   communityId: string;
@@ -138,10 +132,10 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
         const text = res.status === 401
-          ? 'You are signed out. Sign in again, then open this community.'
+          ? t('You are signed out. Sign in again, then open this community.')
           : res.status === 404
-            ? 'This community is not available on this account.'
-            : (typeof d?.error === 'string' && d.error.length < 160 ? d.error : 'This community could not be loaded. Check your connection and try again.');
+            ? t('This community is not available on this account.')
+            : t(typeof d?.error === 'string' && d.error.length < 160 ? d.error : 'This community could not be loaded. Check your connection and try again.');
         setNote({ kind: 'error', text });
         setLoad('error');
         return;
@@ -152,17 +146,38 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
       setNote({ kind: 'error', text: t("This community could not be loaded. Check your connection and try again.") });
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, f, headers]);
 
   useEffect(() => { setView('rows'); setLoad('loading'); setCommunity(null); fetchCommunity(); }, [fetchCommunity]);
   useEffect(() => { setNote(null); }, [view]);
 
-  const myMember = (community?.members || []).find((m: any) => String(m.walletAddress || '').toLowerCase() === me);
-  const isOwner = !!community?.ownerAddress && String(community.ownerAddress).toLowerCase() === me;
-  const isAdmin = isOwner || myMember?.role === 'ADMIN';
-  const role = { isOwner, isAdmin, isMember: isOwner || !!myMember };
+  const rank: Rank | null = rankIn(community, me);
+  const isOwner = rank === 'OWNER';
+  const isAdmin = rank === 'OWNER' || rank === 'ADMIN';
+  const role = { isOwner, isAdmin, isMember: !!rank };
   const rows = manageRows(role);
-  const name = community?.name || 'Community';
+  const name = community?.name || t('Community');
+  const mls = isMlsCommunity(community);
+  const perms = effectivePermissions(community?.permissions);
+  // Members may edit name and description when the community allows it (changeInfo).
+  const canEditInfo = isAdmin || (!!rank && perms.changeInfo);
+  const visibleRows = canEditInfo && !isAdmin
+    ? [...rows.slice(0, 3), { view: 'profile' as const, label: 'Name and description' }, ...rows.slice(3)]
+    : rows;
+
+  /** After a membership change: an admin's app makes each encrypted channel match the server's list now. */
+  const syncEncrypted = useCallback(async () => {
+    if (!mls || !xmtpClient || !isAdmin) return;
+    try {
+      const res = await f(base, { headers, credentials: 'include', cache: 'no-store' });
+      const d = await res.json().catch(() => ({}));
+      const c = d.community ?? d;
+      for (const ch of (c?.channels || []) as { xmtpGroupId?: string | null }[]) {
+        if (ch.xmtpGroupId) await syncGroupMembers(xmtpClient, ch.xmtpGroupId, c, me).catch(() => { /* retried when the community opens */ });
+      }
+    } catch { /* retried when the community opens */ }
+  }, [mls, xmtpClient, isAdmin, f, base, headers, me]);
 
   const patch = async (url: string, body: unknown, method = 'PATCH'): Promise<{ ok: boolean; data: any }> => {
     try {
@@ -173,9 +188,9 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
       return { ok: false, data: { error: 'This device could not reach the server. Check your connection and try again.' } };
     }
   };
-  const fail = (d: any, fallback: string) => setNote({ kind: 'error', text: typeof d?.error === 'string' && d.error.length < 160 ? d.error : fallback });
+  const fail = (d: any, fallback: string) => setNote({ kind: 'error', text: t(typeof d?.error === 'string' && d.error.length < 160 ? d.error : fallback) });
 
-  const title = view === 'rows' ? 'Manage' : rows.find((r) => r.view === view)?.label ?? 'Manage';
+  const title = t(view === 'rows' ? 'Manage' : visibleRows.find((r) => r.view === view)?.label ?? 'Manage');
 
   return (
     <section className="flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white" aria-label={t("Manage {name}", { name })}>
@@ -219,7 +234,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
           {community && view === 'rows' && (
             <>
               <ul className={`${card} divide-y divide-[#d4d8de] overflow-hidden`} aria-label={t("Manage this community")}>
-                {rows.map((r) => (
+                {visibleRows.map((r) => (
                   <li key={r.view}>
                     <button
                       type="button"
@@ -227,23 +242,28 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
                       className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 text-left text-[18px] font-semibold hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#15171c]/25"
                       style={{ color: r.danger ? DANGER : INK }}
                     >
-                      <span className="flex-1 min-w-0">{r.label}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block">{t(r.label)}</span>
+                        {ROW_HELP[r.view] && <span className="block text-[15px] font-normal leading-snug mt-0.5" style={{ color: r.danger ? DANGER : INK_SOFT }}>{t(ROW_HELP[r.view])}</span>}
+                      </span>
                       <RowValue view={r.view} community={community} />
                       <span aria-hidden="true" className="text-[22px] leading-none" style={{ color: INK_SOFT }}>›</span>
                     </button>
                   </li>
                 ))}
               </ul>
-              <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{VISIBILITY_SENTENCE}</p>
+              <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{t(mls ? MLS_VISIBILITY_SENTENCE : VISIBILITY_SENTENCE)}</p>
             </>
           )}
 
           {community && view === 'pinned' && (
-            <PinnedPosts communityId={communityId} base={base} f={f} headers={headers} me={me} nameFor={nameFor} allowed={canPin(role, community?.permissions?.pinMessages)} />
+            mls
+              ? <MlsPinnedPosts community={community} xmtpClient={xmtpClient} me={me} nameFor={nameFor} allowed={mayPinFor(perms, rank)} />
+              : <PinnedPosts communityId={communityId} base={base} f={f} headers={headers} me={me} nameFor={nameFor} allowed={mayPinFor(perms, rank)} />
           )}
 
           {community && view === 'members' && (
-            <Members base={base} f={f} headers={headers} me={me} nameFor={nameFor} isAdmin={isAdmin} owner={String(community.ownerAddress || '').toLowerCase()} />
+            <Members base={base} f={f} headers={headers} me={me} nameFor={nameFor} rank={rank} owner={String(community.ownerAddress || '').toLowerCase()} mls={mls} onChanged={async () => { await fetchCommunity(); await syncEncrypted(); }} />
           )}
 
           {community && view === 'invite' && (
@@ -259,7 +279,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
             />
           )}
 
-          {community && view === 'profile' && isAdmin && (
+          {community && view === 'profile' && canEditInfo && (
             <Profile
               community={community}
               onSave={async (n, d) => {
@@ -274,24 +294,25 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
           {community && view === 'channels' && isAdmin && (
             <Channels
               channels={community.channels || []}
+              mls={mls}
               onAdd={async (n) => {
                 // An MLS community: the channel is an XMTP group, created here; the server stores only its id.
                 let xmtpGroupId: string | undefined;
                 if (isMlsCommunity(community)) {
                   if (!xmtpClient) { setNote({ kind: 'error', text: t("Encrypted messaging is not connected on this device yet. Try again in a moment.") }); return false; }
                   try { xmtpGroupId = await createChannelGroup(xmtpClient, community, n, me); }
-                  catch (e) { setNote({ kind: 'error', text: e instanceof Error && !e.message.startsWith('[') ? e.message : 'The encrypted channel could not be created. Try again.' }); return false; }
+                  catch (e) { setNote({ kind: 'error', text: t(e instanceof Error && !e.message.startsWith('[') ? e.message : 'The encrypted channel could not be created. Try again.') }); return false; }
                 }
                 const r = await patch('/api/chat/communities', { action: 'CREATE_CHANNEL', communityId, name: n, ...(xmtpGroupId ? { xmtpGroupId } : {}) });
                 if (!r.ok) { fail(r.data, 'The channel was not added. Try again.'); return false; }
-                setNote({ kind: 'ok', text: `Channel ${n} added.` });
+                setNote({ kind: 'ok', text: t('Channel {name} added.', { name: n }) });
                 await fetchCommunity();
                 return true;
               }}
               onDelete={async (id, n) => {
                 const r = await patch('/api/chat/communities', { action: 'DELETE_CHANNEL', communityId, channelId: id });
                 if (!r.ok) return fail(r.data, 'The channel was not deleted. Try again.');
-                setNote({ kind: 'ok', text: `Channel ${n} deleted.` });
+                setNote({ kind: 'ok', text: t('Channel {name} deleted.', { name: n }) });
                 fetchCommunity();
               }}
             />
@@ -299,14 +320,16 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
           {community && (view === 'permissions' || view === 'moderation') && isAdmin && (
             <Switches
-              items={view === 'permissions' ? PERMISSIONS : MODERATION}
-              values={community.permissions || {}}
+              items={view === 'permissions' ? PERMISSION_SETTINGS : MODERATION_SETTINGS}
+              values={perms}
               slow={view === 'moderation'}
+              mls={mls}
               onChange={async (changes) => {
                 const r = await patch('/api/chat/communities', { action: 'UPDATE_PERMISSIONS', communityId, permissions: changes });
                 if (!r.ok) return fail(r.data, 'Not saved. Try again.');
                 setNote({ kind: 'ok', text: t("Saved.") });
                 setCommunity((c: any) => ({ ...c, permissions: { ...(c?.permissions || {}), ...(r.data?.permissions || changes) } }));
+                // Turning approval off does not admit anyone: pending requests stay until answered in Members.
               }}
             />
           )}
@@ -314,10 +337,11 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
           {community && view === 'privacy' && isAdmin && (
             <Privacy
               isPrivate={!!community.isPrivate}
+              mls={mls}
               onChange={async (priv) => {
                 const r = await patch(base, { isPrivate: priv });
                 if (!r.ok) return fail(r.data, 'Not saved. Try again.');
-                setNote({ kind: 'ok', text: priv ? 'Saved. It is private now.' : 'Saved. It is public now.' });
+                setNote({ kind: 'ok', text: t(priv ? 'Saved. It is private now.' : 'Saved. It is public now.') });
                 setCommunity((c: any) => ({ ...c, isPrivate: priv }));
               }}
             />
@@ -335,8 +359,10 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
           {community && view === 'leave' && !isOwner && (
             <Confirm
-              text={t("You will stop seeing the posts of {name}. To come back you need a new invite if it is private.", { name })}
-              action="Leave"
+              text={t(mls
+                ? 'You stop being a member of {name}. An admin’s app removes you from the encrypted channel the next time it opens; from then on you cannot read new posts. To come back you need a new invite if it is private.'
+                : 'You will stop seeing the posts of {name}. To come back you need a new invite if it is private.', { name })}
+              action={t('Leave')}
               onConfirm={async () => {
                 const r = await patch(`${base}/members`, {}, 'DELETE');
                 if (!r.ok) return fail(r.data, 'You did not leave. Try again.');
@@ -348,8 +374,10 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
           {community && view === 'delete' && isOwner && (
             <Confirm
-              text={t("This deletes {name} for everyone: its posts, channels and members. It cannot be undone.", { name })}
-              action="Delete for everyone"
+              text={t(mls
+                ? 'This deletes {name} for everyone: its name, channels, members and invite links on our server. Posts are end-to-end encrypted and stay on the devices that already received them. It cannot be undone.'
+                : 'This deletes {name} for everyone: its posts, channels and members. It cannot be undone.', { name })}
+              action={t('Delete for everyone')}
               typeToConfirm={name}
               onConfirm={async () => {
                 const r = await patch(base, {}, 'DELETE');
@@ -366,9 +394,10 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 }
 
 function RowValue({ view, community }: { view: ManageView; community: any }) {
+  const t = useT();
   let v = '';
   if (view === 'members' && typeof community?.membersCount === 'number') v = String(community.membersCount);
-  if (view === 'privacy') v = community?.isPrivate ? 'Private' : 'Public';
+  if (view === 'privacy') v = community?.isPrivate ? t('Private') : t('Public');
   if (view === 'channels' && Array.isArray(community?.channels)) v = String(community.channels.length);
   if (!v) return null;
   return <span className="text-[16px] font-normal shrink-0" style={{ color: INK_SOFT }}>{v}</span>;
@@ -474,6 +503,72 @@ function PinnedPosts({ communityId, base, f, headers, me, nameFor, allowed }: {
   );
 }
 
+/**
+ * Pins of an encrypted community are group messages (__PIN__ / __UNPIN__), read on this device;
+ * our server never sees which post is pinned. Pins from people who may not pin are ignored by
+ * every app (lib/communities/settings.ts pinnedIds).
+ */
+function MlsPinnedPosts({ community, xmtpClient, me, nameFor, allowed }: {
+  community: any; xmtpClient?: any; me: string; nameFor?: (a: string) => string | undefined; allowed: boolean;
+}) {
+  const t = useT();
+  const group = mlsGroupOf(community);
+  const [list, setList] = useState<ReaderPost[] | null>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const refresh = useCallback(async () => {
+    if (!group || !xmtpClient) { setError(t('Encrypted messaging is not connected on this device yet. Try again in a moment.')); return; }
+    try {
+      const msgs = await readGroupPosts(xmtpClient, group);
+      const addr = new Map<string, string>();
+      const withAuthors = [] as { id: string; content: string; authorAddress?: string; createdAt: number }[];
+      for (const m of msgs) {
+        if (!addr.has(m.senderInboxId)) addr.set(m.senderInboxId, (await resolveInboxIdToAddress(m.senderInboxId, xmtpClient).catch(() => null)) ?? '');
+        withAuthors.push({ id: m.id, content: m.content, authorAddress: addr.get(m.senderInboxId) || undefined, createdAt: m.createdAt });
+      }
+      const p = effectivePermissions(community?.permissions);
+      const ids = pinnedIds(withAuthors, (a) => mayPinFor(p, rankIn(community, a)));
+      const byId = new Map(withAuthors.map((x) => [x.id, x]));
+      setList(ids.map((id) => byId.get(id)).filter(Boolean) as ReaderPost[]);
+      setError('');
+    } catch {
+      setError(t('The posts could not be loaded. Check your connection and try again.'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, xmtpClient, community]);
+  useEffect(() => { refresh(); }, [refresh]);
+  const unpin = async (id: string) => {
+    if (!group || !xmtpClient) return;
+    setBusy(id);
+    try { await postToGroup(xmtpClient, group, encodeUnpin(id)); } catch { setError(t('The post was not unpinned. Try again.')); }
+    await refresh();
+    setBusy(null);
+  };
+  const who = (p: ReaderPost) => { const l = authorLabel(p, me, nameFor); return l.wallet ? `${l.name} · ${l.wallet}` : l.name; };
+  return (
+    <>
+      {error && <p role="alert" className="rounded-2xl border border-[#9b1c16] bg-[#fdf3f2] px-4 py-3 text-[18px]" style={{ color: DANGER }}>{error}</p>}
+      <h2 className="text-[19px] font-semibold" style={{ color: INK }}>{t("Pinned")}</h2>
+      {list === null && !error ? (
+        <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>
+      ) : list && list.length === 0 ? (
+        <p className={`${card} px-4 py-3 text-[18px]`} style={{ color: INK }}>{t("No pinned posts.")}</p>
+      ) : list ? (
+        <ol className="flex flex-col gap-3">
+          {list.map((p) => (
+            <PostCard key={p.id} p={p} who={who(p)}>
+              {allowed && <button type="button" disabled={busy === p.id} onClick={() => unpin(p.id)} className={secondary} style={{ color: INK }}>{t("Unpin")}</button>}
+            </PostCard>
+          ))}
+        </ol>
+      ) : null}
+      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>
+        {t(allowed ? 'To pin a post, open its menu in the community and choose Pin. Pins are encrypted group messages: our server does not know which posts are pinned.' : 'The owner, admins and moderators choose which posts are pinned.')}
+      </p>
+    </>
+  );
+}
+
 function PostCard({ p, who, children }: { p: ReaderPost; who: string; children?: React.ReactNode }) {
   const t = useT();
   return (
@@ -489,14 +584,25 @@ function PostCard({ p, who, children }: { p: ReaderPost; who: string; children?:
 
 // ─── Members ─────────────────────────────────────────────────────────────────
 
-function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
-  base: string; f: typeof fetch; headers: Record<string, string>; me: string; nameFor?: (a: string) => string | undefined; isAdmin: boolean; owner: string;
+const RANKS: Record<Rank, number> = { OWNER: 3, ADMIN: 2, MODERATOR: 1, MEMBER: 0 };
+const ROLE_HELP: Record<string, string> = {
+  ADMIN: 'Admins change settings, channels and roles, add and remove people, and answer join requests.',
+  MODERATOR: 'Moderators pin posts and remove members. They do not change settings.',
+  MEMBER: 'Members read, post and vote, within the community’s permissions.',
+};
+
+function Members({ base, f, headers, me, nameFor, rank, owner, mls, onChanged }: {
+  base: string; f: typeof fetch; headers: Record<string, string>; me: string; nameFor?: (a: string) => string | undefined;
+  rank: Rank | null; owner: string; mls: boolean; onChanged: () => Promise<void>;
 }) {
   const t = useT();
   const [members, setMembers] = useState<any[] | null>(null);
+  const [requests, setRequests] = useState<any[]>([]);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
   const [add, setAdd] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const isAdmin = rank === 'OWNER' || rank === 'ADMIN';
 
   const refresh = useCallback(async () => {
     try {
@@ -504,66 +610,120 @@ function Members({ base, f, headers, me, nameFor, isAdmin, owner }: {
       if (!res.ok) throw new Error(String(res.status));
       const d = await res.json();
       setMembers(Array.isArray(d.members) ? d.members : []);
+      setRequests(Array.isArray(d.requests) ? d.requests : []);
     } catch {
       setError(t("The members could not be loaded. Check your connection and try again."));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, f, headers]);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const call = async (method: string, body: unknown, key: string, failText: string) => {
+  const call = async (method: string, body: unknown, key: string, failText: string, doneText: string) => {
     setBusy(key);
-    setError('');
+    setError(''); setOk('');
+    let changed = false;
     try {
       const res = await f(`${base}/members`, { method, headers, credentials: 'include', body: JSON.stringify(body) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) setError(typeof d?.error === 'string' ? d.error : failText);
+      if (!res.ok) setError(t(typeof d?.error === 'string' && d.error.length < 160 ? d.error : failText));
+      else { changed = true; setOk(t(doneText)); }
     } catch {
       setError(t("This device could not reach the server. Check your connection and try again."));
     }
     await refresh();
+    if (changed) await onChanged();
     setBusy(null);
   };
 
   const validAdd = /^0x[0-9a-fA-F]{40}$/.test(add.trim());
+  const rankOfRow = (m: any): Rank => (String(m.walletAddress || '').toLowerCase() === owner ? 'OWNER' : m.role === 'ADMIN' || m.role === 'MODERATOR' ? m.role : 'MEMBER');
+  const nameOf = (a: string, m?: any) => nameFor?.(a) || (typeof m?.name === 'string' && m.name) || short(a);
+  // Roles you can give: strictly below your own (lib/communities/roles.ts, enforced by the server).
+  const givable = (['ADMIN', 'MODERATOR', 'MEMBER'] as Rank[]).filter((r) => isAdmin && rank && RANKS[r] < RANKS[rank]);
 
   return (
     <>
       {error && <p role="alert" className="rounded-2xl border border-[#9b1c16] bg-[#fdf3f2] px-4 py-3 text-[18px]" style={{ color: DANGER }}>{error}</p>}
+      {ok && <p role="status" className="rounded-2xl border border-[#d4d8de] bg-[#f2f4f7] px-4 py-3 text-[18px]" style={{ color: INK }}>{ok}</p>}
+
+      {isAdmin && requests.length > 0 && (
+        <section className={`${card} px-4 py-4 flex flex-col gap-3`} aria-label={t('Requests to join')}>
+          <h2 className="text-[19px] font-semibold" style={{ color: INK }}>{t('Requests to join')} · {requests.length}</h2>
+          <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{t('These people opened your invite link. They see nothing until you approve them.')}</p>
+          <ul className="divide-y divide-[#d4d8de]">
+            {requests.map((r) => {
+              const a = String(r.walletAddress || '').toLowerCase();
+              return (
+                <li key={a} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[18px] font-semibold truncate" style={{ color: INK }}>{nameOf(a, r)}</p>
+                    <p className="text-[16px] tabular-nums" style={{ color: INK_SOFT }}>{short(a)}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={busy === a} className={primary} onClick={() => call('POST', { walletAddress: a }, a, 'The request was not approved. Try again.', 'Approved. They are a member now.')}>{t('Approve')}</button>
+                    <button type="button" disabled={busy === a} className={secondary} style={{ color: DANGER, borderColor: DANGER }} onClick={() => call('DELETE', { walletAddress: a, request: true }, a, 'The request was not declined. Try again.', 'Request declined.')}>{t('Decline')}</button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {members === null && !error && <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>}
       {members && (
         <ul className={`${card} divide-y divide-[#d4d8de]`}>
           {members.map((m) => {
             const a = String(m.walletAddress || '').toLowerCase();
             const isMe = a === me;
-            const isTheOwner = a === owner;
-            const label = isMe ? 'You' : nameFor?.(a) || (typeof m.name === 'string' && m.name) || short(a);
-            const roleText = isTheOwner ? 'Owner' : m.role === 'ADMIN' ? 'Admin' : m.role === 'MODERATOR' ? 'Moderator' : 'Member';
+            const r = rankOfRow(m);
+            const label = isMe ? t('You') : nameOf(a, m);
+            const roleText = t(r === 'OWNER' ? 'Owner' : r === 'ADMIN' ? 'Admin' : r === 'MODERATOR' ? 'Moderator' : 'Member');
+            // Act only on someone below you; moderators may remove members but not change roles.
+            const canRemove = !isMe && !!rank && isPrivileged(rank) && RANKS[r] < RANKS[rank];
+            const roleChoices = !isMe && rank && RANKS[r] < RANKS[rank] ? givable.filter((x) => x !== r) : [];
             return (
-              <li key={a} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[18px] font-semibold truncate" style={{ color: INK }}>{label}</p>
-                  <p className="text-[16px]" style={{ color: INK_SOFT }}>{roleText}{label !== short(a) ? <span className="tabular-nums"> · {short(a)}</span> : null}</p>
-                </div>
-                {isAdmin && !isTheOwner && !isMe && (
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={busy === a} className={secondary} style={{ color: INK }}
-                      onClick={() => call('PATCH', { walletAddress: a, role: m.role === 'ADMIN' ? 'MEMBER' : 'ADMIN' }, a, 'The role was not changed. Try again.')}>
-                      {m.role === 'ADMIN' ? t("Make member") : t("Make admin")}
-                    </button>
-                    <button type="button" disabled={busy === a} className={secondary} style={{ color: DANGER, borderColor: DANGER }}
-                      onClick={() => call('DELETE', { walletAddress: a }, a, 'The member was not removed. Try again.')}>
-                      {t("Remove")}
-                    </button>
+              <li key={a} className="px-4 py-3 flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[18px] font-semibold truncate" style={{ color: INK }}>{label}</p>
+                    <p className="text-[16px]" style={{ color: INK_SOFT }}>{roleText}{label !== short(a) ? <span className="tabular-nums"> · {short(a)}</span> : null}</p>
                   </div>
-                )}
+                  {(roleChoices.length > 0 || canRemove) && (
+                    <div className="flex flex-wrap gap-2">
+                      {roleChoices.map((x) => (
+                        <button key={x} type="button" disabled={busy === a} className={secondary} style={{ color: INK }}
+                          onClick={() => call('PATCH', { walletAddress: a, role: x }, a, 'The role was not changed. Try again.', 'Role changed.')}>
+                          {t(x === 'ADMIN' ? 'Make admin' : x === 'MODERATOR' ? 'Make moderator' : 'Make member')}
+                        </button>
+                      ))}
+                      {canRemove && (
+                        <button type="button" disabled={busy === a} className={secondary} style={{ color: DANGER, borderColor: DANGER }}
+                          onClick={() => call('DELETE', { walletAddress: a }, a, 'The member was not removed. Try again.', mls ? 'Removed. They can no longer read new posts once the encrypted channel is updated.' : 'Removed.')}>
+                          {t("Remove")}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </li>
             );
           })}
         </ul>
       )}
+      <details className={`${card} px-4 py-3`}>
+        <summary className="text-[18px] font-semibold cursor-pointer" style={{ color: INK }}>{t('What each role can do')}</summary>
+        <ul className="mt-2 flex flex-col gap-1.5 text-[16px] leading-snug" style={{ color: INK_SOFT }}>
+          <li><b style={{ color: INK }}>{t('Owner')}</b> — {t('Everything, including deleting the community. There is one owner.')}</li>
+          <li><b style={{ color: INK }}>{t('Admin')}</b> — {t(ROLE_HELP.ADMIN)}</li>
+          <li><b style={{ color: INK }}>{t('Moderator')}</b> — {t(ROLE_HELP.MODERATOR)}</li>
+          <li><b style={{ color: INK }}>{t('Member')}</b> — {t(ROLE_HELP.MEMBER)}</li>
+        </ul>
+      </details>
       {isAdmin && (
-        <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={(e) => { e.preventDefault(); if (validAdd) call('POST', { walletAddress: add.trim() }, 'add', 'The member was not added. Try again.').then(() => setAdd('')); }}>
+        <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={(e) => { e.preventDefault(); if (validAdd) call('POST', { walletAddress: add.trim() }, 'add', 'The member was not added. Try again.', 'Added.').then(() => setAdd('')); }}>
           <label htmlFor="manage-add-member" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Add a member by wallet address")}</label>
+          <p className="text-[16px] leading-snug -mt-1" style={{ color: INK_SOFT }}>{t(mls ? 'They join as a member and can read new posts as soon as the encrypted channel adds them (your app does it now).' : 'They join as a member.')}</p>
           <input id="manage-add-member" value={add} onChange={(e) => setAdd(e.target.value)} placeholder="0x…" className={input} style={{ color: INK }} autoComplete="off" spellCheck={false} />
           <div className="flex justify-end">
             <button type="submit" disabled={!validAdd || busy === 'add'} className={primary}>{t("Add")}</button>
@@ -644,30 +804,47 @@ function Profile({ community, onSave }: { community: any; onSave: (name: string,
 
 // ─── Channels ────────────────────────────────────────────────────────────────
 
-function Channels({ channels, onAdd, onDelete }: { channels: any[]; onAdd: (name: string) => Promise<boolean>; onDelete: (id: string, name: string) => Promise<void> }) {
+function Channels({ channels, mls, onAdd, onDelete }: { channels: any[]; mls: boolean; onAdd: (name: string) => Promise<boolean>; onDelete: (id: string, name: string) => Promise<void> }) {
   const t = useT();
   const [n, setN] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<string | null>(null);
   const clean = n.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 40);
+  const taken = channels.some((c) => String(c.name).toLowerCase() === clean);
   return (
     <>
+      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>
+        {t(mls ? 'Each channel is its own end-to-end encrypted group with every member. The first channel carries the community’s main posts and cannot be deleted.' : 'The first channel carries the community’s main posts and cannot be deleted.')}
+      </p>
       <ul className={`${card} divide-y divide-[#d4d8de]`}>
-        {channels.map((c) => (
-          <li key={c.id} className="px-4 py-3 flex items-center gap-3 min-h-[56px]">
-            <span className="flex-1 min-w-0 text-[18px] font-semibold truncate" style={{ color: INK }}>{c.name}</span>
-            {c.name !== 'general' && (
-              <button type="button" className={secondary} style={{ color: DANGER, borderColor: DANGER }} onClick={() => onDelete(c.id, c.name)}>
-                {t("Delete")}
-              </button>
+        {channels.map((c, i) => (
+          <li key={c.id} className="px-4 py-3 flex flex-col gap-2 min-h-[56px]">
+            <div className="flex items-center gap-3">
+              <span className="flex-1 min-w-0 text-[18px] font-semibold truncate" style={{ color: INK }}>
+                {c.name}{i === 0 && <span className="ml-2 text-[15px] font-normal" style={{ color: INK_SOFT }}>{t('Main')}</span>}
+              </span>
+              {i > 0 && confirm !== c.id && (
+                <button type="button" className={secondary} style={{ color: DANGER, borderColor: DANGER }} onClick={() => setConfirm(c.id)}>{t("Delete")}</button>
+              )}
+            </div>
+            {confirm === c.id && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[16px] leading-snug" style={{ color: INK }}>{t(mls ? 'Delete {name}? It disappears from the community for everyone. Posts already sent stay on the devices that received them.' : 'Delete {name}? Its posts are deleted for everyone.', { name: c.name })}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" disabled={busy} className={dangerBtn} onClick={async () => { setBusy(true); await onDelete(c.id, c.name); setBusy(false); setConfirm(null); }}>{t('Delete for everyone')}</button>
+                  <button type="button" className={secondary} style={{ color: INK }} onClick={() => setConfirm(null)}>{t('Cancel')}</button>
+                </div>
+              </div>
             )}
           </li>
         ))}
       </ul>
-      <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={async (e) => { e.preventDefault(); if (!clean) return; setBusy(true); if (await onAdd(clean)) setN(''); setBusy(false); }}>
+      <form className={`${card} px-4 py-4 flex flex-col gap-3`} onSubmit={async (e) => { e.preventDefault(); if (!clean || taken) return; setBusy(true); if (await onAdd(clean)) setN(''); setBusy(false); }}>
         <label htmlFor="manage-channel" className="text-[18px] font-semibold" style={{ color: INK }}>{t("Add a channel")}</label>
         <input id="manage-channel" value={n} onChange={(e) => setN(e.target.value)} placeholder={t("announcements")} maxLength={40} className={input} style={{ color: INK }} />
+        {taken && <p role="alert" className="text-[16px]" style={{ color: DANGER }}>{t('A channel with this name already exists.')}</p>}
         <div className="flex justify-end">
-          <button type="submit" disabled={!clean || busy} className={primary}>{t("Add")}</button>
+          <button type="submit" disabled={!clean || taken || busy} className={primary}>{busy ? t('Creating…') : t("Add")}</button>
         </div>
       </form>
     </>
@@ -676,8 +853,8 @@ function Channels({ channels, onAdd, onDelete }: { channels: any[]; onAdd: (name
 
 // ─── Permissions, moderation and slow mode ───────────────────────────────────
 
-function Switches({ items, values, slow, onChange }: {
-  items: Array<[string, string]>; values: Record<string, any>; slow: boolean; onChange: (changes: Record<string, boolean | number>) => Promise<void>;
+function Switches({ items, values, slow, mls, onChange }: {
+  items: SettingInfo[]; values: Record<string, any>; slow: boolean; mls: boolean; onChange: (changes: Record<string, boolean | number>) => Promise<void>;
 }) {
   const t = useT();
   const [busy, setBusy] = useState<string | null>(null);
@@ -685,7 +862,7 @@ function Switches({ items, values, slow, onChange }: {
   return (
     <>
       <ul className={`${card} divide-y divide-[#d4d8de]`}>
-        {items.map(([key, label]) => {
+        {items.map(({ key, label, help }) => {
           const on = values[key] === true;
           return (
             <li key={key}>
@@ -693,13 +870,17 @@ function Switches({ items, values, slow, onChange }: {
                 type="button"
                 role="switch"
                 aria-checked={on}
+                aria-describedby={`help-${key}`}
                 disabled={busy === key}
                 onClick={() => run(key, { [key]: !on })}
                 className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 text-left text-[18px] hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#15171c]/25"
                 style={{ color: INK }}
               >
-                <span className="flex-1 min-w-0 font-semibold">{label}</span>
-                <span className={`min-w-[64px] text-center rounded-xl px-3 py-1 text-[16px] font-semibold border-2 ${on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#9aa1ac] text-[#15171c]'}`}>{on ? t("On") : t("Off")}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold">{t(label)}</span>
+                  <span id={`help-${key}`} className="block text-[15px] leading-snug mt-0.5" style={{ color: INK_SOFT }}>{t(help)}</span>
+                </span>
+                <span className={`min-w-[64px] text-center rounded-xl px-3 py-1 text-[16px] font-semibold border-2 shrink-0 ${on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#9aa1ac] text-[#15171c]'}`}>{busy === key ? '…' : on ? t("On") : t("Off")}</span>
               </button>
             </li>
           );
@@ -708,47 +889,55 @@ function Switches({ items, values, slow, onChange }: {
       {slow && (
         <fieldset className={`${card} px-4 py-4`}>
           <legend className="px-1 text-[18px] font-semibold" style={{ color: INK }}>{t("Slow mode")}</legend>
-          <p className="text-[16px] mb-3" style={{ color: INK_SOFT }}>{t("How long each member waits between two posts.")}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {SLOW.map(([v, l]) => {
+          <p className="text-[16px] mb-3" style={{ color: INK_SOFT }}>{t(SLOW_MODE_HELP)}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="radiogroup" aria-label={t("Slow mode")}>
+            {SLOW_MODE_OPTIONS.map(([v, l]) => {
               const on = (values.slowModeSeconds ?? 0) === v;
               return (
                 <button key={v} type="button" role="radio" aria-checked={on} disabled={busy === 'slow'} onClick={() => run('slow', { slowModeSeconds: v })}
                   className={`${btn} ${on ? 'bg-[#15171c] text-white' : 'border-2 border-[#9aa1ac] bg-white text-[#15171c] hover:bg-[#f2f4f7]'}`}>
-                  {l}
+                  {t(l)}
                 </button>
               );
             })}
           </div>
         </fieldset>
       )}
+      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>
+        {t(mls ? ENFORCEMENT_NOTE_MLS : 'These rules apply to new posts in this community.')}
+      </p>
     </>
   );
 }
 
 // ─── Privacy and discovery ───────────────────────────────────────────────────
 
-function Privacy({ isPrivate, onChange }: { isPrivate: boolean; onChange: (priv: boolean) => Promise<void> }) {
+function Privacy({ isPrivate, mls, onChange }: { isPrivate: boolean; mls: boolean; onChange: (priv: boolean) => Promise<void> }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="sr-only">{t("Who can join")}</legend>
       {([
-        [true, 'Private', 'Only people with an invite can join. It is not listed in Find one.'],
-        [false, 'Public', 'Anyone can find it in Find one and join.'],
+        [true, 'Private', 'Not listed in Discover. Only people with your invite link or a personal invite can join.'],
+        [false, 'Public', 'Listed in Discover with its name and description. Anyone can join and read new posts.'],
       ] as const).map(([priv, label, text]) => (
         <button key={label} type="button" role="radio" aria-checked={isPrivate === priv} disabled={busy}
           onClick={async () => { if (isPrivate === priv) return; setBusy(true); await onChange(priv); setBusy(false); }}
           className={`${card} min-h-[56px] px-4 py-3 flex items-center gap-3 text-left border-2 ${isPrivate === priv ? 'border-[#15171c]' : 'border-[#d4d8de] hover:bg-[#f2f4f7]'}`}>
           <span className="flex-1 min-w-0">
-            <span className="block text-[18px] font-semibold" style={{ color: INK }}>{label}</span>
-            <span className="block text-[16px]" style={{ color: INK_SOFT }}>{text}</span>
+            <span className="block text-[18px] font-semibold" style={{ color: INK }}>{t(label)}</span>
+            <span className="block text-[16px]" style={{ color: INK_SOFT }}>{t(text)}</span>
           </span>
-          <span className="text-[16px] font-semibold" style={{ color: INK }}>{isPrivate === priv ? t("Selected") : t("Choose")}</span>
+          <span className="text-[16px] font-semibold shrink-0" style={{ color: INK }}>{isPrivate === priv ? t("Selected") : t("Choose")}</span>
         </button>
       ))}
-      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{t("Either way, posts are stored on our server and people in the community can read them.")}</p>
+      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>
+        {t(mls
+          ? 'Either way, posts are end-to-end encrypted: only members can read them and our server never stores them. Our server knows the name, the description and who is a member.'
+          : 'Either way, posts are stored on our server and people in the community can read them.')}
+      </p>
+      <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{t('To control who gets in one by one, turn on “Approve new members before they join” in Moderation.')}</p>
     </fieldset>
   );
 }
