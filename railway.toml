@@ -6,5 +6,11 @@ dockerfilePath = "./Dockerfile"
 startCommand = "sh ./start.sh"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 600
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
+# ALWAYS (27 Nov 2026): with ON_FAILURE and 3 retries, a fourth crash left the site down until
+# someone redeployed. The service is restarted whatever the exit.
+restartPolicyType = "ALWAYS"
+# Zero-downtime deploys: the new deployment and the old one both serve for overlapSeconds after
+# the new one passes /api/health; the old one then gets SIGTERM and scripts/serve.js keeps it
+# serving in-flight requests (SHUTDOWN_GRACE_MS 15 s + SHUTDOWN_KILL_MS 10 s) within drainingSeconds.
+overlapSeconds = 30
+drainingSeconds = 30
