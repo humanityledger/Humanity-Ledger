@@ -277,8 +277,8 @@ export async function PATCH(req: NextRequest) {
         ]);
         if (!community) return NextResponse.json({ error: 'Community not found' }, { status: 404 });
         const isOwner = community.ownerAddress?.toLowerCase() === me;
-        const allowed = isOwner || member?.role === 'ADMIN' || (Boolean(member) && perms?.pinMessages === true);
-        if (!allowed) return NextResponse.json({ error: 'Only admins can pin in this community' }, { status: 403 });
+        const allowed = isOwner || member?.role === 'ADMIN' || member?.role === 'MODERATOR' || (Boolean(member) && perms?.pinMessages === true);
+        if (!allowed) return NextResponse.json({ error: 'Only admins and moderators can pin in this community' }, { status: 403 });
         if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
         const pin = action === 'PIN_MESSAGE';
         const updated = await (prisma as any).communityPost.update({
@@ -383,6 +383,10 @@ export async function PATCH(req: NextRequest) {
       if (action === 'DELETE_CHANNEL') {
         const { channelId } = body;
         if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
+        const all = await (prisma as any).communityChannel.findMany({ where: { communityId }, orderBy: { position: 'asc' }, select: { id: true } });
+        if (all.length <= 1 || all[0]?.id === channelId) {
+          return NextResponse.json({ error: 'The main channel cannot be deleted. It carries the community\'s posts.', code: 'MAIN_CHANNEL' }, { status: 400 });
+        }
         const removed = await (prisma as any).communityChannel.deleteMany({ where: { id: channelId, communityId } });
         if (!removed?.count) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
         return NextResponse.json({ ok: true });
@@ -414,9 +418,13 @@ export async function PATCH(req: NextRequest) {
         });
         return NextResponse.json({ ok: true, community: updated });
       }
-    } catch {}
-
-    return NextResponse.json({ ok: true });
+      return NextResponse.json({ error: 'Unknown action', code: 'UNKNOWN_ACTION' }, { status: 400 });
+    } catch (e: any) {
+      // A failed write used to answer { ok: true }, so the screen said "Saved" for a change that
+      // was never stored (27/11/2026).
+      console.error('[chat/communities PATCH action]', action, e?.code || e?.message);
+      return NextResponse.json({ error: 'Not saved. Try again in a moment.' }, { status: 503 });
+    }
   } catch (error: any) {
     console.error('[chat/communities PATCH]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -432,13 +440,17 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get('id');
     if (!id || typeof id !== 'string') return NextResponse.json({ error: 'Invalid community id' }, { status: 400 });
 
+    let community: any = null;
     try {
-      const community = await (prisma as any).community.findUnique({ where: { id } });
-      if (community && community.ownerAddress === caller.toLowerCase()) {
-        await (prisma as any).community.delete({ where: { id } });
-      }
-    } catch {}
-
+      community = await (prisma as any).community.findUnique({ where: { id } });
+    } catch {
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
+    }
+    if (!community) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (String(community.ownerAddress || '').toLowerCase() !== caller.toLowerCase()) {
+      return NextResponse.json({ error: 'Only the owner can delete this community' }, { status: 403 });
+    }
+    await (prisma as any).community.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     console.error('[chat/communities DELETE]', error);

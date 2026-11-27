@@ -99,7 +99,7 @@ describe('wiring', () => {
   it('admin actions only for someone who outranks the member; the server checks again', () => {
     const m = read('components/communities/MemberSheet.tsx');
     expect(m).toMatch(/canActOn\(myRole, role, 'promote'\) \|\| canActOn\(myRole, role, 'removeMember'\)/);
-    expect(read('app/api/chat/communities/[id]/members/route.ts')).toMatch(/isAdminOrOwner/);
+    expect(read('app/api/chat/communities/[id]/members/route.ts')).toMatch(/async function roleIn[\s\S]*RANK\[current\] >= RANK\[actor\]/);
   });
   it('mobile: sheets use the dynamic viewport and safe areas', () => {
     for (const f of ['CommunityMediaSheet', 'MemberSheet', 'CreateCommunitySheet', 'PostBody']) {
