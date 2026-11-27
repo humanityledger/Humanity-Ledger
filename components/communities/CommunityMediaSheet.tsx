@@ -130,11 +130,11 @@ export function CommunityMediaSheet({ posts, messages, title, onClose, initialTa
           </div>
           <div className="flex gap-1.5 overflow-x-auto px-3 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
             {MEDIA_TABS.map((k) => {
-              const M = TAB_META[k]; const n = index[k].length; const on = tab === k;
+              const M = TAB_META[k]; const Icon = M.icon; const n = index[k].length; const on = tab === k;
               return (
                 <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { setTab(k); setViewer(null); }}
                   className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[13.5px] font-medium transition-colors ${on ? 'bg-[#15171c] text-white' : 'bg-[#f2f3f5] text-[#3d424b] hover:bg-[#e8eaee]'}`}>
-                  <M size={15} strokeWidth={1.9} /> {t(M.label)}{n ? <span className={`tabular-nums ${on ? 'text-white/70' : 'text-[#8a919c]'}`}>{n}</span> : null}
+                  <Icon size={15} strokeWidth={1.9} /> {t(M.label)}{n ? <span className={`tabular-nums ${on ? 'text-white/70' : 'text-[#8a919c]'}`}>{n}</span> : null}
                 </button>
               );
             })}
