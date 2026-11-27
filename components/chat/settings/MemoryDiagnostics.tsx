@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useT } from '@/lib/i18n/client';
 import { memorySnapshot, type MemorySnapshot } from '@/lib/perf/memory-observatory';
 import { trimMediaUrls } from '@/lib/core/MediaArena';
+import { medianMs } from '@/lib/perf/client-timings';
 
 export function MemoryDiagnostics() {
   const t = useT();
@@ -55,6 +56,7 @@ export function MemoryDiagnostics() {
       {row(t("Private node"), nodeActive == null ? '…' : nodeActive ? t("Active") : t("Hibernated (0 MB)"))}
       {row(t("Last proof"), last ? t("{s} s · {threads} threads · SRS 2^{srs}", { s: (last.ms / 1000).toFixed(1), threads: last.threads, srs: last.srsSize ? Math.round(Math.log2(last.srsSize)) : '?' }) : t("None yet"))}
       {row(t("Media URLs in memory"), String(snap?.liveBlobUrls ?? 0))}
+      {(() => { const a = medianMs('attachment.encrypt+upload'), v = medianMs('voice.encrypt+upload'); return (a !== null || v !== null) ? row(t("Encrypt + upload (median)"), [a !== null ? t("files {ms} ms", { ms: a }) : '', v !== null ? t("voice {ms} ms", { ms: v }) : ''].filter(Boolean).join(' · ')) : null; })()}
       {(snap?.caches ?? []).filter(c => c.size > 0).slice(0, 6).map(c => row(c.name, `${c.size}/${c.capacity}${c.bytes != null ? ` · ${(c.bytes / 1024).toFixed(0)} KB` : ''}`))}
       <button
         type="button"

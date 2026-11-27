@@ -25,7 +25,7 @@ export type MediaItem =
   | { tab: 'music'; id: string; at: number; author?: string; att: AttachmentMessage; name: string };
 
 /** Control messages (reactions, receipts, votes, typing…) are not posts and never shown as such. */
-export const CONTROL_PREFIXES = ['__REACT__', '__READ__', '__DELIVERED__', '__TYPING__', '__VOTE__', '__EDIT__', '__REVOKE__', '__PIN__', '__UNPIN__', '__CALL_', '__CLEAR__'];
+export const CONTROL_PREFIXES = ['__REACT__', '__READ__', '__DELIVERED__', '__TYPING__', '__VOTE__', '__EDIT__', '__REVOKE__', '__PIN__', '__UNPIN__', '__CALL_', '__CLEAR__', '__POLL_CLOSE__'];
 export const isControlMessage = (c: unknown) => typeof c === 'string' && CONTROL_PREFIXES.some((p) => c.startsWith(p));
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)\]]/gi;
@@ -33,18 +33,20 @@ const SAFE_GIF = /^https:\/\/[^\s]+$/i;
 
 const toMs = (v: unknown) => (typeof v === 'number' ? v : typeof v === 'string' ? Date.parse(v) || 0 : 0);
 
-export interface PollShape { pollId: string; question: string; options: string[] }
+export interface PollShape { pollId: string; question: string; options: string[]; /** Results hidden until the author closes the poll. */ hideResults?: boolean }
 /** __POLL__<pollId>__::<question>__::<opt1|opt2|…> (same as private chats). */
 export function parsePoll(content: string): PollShape | null {
   if (!content.startsWith('__POLL__')) return null;
-  const [pollId, question, opts] = content.slice('__POLL__'.length).split('__::');
+  const [pollId, question, opts, flags = ''] = content.slice('__POLL__'.length).split('__::');
   const options = (opts || '').split('|').map((o) => o.trim()).filter(Boolean).slice(0, 12);
   if (!pollId || !question || options.length < 2) return null;
-  return { pollId: pollId.slice(0, 64), question: question.slice(0, 300), options: options.map((o) => o.slice(0, 100)) };
+  const shape: PollShape = { pollId: pollId.slice(0, 64), question: question.slice(0, 300), options: options.map((o) => o.slice(0, 100)) };
+  if (flags.split(',').includes('hide')) shape.hideResults = true;
+  return shape;
 }
-export function encodePoll(question: string, options: string[], id = Math.random().toString(36).slice(2, 12)): string {
+export function encodePoll(question: string, options: string[], id = Math.random().toString(36).slice(2, 12), opts: { hideResults?: boolean } = {}): string {
   const clean = (s: string) => s.replace(/__::|\|/g, ' ').trim();
-  return `__POLL__${id}__::${clean(question)}__::${options.map(clean).filter(Boolean).join('|')}`;
+  return `__POLL__${id}__::${clean(question)}__::${options.map(clean).filter(Boolean).join('|')}${opts.hideResults ? '__::hide' : ''}`;
 }
 /** __VOTE__<pollId>__::<optionIndex> — one vote per voter; the last one counts. */
 export function encodeVote(pollId: string, option: number): string { return `__VOTE__${pollId}__::${option}`; }
@@ -66,9 +68,20 @@ export function tallyVotes(messages: { content?: string | null; authorAddress?: 
   return { counts, voters };
 }
 
+function stripEnvelopes(c: string): string {
+  for (let i = 0; i < 2; i++) {
+    if (!c.startsWith('__FORWARD__') && !c.startsWith('__REPLY__')) break;
+    const k = c.indexOf('__::');
+    if (k < 0) break;
+    c = c.slice(k + 4);
+  }
+  return c;
+}
+
 export function classifyPost(p: IndexInput): MediaItem[] {
-  const c = typeof p.content === 'string' ? p.content.trim() : '';
-  if (!c || isControlMessage(c)) return [];
+  const raw = typeof p.content === 'string' ? p.content.trim() : '';
+  if (!raw || isControlMessage(raw)) return [];
+  const c = stripEnvelopes(raw); // a reply or a forward is indexed by what it carries
   const base = { id: p.id, at: toMs(p.createdAt), author: p.authorAddress };
   const att = parseAttachmentMessage(c);
   if (att) {
