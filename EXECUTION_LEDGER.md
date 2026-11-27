@@ -71,3 +71,13 @@ Open: Level 2 (Zero-Passport: bounded ZK vouches + in-browser zkTLS/DKIM proof o
 - Security: role hierarchy on the members API (an admin can no longer demote/remove another admin; nobody but the owner makes admins); POST no longer overwrites roles; settings writes no longer answer ok on failure; main channel protected; changeInfo honoured; retired join-by-id route refuses in its handler; owner's app makes community admins XMTP admins so their removals reach the encrypted group.
 - Every setting works and explains itself: defaults shown, help line per row and switch, MLS-aware texts, posting rules + slow mode + spam filter applied by every app, encrypted pins, moderators, join approval (requests in Redis), es/de/ru/zh.
 - Tests: test/unit/communities/settings-and-security.test.ts.
+
+## 27/11/2026 — Communities V1+V2 integrated upgrade (uncommitted, on top of a4dc218ce)
+Precedence applied: repository invariants > V2 > V1 (V1 items that broke an invariant were replaced by their V2 form: sandbox stays `allow-scripts`, no `#6366f1`/dark mode, BrandedQr not qrcode.react, Nemi host-side not in a frame, existing `lib/aztec/*` and `components/zk/*` extended, no forum auto-posting).
+- Messaging: reader resolves groups case-insensitively and promotes consent; channel bar opens every channel (MLS group per channel); "Check encrypted access now"; posts API `?channelId=`.
+- Manage: Apps full screen, Analytics/Governance 1160 px; Channels with slug validation, 2-step progress, per-channel X/Y sync + repair, Open; Invite with BrandedQr, PNG, code, Share, personal signed invites; ZK-verified badge (User.isZkVerified).
+- Apps: extension-noise filter (frame + host), V2 base CSS, hl.patch/remove/pick/formatDate, 3-block system prompt (fits 8k TPM), validated `PATCH { html }`, code + live preview (frame route `?preview=1`, creator only), 3 new templates.
+- Governance: no "For ("/"Against ("/"Consensus Engine"; Abstain, quorum, roles, duration, forum Markdown draft; pure rules in lib/communities/governance.ts.
+- Analytics: pure helpers, server V2 fields, on-device MLS metrics, SVG charts, CSV.
+- Aztec: AztecFeeBadge, wallet-sdk discovery, NemiDexPanel, zkpassport interface (unwired), detectNoteReceipts (pure, not wired until after the audit), treasury panel (no balances). Docs: docs/aztec/ECOSYSTEM_LAUNCH_POST.md, docs/TWITTER_ANNOUNCEMENT.md rewritten to code-true claims.
+- Tests: test/unit/apps/apps-v2.test.ts, test/unit/communities/v2-upgrade.test.ts. Verified on the Linux shell with tsc per touched-file closure and a vitest stand-in; run `npx tsc --noEmit` and `npx vitest run` from Windows before committing.

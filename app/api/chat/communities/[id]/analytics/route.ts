@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
-import { memberGrowthByMonth } from '@/lib/communities/analytics';
+import { activityByDay, memberGrowthByMonth } from '@/lib/communities/analytics';
+import { zkVerifiedWallets } from '@/lib/communities/identity';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,11 +107,50 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     // 6. Native Real Members
+    const verified = await zkVerifiedWallets([community.ownerAddress, ...sortedMembers.map((m: any) => m.walletAddress)]);
     const realMembers = sortedMembers.map((m: any) => ({
       address: m.walletAddress,
       role: m.role || 'MEMBER',
       joinedAt: m.joinedAt,
+      isZkVerified: verified.has(String(m.walletAddress || '').toLowerCase()),
     }));
+
+    // 7. V2 figures. An encrypted (MLS) community's posts are not on this server: activity is null
+    // here and the admin's device computes it from the channels it can decrypt.
+    const isMls = community.communityMls === true;
+    const roleBreakdown = { OWNER: 1, ADMIN: 0, MODERATOR: 0, MEMBER: 0 };
+    const owner = String(community.ownerAddress || '').toLowerCase();
+    for (const m of sortedMembers) {
+      if (String(m.walletAddress || '').toLowerCase() === owner) continue;
+      const r = m.role === 'ADMIN' || m.role === 'MODERATOR' ? m.role : 'MEMBER';
+      roleBreakdown[r as 'ADMIN' | 'MODERATOR' | 'MEMBER']++;
+    }
+    let dailyActivity14d: ReturnType<typeof activityByDay> | null = null;
+    let channelPostCounts: Record<string, number> | null = null;
+    if (!isMls) {
+      const since14 = new Date(Date.now() - 14 * 86_400_000);
+      const rows: Array<{ createdAt: Date; channelId: string | null }> | null = await (prisma as any).communityPost.findMany({
+        where: { communityId, createdAt: { gte: since14 } },
+        select: { createdAt: true, channelId: true },
+        take: 20_000,
+      }).catch(() => null);
+      if (rows) dailyActivity14d = activityByDay(rows.map((r) => r.createdAt), 14);
+      const grouped: Array<{ channelId: string | null; _count: { _all: number } }> | null = await (prisma as any).communityPost.groupBy({
+        by: ['channelId'], where: { communityId }, _count: { _all: true },
+      }).catch(() => null);
+      if (grouped) {
+        const first = community.channels?.[0]?.id ?? null;
+        channelPostCounts = {};
+        for (const ch of community.channels || []) channelPostCounts[ch.id] = 0;
+        for (const g of grouped) {
+          const key = g.channelId ?? first;
+          if (key) channelPostCounts[key] = (channelPostCounts[key] ?? 0) + g._count._all;
+        }
+      }
+    }
+    const activeProposalsCount = await (prisma as any).marketProposal.count({
+      where: { OR: [{ category: `COMMUNITY_${communityId}` }, { category: communityId }], votingEndsAt: { gt: new Date() } },
+    }).catch(() => null);
 
     return NextResponse.json({
       community: {
@@ -121,7 +161,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ownerAddress: community.ownerAddress,
         createdAt: community.createdAt,
         joinCode: community.joinCode,
+        communityMls: isMls,
       },
+      dailyActivity14d,
+      roleBreakdown,
+      activeProposalsCount,
+      verifiedMembersCount: verified.size,
+      channelPostCounts,
       stats: {
         totalMembers,
         adminCount,

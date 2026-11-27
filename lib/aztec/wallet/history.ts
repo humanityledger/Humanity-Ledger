@@ -77,3 +77,38 @@ export function mergeActivity(local: Activity[], fromEvents: Activity[]): Activi
   }
   return out.sort((a, b) => (b.blockNumber ?? Number.MAX_SAFE_INTEGER) - (a.blockNumber ?? Number.MAX_SAFE_INTEGER) || b.createdAt - a.createdAt);
 }
+
+/**
+ * A-06 (docs/AZTEC_ALIGNMENT_AUDIT.md): the aztec-standards Token (cUSDC) delivers the recipient's
+ * note but emits no private event, so an incoming payment shows in the balance and not in the
+ * activity list. Comparing two balance reads closes that gap honestly: a rise in the private
+ * balance that this device did not cause becomes one "receive" entry, labelled as detected from
+ * the balance (no sender, no transaction hash: the wallet does not know them).
+ *
+ * `expected` is what this device itself moved in the meantime (its own shields, for example), so
+ * those are not counted as received. Pure: the caller stores the result with upsertActivity.
+ */
+export function detectNoteReceipts(
+  prev: ReadonlyArray<{ key: TokenKey; privateUnits: bigint }>,
+  next: ReadonlyArray<{ key: TokenKey; privateUnits: bigint }>,
+  opts: { emitsEvents: (key: TokenKey) => boolean; expected?: Partial<Record<string, bigint>>; now?: number },
+): Activity[] {
+  const before = new Map(prev.map((b) => [b.key, b.privateUnits]));
+  const out: Activity[] = [];
+  const now = opts.now ?? Date.now();
+  for (const b of next) {
+    if (opts.emitsEvents(b.key)) continue;
+    const was = before.get(b.key);
+    if (was === undefined) continue;
+    const rise = b.privateUnits - was - (opts.expected?.[b.key] ?? 0n);
+    if (rise <= 0n) continue;
+    out.push({ id: `note-sync:${b.key}:${now}`, kind: 'receive', token: b.key, amount: rise.toString(), status: 'settled', createdAt: now });
+  }
+  return out;
+}
+
+/** The label the activity list shows for an entry made by detectNoteReceipts. */
+export const NOTE_SYNC_LABEL = 'Received (detected from your private balance)';
+export function isNoteSyncActivity(a: Pick<Activity, 'id'>): boolean {
+  return a.id.startsWith('note-sync:');
+}

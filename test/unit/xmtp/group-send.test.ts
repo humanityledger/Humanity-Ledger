@@ -312,4 +312,71 @@ describe('MLS membership and linked-device installation sync', () => {
     const res = await syncGroupMembers(client, GID, community, ADDR_A);
     expect(res.added).toBe(1); // addrC succeeded even though ADDR_B failed
   });
+
+  it('retries sendOptimistic after syncAll + group sync when a newly welcomed member hits stale epoch', async () => {
+    const { sendGroupMessage } = await import('@/lib/xmtp/groups');
+    let prepAttempt = 0;
+    const syncAll = vi.fn(async () => {});
+    const group: any = {
+      id: GID,
+      consentState: async () => 0,
+      updateConsentState: vi.fn(async () => {}),
+      isActive: async () => true,
+      sync: vi.fn(async () => {}),
+      sendOptimistic: vi.fn(async () => {
+        prepAttempt++;
+        if (prepAttempt === 1) throw new Error('WrongEpoch');
+        return 'msg-recovered';
+      }),
+      publishMessages: vi.fn(async () => {}),
+      send: vi.fn(async () => 'fallback-should-not-run'),
+      messages: async () => [],
+    };
+    const client: any = { conversations: { getConversationById: async () => group, syncAll } };
+
+    expect(await sendGroupMessage(client, GID, 'member post')).toBe('msg-recovered');
+    expect(group.updateConsentState).toHaveBeenCalledWith(1);
+    expect(syncAll).toHaveBeenCalledWith([0, 1]);
+    expect(group.send).not.toHaveBeenCalled();
+  });
+
+  it('createChannelGroup falls back to creator-only + individual member adds when one member lacks XMTP', async () => {
+    const { createChannelGroup } = await import('@/lib/communities/mls');
+    const addrC = '0x3333333333333333333333333333333333333333';
+    const addedIndividual: string[] = [];
+    const createdGroup: any = {
+      id: '00112233445566778899aabbccddeeff',
+      consentState: async () => 1,
+      isActive: async () => true,
+      sync: async () => {},
+      publishMessages: async () => {},
+      members: async () => [],
+      addMembersByIdentifiers: vi.fn(async (ids: { identifier: string }[]) => {
+        const addr = ids[0].identifier.toLowerCase();
+        if (addr === ADDR_B.toLowerCase()) throw new Error('not registered');
+        addedIndividual.push(addr);
+      }),
+    };
+    const client: any = {
+      inboxId: 'inbox-a',
+      conversations: {
+        newGroupWithIdentifiers: vi.fn(async () => { throw new Error('one bad address'); }),
+        newGroupOptimistic: vi.fn(async () => createdGroup),
+        getConversationById: vi.fn(async () => createdGroup),
+      },
+    };
+    const community = {
+      ownerAddress: ADDR_A,
+      communityMls: true,
+      members: [
+        { walletAddress: ADDR_A, role: 'ADMIN' },
+        { walletAddress: ADDR_B, role: 'MEMBER' },
+        { walletAddress: addrC, role: 'MEMBER' },
+      ],
+    };
+
+    const gid = await createChannelGroup(client, community, 'announcements', ADDR_A);
+    expect(gid).toBe('00112233445566778899aabbccddeeff');
+    expect(addedIndividual).toEqual([addrC.toLowerCase()]);
+  });
 });

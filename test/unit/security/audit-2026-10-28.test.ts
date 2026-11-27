@@ -12,7 +12,7 @@ const { db, ME, OTHER, wallet } = vi.hoisted(() => ({
   wallet: { current: '0x1111111111111111111111111111111111111111' as string | null },
   db: {
     community: { findUnique: vi.fn() },
-    communityMember: { findUnique: vi.fn() },
+    communityMember: { findUnique: vi.fn(), findMany: vi.fn() },
     marketProposal: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     proposalVote: { findUnique: vi.fn(), create: vi.fn() },
     pushSubscription: { findUnique: vi.fn(), delete: vi.fn() },
@@ -48,6 +48,7 @@ describe('community governance', () => {
     wallet.current = ME;
     db.community.findUnique.mockResolvedValue({ id: 'c1', ownerAddress: OTHER });
     db.communityMember.findUnique.mockResolvedValue({ id: 'm1' });
+    db.communityMember.findMany.mockResolvedValue([{ walletAddress: ME, role: 'MEMBER' }]);
     db.marketProposal.findUnique.mockResolvedValue({ id: 'p1', category: 'COMMUNITY_c1', votingEndsAt: new Date(Date.now() + 86_400_000) });
     db.proposalVote.findUnique.mockResolvedValue(null);
   });

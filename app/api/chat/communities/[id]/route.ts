@@ -39,7 +39,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       });
     } catch {
       try {
-        community = await (prisma as any).community.findUnique({ where: { id: communityId } });
+        community = await (prisma as any).community.findUnique({
+          where: { id: communityId },
+          include: { members: true, channels: { orderBy: { position: 'asc' } } },
+        });
       } catch {
         community = null;
       }

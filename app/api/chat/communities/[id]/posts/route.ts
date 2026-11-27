@@ -55,8 +55,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // ?pinned=1 returns only the posts a person pinned, newest pin first. An empty list is an
     // empty list: the client must show nothing, not the previous result.
     const pinnedOnly = ['1', 'true'].includes(req.nextUrl.searchParams.get('pinned') ?? '');
+    // ?channelId= narrows the reading screen to one channel. Posts saved before channels existed
+    // have no channel and belong to the main (first) channel.
+    let channelWhere: Record<string, unknown> = {};
+    const wantedChannel = req.nextUrl.searchParams.get('channelId');
+    if (!pinnedOnly && wantedChannel) {
+      const chans: { id: string }[] = await (prisma as any).communityChannel.findMany({
+        where: { communityId }, orderBy: { position: 'asc' }, select: { id: true },
+      }).catch(() => []);
+      const idx = chans.findIndex((c) => c.id === wantedChannel);
+      if (idx === 0) channelWhere = { OR: [{ channelId: wantedChannel }, { channelId: null }] };
+      else if (idx > 0) channelWhere = { channelId: wantedChannel };
+    }
     const posts = await (prisma as any).communityPost.findMany({
-      where: { communityId, title: { not: null }, ...(pinnedOnly ? { pinnedAt: { not: null } } : {}) },
+      where: { communityId, title: { not: null }, ...(pinnedOnly ? { pinnedAt: { not: null } } : {}), ...channelWhere },
       orderBy: pinnedOnly ? { pinnedAt: 'desc' } : { createdAt: 'desc' },
       take: 100,
     }).catch(() => []);

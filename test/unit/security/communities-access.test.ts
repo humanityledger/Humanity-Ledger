@@ -5,7 +5,7 @@ const { db, ADMIN } = vi.hoisted(() => ({
   ADMIN: '0x1111111111111111111111111111111111111111',
   db: {
     communityMember: { findUnique: vi.fn(), findFirst: vi.fn() },
-    communityChannel: { findFirst: vi.fn(), update: vi.fn(), deleteMany: vi.fn(), count: vi.fn(), create: vi.fn() },
+    communityChannel: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), deleteMany: vi.fn(), count: vi.fn(), create: vi.fn() },
     communityPermission: { upsert: vi.fn() },
     community: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
   },
@@ -73,6 +73,7 @@ describe('communities access control', () => {
   });
 
   it('an admin cannot delete a channel that belongs to another community', async () => {
+    db.communityChannel.findMany.mockResolvedValue([{ id: 'main' }, { id: 'foreign' }]);
     db.communityChannel.deleteMany.mockResolvedValue({ count: 0 });
     const res = await patch({ communityId: 'mine', action: 'DELETE_CHANNEL', channelId: 'foreign' });
     expect(res.status).toBe(404);

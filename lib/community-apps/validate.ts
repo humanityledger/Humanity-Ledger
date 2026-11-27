@@ -55,7 +55,7 @@ export interface ValidationResult {
 export function validateAppHtml(html: string): ValidationResult {
   const problems: string[] = [];
   if (!html || !html.trim()) problems.push('The app is empty.');
-  if (Buffer.byteLength(html, 'utf8') > MAX_APP_BYTES) {
+  if (new TextEncoder().encode(html).length > MAX_APP_BYTES) {
     problems.push(`The app is larger than ${Math.round(MAX_APP_BYTES / 1000)} KB.`);
   }
   for (const rule of RULES) {

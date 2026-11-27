@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWallet } from '@/lib/security/requireWallet';
 import { resolveCommunityAccess, appVisibleTo } from '@/lib/community-apps/access';
-import { buildAppDocument } from '@/lib/community-apps/sdk';
+import { APP_PREVIEW_SHELL, buildAppDocument } from '@/lib/community-apps/sdk';
 import { APP_FRAME_CSP } from '@/lib/community-apps/framePolicy';
 import { classifyAppsError, newErrorId } from '@/lib/community-apps/routeErrors';
 
@@ -54,6 +54,12 @@ async function render(req: NextRequest, { params }: { params: Promise<{ id: stri
     select: { html: true, title: true, status: true, creatorAddress: true },
   });
   if (!app || !appVisibleTo(app, access)) return page(404, 'This app does not exist or is not shared with you.');
+
+  // ?preview=1: the shell for "Edit code" (lib/community-apps/sdk.ts). Same CSP, same sandbox.
+  if (req.nextUrl.searchParams.get('preview') === '1') {
+    if (String(app.creatorAddress || '').toLowerCase() !== access.caller) return page(403, 'Only the person who made this app can preview edits.');
+    return new NextResponse(APP_PREVIEW_SHELL, { status: 200, headers: headers() });
+  }
 
   return new NextResponse(buildAppDocument(app.html, app.title), { status: 200, headers: headers() });
 }
