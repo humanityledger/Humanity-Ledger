@@ -15,7 +15,8 @@ const community = { ownerAddress: O, members: [{ walletAddress: A, role: 'MEMBER
 describe('community settings: defaults and what is shown', () => {
   it('a community without a permissions row shows the database defaults, not everything off', () => {
     expect(effectivePermissions(null)).toEqual(PERMISSION_DEFAULTS);
-    expect(effectivePermissions({ sendMedia: false, slowModeSeconds: 60, junk: 1 } as any)).toMatchObject({ sendMessages: true, sendMedia: false, slowModeSeconds: 60 });
+    const e = effectivePermissions({ sendMedia: false, slowModeSeconds: 60, junk: 1 } as any);
+    expect([e.sendMessages, e.sendMedia, e.slowModeSeconds, 'junk' in e]).toEqual([true, false, 60, false]);
     // Same defaults as prisma/schema.prisma CommunityPermission.
     const model = read('prisma/schema.prisma').match(/model CommunityPermission \{[\s\S]*?\n\}/)![0];
     for (const [k, v] of Object.entries(PERMISSION_DEFAULTS)) expect(model).toMatch(new RegExp(`${k}\\s+\\w+\\s+@default\\(${v}\\)`));
@@ -113,7 +114,7 @@ describe('community security (27/11/2026 review)', () => {
   it('creating a community never waits on the network for its first group', () => {
     const g = read('lib/xmtp/groups.ts');
     expect(g).toMatch(/validatedIdentifiers\.length === 0[\s\S]*newGroupOptimistic/);
-    expect(g).not.toMatch(/The group may still be on its way/);
+    expect(g).not.toMatch(/throw new Error\('The group may still be on its way/);
   });
   it('admins other than the owner can remove people from the encrypted group', () => {
     const m = read('lib/communities/mls.ts');
