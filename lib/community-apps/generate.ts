@@ -14,25 +14,30 @@
  *                                             including a local model server
  * COMMUNITY_APPS_MODEL overrides the model name. It is required for the
  * OpenAI-compatible path, because model names differ per server.
- * (Anthropic was removed on 11 November 2026.)
+ * (Anthropic was removed from Studio on 11 November 2026.)
+ *
+ * Max engine (28 November 2026, lib/community-apps/engine.ts): when COMMUNITY_APPS_MAX_API_KEY and
+ * COMMUNITY_APPS_MAX_MODEL are set, apps are written by that model (OpenAI-compatible, or Anthropic
+ * when COMMUNITY_APPS_MAX_PROVIDER=anthropic) with a plan, parallel drafts, server-side checks and a
+ * refinement pass. Without them, the free path below is unchanged except that JavaScript which does
+ * not parse is now caught on the server too.
  */
 
-import { validateAppHtml } from './validate';
 import { createStudioClient, serverDefaultModel, studioApiKey } from '@/lib/studio/client';
 import { ProviderError } from '@/lib/studio/groq';
 import type { SystemBlock } from '@/lib/studio/prompt';
 import { isStudioModel } from '@/lib/studio/models';
+import { hardProblems, plannedKeysOf, qualityProblems, resolveEngine, scoreApp, timeLeft, type EngineConfig } from './engine';
 
 export class GenerationUnavailableError extends Error {}
 export class GenerationFailedError extends Error {
   constructor(message: string, public problems: string[] = []) { super(message); }
 }
 
-const MAX_OUTPUT_TOKENS = 8000;
 const TIMEOUT_MS = 150_000;
 
 export function generationConfigured(): boolean {
-  return !!studioApiKey() || (!!process.env.OPENAI_API_KEY && !!process.env.COMMUNITY_APPS_MODEL);
+  return resolveEngine().tier === 'max' || !!studioApiKey() || (!!process.env.OPENAI_API_KEY && !!process.env.COMMUNITY_APPS_MODEL);
 }
 
 /**
@@ -155,56 +160,94 @@ function parseReply(text: string): ModelReply {
   return { title, summary, html };
 }
 
-async function callGroq(system: SystemBlock[], user: string, signal: AbortSignal): Promise<string> {
+/** One model call. Everything above it (plan, drafts, checks) is provider-independent. */
+export type Transport = (call: { system: SystemBlock[]; user: string; maxTokens: number; timeoutMs: number }) => Promise<string>;
+
+function withTimeout<T>(timeoutMs: number, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(1_000, timeoutMs));
+  return run(controller.signal).finally(() => clearTimeout(timer));
+}
+
+function groqTransport(engine: EngineConfig): Transport {
   const override = process.env.COMMUNITY_APPS_MODEL;
   const model = isStudioModel(override) ? override : serverDefaultModel();
-  try {
-    const r = await createStudioClient(studioApiKey() as string, { timeout: TIMEOUT_MS }).complete(
-      { model, max_tokens: MAX_OUTPUT_TOKENS, system, messages: [{ role: 'user', content: user }], tools: [], reasoning_effort: 'low' },
-      { signal },
-    );
-    return r.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
-  } catch (e) {
-    if (e instanceof ProviderError) throw new GenerationFailedError(e.message);
-    throw e;
-  }
-}
-
-async function callOpenAICompatible(system: SystemBlock[], user: string, signal: AbortSignal): Promise<string> {
-  const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST',
-    signal,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-    body: JSON.stringify({
-      model: process.env.COMMUNITY_APPS_MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      messages: [{ role: 'system', content: system.map((b) => b.text).join('\n\n') }, { role: 'user', content: user }],
-    }),
+  return ({ system, user, maxTokens, timeoutMs }) => withTimeout(timeoutMs, async (signal) => {
+    try {
+      const r = await createStudioClient(studioApiKey() as string, { timeout: timeoutMs }).complete(
+        { model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }], tools: [], reasoning_effort: engine.effort ?? 'low' },
+        { signal },
+      );
+      return r.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+    } catch (e) {
+      if (e instanceof ProviderError) throw new GenerationFailedError(e.message);
+      throw e;
+    }
   });
-  const body: any = await res.json().catch(() => ({}));
-  if (!res.ok) throw new GenerationFailedError(`The model provider answered ${res.status}: ${body?.error?.message || 'no detail'}`);
-  return body?.choices?.[0]?.message?.content || '';
 }
 
-async function complete(user: string): Promise<string> {
-  if (!generationConfigured()) {
-    throw new GenerationUnavailableError('No model is configured on this server. Set GROQ_API_KEY, or OPENAI_API_KEY with COMMUNITY_APPS_MODEL.');
+/** Any OpenAI-compatible Chat Completions endpoint. */
+function openAITransport(base: string, key: string, model: string, effort?: string): Transport {
+  return ({ system, user, maxTokens, timeoutMs }) => withTimeout(timeoutMs, async (signal) => {
+    const send = async (tokenParam: 'max_tokens' | 'max_completion_tokens') => fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      signal,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        [tokenParam]: maxTokens,
+        ...(effort ? { reasoning_effort: effort } : {}),
+        messages: [{ role: 'system', content: system.map((b) => b.text).join('\n\n') }, { role: 'user', content: user }],
+      }),
+    });
+    let res = await send('max_tokens');
+    let body: any = await res.json().catch(() => ({}));
+    // Newer reasoning models take max_completion_tokens instead of max_tokens.
+    if (res.status === 400 && /max_tokens|max_completion_tokens/i.test(String(body?.error?.message ?? ''))) {
+      res = await send('max_completion_tokens');
+      body = await res.json().catch(() => ({}));
+    }
+    if (!res.ok) throw new GenerationFailedError(`The model provider answered ${res.status}: ${String(body?.error?.message || 'no detail').slice(0, 300)}`);
+    return body?.choices?.[0]?.message?.content || '';
+  });
+}
+
+/** Anthropic Messages API. */
+function anthropicTransport(base: string, key: string, model: string): Transport {
+  return ({ system, user, maxTokens, timeoutMs }) => withTimeout(timeoutMs, async (signal) => {
+    const res = await fetch(`${base}/messages`, {
+      method: 'POST',
+      signal,
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: system.map((b) => b.text).join('\n\n'), messages: [{ role: 'user', content: user }] }),
+    });
+    const body: any = await res.json().catch(() => ({}));
+    if (!res.ok) throw new GenerationFailedError(`The model provider answered ${res.status}: ${String(body?.error?.message || 'no detail').slice(0, 300)}`);
+    return (Array.isArray(body?.content) ? body.content : []).filter((b: any) => b?.type === 'text').map((b: any) => b.text).join('');
+  });
+}
+
+export function transportFor(engine: EngineConfig): Transport {
+  if (engine.tier === 'max') {
+    return engine.provider === 'anthropic'
+      ? anthropicTransport(engine.baseUrl as string, engine.apiKey as string, engine.model as string)
+      : openAITransport(engine.baseUrl as string, engine.apiKey as string, engine.model as string, engine.effort);
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  if (studioApiKey()) return groqTransport(engine);
+  const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  return openAITransport(base, process.env.OPENAI_API_KEY as string, process.env.COMMUNITY_APPS_MODEL as string);
+}
+
+/** A call with the provider's failures turned into messages a member can act on. */
+async function call(transport: Transport, args: Parameters<Transport>[0]): Promise<string> {
   try {
-    return studioApiKey()
-      ? await callGroq(SYSTEM_BLOCKS, user, controller.signal)
-      : await callOpenAICompatible(SYSTEM_BLOCKS, user, controller.signal);
+    return await transport(args);
   } catch (e: any) {
     if (e?.name === 'AbortError') throw new GenerationFailedError('The model took too long. Try a shorter description.');
     if (e instanceof GenerationFailedError || e instanceof GenerationUnavailableError) throw e;
     // Network failures and unexpected provider answers are a failed generation, not a server error.
     console.error('[community apps generate] provider call failed:', e?.name || 'Error', String(e?.message || '').slice(0, 200));
     throw new GenerationFailedError('The model service could not be reached. Try again in a minute.');
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -215,11 +258,7 @@ export interface GenerateInput {
   runtimeError?: string;
 }
 
-/**
- * One attempt, and if the result fails validation, one repair attempt that
- * shows the model exactly what was rejected.
- */
-export async function generateApp(input: GenerateInput): Promise<ModelReply> {
+function userMessage(input: GenerateInput): string {
   const lines: string[] = [`Community: ${input.communityName.slice(0, 80)}`];
   if (input.current) {
     lines.push('', 'This is the current app. Change it as requested and return the whole app.', '<current>', compactSource(input.current.html), '</current>');
@@ -228,17 +267,129 @@ export async function generateApp(input: GenerateInput): Promise<ModelReply> {
   } else {
     lines.push('', `What the community needs: ${input.request}`);
   }
-  const user = lines.join('\n');
-
-  let reply = parseReply(await complete(user));
-  let check = validateAppHtml(reply.html);
-  if (!check.ok) {
-    // The rejected answer is not sent back: with the current app it would not fit the free tier.
-    // The reasons are enough for the model to write it again without them.
-    const retry = `${user}\n\nYour previous answer was rejected for these reasons:\n- ${check.problems.join('\n- ')}\nWrite the whole app again in the same format, without those problems.`;
-    reply = parseReply(await complete(retry));
-    check = validateAppHtml(reply.html);
-    if (!check.ok) throw new GenerationFailedError('The model could not produce an app that passes the safety checks.', check.problems);
-  }
-  return reply;
+  return lines.join('\n');
 }
+
+// ── Max engine prompts (not sent on the free tier: they would not fit its token limit) ─────────
+
+/** Extra standards for the max engine: what separates a finished tool from a demo. */
+export const QUALITY_BLOCK = `# Quality bar (max engine)
+Before you write, think the app through like a senior product engineer:
+- The real job: who uses it, how often, what they must see first, what an admin needs that a member does not (me.isAdmin).
+- Data model: one key per item (item:<id>), member keys for anything personal (votes, RSVPs, scores), totals computed at render, never stored. Concurrent edits use hl.patch or member keys so nobody overwrites anyone.
+- Every state: empty, one item, many items (sorting, grouping, search or filters when lists can grow), errors from hl.set (show them inline), long text (wrap, clamp), and the preview context.
+- Interaction: clear primary action, keyboard friendly (Enter submits, focus kept while typing across hl.onChange re-renders), destructive actions confirm with a second click, undo where cheap.
+- Language: every visible string through hl.pick(es, en). Dates through hl.formatDate. Numbers with toLocaleString.
+- Layout: mobile first (360 px wide), no horizontal scroll, touch targets of 40 px or more, the design system classes.
+- Code: small named functions, one render() from state, event delegation on the root, no global leaks beyond one IIFE, no dead code, no console noise.
+Then write the complete app. Never leave TODOs, placeholders or "add more here".`;
+
+const PLAN_INSTRUCTIONS = `Plan the app before anyone writes code. Answer only with:
+<plan>
+Purpose: one sentence.
+Users and roles: members, admins (me.isAdmin), creator.
+Data (keys in backticks, e.g. \`item:<id>\` {title, by, at}, \`vote\` member key): every key, its value shape, who writes it.
+Screens and sections, in order of importance.
+Interactions: each action, what it writes, what re-renders.
+Edge cases and limits.
+</plan>
+Be concrete and complete; no code.`;
+
+const VARIANTS = [
+  'Follow the plan exactly.',
+  'Follow the plan, and favour the most robust, simplest interaction for each action.',
+  'Follow the plan, and favour the richest useful views (summaries, sorting, filters, admin tools).',
+  'Follow the plan, and polish the details: empty states, inline errors, keyboard flow, focus.',
+  'Follow the plan, and favour clarity for first-time members: short help text and obvious next steps.',
+];
+
+/**
+ * Writes or revises an app.
+ *  free: one attempt, and if it fails the checks, one repair that shows the model what was rejected.
+ *  max:  plan → parallel drafts from the plan → server-side checks and scoring → repair or refine.
+ */
+export async function generateApp(input: GenerateInput): Promise<ModelReply> {
+  if (!generationConfigured()) {
+    throw new GenerationUnavailableError('No model is configured on this server. Set GROQ_API_KEY, or OPENAI_API_KEY with COMMUNITY_APPS_MODEL, or COMMUNITY_APPS_MAX_API_KEY with COMMUNITY_APPS_MAX_MODEL.');
+  }
+  const engine = resolveEngine();
+  return generateWith(input, engine, transportFor(engine));
+}
+
+/** The pipeline with an injectable transport (tests use a fake one). */
+export async function generateWith(input: GenerateInput, engine: EngineConfig, transport: Transport, now: number = Date.now()): Promise<ModelReply> {
+  const deadline = now + engine.budgetMs;
+  const user = userMessage(input);
+  const perCall = (share = 1) => Math.min(TIMEOUT_MS * (engine.tier === 'max' ? 1.6 : 1), Math.floor(timeLeft(deadline) * share));
+
+  if (engine.tier === 'free') {
+    let reply = parseReply(await call(transport, { system: SYSTEM_BLOCKS, user, maxTokens: engine.maxOutputTokens, timeoutMs: perCall() }));
+    let problems = hardProblems(reply.html);
+    if (problems.length) {
+      // The rejected answer is not sent back: with the current app it would not fit the free tier.
+      // The reasons are enough for the model to write it again without them.
+      const retry = `${user}\n\nYour previous answer was rejected for these reasons:\n- ${problems.join('\n- ')}\nWrite the whole app again in the same format, without those problems.`;
+      if (timeLeft(deadline) < 15_000) throw new GenerationFailedError('The model could not produce an app that passes the safety checks.', problems);
+      reply = parseReply(await call(transport, { system: SYSTEM_BLOCKS, user: retry, maxTokens: engine.maxOutputTokens, timeoutMs: perCall() }));
+      problems = hardProblems(reply.html);
+      if (problems.length) throw new GenerationFailedError('The model could not produce an app that passes the safety checks.', problems);
+    }
+    return reply;
+  }
+
+  // ── max ──
+  const system: SystemBlock[] = [...SYSTEM_BLOCKS, { type: 'text', text: QUALITY_BLOCK }];
+
+  // 1. Plan (skipped when time is short; a revision plans the change against the current app).
+  let plan = '';
+  if (engine.plan && timeLeft(deadline) > 120_000) {
+    try {
+      const raw = await call(transport, {
+        system,
+        user: `${user}\n\n${input.current ? 'Plan the requested change to the current app (what stays, what changes, any new data).\n' : ''}${PLAN_INSTRUCTIONS}`,
+        maxTokens: Math.min(6_000, engine.maxOutputTokens),
+        timeoutMs: perCall(0.3),
+      });
+      plan = (raw.match(/<plan>([\s\S]*?)<\/plan>/i)?.[1] ?? raw).trim().slice(0, 6_000);
+    } catch { /* a plan helps; without it the drafts still follow the rules */ }
+  }
+  const keys = plannedKeysOf(plan);
+  const build = (variant: string) =>
+    `${user}${plan ? `\n\nThe agreed plan:\n<plan>\n${plan}\n</plan>` : ''}\n\n${variant} Answer in the required format: <title>, <summary>, <app>.`;
+
+  // 2. Drafts in parallel.
+  const n = Math.max(1, engine.candidates);
+  const settled = await Promise.allSettled(
+    Array.from({ length: n }, (_, i) => call(transport, { system, user: build(VARIANTS[i % VARIANTS.length]), maxTokens: engine.maxOutputTokens, timeoutMs: perCall(0.75) })),
+  );
+  const drafts = settled
+    .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+    .map((r) => parseReply(r.value))
+    .map((reply) => ({ reply, ...scoreApp(reply.html, keys) }))
+    .sort((a, b) => b.score - a.score);
+  if (!drafts.length) {
+    const why = settled.find((r): r is PromiseRejectedResult => r.status === 'rejected')?.reason;
+    throw why instanceof GenerationFailedError ? why : new GenerationFailedError('The model service could not be reached. Try again in a minute.');
+  }
+  let best = drafts[0];
+
+  // 3. Repair (hard problems) or refine (quality problems), once, when time allows.
+  const issues = best.hard.length ? best.hard : engine.refine ? best.quality : [];
+  if (issues.length && timeLeft(deadline) > 25_000) {
+    const fix = `${build('Fix the draft below.')}\n\nYour draft:\n<draft>\n${compactSource(best.reply.html)}\n</draft>\n\nThe server checks found:\n- ${issues.join('\n- ')}\nReturn the whole corrected app in the required format.`;
+    try {
+      const reply = parseReply(await call(transport, { system, user: fix, maxTokens: engine.maxOutputTokens, timeoutMs: perCall() }));
+      if (!reply.title || reply.title === 'Community app') reply.title = best.reply.title;
+      if (!reply.summary) reply.summary = best.reply.summary;
+      const scored = { reply, ...scoreApp(reply.html, keys) };
+      if (scored.score >= best.score) best = scored;
+    } catch (e) {
+      if (best.hard.length) throw e;
+    }
+  }
+  if (best.hard.length) throw new GenerationFailedError('The model could not produce an app that passes the safety checks.', best.hard);
+  return best.reply;
+}
+
+/** Quality findings for an app (exposed for tests and diagnostics). */
+export { qualityProblems };
