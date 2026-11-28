@@ -314,7 +314,36 @@ export const FEATURES: { title: string; text: string; claim: ClaimId }[] = [
   ...NEXT.items.map((i) => ({ title: i.title, text: i.text, claim: i.claim })),
 ];
 
+/**
+ * Other apps on Aztec, as the directory at aztec.network/apps lists them (checked 28 Nov 2026):
+ * name, category and availability as that page shows them, the line in our own words. A card opens
+ * the app's own site, or its Aztec project page when that page names no site. `icon` is the host
+ * whose favicon the card shows; a letter tile stays visible when none loads.
+ */
+export const ECOSYSTEM = {
+  eyebrow: 'Aztec ecosystem',
+  title: 'More private apps on Aztec',
+  body: 'Ledger Chat is built with Aztec. These are other apps on the same network. Each card opens the app in a new tab.',
+  source: 'Names, categories and availability as listed on aztec.network/apps. Ledger Chat does not run these apps.',
+  more: { label: 'See every app on aztec.network', href: 'https://aztec.network/apps' },
+  apps: [
+    { slug: 'aztecscan', brand: 'Aztecscan', category: 'Block explorers', availability: 'Available', url: 'https://aztecscan.xyz/', icon: 'aztecscan.xyz', note: 'Look up blocks, transactions and contracts on Aztec.' },
+    { slug: 'dark-forest-aztec', brand: 'Dark Forest Aztec', category: 'Apps', availability: 'Available', url: 'https://aztec.network/projects/dark-forest-aztec', icon: '', note: 'Strategy game where hidden planets stay hidden through private state.' },
+    { slug: 'galactica', brand: 'Galactica', category: 'Apps', availability: 'Available', url: 'https://privateinference.gg/', icon: 'privateinference.gg', note: 'AI chat and API paid for privately, with encrypted prompts.' },
+    { slug: 'nemi', brand: 'Nemi', category: 'Apps', availability: 'Alpha', url: 'https://nemi.fi/', icon: 'nemi.fi', note: 'Trading that hides who trades and how, on a public market.' },
+    { slug: 'nulo', brand: 'Nulo', category: 'Wallets', availability: 'Available', url: 'https://nulo.sh/', icon: 'nulo.sh', note: 'Open-source wallet that shows what stays private before you send.' },
+    { slug: 'nyx', brand: 'Nyx', category: 'Apps', availability: 'Alpha', url: 'https://www.nyx.money/', icon: 'nyx.money', note: 'Private account controlled by an Ethereum wallet and a passkey.' },
+    { slug: 'olla', brand: 'Olla', category: 'Apps', availability: 'Available', url: 'https://olla.finance/', icon: 'olla.finance', note: 'Pooled staking for AZTEC holders, without the solo staking minimum.' },
+    { slug: 'ravenhouse', brand: 'RavenHouse', category: 'Apps', availability: 'Available', url: 'https://aztec.network/projects/ravenhouse', icon: 'app.ravenhouse.xyz', note: 'NFT launches, private ownership and auctions.' },
+    { slug: 'rollingchat', brand: 'RollingChat', category: 'Apps', availability: 'Alpha', url: 'https://rolling.chat/', icon: 'rolling.chat', note: 'Onchain message board where you post under any name.' },
+    { slug: 'shield', brand: 'Shield', category: 'Bridges', availability: 'Alpha', url: 'https://shield.human.tech/', icon: 'shield.human.tech', note: 'Moves assets between Ethereum and Aztec and converts the fee asset on the way.' },
+    { slug: 'xochi', brand: 'Xochi', category: 'Bridges', availability: 'Check availability', url: 'https://xochi.fi/', icon: 'xochi.fi', note: 'Private intents settled by competing solvers, away from the public mempool.' },
+    { slug: 'zk-money', brand: 'zk.money', category: 'Apps', availability: 'Available', url: 'https://zk.money/', icon: 'zk.money', note: 'Self-custodial wallet to send and receive crypto privately.' },
+    { slug: 'zkpassport', brand: 'ZKPassport', category: 'Apps', availability: 'Available', url: 'https://aztec.network/projects/zkpassport', icon: 'zkpassport.id', note: 'Open SDK for eligibility, compliance and bot checks, proved on the device.' },
+  ],
+};
+
 /** All prose of the page, for the banned-items test. */
 export const ALL_COPY = [
-  HERO, HERO_THREAD, FEATURES_ROWS, WHY, HOW, PAYMENT, ZK, MESSAGES, VISIBILITY, ARCHITECTURE, RELAY, OPEN, NEXT, FAQ, DEVICES, CLOSING,
+  HERO, HERO_THREAD, FEATURES_ROWS, WHY, HOW, PAYMENT, ZK, MESSAGES, VISIBILITY, ARCHITECTURE, RELAY, OPEN, NEXT, FAQ, DEVICES, CLOSING, ECOSYSTEM,
 ];

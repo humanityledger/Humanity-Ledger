@@ -11,6 +11,8 @@
 export const NOT_TEXT_KEYS = new Set([
   'href', 'id', 'key', 'screen', 'claim', 'glyph', 'icon', 'kind', 'src', 'url', 'slug', 'anchor',
   'className', 'tone', 'state', 'image', 'mockup', 'variant', 'route', 'path', 'file', 'repo', 'from', 'people',
+  // Product names stay as written (the Aztec ecosystem cards).
+  'brand',
 ]);
 
 export function translateDeep<T>(value: T, t: (text: string) => string, key?: string): T {
