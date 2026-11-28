@@ -5059,5 +5059,9 @@
  "Restoring…": "Восстановление…",
  "Restore channel": "Восстановить канал",
  "Stories": "Истории",
- "MLS is required for new communities. Encrypted messaging must be running on this device; try again in a moment.": "Для новых сообществ требуется MLS. На этом устройстве должен работать зашифрованный обмен сообщениями; попробуйте ещё раз через минуту."
+ "MLS is required for new communities. Encrypted messaging must be running on this device; try again in a moment.": "Для новых сообществ требуется MLS. На этом устройстве должен работать зашифрованный обмен сообщениями; попробуйте ещё раз через минуту.",
+ "If it keeps happening, ask the owner or an admin of the community to open it and restore the channel.": "Если это повторяется, попросите владельца или администратора сообщества открыть его и восстановить канал.",
+ "No device can reach this channel's encrypted group. Restoring it creates a new encrypted group with every member, and sends this post. Earlier posts stay on the devices that have them.": "Ни одно устройство не может связаться с зашифрованной группой этого канала. При восстановлении создаётся новая зашифрованная группа со всеми участниками, и эта публикация отправляется. Прежние публикации остаются на устройствах, где они есть.",
+ "Restore the channel": "Восстановить канал",
+ "The channel was restored. Every member can post again.": "Канал восстановлен. Все участники снова могут публиковать."
 }

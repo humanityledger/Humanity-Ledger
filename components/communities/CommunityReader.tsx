@@ -44,12 +44,12 @@ import { isControlMessage, type IndexInput } from '@/lib/communities/media-index
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
 import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncAllCommunityChannels, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
-import { createCommunityGroup, requestHistory, sendHistoryCapsule } from '@/lib/communities/mls';
+import { createCommunityGroup, requestHistory, restoreChannelGroup, sendHistoryCapsule } from '@/lib/communities/mls';
 import { absorbHistory } from '@/lib/communities/mls-history-backfill';
 import { checkPost, effectivePermissions, encodePin, isPrivileged, mayPinFor, rankIn, spamIds, type CommunityPermissions, type PostKind, type Rank } from '@/lib/communities/settings';
 import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
-import { resolveGroupForClient } from '@/lib/xmtp/groups';
+import { GROUP_NOT_REACHABLE, resolveGroupForClient } from '@/lib/xmtp/groups';
 import { useT } from '@/lib/i18n/client';
 import { AVATAR_RADIUS, UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
@@ -77,7 +77,7 @@ export interface ReaderPost {
   relayed?: boolean;
 }
 
-type Shown = ReaderPost & { state?: 'sending' | 'failed'; error?: string };
+type Shown = ReaderPost & { state?: 'sending' | 'failed'; error?: string; unreachable?: boolean };
 
 export interface CommunityReaderProps {
   /** Opens a private conversation and its Pay sheet (the member profile's "Pay"). */
@@ -711,8 +711,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         fetchPosts();
       } catch (e) {
         const msg = e instanceof Error ? e.message : typeof (e as any)?.message === 'string' ? (e as any).message : typeof e === 'string' ? e : '';
-        const text = msg.startsWith('Not sent.') ? tr(msg) : tr('Not sent. The encrypted group did not accept it. Check your connection and try again.');
-        setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: text } : p)));
+        const unreachable = (e as { code?: unknown } | null)?.code === GROUP_NOT_REACHABLE;
+        let text = msg.startsWith('Not sent.') ? tr(msg) : tr('Not sent. The encrypted group did not accept it. Check your connection and try again.');
+        // No device may hold this channel's group any more: only the owner or an admin can restore it.
+        if (unreachable && !canRestore) text = `${text} ${tr('If it keeps happening, ask the owner or an admin of the community to open it and restore the channel.')}`;
+        setPosts((prev) => prev.map((p) => (p.id === localId ? { ...p, state: 'failed', error: text, unreachable } : p)));
       }
       return;
     }
@@ -849,6 +852,33 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   };
 
   const dismiss = (id: string) => setPosts((prev) => prev.filter((p) => p.id !== id));
+
+  // Restore a channel whose encrypted group no device can reach (lib/communities/mls.ts
+  // restoreChannelGroup), then send the post that failed into the new group.
+  const canRestore = myRank === 'OWNER' || myRank === 'ADMIN';
+  const [restoring, setRestoring] = useState(false);
+  const restoreAndSend = async (postId: string, body: string) => {
+    if (!mlsGroup || !xmtpClient || restoring) return;
+    setRestoring(true);
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, state: 'sending', error: undefined } : p)));
+    const r = await restoreChannelGroup({ client: xmtpClient, communityId, oldGroupId: mlsGroup, me, headers, fetchImpl: f });
+    if (!r.ok) {
+      setRestoring(false);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, state: 'failed', error: tr(r.error), unreachable: true } : p)));
+      return;
+    }
+    try {
+      const sentId = await postToGroup(xmtpClient, r.groupId, body);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, id: sentId || p.id, state: undefined } : p)));
+      if (r.restored) toast.success(tr('The channel was restored. Every member can post again.'));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, state: 'failed', error: msg.startsWith('Not sent.') ? tr(msg) : tr('Not sent. The encrypted group did not accept it. Check your connection and try again.') } : p)));
+    } finally {
+      setRestoring(false);
+      await fetchCommunity();
+    }
+  };
 
   const copy = async (text: string, done: string) => {
     try {
@@ -1097,6 +1127,12 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                       <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
                       <button type="button" onClick={() => dismiss(p.id)} className={`${btn} lg-pill rounded-full`} style={{ color: INK }}>{tr("Remove")}</button>
                     </div>
+                    {p.unreachable && canRestore && (
+                      <div className="mt-3">
+                        <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{tr("No device can reach this channel's encrypted group. Restoring it creates a new encrypted group with every member, and sends this post. Earlier posts stay on the devices that have them.")}</p>
+                        <button type="button" disabled={restoring} onClick={() => restoreAndSend(p.id, text)} className={`${btn} mt-2 rounded-full bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34] disabled:opacity-60`}>{restoring ? tr("Restoring…") : tr("Restore the channel")}</button>
+                      </div>
+                    )}
                   </div>
                 )}
               </PostItem>

@@ -157,6 +157,11 @@ export function runGroupSerial<T>(groupId: string, task: () => Promise<T>): Prom
   return result;
 }
 
+/** The group is not on this device after a full sync: sendGroupMessage throws this code. */
+export const GROUP_NOT_REACHABLE = 'GROUP_NOT_REACHABLE';
+export const GROUP_NOT_REACHABLE_MESSAGE =
+  'Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.';
+
 /**
  * Look up a group by id; if absent locally, sync welcomes (including unknown consent) and check again.
  * `patient` (used before giving up on a send, and by "Check access now") doubles the sync budgets:
@@ -298,7 +303,11 @@ export async function createSecureGroup(
       });
       // Serialize the initial publish per group so an immediate first post waits cleanly in line
       // instead of colliding in the WASM worker.
-      void runGroupSerial(group.id, async () => {
+      // Awaited (28 Nov 2026): an optimistic group exists only in this device's database until
+      // something is published. Publishing now adds the creator's other devices, so the group no
+      // longer depends on one browser's storage (iOS Safari evicts it). Bounded: a slow network
+      // still returns the id, and the first post or member publishes it.
+      await runGroupSerial(group.id, async () => {
         await withTimeout(Promise.resolve(group.publishMessages?.()), 15_000, 'publish timeout');
       }).catch(() => { /* published with the first post or first member */ });
       console.log(`[GroupChat] Group "${safeName}" created on this device with ID: ${group.id}`);
@@ -472,9 +481,9 @@ export async function sendGroupMessage(
   // Second, patient attempt before giving up: on phones the welcome often lands a few seconds late.
   const group = (await resolveGroupForClient(client, groupId)) ?? (await resolveGroupForClient(client, groupId, { patient: true }));
   if (!group) {
-    throw new Error(
-      'Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.'
-    );
+    // Coded so the community screen can offer its owner or an admin to restore the channel
+    // (lib/communities/mls.ts restoreChannelGroup) when no device can reach the group.
+    throw Object.assign(new Error(GROUP_NOT_REACHABLE_MESSAGE), { code: GROUP_NOT_REACHABLE });
   }
 
   return runGroupSerial(groupId, async () => {

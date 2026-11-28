@@ -399,6 +399,33 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ ok: true, channel });
       }
 
+      if (action === 'REPLACE_CHANNEL_GROUP') {
+        // An MLS channel whose group no device can reach (28 Nov 2026): it was created on one
+        // device only and that device's storage is gone, so nobody could post or add anyone. The
+        // owner or an admin creates a new group with every member and the channel points at it.
+        // Compare-and-set on the old id: two admins restoring at once leave one group, and the
+        // second learns which.
+        const { channelId, expectedXmtpGroupId, xmtpGroupId } = body;
+        if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
+        if (!isPersistableXmtpGroupId(xmtpGroupId)) return NextResponse.json({ error: 'Invalid xmtpGroupId', code: 'XMTP_GROUP_REQUIRED' }, { status: 400 });
+        const community = await (prisma as any).community.findUnique({ where: { id: communityId }, select: { communityMls: true } });
+        if (community?.communityMls !== true) return NextResponse.json({ error: 'This community does not use encrypted groups.' }, { status: 400 });
+        const current = await (prisma as any).communityChannel.findFirst({ where: { id: channelId, communityId }, select: { xmtpGroupId: true } });
+        if (!current) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+        const expected = typeof expectedXmtpGroupId === 'string' && expectedXmtpGroupId ? expectedXmtpGroupId : null;
+        const swapped = await (prisma as any).communityChannel.updateMany({
+          where: { id: channelId, communityId, xmtpGroupId: expected },
+          data: { xmtpGroupId: String(xmtpGroupId) },
+        });
+        if (!swapped?.count) {
+          return NextResponse.json(
+            { error: 'This channel was already restored.', code: 'CHANNEL_GROUP_CHANGED', xmtpGroupId: current.xmtpGroupId ?? null },
+            { status: 409 },
+          );
+        }
+        return NextResponse.json({ ok: true, xmtpGroupId: String(xmtpGroupId) });
+      }
+
       if (action === 'DELETE_CHANNEL') {
         const { channelId } = body;
         if (!channelId || typeof channelId !== 'string') return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });

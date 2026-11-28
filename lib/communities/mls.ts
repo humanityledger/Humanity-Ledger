@@ -448,3 +448,61 @@ export async function createChannelGroup(client: any, c: CommunityLike, channelN
   }
   return groupId;
 }
+
+export type RestoreResult =
+  | { ok: true; groupId: string; restored: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Restores an MLS channel whose group no device can reach (28 Nov 2026). Communities start with a
+ * group created on the creator's device only (createCommunityGroup); until something is published,
+ * that group exists nowhere else, and when that browser's storage is gone (iOS Safari evicts it)
+ * nobody can post and nobody can add members: every member sees "This device has not received
+ * access to the encrypted group yet".
+ *
+ * For the owner or an admin: checks the old group is still unreachable on this device after a full
+ * sync, creates a new group with every server member (welcomes are sent at once), and points the
+ * channel at it on the server with a compare-and-set on the old id. If another admin restored it
+ * first, their group is returned. Posts of the old group stay on devices that still have it.
+ */
+export async function restoreChannelGroup(opts: {
+  client: any;
+  communityId: string;
+  oldGroupId: string;
+  me: string;
+  headers: Record<string, string>;
+  fetchImpl?: typeof fetch;
+}): Promise<RestoreResult> {
+  const f = opts.fetchImpl ?? fetch;
+  const me = (opts.me || '').toLowerCase();
+  if (!opts.client) return { ok: false, error: 'Encrypted messaging is not connected on this device yet. Try again in a moment.' };
+  if (await resolveGroupForClient(opts.client, opts.oldGroupId).catch(() => null)) {
+    return { ok: true, groupId: opts.oldGroupId, restored: false };
+  }
+  const res = await f(`/api/chat/communities/${encodeURIComponent(opts.communityId)}`, { credentials: 'include', headers: opts.headers, cache: 'no-store' }).catch(() => null);
+  if (!res?.ok) return { ok: false, error: 'The community could not be loaded. Check your connection and try again.' };
+  const d = await res.json().catch(() => ({}));
+  const full = d?.community ?? d;
+  const target = String(opts.oldGroupId).toLowerCase();
+  const channel = (Array.isArray(full?.channels) ? full.channels : []).find((ch: any) => String(ch?.xmtpGroupId || '').toLowerCase() === target);
+  if (!channel?.id) return { ok: false, error: 'This channel changed on another device. Reload the community.' };
+  const name = typeof channel.name === 'string' && channel.name ? channel.name : 'general';
+  let groupId: string;
+  try {
+    groupId = await createChannelGroup(opts.client, full as CommunityLike, `${full?.name ? `${full.name} · ` : ''}${name}`.slice(0, 100), me);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error && !e.message.startsWith('[') ? e.message : 'The encrypted channel could not be created. Try again.' };
+  }
+  const patch = await f('/api/chat/communities', {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    body: JSON.stringify({ action: 'REPLACE_CHANNEL_GROUP', communityId: opts.communityId, channelId: channel.id, expectedXmtpGroupId: channel.xmtpGroupId, xmtpGroupId: groupId }),
+  }).catch(() => null);
+  if (patch?.ok) return { ok: true, groupId, restored: true };
+  const pd = await patch?.json().catch(() => ({}));
+  if (patch?.status === 409 && typeof pd?.xmtpGroupId === 'string' && pd.xmtpGroupId) {
+    return { ok: true, groupId: pd.xmtpGroupId, restored: false };
+  }
+  return { ok: false, error: typeof pd?.error === 'string' ? pd.error : 'The channel could not be restored. Try again.' };
+}
