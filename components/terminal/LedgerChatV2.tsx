@@ -4833,6 +4833,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         if (!cancelled && dmEntries.length > 0) {
           const toRevive: Array<{ peerAddress: string; lastMessage: string; lastAt: Date; unreadCount: number; msgsToSave: any[] }> = [];
           const previewUpdates = new Map<string, { lastMessage: string; lastAt: Date; bumpUnread: boolean }>();
+          // Visible chats whose newest message the stream never delivered: peer -> what we had.
+          const missedSince = new Map<string, number>();
           const myInboxId = String((client as any).inboxId ?? '').toLowerCase();
 
           // Yield to the main thread every ~8 ms of work so taps and typing stay responsive.
@@ -4932,7 +4934,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const okClear = cutMs === 0 || survivesClear(msgMs, cutMs) || isRescuedMessage(pLower, String(m.id), [effectiveAddress, address]);
                 const curConv = conversationsRef.current.find(c => c.peerAddress.toLowerCase() === pLower);
                 const curMs = curConv?.lastAt ? new Date(curConv.lastAt).getTime() : 0;
-                if (okClear && msgMs > curMs + 500) {
+                const prevUpd = previewUpdates.get(pLower);
+                if (okClear && msgMs > curMs + 500 && (!prevUpd || msgMs > toMs(prevUpd.lastAt))) {
+                  // The live stream missed this message (sleep, reconnect, or sent from our other
+                  // device). Its preview is set here; its text is fetched and stored below.
+                  if (!missedSince.has(pLower) || curMs < (missedSince.get(pLower) as number)) missedSince.set(pLower, curMs);
                   let mappedContent = rawContent;
                   if (rawContent.startsWith('__BURN_')) {
                     const parts = rawContent.split('__::');
@@ -4982,6 +4988,51 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               return updated;
             });
             toRevive.forEach(r => syncToAddressBook(r.peerAddress));
+          }
+
+          // 28 Nov 2026: messages the stream missed in a visible chat only moved its preview; the
+          // text reached the chat when it was opened and read from the network, and the unread
+          // state could disagree with it. That is the case of a phone and a computer open on the
+          // same account: what one sends often never streams to the other. Store them now (at most
+          // four chats per run; the open chat has its own poll below).
+          const activeNow = activePeerRef.current?.toLowerCase() ?? '';
+          const missedPeers = [...missedSince.entries()].filter(([p]) => p !== activeNow).slice(0, 4);
+          for (const [peer, sinceMs] of missedPeers) {
+            if (cancelled) break;
+            try {
+              const raw = await getMessages(client, peer);
+              const cutMs = clearedAtMs(peer, [effectiveAddress, address]);
+              const recs = (raw || [])
+                .map((m: any) => ({ m, text: contentText(m), msgMs: toMs(m.sentAtNs ?? m.sentAt ?? m.sent) }))
+                .filter(({ m, text, msgMs }) =>
+                  m?.id && msgMs > sinceMs - 1000 && !isHidden(peer, String(m.id)) &&
+                  (m.deliveryStatus !== 2 && m.deliveryStatus !== 'failed') &&
+                  !isSystemSignal(text) && !text.startsWith('__CALL_') && !text.startsWith('__HL_HIST_') &&
+                  (cutMs === 0 || survivesClear(msgMs, cutMs) || isRescuedMessage(peer, String(m.id), [effectiveAddress, address])))
+                .map(({ m, text, msgMs }) => {
+                  let content = text;
+                  let burnAtNs: number | undefined;
+                  if (content.startsWith('__BURN_')) {
+                    const parts = content.split('__::');
+                    if (parts.length >= 2) {
+                      burnAtNs = msgMs + parseInt(parts[0].replace('__BURN_', ''), 10) * 1000;
+                      content = parts.slice(1).join('__::');
+                    }
+                  }
+                  return createChatMessageRecord({
+                    id: m.id,
+                    conversationId: `dm-${peer}`,
+                    senderAddress: String(m.senderInboxId ?? '').toLowerCase() === myInboxId ? address.toLowerCase() : peer,
+                    senderInboxId: m.senderInboxId ?? '',
+                    content,
+                    sentAtNs: msgMs,
+                    status: 'delivered',
+                    burnAtNs,
+                  });
+                })
+                .filter((r: any) => !r.burnAtNs || r.burnAtNs > Date.now());
+              if (recs.length > 0) await chatDB.saveMessages(recs).catch(() => {});
+            } catch { /* next run tries again */ }
           }
         } else {
           // Keep discoverNewPeers cache warm if needed
@@ -5915,7 +5966,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             
             // [CRITICAL FIX #4] If we literally just sent this message, it is in optimisticContentMap.
             // This is absolute proof that the message belongs to the active peer!
-            const isKnownOptimistic = !fromPeer && optimisticContentMap.current.has(content);
+            // Only when the message's own peer is unknown or is the open chat: the same text sent from our
+            // other device to another chat must not land here (28 Nov 2026).
+            const isKnownOptimistic = !fromPeer && optimisticContentMap.current.has(content) &&
+              (!normalizedMsgPeer || normalizedMsgPeer === 'unknown' || normalizedMsgPeer === normalizedActivePeer);
             
             const belongsToActive = belongsToActiveByAddr || belongsToActiveByConvoId || belongsToActiveBySenderInboxId || isKnownOptimistic;
 

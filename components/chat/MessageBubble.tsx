@@ -872,7 +872,7 @@ export const MessageBubble = React.memo(({
       <div
         id={`msg-${msg.id}`}
         data-allow-context="true"
-        className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}${entering ? (isMe ? 'hl-msg-in-me' : 'hl-msg-in-peer') : ''}`}
+        className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}${entering ? (isMe ? ' hl-msg-in-me' : ' hl-msg-in-peer') : ''}`}
         style={{ marginBottom: 2 }}
         onAnimationEnd={entering ? (e) => { if (e.target === e.currentTarget) setEntering(false); } : undefined}
       >

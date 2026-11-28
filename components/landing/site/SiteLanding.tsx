@@ -285,6 +285,38 @@ export async function SiteLanding() {
           </ul>
         </Section>
 
+        {/* Aztec ecosystem: the other apps on the network, each with its own favicon */}
+        <Section id="ecosystem">
+          <Head id="ecosystem" eyebrow={K.ECOSYSTEM.eyebrow} title={K.ECOSYSTEM.title} body={K.ECOSYSTEM.body} center />
+          <ul className={s.ecoGrid}>
+            {K.ECOSYSTEM.apps.map((a) => (
+              <li key={a.slug}>
+                <a className={s.ecoCard} href={a.url} target="_blank" rel="noopener noreferrer" aria-label={`${a.brand}, ${a.category}, ${a.availability}`}>
+                  <span className={s.ecoIcon} aria-hidden="true">
+                    <span>{a.brand.slice(0, 1).toUpperCase()}</span>
+                    {/* Favicon through DuckDuckGo's icon service (one host, no referrer); when it
+                        fails, the letter tile shows instead (site.module.css .ecoIcon img::after). */}
+                    {a.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`https://icons.duckduckgo.com/ip3/${a.icon}.ico`} alt="" data-l={a.brand.slice(0, 1).toUpperCase()} width={28} height={28} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                    ) : null}
+                  </span>
+                  <span className={s.ecoText}>
+                    <b>{a.brand}</b>
+                    <small>{a.category} · {a.availability}</small>
+                    <span>{a.note}</span>
+                  </span>
+                  <Arrow />
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className={s.ecoFoot}>
+            <span>{K.ECOSYSTEM.source}</span>
+            <a className={s.textLink} href={K.ECOSYSTEM.more.href} target="_blank" rel="noopener noreferrer">{K.ECOSYSTEM.more.label}<Arrow /></a>
+          </p>
+        </Section>
+
         {/* Questions */}
         <Section id="questions">
           <Head id="questions" title={__t("Questions")} center />

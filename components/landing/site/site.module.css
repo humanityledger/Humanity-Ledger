@@ -585,3 +585,22 @@
 .cRound { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #f2f4f7; color: var(--ink-2); }
 .cInk { background: var(--ink); color: #fff; }
 .cField { flex: 1; height: 32px; display: flex; align-items: center; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line); color: #98a1b0; font-size: 13px; }
+
+/* Aztec ecosystem (28 Nov 2026): one card per app with its favicon over a letter tile. */
+.ecoGrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ecoCard { display: flex; align-items: flex-start; gap: 14px; height: 100%; padding: 18px 18px 18px 16px; border-radius: 20px; background: #fff; border: 1px solid var(--line); color: var(--ink); transition: border-color 0.2s ease, transform 0.2s var(--ease); }
+.ecoCard:hover { border-color: #c9ced8; transform: translateY(-2px); }
+.ecoCard:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+.ecoCard > svg { flex: none; margin-top: 4px; color: var(--ink-3); }
+.ecoIcon { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--wash); border: 1px solid var(--line); overflow: hidden; font-weight: 650; font-size: 17px; color: var(--ink-2); }
+.ecoIcon img { position: absolute; top: 7px; left: 7px; width: 28px; height: 28px; border-radius: 6px; background: var(--wash); object-fit: contain; font-size: 0; color: transparent; }
+/* Drawn only when the icon fails to load: the letter again, over the broken image box. */
+.ecoIcon img::after { content: attr(data-l); position: absolute; inset: -7px; display: grid; place-items: center; background: var(--wash); font-size: 17px; font-weight: 650; color: var(--ink-2); }
+.ecoText { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.ecoText b { font-size: 16.5px; font-weight: 650; letter-spacing: -0.015em; }
+.ecoText small { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.ecoText span { margin-top: 4px; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
+.ecoFoot { margin: 28px auto 0; max-width: 760px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 18px; text-align: center; font-size: 14px; color: var(--ink-3); }
+@media (max-width: 980px) { .ecoGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .ecoGrid { grid-template-columns: 1fr; } .ecoCard { padding: 16px 14px; } }
+@media (prefers-reduced-motion: reduce) { .ecoCard, .ecoCard:hover { transition: none; transform: none; } }
