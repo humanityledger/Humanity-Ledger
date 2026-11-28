@@ -221,7 +221,9 @@ export const isSystemSignal = (content: any): boolean => {
          content.startsWith('__TYPING__') ||
          content.startsWith('__KEY_') ||
          content.startsWith('__SIGNAL_') ||
-         content.startsWith('__CLEAR__');
+         content.startsWith('__CLEAR__') ||
+         // Community history capsules and requests (lib/communities/mls-history-backfill.ts): data, never a message.
+         content.startsWith('__HL_HIST_');
 };
 
 /**
@@ -5590,11 +5592,17 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             // Delivery receipt (double grey tick on the sender's side) for a message that arrived on
             // this device but is not being read now: page hidden, or another chat open. Sent once,
             // the first time this device sees the message. A message read now gets __READ__ instead.
+            // 28 Nov 2026: messages stayed on one tick for some people. The receipt was skipped for every
+            // wrapped message (replies, GIFs, stickers, photos, payments all start with "__") and for
+            // anyone who turned read receipts off. Now every real message gets "delivered" unless a
+            // "read" receipt is sent for it below; read receipts off hides only "read", as on WhatsApp.
+            const willSendRead =
+              !document.hidden && ledgerSettings?.show_read_receipts !== false && typeof content === 'string' && !content.startsWith('__') &&
+              String(msgConvPeer).toLowerCase() === activePeerRef.current?.toLowerCase();
             if (
-              firstSight && fromPeer && msg.id && typeof content === 'string' && !content.startsWith('__') &&
-              ledgerSettings?.show_read_receipts !== false &&
+              firstSight && fromPeer && msg.id && typeof content === 'string' && !isSystemSignal(content) &&
               /^0x[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$/.test(String(msgConvPeer)) &&
-              (document.hidden || String(msgConvPeer).toLowerCase() !== activePeerRef.current?.toLowerCase())
+              !willSendRead
             ) {
               sendMessage(client, msgConvPeer, `__DELIVERED__${realId}`, address).catch(() => {});
             }
@@ -7980,6 +7988,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 // A deleted chat stays out of the list until a message newer than the deletion.
                 .filter(conv => !hiddenAfterDelete(conv, deletedAtMs(conv.peerAddress, [effectiveAddress, address])))
                 .filter(conv => conv.peerAddress?.toLowerCase() !== address?.toLowerCase())
+                // Community channels open from Communities, never as chats (a channel saved as a chat
+                // before its community was known is hidden here too).
+                .filter(conv => !communityGroupIdsRef.current.has(String(conv.peerAddress || '').toLowerCase()))
                 .filter(conv => showArchived ? archivedPeers.has(conv.peerAddress.toLowerCase()) : !archivedPeers.has(conv.peerAddress.toLowerCase()))
                 .filter(conv => chatFilter === 'all' ? true
                   : chatFilter === 'unread' ? (conv.unreadCount || 0) > 0
