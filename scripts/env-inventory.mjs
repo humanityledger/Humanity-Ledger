@@ -22,6 +22,15 @@ const SKIP = new Set(['node_modules', '.next', '.git', 'archive', 'legacy']);
 
 /** Purpose of the variables an operator must get right. */
 const PURPOSE = {
+  COMMUNITY_APPS_MAX_API_KEY: 'Community apps max engine: provider key (server only, secret). With COMMUNITY_APPS_MAX_MODEL it turns on plan, parallel drafts, server checks and refinement.',
+  COMMUNITY_APPS_MAX_MODEL: 'Community apps max engine: the provider model id; use the most capable model the provider offers.',
+  COMMUNITY_APPS_MAX_PROVIDER: 'Community apps max engine: openai (any OpenAI-compatible endpoint) or anthropic. Default openai.',
+  COMMUNITY_APPS_MAX_BASE_URL: 'Community apps max engine: OpenAI-compatible base URL (default https://api.openai.com/v1).',
+  COMMUNITY_APPS_MAX_EFFORT: 'Community apps max engine: low | medium | high, sent as reasoning_effort to OpenAI-compatible reasoning models.',
+  COMMUNITY_APPS_MAX_OUTPUT_TOKENS: 'Community apps max engine: output tokens per call, 4000-128000 (default 32000).',
+  COMMUNITY_APPS_CANDIDATES: 'Community apps max engine: drafts written in parallel, 1-5 (default 3).',
+  COMMUNITY_APPS_BUDGET_MS: 'Community apps: time for one generation in ms, 30000-285000 (default 270000; the route allows 300 s).',
+  COMMUNITY_APPS_EFFORT: 'Community apps free path: Groq reasoning effort, low | medium | high (default low, fitted to the free tier).',
   NEXT_PUBLIC_AZTEC_NETWORK: 'Aztec network of this build: "alpha" (Aztec Alpha, Ethereum mainnet, real funds) or empty for the test network. Read at build time.',
   NEXT_PUBLIC_AZTEC_ALPHA_ENABLED: 'Must be "true" together with NEXT_PUBLIC_AZTEC_NETWORK=alpha, or the wallet refuses a node that settles on Ethereum mainnet.',
   NEXT_PUBLIC_AZTEC_L1_CHAIN_ID: 'L1 chain the build expects (1 on Alpha). Checked against the node.',
