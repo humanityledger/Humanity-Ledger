@@ -134,9 +134,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { communityId, walletAddress: caller },
     }).catch(() => null);
     const isAdmin = community.ownerAddress?.toLowerCase() === caller || membership?.role === 'ADMIN';
-    if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
     const body = await req.json().catch(() => ({}));
+    if (!isAdmin) {
+      // "Members can change the name and description" (changeInfo): members change those two
+      // fields only, never privacy or the picture.
+      const perms = membership ? await (prisma as any).communityPermission.findUnique({ where: { communityId }, select: { changeInfo: true } }).catch(() => null) : null;
+      const onlyInfo = Object.keys(body || {}).every((k) => k === 'name' || k === 'description');
+      if (!membership || perms?.changeInfo !== true || !onlyInfo) return NextResponse.json({ error: 'Only admins can change this.' }, { status: 403 });
+    }
     const data: Record<string, any> = {};
     if (body.name !== undefined) {
       const name = clean(body.name, 60);

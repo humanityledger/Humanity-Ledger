@@ -134,6 +134,11 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
       });
       if (res.ok) {
         const d = await res.json().catch(() => ({}));
+        if (d?.status === 'PENDING_APPROVAL') {
+          setJoinLink(''); setShowJoin(false);
+          toast.success(t("Request sent to {name}. You can open it once an admin approves you.", { name: d?.community?.name ?? '' }));
+          return;
+        }
         const id: string | undefined = d?.community?.id;
         await fetchMine();
         setJoinLink(''); setShowJoin(false);

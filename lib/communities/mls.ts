@@ -66,22 +66,58 @@ export async function groupMemberAddresses(client: any, groupId: string): Promis
   return out;
 }
 
-/** Admin only: make the group match the server's members. Returns what changed. */
+/**
+ * Admin only: make the group match the server's members. Returns what changed.
+ *
+ * Adds go in one commit and removals in one commit (one MLS epoch each, not one per person). The
+ * group's creator (the community owner, XMTP super admin) also makes the community's admins XMTP
+ * admins, so their apps can remove people too; before 27/11/2026 only the owner's app could, and a
+ * person removed by another admin kept reading new posts until the owner opened the community.
+ */
 export async function syncGroupMembers(client: any, groupId: string, c: CommunityLike, self: string): Promise<{ added: number; removed: number }> {
   const plan = reconcileMembers(serverMembers(c), await groupMemberAddresses(client, groupId), self);
-  for (const a of plan.add) await addGroupMember(client, groupId, a);
   // Removing needs a complete list (membersComplete): a partial answer from the server must never
   // empty the group.
   const remove = membersComplete(c) ? plan.remove : [];
-  for (const a of remove) await removeGroupMember(client, groupId, a);
-  return { added: plan.add.length, removed: remove.length };
+  const group = await client?.conversations?.getConversationById?.(groupId);
+  if (!group) return { added: 0, removed: 0 };
+  const ids = (list: string[]) => list.map((a) => ({ identifier: a, identifierKind: 'Ethereum' as const }));
+  let added = 0, removed = 0;
+  if (plan.add.length) {
+    try { await group.addMembersByIdentifiers(ids(plan.add)); added = plan.add.length; }
+    catch { for (const a of plan.add) { try { await addGroupMember(client, groupId, a); added++; } catch { /* not on XMTP yet */ } } }
+  }
+  if (remove.length) {
+    try { await group.removeMembersByIdentifiers(ids(remove)); removed = remove.length; }
+    catch { for (const a of remove) { try { await removeGroupMember(client, groupId, a); removed++; } catch { /* retried next time */ } } }
+  }
+  await grantAdmins(client, group, c).catch(() => { /* only the super admin can; others skip */ });
+  return { added, removed };
+}
+
+/** The super admin's app: community ADMINs (and the owner) are XMTP admins; nobody else is. */
+async function grantAdmins(client: any, group: any, c: CommunityLike): Promise<void> {
+  const selfInbox: string = client?.inboxId ?? '';
+  if (!selfInbox || !(await group.isSuperAdmin?.(selfInbox))) return;
+  const wanted = new Set<string>();
+  for (const m of c.members ?? []) {
+    const a = String(m?.walletAddress ?? '').toLowerCase();
+    if (m?.role === 'ADMIN' && ADDR.test(a)) {
+      const inbox = await client.findInboxIdByIdentifier?.({ identifier: a, identifierKind: 'Ethereum' }).catch(() => undefined);
+      if (inbox) wanted.add(inbox);
+    }
+  }
+  const current: string[] = (await group.listAdmins?.()) ?? [];
+  for (const inbox of wanted) if (!current.includes(inbox)) await group.addAdmin(inbox).catch(() => {});
+  for (const inbox of current) if (!wanted.has(inbox) && inbox !== selfInbox) await group.removeAdmin(inbox).catch(() => {});
 }
 
 /** Non-admin members: add the server's members missing from the group, never remove anyone. */
 export async function addMissingMembers(client: any, groupId: string, c: CommunityLike, self: string): Promise<number> {
   const plan = reconcileMembers(serverMembers(c), await groupMemberAddresses(client, groupId), self);
-  for (const a of plan.add) await addGroupMember(client, groupId, a);
-  return plan.add.length;
+  let n = 0;
+  for (const a of plan.add) { try { await addGroupMember(client, groupId, a); n++; } catch { /* not on XMTP yet */ } }
+  return n;
 }
 
 /** The first channel's group of a community being created: the creator only, members join later. */

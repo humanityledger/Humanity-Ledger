@@ -613,7 +613,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             body: JSON.stringify({ joinCode }),
           });
           const data = await res.json();
-          if (res.ok && data.community) {
+          if (res.ok && data.status === 'PENDING_APPROVAL') {
+            toast.success(tr("Request sent to {name}. You can open it once an admin approves you.", { name: data.community?.name ?? '' }));
+          } else if (res.ok && data.community) {
             setActivePeer(null);
             setActiveCommunity(data.community.id);
             setSidebarTab('communities');

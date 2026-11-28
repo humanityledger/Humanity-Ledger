@@ -130,6 +130,20 @@ export async function createSecureGroup(
   }
 
   // 4. Create the group via XMTP (MLS handles key material securely)
+  // A group with only its creator (the first channel of a new community) is made on this device
+  // with newGroupOptimistic: it needs no network round trip, its id is final at once, and it is
+  // published with the first post or the first member added. Waiting for the network here was the
+  // cause of "The group may still be on its way" when creating a community (27/11/2026).
+  if (validatedIdentifiers.length === 0) {
+    const conv = client.conversations as any;
+    if (typeof conv.newGroupOptimistic === 'function') {
+      const group = await conv.newGroupOptimistic({ groupName: safeName, groupDescription: safeDescription });
+      Promise.resolve(group.publishMessages?.()).catch(() => { /* published with the first post */ });
+      console.log(`[GroupChat] Group "${safeName}" created on this device with ID: ${group.id}`);
+      return group.id;
+    }
+  }
+
   const startedNs = BigInt(Date.now() - 5_000) * 1_000_000n;
   let group: any;
   try {
@@ -143,10 +157,14 @@ export async function createSecureGroup(
   } catch (e) {
     // "synced N messages, 0 failed N succeeded from cursor …": the group was created and the
     // commit published; only the wait for the network's receipt ran out (isSyncWaitError).
-    // Find it instead of reporting a failure, and let a later sync finish the invitations.
+    // Find it instead of reporting a failure (three tries over about 6 s), and let a later sync
+    // finish the invitations.
     if (!isSyncWaitError(e)) throw e;
-    group = await findGroupCreatedSince(client, safeName, startedNs);
-    if (!group) throw new Error('The group may still be on its way. Pull to refresh in a moment.');
+    for (let attempt = 0; attempt < 3 && !group; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 2_000));
+      group = await findGroupCreatedSince(client, safeName, startedNs).catch(() => null);
+    }
+    if (!group) throw new Error('The network did not confirm the new group in time. Check your connection and try again.');
     console.warn(`[GroupChat] Group "${safeName}" created; the network confirmed it late (${redactXmtpError(e)}).`);
     setTimeout(() => { Promise.resolve(group.sync?.()).catch(() => {}); }, 3_000);
   }
@@ -306,7 +324,7 @@ export async function getGroupMessages(client: Client, groupId: string): Promise
 async function findGroupCreatedSince(client: Client, name: string, sinceNs: bigint): Promise<any | null> {
   try { await client.conversations.sync(); } catch { /* local list still has it */ }
   const groups: any[] = await (client.conversations as any).listGroups();
-  const created = (g: any) => { try { return BigInt(g.createdAtNs ?? 0); } catch { return 0n; } };
+  const created = (g: any) => { try { return g.createdAtNs === undefined || g.createdAtNs === null ? sinceNs : BigInt(g.createdAtNs); } catch { return sinceNs; } };
   const matches = groups
     .filter((g) => sanitizeGroupMetadata(g.name ?? '') === name && created(g) >= sinceNs)
     .sort((a, b) => (created(b) > created(a) ? 1 : -1));
