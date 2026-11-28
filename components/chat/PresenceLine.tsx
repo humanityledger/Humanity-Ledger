@@ -25,7 +25,7 @@ export function PresenceLine({ typing, online, idle }: { typing: boolean; online
 export function OnlineDot({ online }: { online: boolean }) {
   return (
     <span
-      className={`absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full border-2 border-white bg-[#12a150] transition-[opacity,transform] duration-150 ease-out ${online ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
+      className={`icon-btn absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full border-2 border-white bg-[#12a150] transition-[opacity,transform] duration-150 ease-out ${online ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
       aria-hidden="true"
     />
   );

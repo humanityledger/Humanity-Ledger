@@ -154,7 +154,7 @@ export function ScheduleMeetingSheet({
 
         <fieldset>
           <legend className={label}>{t("Type")}</legend>
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#f2f4f7]">
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl lg-recessed">
             {(['video', 'voice'] as const).map((k) => (
               <button
                 key={k}
@@ -179,7 +179,7 @@ export function ScheduleMeetingSheet({
             id="meet-note"
             rows={2}
             maxLength={MAX_NOTE}
-            className="w-full px-3 py-2.5 rounded-xl border border-[#d0d5dd] bg-white text-[15px] text-[#15171c] outline-none focus:border-[#15171c] resize-none"
+            className="w-full px-3 py-2.5 rounded-xl lg-card text-[15px] text-[#15171c] outline-none focus:border-[#15171c] resize-none"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={t("What you want to talk about")}

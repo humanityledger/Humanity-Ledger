@@ -44,7 +44,8 @@ import { isControlMessage, type IndexInput } from '@/lib/communities/media-index
 import { ContextMenu, useContextMenuTrigger, type MenuAt, type MenuItem } from '@/components/chat/ui/ContextMenu';
 import { tintFor, initials } from '@/components/chat/ui/kit';
 import { addMissingMembers, mlsGroupOf, postToGroup, readGroupPosts, syncAllCommunityChannels, syncGroupMembers, type CommunityLike } from '@/lib/communities/mls';
-import { createCommunityGroup } from '@/lib/communities/mls';
+import { createCommunityGroup, requestHistory, sendHistoryCapsule } from '@/lib/communities/mls';
+import { absorbHistory } from '@/lib/communities/mls-history-backfill';
 import { checkPost, effectivePermissions, encodePin, isPrivileged, mayPinFor, rankIn, spamIds, type CommunityPermissions, type PostKind, type Rank } from '@/lib/communities/settings';
 import { followSuccessor, recreateOnMls } from '@/lib/communities/recreate';
 import { resolveInboxIdToAddress } from '@/lib/xmtp/client';
@@ -72,6 +73,8 @@ export interface ReaderPost {
   content?: string | null;
   contentHtml?: string | null;
   createdAt?: string | number;
+  /** Restored from another member's history capsule (sent before this device joined). */
+  relayed?: boolean;
 }
 
 type Shown = ReaderPost & { state?: 'sending' | 'failed'; error?: string };
@@ -307,6 +310,29 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     } catch { /* the header falls back to "Community" */ }
   }, [communityId, f, headers, me, initialChannelId]);
 
+  // Tell online members (welcome-queue) that this device still waits for the encrypted channel;
+  // at most every 8 s, and cleared once access arrives.
+  const lastSignal = useRef(0);
+  const signalWaiting = useCallback(() => {
+    const now = Date.now();
+    if (now - lastSignal.current < 8_000) return;
+    lastSignal.current = now;
+    void f('/api/chat/communities/welcome-queue', {
+      method: 'POST', credentials: 'include',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ communityId }),
+    }).catch(() => null);
+  }, [f, headers, communityId]);
+  const signalDone = useCallback(() => {
+    if (lastSignal.current === 0) return;
+    lastSignal.current = 0;
+    void f('/api/chat/communities/welcome-queue', {
+      method: 'POST', credentials: 'include',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ communityId, done: true }),
+    }).catch(() => null);
+  }, [f, headers, communityId]);
+
   const pendingRefetch = useRef(false);
   const fetchPosts = useCallback(async () => {
     if (mlsGroup) {
@@ -321,21 +347,39 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         await xmtpClient.conversations?.sync?.().catch?.(() => {});
         const inGroup = await resolveGroupForClient(xmtpClient, mlsGroup).catch(() => null);
         if (openGroup.current !== mlsGroup) return;
-        if (!inGroup) { setLoad((st) => (st === 'ready' ? 'ready' : 'waiting')); return; }
+        if (!inGroup) {
+          setLoad((st) => (st === 'ready' ? 'ready' : 'waiting'));
+          signalWaiting();
+          return;
+        }
+        signalDone();
         // The server lists this person as a member: a welcome still marked Unknown is theirs to accept.
         if (typeof inGroup.consentState === 'function' && typeof inGroup.updateConsentState === 'function') {
           const st = await Promise.resolve(inGroup.consentState()).catch(() => 1);
           if (st !== 1) await Promise.resolve(inGroup.updateConsentState(1)).catch(() => {});
         }
-        const list = await readGroupPosts(xmtpClient, mlsGroup);
+        const native = await readGroupPosts(xmtpClient, mlsGroup);
+        // History from before this device joined arrives in members' capsules (mls-history-backfill.ts)
+        // and is kept encrypted on this device, so the whole channel shows at once, also after a reload.
+        const selfInbox = String(xmtpClient?.inboxId ?? '');
+        const absorbed = await absorbHistory({ wallet: me, communityId, groupId: mlsGroup, selfInbox }, native).catch(() => null);
+        const list = absorbed ? absorbed.history : native;
+        if (absorbed) {
+          for (const r of absorbed.toAnswer) {
+            // Small random delay so two members online at once rarely answer the same request.
+            const gid = mlsGroup;
+            setTimeout(() => { void sendHistoryCapsule(xmtpClient, me, communityId, gid, r.rid).catch(() => 0); }, 400 + Math.floor(Math.random() * 3_600));
+          }
+          if (!absorbed.hadCache && myRank !== 'OWNER') void requestHistory(xmtpClient, me, mlsGroup).catch(() => false);
+        }
         const incoming: ReaderPost[] = [];
-        for (const m of list) {
+        for (const m of list as Array<{ id: string; senderInboxId: string; content: string; createdAt: number; authorAddress?: string; relayed?: boolean }>) {
           let addr = senders.current.get(m.senderInboxId);
           if (addr === undefined) {
             addr = (await resolveInboxIdToAddress(m.senderInboxId, xmtpClient).catch(() => null)) ?? '';
-            senders.current.set(m.senderInboxId, addr);
+            if (addr || !m.relayed) senders.current.set(m.senderInboxId, addr);
           }
-          incoming.push({ id: m.id, authorAddress: addr || undefined, content: m.content, createdAt: m.createdAt });
+          incoming.push({ id: m.id, authorAddress: addr || m.authorAddress || undefined, content: m.content, createdAt: m.createdAt, ...(m.relayed ? { relayed: true } : {}) });
         }
         if (openGroup.current !== mlsGroup) return;
         // Votes, reactions and receipts are kept for poll results and media, never shown as posts.
@@ -397,7 +441,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     } catch {
       setLoad((s) => (s === 'ready' ? 'ready' : 'error'));
     }
-  }, [communityId, f, headers, mlsGroup, mlsOn, xmtpClient, channels.length, activeChannel]);
+  }, [communityId, f, headers, mlsGroup, mlsOn, xmtpClient, channels.length, activeChannel, me, myRank, signalWaiting, signalDone]);
 
   /** One click for a member still waiting: fetch welcomes, add anyone missing, read again. */
   const checkAccess = useCallback(async () => {
@@ -407,7 +451,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     }
     setChecking(true);
     try {
+      lastSignal.current = 0;
+      signalWaiting();
       await Promise.resolve(xmtpClient.conversations?.syncAll?.([0, 1])).catch(() => {});
+      if (mlsGroup) await resolveGroupForClient(xmtpClient, mlsGroup, { patient: true }).catch(() => null);
       const c = mlsAdmin ?? mlsMember;
       if (c && mlsGroup) await addMissingMembers(xmtpClient, mlsGroup, c, me).catch(() => 0);
       fetchingPosts.current = null;
@@ -415,7 +462,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     } finally {
       setChecking(false);
     }
-  }, [xmtpClient, mlsAdmin, mlsMember, mlsGroup, me, fetchPosts, tr]);
+  }, [xmtpClient, mlsAdmin, mlsMember, mlsGroup, me, fetchPosts, tr, signalWaiting]);
 
   /** Join a public community from Discover / Reader without a join code. */
   const joinCommunity = useCallback(async () => {
@@ -465,7 +512,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
       if (typeof document === 'undefined' || document.visibilityState === 'visible') {
         void fetchPosts();
       }
-    }, 2_500);
+    }, 3_000);
     return () => clearInterval(fast);
   }, [mlsGroup, load, fetchPosts]);
 
@@ -633,7 +680,9 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
     return r.ok;
   };
   const kindOf = (text: string): PostKind => (text.startsWith('__POLL__') ? 'poll' : /^\s*\{\s*"type"\s*:\s*"hl\.(attachment|largefile)"/.test(text) || text.startsWith('__AUDIO__') ? 'media' : 'text');
-  const mayWrite = !mlsGroup || !communityLoaded || checkPost(rules, myRank, 'text', '', null).ok;
+  // No composer while this device has no key for the channel: sending could only fail.
+  const awaitingAccess = !!mlsGroup && load === 'waiting';
+  const mayWrite = !awaitingAccess && (!mlsGroup || !communityLoaded || checkPost(rules, myRank, 'text', '', null).ok);
   // Spam filter: on every member's app, posts it catches are hidden (never for privileged people).
   const spam = useMemo(() => (mlsGroup && rules.antiSpam ? spamIds(posts.filter((p) => !p.state).map((p) => ({ id: p.id, content: postText(p), authorAddress: p.authorAddress, createdAt: time(p) })), (a) => rankIn(roleInfo, a)) : new Set<string>()), [mlsGroup, rules.antiSpam, posts, roleInfo]);
 
@@ -856,9 +905,9 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
   const btn = 'min-h-[48px] min-w-[48px] px-4 rounded-2xl text-[18px] font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/25';
 
   return (
-    <section className="flex-1 flex flex-col h-full min-h-0 bg-white" aria-label={title}>
-      <header className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-[#d4d8de] bg-white">
-        <button type="button" onClick={onBack} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Back to your communities")}>
+    <section className="lg-canvas flex-1 flex flex-col h-full min-h-0" aria-label={title}>
+      <header className="lg-bar relative z-20 shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3">
+        <button type="button" onClick={onBack} className={`${btn} lg-pill px-3 rounded-full`} style={{ color: INK }} aria-label={tr("Back to your communities")}>
           <span aria-hidden="true" className="text-[22px] leading-none">‹</span>
           <span className="hidden sm:inline">{tr("Back")}</span>
         </button>
@@ -868,21 +917,21 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{members === 1 ? tr("1 member") : tr("{members} members", { members })}</p>
           )}
         </div>
-        <button type="button" onClick={() => { setSearchOpen((o) => !o); setQuery(''); }} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Search in this community")} aria-pressed={searchOpen} title={tr("Search in this community")}>
+        <button type="button" onClick={() => { setSearchOpen((o) => !o); setQuery(''); }} className={`${btn} lg-pill px-3 rounded-full`} style={{ color: INK }} aria-label={tr("Search in this community")} aria-pressed={searchOpen} title={tr("Search in this community")}>
           <Search size={21} strokeWidth={1.9} aria-hidden="true" />
         </button>
-        <button type="button" onClick={() => setPanel('media')} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Shared media")} title={tr("Shared media")}>
+        <button type="button" onClick={() => setPanel('media')} className={`${btn} lg-pill px-3 rounded-full`} style={{ color: INK }} aria-label={tr("Shared media")} title={tr("Shared media")}>
           <Images size={21} strokeWidth={1.9} aria-hidden="true" />
         </button>
-        <button type="button" onClick={() => setPanel('members')} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Members")} title={tr("Members")}>
+        <button type="button" onClick={() => setPanel('members')} className={`${btn} lg-pill px-3 rounded-full`} style={{ color: INK }} aria-label={tr("Members")} title={tr("Members")}>
           <Users size={21} strokeWidth={1.9} aria-hidden="true" />
         </button>
-        <button type="button" onClick={onManage} className={`${btn} border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`} style={{ color: INK }}>
+        <button type="button" onClick={onManage} className={`${btn} lg-pill rounded-full`} style={{ color: INK }}>
           {tr("Manage")}
         </button>
       </header>
       {channels.length > 1 && (
-        <nav className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2 border-b border-[#d4d8de] bg-white overflow-x-auto" aria-label={tr("Channels")}>
+        <nav className="lg-bar relative z-10 shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2 overflow-x-auto" aria-label={tr("Channels")}>
           {channels.map((ch) => {
             const on = ch.id === activeChannel?.id;
             return (
@@ -891,7 +940,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                 type="button"
                 onClick={() => { if (!on) { setActiveChannelId(ch.id); } }}
                 aria-pressed={on}
-                className={`shrink-0 min-h-[44px] px-4 rounded-full text-[16px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/25 ${on ? 'bg-[#15171c] text-white' : 'bg-[#f2f4f7] text-[#15171c] hover:bg-[#e4e7ec]'}`}
+                className={`shrink-0 min-h-[44px] px-4 rounded-full text-[16px] font-semibold whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/25 ${on ? 'bg-[#15171c] lg-ink text-white' : 'lg-recessed text-[#15171c] hover:bg-[#e4e7ec]'}`}
               >
                 #{ch.name}
               </button>
@@ -900,10 +949,10 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         </nav>
       )}
       {searchOpen && (
-        <div className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2 border-b border-[#d4d8de] bg-white">
+        <div className="lg-bar relative z-10 shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2">
           <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setSearchOpen(false); setQuery(''); } }}
             placeholder={tr("Search posts, files and people")} aria-label={tr("Search in this community")}
-            className="flex-1 min-w-0 h-11 px-4 rounded-xl bg-[#f2f4f7] outline-none text-[16px]" style={{ color: INK }} />
+            className="flex-1 min-w-0 h-11 px-4 rounded-full lg-recessed outline-none text-[16px]" style={{ color: INK }} />
           {query && <span className="text-[14px] tabular-nums shrink-0" style={{ color: INK_SOFT }} role="status">{tr("{count} found", { count: shownPosts.length })}</span>}
         </div>
       )}
@@ -929,7 +978,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         <PollComposer onClose={() => setPollOpen(false)} onSend={(encoded) => { setPollOpen(false); void submit(encoded); }} />
       )}
 
-      <p className="shrink-0 px-4 sm:px-6 py-3 text-[18px] leading-snug bg-[#f2f4f7] border-b border-[#d4d8de]" style={{ color: INK }} role="note">
+      <p className="shrink-0 px-4 sm:px-6 py-3 text-[18px] leading-snug lg-card" style={{ color: INK }} role="note">
         {tr(mlsGroup ? MLS_VISIBILITY_SENTENCE : readOnly ? LEGACY_VISIBILITY_SENTENCE : VISIBILITY_SENTENCE)}
       </p>
 
@@ -941,11 +990,11 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
           <div className="py-10 text-center" role="status" data-testid="mls-waiting">
             <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("You are in. The posts here are end-to-end encrypted: they appear as soon as a member who is online adds you to the encrypted channel.")}</p>
             {communityLoaded && myRank === null && !about.isPrivate && (
-              <button type="button" disabled={joining} onClick={() => void joinCommunity()} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:opacity-60`}>
+              <button type="button" disabled={joining} onClick={() => void joinCommunity()} className={`${btn} mx-auto mt-4 bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34] disabled:opacity-60`}>
                 {joining ? tr("Joining...") : tr("Join community")}
               </button>
             )}
-            <button type="button" onClick={() => { void checkAccess(); }} disabled={checking} aria-busy={checking} className={`${btn} mx-auto mt-4 border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7] disabled:opacity-60`} style={{ color: INK }}>
+            <button type="button" onClick={() => { void checkAccess(); }} disabled={checking} aria-busy={checking} className={`${btn} mx-auto mt-4 lg-pill rounded-full disabled:opacity-60`} style={{ color: INK }}>
               {checking ? tr("Checking…") : tr("Check encrypted access now")}
             </button>
             {!xmtpClient && (
@@ -956,7 +1005,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
         {load === 'error' && posts.length === 0 && (
           <div className="py-10 text-center" role="alert">
             <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("The posts could not be loaded. Check your connection and try again.")}</p>
-            <button type="button" onClick={() => { setLoad('loading'); fetchPosts(); }} className={`${btn} mx-auto mt-4 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
+            <button type="button" onClick={() => { setLoad('loading'); fetchPosts(); }} className={`${btn} mx-auto mt-4 bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
           </div>
         )}
         {load === 'ready' && posts.length === 0 && (
@@ -1002,6 +1051,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                       : <span className="font-semibold" style={{ color: INK }}>{author.name}</span>}
                     {author.wallet ? <span className="ml-1.5 tabular-nums" style={{ color: INK_SOFT }}>{author.wallet}</span> : null}
                     {when ? <span className="block text-[15px] mt-0.5" style={{ color: INK_SOFT }}>{when}</span> : null}
+                    {p.relayed ? <span className="block text-[12.5px] mt-0.5" style={{ color: INK_SOFT }} title={tr("Sent before you joined. Shared with you, encrypted, by a member's device.")}>{tr("Restored history")}</span> : null}
                   </p>
                 </div>
                 {heading && <p className="text-[19px] font-semibold mt-2" style={{ color: INK }}>{heading}</p>}
@@ -1013,7 +1063,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                       {u.forwardedFrom && <p className="mt-2 text-[13.5px] italic" style={{ color: INK_SOFT }}>{tr("Forwarded from {from}", { from: u.forwardedFrom })}</p>}
                       {u.reply && (
                         <button type="button" onClick={() => document.getElementById(`post-${u.reply!.id}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-                          className="mt-2 w-full text-left border-l-[3px] border-[#15171c] bg-[#f2f4f7] rounded-r-xl px-3 py-1.5 text-[14.5px] truncate" style={{ color: INK_SOFT }}>
+                          className="mt-2 w-full text-left border-l-[3px] border-[#15171c] lg-recessed rounded-r-xl px-3 py-1.5 text-[14.5px] truncate" style={{ color: INK_SOFT }}>
                           {u.reply.snippet || tr("Message")}
                         </button>
                       )}
@@ -1022,16 +1072,16 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                         <div className="flex flex-wrap items-center gap-1.5 mt-2">
                           {r && [...r.counts].map(([emoji, n]) => (
                             <button key={emoji} type="button" disabled={!mlsGroup || readOnly} onClick={() => void sendControl(r.mine === emoji ? encodeUnreact(p.id) : encodeReaction(p.id, emoji))}
-                              className={`h-8 px-2.5 rounded-full text-[14px] inline-flex items-center gap-1 border ${r.mine === emoji ? 'border-[#15171c] bg-[#eef2fb]' : 'border-[#d4d8de] bg-white'}`} aria-pressed={r.mine === emoji}>
+                              className={`icon-btn lg-pill h-8 px-2.5 rounded-full text-[14px] inline-flex items-center gap-1 ${r.mine === emoji ? 'ring-1 ring-[#15171c]' : ''}`} aria-pressed={r.mine === emoji}>
                               <span>{emoji}</span><span className="tabular-nums text-[13px]" style={{ color: INK }}>{n}</span>
                             </button>
                           ))}
                           {reactFor === p.id && (
-                            <span className="inline-flex items-center gap-0.5 h-9 px-1.5 rounded-full border border-[#d4d8de] bg-white" role="group" aria-label={tr("React")}>
+                            <span className="icon-btn inline-flex items-center gap-0.5 h-9 px-1.5 rounded-full lg-sheet" role="group" aria-label={tr("React")}>
                               {QUICK_REACTIONS.map((e) => (
-                                <button key={e} type="button" onClick={() => { setReactFor(null); void sendControl(r?.mine === e ? encodeUnreact(p.id) : encodeReaction(p.id, e)); }} className="w-8 h-8 grid place-items-center rounded-full text-[18px] hover:bg-[#f2f4f7]" aria-label={e}>{e}</button>
+                                <button key={e} type="button" onClick={() => { setReactFor(null); void sendControl(r?.mine === e ? encodeUnreact(p.id) : encodeReaction(p.id, e)); }} className="icon-btn w-8 h-8 grid place-items-center rounded-full text-[18px] hover:bg-black/[0.05]" aria-label={e}>{e}</button>
                               ))}
-                              <button type="button" onClick={() => setReactFor(null)} className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#f2f4f7]" aria-label={tr("Close")}><X size={15} /></button>
+                              <button type="button" onClick={() => setReactFor(null)} className="icon-btn w-8 h-8 grid place-items-center rounded-full hover:bg-black/[0.05]" aria-label={tr("Close")}><X size={15} /></button>
                             </span>
                           )}
                         </div>
@@ -1044,8 +1094,8 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
                   <div className="mt-2" role="alert">
                     <p className="text-[17px] font-semibold leading-snug" style={{ color: DANGER }}>{p.error}</p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
-                      <button type="button" onClick={() => dismiss(p.id)} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>{tr("Remove")}</button>
+                      <button type="button" onClick={() => submit(text, p.id)} className={`${btn} bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34]`}>{tr("Try again")}</button>
+                      <button type="button" onClick={() => dismiss(p.id)} className={`${btn} lg-pill rounded-full`} style={{ color: INK }}>{tr("Remove")}</button>
                     </div>
                   </div>
                 )}
@@ -1059,7 +1109,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
 
       {readOnly ? (
         <div
-          className="shrink-0 border-t border-[#d4d8de] bg-[#f2f4f7] px-4 sm:px-6 pt-4 pb-[max(16px,env(safe-area-inset-bottom))]"
+          className="lg-bar shrink-0 px-4 sm:px-6 pt-4 pb-[max(16px,env(safe-area-inset-bottom))]"
           role="region"
           aria-label={tr(READ_ONLY_TITLE)}
           data-testid="legacy-read-only"
@@ -1070,23 +1120,23 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             {successorId ? (
               <>
                 <p className="text-[18px] leading-snug mt-3" style={{ color: INK }}>{tr("It continues as a new community where posts are end-to-end encrypted and our server does not store them. Joining is your choice.")}</p>
-                <button type="button" onClick={follow} disabled={moving === 'working'} className={`${btn} mt-3 px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
+                <button type="button" onClick={follow} disabled={moving === 'working'} className={`${btn} mt-3 px-6 bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
                   {moving === 'working' ? tr("Joining…") : tr("Join the encrypted community")}
                 </button>
               </>
             ) : isAdmin ? (
               moving === 'idle' ? (
-                <button type="button" onClick={() => { setMoveError(''); setMoving('confirm'); }} className={`${btn} mt-3 px-6 bg-[#15171c] text-white hover:bg-[#2a2d34]`}>
+                <button type="button" onClick={() => { setMoveError(''); setMoving('confirm'); }} className={`${btn} mt-3 px-6 bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34]`}>
                   {tr("Re-create it end-to-end encrypted")}
                 </button>
               ) : (
                 <div className="mt-3" data-testid="legacy-recreate-confirm">
                   <p className="text-[18px] leading-snug" style={{ color: INK }}>{tr("A new community starts with the same name, and its posts are end-to-end encrypted. Members are not added for them: each one sees a button here to join. Old posts are not copied.")}</p>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <button type="button" onClick={recreate} disabled={moving === 'working'} className={`${btn} px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
+                    <button type="button" onClick={recreate} disabled={moving === 'working'} className={`${btn} px-6 bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
                       {moving === 'working' ? tr("Creating…") : tr("Create the encrypted community")}
                     </button>
-                    <button type="button" onClick={() => setMoving('idle')} disabled={moving === 'working'} className={`${btn} border-2 border-[#15171c] bg-white`} style={{ color: INK }}>{tr("Cancel")}</button>
+                    <button type="button" onClick={() => setMoving('idle')} disabled={moving === 'working'} className={`${btn} lg-pill rounded-full`} style={{ color: INK }}>{tr("Cancel")}</button>
                   </div>
                 </div>
               )
@@ -1096,23 +1146,36 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             {moveError && <p className="text-[17px] font-semibold leading-snug mt-2" style={{ color: DANGER }} role="alert">{moveError}</p>}
           </div>
         </div>
+      ) : awaitingAccess ? (
+        <div className="shrink-0 px-3 sm:px-6 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]" data-testid="mls-access-card">
+          <div className="lg-dock max-w-[720px] mx-auto rounded-[26px] px-4 py-3.5 flex items-center gap-3" role="status" aria-live="polite">
+            <span className="lg-sync-dot shrink-0" aria-hidden="true" />
+            <p className="flex-1 min-w-0 text-[15px] leading-snug" style={{ color: INK }}>
+              {tr("Syncing encrypted access to this channel… You can write as soon as a member's device adds this one.")}
+            </p>
+            <button type="button" onClick={() => { void checkAccess(); }} disabled={checking} aria-busy={checking}
+              className="lg-pill shrink-0 min-h-[44px] px-4 rounded-full text-[14px] font-semibold disabled:opacity-60" style={{ color: INK }}>
+              {checking ? tr("Checking…") : tr("Check access now")}
+            </button>
+          </div>
+        </div>
       ) : (
       <form
-        className="shrink-0 border-t border-[#d4d8de] bg-white px-3 sm:px-6 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]"
+        className="lg-composer-row shrink-0 px-3 sm:px-6 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]"
         onSubmit={(e) => { e.preventDefault(); submit(draft); }}
       >
         <div className="max-w-[720px] mx-auto">
-          <label htmlFor={`community-write-${communityId}`} className="block text-[18px] font-semibold mb-2" style={{ color: INK }}>
+          <label htmlFor={`community-write-${communityId}`} className="block text-[15px] font-semibold mb-1.5 px-1" style={{ color: INK_SOFT }}>
             {tr("Write a post")}
           </label>
           {replyTo && (
-            <div className="flex items-center gap-2 mb-2 border-l-[3px] border-[#15171c] bg-[#f2f4f7] rounded-r-xl pl-3 pr-1 py-1.5">
+            <div className="lg-card flex items-center gap-2 mb-2 border-l-[3px] border-[#15171c] rounded-2xl pl-3 pr-1 py-1.5">
               <span className="flex-1 min-w-0 text-[14.5px] truncate" style={{ color: INK_SOFT }}>{tr("Replying to: {text}", { text: replyTo.snippet || tr("Message") })}</span>
-              <button type="button" onClick={() => setReplyTo(null)} className="w-9 h-9 grid place-items-center rounded-full hover:bg-white" aria-label={tr("Cancel reply")}><X size={16} /></button>
+              <button type="button" onClick={() => setReplyTo(null)} className="icon-btn w-9 h-9 grid place-items-center rounded-full hover:bg-black/[0.05]" aria-label={tr("Cancel reply")}><X size={16} /></button>
             </div>
           )}
           {!mayWrite && communityLoaded && myRank === null && !about.isPrivate && (
-            <button type="button" disabled={joining} onClick={() => void joinCommunity()} className="mb-2 w-full min-h-[44px] rounded-2xl bg-[#15171c] text-white text-[15px] font-semibold disabled:opacity-50">{joining ? tr("Joining...") : tr("Join community")}</button>
+            <button type="button" disabled={joining} onClick={() => void joinCommunity()} className="mb-2 w-full min-h-[44px] rounded-2xl bg-[#15171c] lg-ink text-white text-[15px] font-semibold disabled:opacity-50">{joining ? tr("Joining...") : tr("Join community")}</button>
           )}
           {!mayWrite && communityLoaded && myRank === null && about.isPrivate && (
             <p className="mb-2 text-[16px] leading-snug" style={{ color: INK_SOFT }} role="note">{tr("Only members can post here.")}</p>
@@ -1133,7 +1196,7 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             maxLength={8000}
             data-allow-context
             placeholder={tr("Write your message here")}
-            className="w-full rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] leading-relaxed resize-none placeholder:text-[#4a505c] bg-white"
+            className="lg-composer w-full rounded-[24px] outline-none px-5 py-3 text-[18px] leading-relaxed resize-none placeholder:text-[#5b606b]"
             style={{ color: INK }}
           />
           {/* Attach (encrypted, same pipeline as private chats) and Poll exist only where posts are
@@ -1142,22 +1205,22 @@ export function CommunityReader({ communityId, myAddress, nameFor, onBack, onMan
             {mlsGroup && (
               <>
                 <input ref={filePick} type="file" className="hidden" multiple onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; void attachFiles(fs); }} />
-                <button type="button" onClick={() => filePick.current?.click()} disabled={!!attaching} className={`${btn} px-3 hover:bg-[#eff1f4] disabled:opacity-50`} style={{ color: INK }} aria-label={tr("Attach photos or files")} title={tr("Attach photos or files")}>
+                <button type="button" onClick={() => filePick.current?.click()} disabled={!!attaching} className={`${btn} icon-btn lg-orb px-3 rounded-full disabled:opacity-50`} style={{ color: INK }} aria-label={tr("Attach photos or files")} title={tr("Attach photos or files")}>
                   <Paperclip size={21} strokeWidth={1.9} aria-hidden="true" />
                 </button>
                 <button type="button" onClick={() => void (rec ? stopVoice() : startVoice())} disabled={!!attaching && !rec}
-                  className={`${btn} px-3 ${rec ? 'bg-[#fdecec] text-[#b42318]' : 'hover:bg-[#eff1f4]'} disabled:opacity-50`} style={rec ? undefined : { color: INK }}
+                  className={`${btn} icon-btn px-3 rounded-full ${rec ? 'bg-[#fdecec] text-[#b42318]' : 'lg-orb'} disabled:opacity-50`} style={rec ? undefined : { color: INK }}
                   aria-label={rec ? tr("Stop and send voice message") : tr("Record a voice message")} title={rec ? tr("Stop and send voice message") : tr("Record a voice message")} aria-pressed={!!rec}>
                   {rec ? <Square size={18} strokeWidth={2.2} aria-hidden="true" /> : <Mic size={21} strokeWidth={1.9} aria-hidden="true" />}
                   {rec && <span className="tabular-nums text-[15px]">{Math.floor(recSecs / 60)}:{String(recSecs % 60).padStart(2, '0')}</span>}
                 </button>
-                <button type="button" onClick={() => { if (allowed('poll')) setPollOpen(true); }} className={`${btn} px-3 hover:bg-[#eff1f4]`} style={{ color: INK }} aria-label={tr("Create a poll")} title={tr("Create a poll")}>
+                <button type="button" onClick={() => { if (allowed('poll')) setPollOpen(true); }} className={`${btn} lg-pill px-3 rounded-full`} style={{ color: INK }} aria-label={tr("Create a poll")} title={tr("Create a poll")}>
                   <BarChart3 size={21} strokeWidth={1.9} aria-hidden="true" />
                 </button>
                 {attaching && <span className="text-[14px] truncate" style={{ color: INK_SOFT }} role="status">{attaching}</span>}
               </>
             )}
-            <button type="submit" disabled={!draft.trim()} className={`${btn} ml-auto px-6 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
+            <button type="submit" disabled={!draft.trim()} className={`${btn} ml-auto px-6 rounded-full bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`}>
               {tr("Send")}
             </button>
           </div>
@@ -1176,7 +1239,7 @@ function PostItem({ anchor, failed, mine, label, onMenu, children }: { anchor?: 
       {...handlers}
       id={anchor}
       aria-label={label}
-      className={`rounded-2xl border px-4 py-3 ${failed ? 'border-[#9b1c16] bg-[#fdf3f2]' : mine ? 'border-[#c9d6f2] bg-[#f4f7fe]' : 'border-[#d4d8de] bg-white'}`}
+      className={`lg-card rounded-2xl px-4 py-3 ${failed ? 'ring-1 ring-[#9b1c16] bg-[#fdf3f2]' : mine ? 'ring-1 ring-[#c9d6f2] bg-[#f4f7fe]' : ''}`}
       style={{ WebkitTouchCallout: 'none' }}
     >
       {children}

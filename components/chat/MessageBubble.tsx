@@ -47,7 +47,8 @@ const AgreementCard = dynamic(() => import('./AgreementCard').then((m) => m.Agre
 
 const INK = '#15171c';
 
-const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
+/* Rich cards in high-density porcelain glass (≥ 0.94 white): ink stays ≥ 10:1 on any chat theme. */
+const CARD = 'rounded-2xl lg-card';
 
 const shortAddress = (value: unknown) => {
   const v = String(value || '');
@@ -59,7 +60,7 @@ function CardLabel({ icon, children, aside }: { icon: React.ReactNode; children:
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-2 text-[13px] text-[#727a88]">
-        <span className="w-6 h-6 rounded-full bg-[#eff1f4] text-[#15171c] flex items-center justify-center" aria-hidden="true">{icon}</span>
+        <span className="icon-btn w-6 h-6 rounded-full lg-tile text-[#15171c] flex items-center justify-center" aria-hidden="true">{icon}</span>
         {children}
       </span>
       {aside}
@@ -172,7 +173,7 @@ const PollBubble = React.memo(({ content, msg, onVotePoll, clientInboxId }: {
               {totalVotes > 0 && (
                 <span
                   aria-hidden="true"
-                  className={`absolute inset-y-0 left-0 transition-[width] duration-700 ${selected ? 'bg-[#e9ebef]' : 'bg-[#f2f4f7]'}`}
+                  className={`absolute inset-y-0 left-0 transition-[width] duration-700 ${selected ? 'bg-[#e9ebef]' : 'lg-recessed'}`}
                   style={{ width: `${pct}%` }}
                 />
               )}
@@ -276,7 +277,7 @@ const ZkPaymentBubble = React.memo(({ content }: { content: string; isMe: boolea
         <dd className="text-[#15171c] truncate text-right tabular-nums">{result.recipientTag}</dd>
       </dl>
       {result.memo && (
-        <p className="mt-3 bg-[#f7f8fa] border border-[#eceef2] px-3 py-2 rounded-xl text-[14px] text-[#4a505c]">{result.memo}</p>
+        <p className="mt-3 lg-recessed border border-[#eceef2] px-3 py-2 rounded-xl text-[14px] text-[#4a505c]">{result.memo}</p>
       )}
       <DemoNote />
     </div>
@@ -313,7 +314,7 @@ const ZkTipBubble = React.memo(({ content }: { content: string; isMe: boolean })
       </p>
       <p className="text-[13px] text-[#727a88] mt-1 truncate">{tr("From {senderTag} to {recipientTag}", { senderTag: tip.senderTag, recipientTag: tip.recipientTag })}</p>
       {tip.message && (
-        <p className="mt-3 bg-[#f7f8fa] border border-[#eceef2] px-3 py-2 rounded-xl text-[14px] text-[#4a505c]">{tip.message}</p>
+        <p className="mt-3 lg-recessed border border-[#eceef2] px-3 py-2 rounded-xl text-[14px] text-[#4a505c]">{tip.message}</p>
       )}
       <DemoNote />
     </div>
@@ -444,7 +445,7 @@ LocationBubble.displayName = 'LocationBubble';
 function CallRow({ icon, title, text, tone = 'neutral', action }: { icon: React.ReactNode; title: string; text: string; tone?: 'neutral' | 'missed'; action?: React.ReactNode }) {
   return (
     <div className={`${CARD} flex items-center gap-3 px-3.5 py-3 min-w-[200px]`}>
-      <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tone === 'missed' ? 'bg-[#fdecec] text-[#d93036]' : 'bg-[#eff1f4] text-[#15171c]'}`} aria-hidden="true">
+      <span className={`icon-btn w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tone === 'missed' ? 'bg-[#fdecec] text-[#d93036]' : 'lg-recessed text-[#15171c]'}`} aria-hidden="true">
         {icon}
       </span>
       <span className="flex flex-col flex-1 min-w-0">
@@ -489,7 +490,7 @@ const CallLogBubble = React.memo(({ content }: { content: string; isMe: boolean 
           }}
           aria-label={e.kind === 'video' ? tr("Video call back") : tr("Call back")}
           title={e.kind === 'video' ? tr("Video call back") : tr("Call back")}
-          className="ml-1 w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[#1f9d55] hover:bg-[#eaf6ef] active:scale-95 transition"
+          className="icon-btn ml-1 w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[#1f9d55] hover:bg-[#eaf6ef] active:scale-95 transition"
         >
           {e.kind === 'video' ? <Video size={17} strokeWidth={2} /> : <Phone size={17} strokeWidth={2} />}
         </button>
@@ -531,7 +532,7 @@ const GroupCallBubble = React.memo(({ isMe }: { content: string; isMe: boolean; 
   const tr = useT();
   return ((
   <div className={`${CARD} flex items-center gap-3 p-3.5 min-w-[240px] max-w-[300px]`}>
-    <span className="w-9 h-9 rounded-full bg-[#eff1f4] text-[#4a505c] flex items-center justify-center shrink-0" aria-hidden="true">
+    <span className="icon-btn w-9 h-9 rounded-full lg-tile text-[#4a505c] flex items-center justify-center shrink-0" aria-hidden="true">
       <Users size={16} strokeWidth={1.9} />
     </span>
     <span className="flex flex-col min-w-0">
@@ -850,7 +851,7 @@ export const MessageBubble = React.memo(({
     <React.Fragment>
       {showDate && (
         <div className="flex justify-center my-4" role="separator" aria-label={dateStr}>
-          <span className="px-3 py-1 bg-white border border-[#e6e8ec] rounded-full text-[12.5px] font-medium text-[#727a88]">{dateStr}</span>
+          <span className="px-3 py-1 lg-pill rounded-full text-[12.5px] font-medium text-[#727a88]">{dateStr}</span>
         </div>
       )}
 
@@ -871,7 +872,7 @@ export const MessageBubble = React.memo(({
       <div
         id={`msg-${msg.id}`}
         data-allow-context="true"
-        className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}${entering ? (isMe ? ' hl-msg-in-me' : ' hl-msg-in-peer') : ''}`}
+        className={`flex flex-col relative w-full ${isMe ? 'items-end' : 'items-start'}${entering ? (isMe ? 'hl-msg-in-me' : 'hl-msg-in-peer') : ''}`}
         style={{ marginBottom: 2 }}
         onAnimationEnd={entering ? (e) => { if (e.target === e.currentTarget) setEntering(false); } : undefined}
       >
@@ -1008,7 +1009,7 @@ export const MessageBubble = React.memo(({
                   <button
                     type="button"
                     onClick={saveToVault}
-                    className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-white/95 rounded-full text-[#15171c] shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10"
+                    className="icon-btn absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-white/95 rounded-full text-[#15171c] shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10"
                     aria-label={tr("Save to vault")}
                     title={tr("Save to vault")}
                   >
@@ -1028,7 +1029,7 @@ export const MessageBubble = React.memo(({
                     onClick={e => e.stopPropagation()}
                     className={`${CARD} flex items-center gap-3 px-3.5 py-3 min-w-[220px] max-w-[300px] hover:border-[#c9ced6] transition-colors`}
                   >
-                    <span className="w-10 h-10 rounded-xl bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                    <span className="w-10 h-10 rounded-xl lg-recessed text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
                       <FileText size={18} strokeWidth={1.8} />
                     </span>
                     <span className="flex flex-col min-w-0 flex-1">
@@ -1063,7 +1064,7 @@ export const MessageBubble = React.memo(({
                     type="button"
                     onClick={jumpToReply}
                     className={`flex items-stretch gap-2 mb-1.5 -mx-1 px-2 py-1.5 rounded-xl text-left max-w-[260px] transition-colors ${
-                      isMe ? 'bg-white/10 hover:bg-white/15' : 'bg-[#f2f4f7] hover:bg-[#eceef2]'
+                      isMe ? 'bg-white/10 hover:bg-white/15' : 'lg-recessed hover:bg-[#eceef2]'
                     }`}
                   >
                     <span className={`w-[3px] rounded-full shrink-0 ${isMe ? 'bg-white/60' : 'bg-[#15171c]'}`} aria-hidden="true" />
@@ -1118,8 +1119,8 @@ export const MessageBubble = React.memo(({
                       onClick={() => onReact(msg.id, emoji)}
                       aria-pressed={mine}
                       aria-label={`${emoji} ${Array.isArray(users) ? users.length : ''}`}
-                      className={`text-[13px] h-6 px-1.5 rounded-full flex items-center gap-1 border bg-white shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-transform active:scale-95 ${
-                        mine ? 'border-[#15171c]' : 'border-[#e6e8ec]'
+                      className={`icon-btn lg-pill text-[13px] h-6 px-1.5 rounded-full flex items-center gap-1 transition-transform active:scale-95 ${
+                        mine ? 'ring-1 ring-[#15171c]' : ''
                       }`}
                     >
                       <span>{emoji}</span>

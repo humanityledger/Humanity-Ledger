@@ -97,11 +97,11 @@ export function PaymentsSettingsSheet({ onClose }: { onClose: () => void }) {
       ) : (
         <p className="text-[13.5px] text-[#5b606b]">{tr("Nothing settled in the last 30 days{value}.", { value: getPrivateWallet().state.phase === 'ready' ? '' : tr(", or your private wallet is closed") })}</p>
       )}
-      <button type="button" onClick={exportCsv} disabled={!activity.length} className="mt-3 w-full h-11 rounded-xl border border-[#d0d5dd] bg-white text-[#15171c] font-semibold text-[14.5px] disabled:opacity-50">{tr("Download report (CSV)")}</button>
+      <button type="button" onClick={exportCsv} disabled={!activity.length} className="mt-3 w-full h-11 rounded-xl lg-card text-[#15171c] font-semibold text-[14.5px] disabled:opacity-50">{tr("Download report (CSV)")}</button>
       <p className="mt-2 text-[12.5px] text-[#5b606b]">{tr("Made on this device from your wallet’s record, for your own accounts or your adviser. Nothing is uploaded.")}</p>
 
       <div className="mt-5 grid gap-2">
-        <button type="button" onClick={save} className="w-full h-12 rounded-xl bg-[#15171c] text-white font-semibold text-[15px]">{tr("Save")}</button>
+        <button type="button" onClick={save} className="w-full h-12 rounded-xl bg-[#15171c] lg-ink text-white font-semibold text-[15px]">{tr("Save")}</button>
         <button type="button" onClick={onClose} className="w-full h-11 text-[#5b606b] font-semibold text-[15px]">{tr("Cancel")}</button>
       </div>
     </div>

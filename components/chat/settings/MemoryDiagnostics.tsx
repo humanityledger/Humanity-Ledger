@@ -47,7 +47,7 @@ export function MemoryDiagnostics() {
     </div>
   );
   return (
-    <div className="bg-white rounded-2xl border border-[#e6e8ec] p-5 mb-6" aria-busy={!snap}>
+    <div className="lg-card rounded-2xl p-5 mb-6" aria-busy={!snap}>
       <div className="flex items-center gap-2 mb-2">
         <Cpu size={16} aria-hidden="true" />
         <p className="text-[12px] text-[#727a88] font-semibold">{t("Memory")}</p>
@@ -62,7 +62,7 @@ export function MemoryDiagnostics() {
         type="button"
         onClick={hibernate}
         disabled={busy}
-        className="mt-4 w-full min-h-[44px] rounded-xl bg-[#15171c] text-white text-[14px] font-semibold disabled:opacity-50"
+        className="mt-4 w-full min-h-[44px] rounded-xl bg-[#15171c] lg-ink text-white text-[14px] font-semibold disabled:opacity-50"
       >
         {busy ? t("Working…") : t("Hibernate private node and trim memory")}
       </button>

@@ -17,9 +17,15 @@ describe('message entrance', () => {
   });
 
   it('every path that confirms our message keeps the optimistic render key', () => {
-    expect((chat.match(/adoptOptimistic\(prev\[(idx|optIdx|burnIdx)\]/g) ?? []).length).toBe(3);
-    expect(chat).toMatch(/adopted\.set\(confirmed\.id, adoptOptimistic\(exactTwin, confirmed\)\)/);
-    expect(chat).toMatch(/newConfirmed\.map\(c => adopted\.get\(c\.id\) \?\? c\)/);
+    // The adoption moved to lib/chat/optimistic-send.ts; the chat delegates every confirmation path there.
+    const opt = read('lib/chat/optimistic-send.ts');
+    expect(opt).toMatch(/clientKey: optimistic\.clientKey \?\? optimistic\.id/);
+    expect(opt).toMatch(/adoptOptimistic\(opt as any, m as any\)/); // confirmOptimistic (send resolved)
+    expect(opt).toMatch(/adoptOptimistic\(prev\[idx\], incoming\)/); // reconcileIncomingMessage (stream)
+    expect(opt).toMatch(/export function reconcileIncomingBatch</);
+    expect(chat).toMatch(/confirmOptimistic\(prev, optimisticId, realId\)/);
+    expect(chat).toMatch(/reconcileIncomingMessage\(prev, mappedMsg,/);
+    expect((chat.match(/reconcileIncomingBatch\(prev, /g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
   it('is one CSS animation of transform and opacity, 160-200 ms, read once at mount', () => {

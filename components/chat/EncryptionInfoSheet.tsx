@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { inboxDevicesFor, safetyDigits } from '@/lib/chat/safety-glyphs';
 import { clearVerified, markVerified, verifyState, VERIFIED_EVENT, type VerifyState } from '@/lib/chat/verified-contacts';
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
+import { useBackLayer } from '@/hooks/useMobileBackStack';
 
 /**
  * The safety number covers both XMTP inboxes and every device registered on them
@@ -37,6 +39,13 @@ export function EncryptionInfoSheet({
   const [code, setCode] = useState('');
   const [unavailable, setUnavailable] = useState(false);
   const [vstate, setVstate] = useState<VerifyState>('unverified');
+  useBackLayer(open, onClose);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
   useEffect(() => {
     const read = () => setVstate(verifyState(peerAddress, code || null));
     read();
@@ -68,11 +77,12 @@ export function EncryptionInfoSheet({
     [<Phone key="p" size={16} />, 'Calls', 'WebRTC with DTLS SRTP, encrypted between your devices. With IP masking on, media goes through a relay but stays encrypted.'],
   ];
   return (
-    <div className="fixed inset-0 z-[250002] bg-black/40 flex items-end sm:items-center justify-center" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={tr("Encryption details")} className="w-full max-w-md bg-white rounded-t-[24px] sm:rounded-[24px] px-6 pt-5 pb-6 max-h-[88vh] overflow-y-auto">
+    <BodyPortal>
+    <div className="lg-scrim fixed inset-0 z-[260500] flex items-end sm:items-center justify-center sm:p-3" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={tr("Encryption details")} className="lg-sheet w-full max-w-[100%] sm:w-[min(calc(100vw-24px),448px)] rounded-t-[28px] sm:rounded-[28px] px-6 pt-5 pb-[max(24px,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-[19px] font-semibold text-[#15171c] flex items-center gap-2"><Lock size={18} />{" "}{tr("Verify encryption")}</h3>
-          <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-8 h-8 rounded-full bg-[#f2f4f7] flex items-center justify-center"><X size={16} className="text-[#727a88]" /></button>
+          <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center hover:bg-black/[0.05]"><span className="icon-btn lg-tile w-8 h-8 rounded-full flex items-center justify-center"><X size={16} className="text-[#4a505c]" /></span></button>
         </div>
         <p className="text-[14px] text-[#4a505c] leading-relaxed mb-4">{tr("Messages in this chat are end to end encrypted. Nobody outside it, including Humanity Ledger, can read them.")}</p>
         {rows.map(([icon, t, d]) => (
@@ -84,7 +94,7 @@ export function EncryptionInfoSheet({
         <div className="py-3 border-t border-[#eceef2]">
           <p className="text-[14px] font-semibold text-[#15171c]">{tr("Safety number")}</p>
           <p className="text-[13px] text-[#4a505c] leading-relaxed mb-2">{tr("Derived from both inboxes and every device on them. Compare it with {peerName} in person or on a call. If it matches, nobody has added a device to either side. It changes whenever one of you adds or removes a device.", { peerName })}</p>
-          <p className="font-mono text-[15px] tracking-wide text-[#15171c] bg-[#f2f4f7] rounded-xl p-3 break-words leading-7" data-testid="safety-number">{code || (unavailable ? tr("Not available until both devices are online on XMTP.") : '...')}</p>
+          <p className="font-mono text-[15px] tracking-wide text-[#15171c] lg-recessed rounded-xl p-3 break-words leading-7" data-testid="safety-number">{code || (unavailable ? tr("Not available until both devices are online on XMTP.") : '...')}</p>
           {code && (
             <button type="button" onClick={() => { navigator.clipboard?.writeText(code); toast.success(tr("Safety number copied")); }} className="mt-2 text-[13px] font-semibold text-[#15171c] inline-flex items-center gap-1.5"><Copy size={14} />{" "}{tr("Copy")}</button>
           )}
@@ -95,14 +105,14 @@ export function EncryptionInfoSheet({
             <div className="mt-3 flex items-center gap-2" data-testid="verify-actions">
               {vstate === 'verified' ? (
                 <>
-                  <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#e8f6f0] px-3 text-[13px] font-semibold text-[#0a7a55]"><ShieldCheck size={15} />{" "}{tr("Verified")}</span>
-                  <button type="button" onClick={() => { clearVerified(peerAddress); toast.success(tr("Verification removed")); }} className="h-9 px-3 rounded-full text-[13px] font-semibold text-[#5b606b] hover:bg-[#f2f4f7]">{tr("Remove")}</button>
+                  <span className="icon-btn inline-flex h-9 items-center gap-1.5 rounded-full bg-[#e8f6f0] px-3 text-[13px] font-semibold text-[#0a7a55]"><ShieldCheck size={15} />{" "}{tr("Verified")}</span>
+                  <button type="button" onClick={() => { clearVerified(peerAddress); toast.success(tr("Verification removed")); }} className="icon-btn h-9 px-3 rounded-full text-[13px] font-semibold text-[#5b606b] hover:bg-[#f2f4f7]">{tr("Remove")}</button>
                 </>
               ) : (
                 <button
                   type="button"
                   onClick={() => { markVerified(peerAddress, code); toast.success(tr("{peerName} verified on this device", { peerName })); }}
-                  className="h-10 px-4 rounded-[12px] bg-[#15171c] text-white text-[14px] font-semibold inline-flex items-center gap-2 hover:bg-[#2b2f38]"
+                  className="h-10 px-4 rounded-[12px] bg-[#15171c] lg-ink text-white text-[14px] font-semibold inline-flex items-center gap-2 hover:bg-[#2b2f38]"
                 >
                   <ShieldCheck size={16} /> {vstate === 'changed' ? tr("It matches again: mark verified") : tr("It matches: mark as verified")}
                 </button>
@@ -121,5 +131,6 @@ export function EncryptionInfoSheet({
         <p className="text-[12px] text-[#727a88] leading-relaxed pt-2">{tr("Your account is your wallet. Metadata such as when you are online may be visible to the network.")}</p>
       </div>
     </div>
+    </BodyPortal>
   );
 }

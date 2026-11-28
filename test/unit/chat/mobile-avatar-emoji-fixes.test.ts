@@ -12,8 +12,12 @@ const profile = readFileSync('components/chat/profile/ProfileShare.tsx', 'utf8')
 describe('avatars', () => {
   it('only your own avatar starts from your photo and listens to your settings', () => {
     const fn = chat.slice(chat.indexOf('function Avatar('), chat.indexOf('const shortAddr'));
-    expect(fn).toMatch(/isMe\s*\n?\s*\? localStorage\.getItem\('ledger_avatar'\)/);
-    expect(fn).toMatch(/if \(!isMe\) return;/);
+    // The chat's Avatar delegates to the one avatar component, which reads your photo only for you.
+    expect(fn).toMatch(/<UserAvatar address=\{address\} isMe=\{isMe \|\| undefined\} size=\{size\} \/>/);
+    const ua = readFileSync('components/chat/UserAvatar.tsx', 'utf8');
+    expect(ua).toMatch(/me && typeof window !== 'undefined' \? readOwnPhoto\(\) : ''/);
+    expect(ua).toMatch(/localStorage\.getItem\('ledger_avatar'\)/);
+    expect(ua).toMatch(/if \(!me\) return;/);
   });
 });
 

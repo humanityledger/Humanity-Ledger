@@ -85,7 +85,11 @@ async function migrateAvatar(a: string, dataUrl: string) {
     storage()?.setItem(`peer_avatar_${a}`, ref);
     const cur = cache.get(a);
     if (cur && cur.avatarUrl === dataUrl) { cache.set(a, { ...cur, avatarUrl: url }); notify(a); }
-  } catch { /* IndexedDB unavailable: the data URL keeps working */ }
+  } catch {
+    // IndexedDB unavailable (private mode, blocked quota, WebView): keep the data URL itself so the
+    // photo is still there on the next visit.
+    try { storage()?.setItem(`peer_avatar_${a}`, dataUrl); } catch { /* storage full */ }
+  }
 }
 
 // A revoked object URL must not be handed out again: forget it so the next view reloads the Blob.
@@ -103,7 +107,11 @@ export function setPeerProfile(address: string, profile: { avatarUrl?: string | 
   const s = storage();
   try {
     if (!next.avatarUrl) s?.removeItem(`peer_avatar_${a}`);
-    else if (isDataUrl(next.avatarUrl)) void migrateAvatar(a, next.avatarUrl);
+    else if (isDataUrl(next.avatarUrl)) {
+      // Kept at once; replaced by a media-ref:// only when IndexedDB stores the bytes.
+      s?.setItem(`peer_avatar_${a}`, next.avatarUrl);
+      if (typeof indexedDB !== 'undefined') void migrateAvatar(a, next.avatarUrl);
+    }
     else s?.setItem(`peer_avatar_${a}`, next.avatarUrl);
   } catch { /* storage full: the photo still shows this session */ }
   if (!prev || prev.avatarUrl !== next.avatarUrl || prev.displayName !== next.displayName) notify(a);

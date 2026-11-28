@@ -8,6 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, ChevronLeft, ChevronRight, Download, ExternalLink, FileText, Image as ImageIcon, Link2, Mic, Music2, Play, Search, Sticker, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
 import { MEDIA_TABS, buildMediaIndex, searchMedia, tallyVotes, type IndexInput, type MediaItem, type MediaTab } from '@/lib/communities/media-index';
 import { RemoteAttachmentBubble, loadAttachment } from '@/components/chat/RemoteAttachmentBubble';
 import type { AttachmentMessage } from '@/lib/chat/remote-attachment';
@@ -77,7 +78,7 @@ function Viewer({ items, start, onClose }: { items: Extract<MediaItem, { tab: 'm
     return () => window.removeEventListener('keydown', k);
   }, [items.length, onClose]);
   return (
-    <div className="fixed inset-0 z-[260] bg-black/95 flex flex-col" role="dialog" aria-modal="true" aria-label={t('Media viewer')}>
+    <div className="fixed inset-0 z-[265000] bg-black/95 flex flex-col" role="dialog" aria-modal="true" aria-label={t('Media viewer')}>
       <div className="flex items-center gap-2 px-3 pt-[max(10px,env(safe-area-inset-top))] pb-2 text-white">
         <button type="button" onClick={onClose} className="w-11 h-11 grid place-items-center rounded-full hover:bg-white/10" aria-label={t('Close')}><X size={22} /></button>
         <span className="text-[14px] text-white/70 tabular-nums">{i + 1} / {items.length}</span>
@@ -118,9 +119,10 @@ export function CommunityMediaSheet({ posts, messages, title, onClose, initialTa
 
   const media = items as Extract<MediaItem, { tab: 'media' }>[];
   return (
-    <div className="fixed inset-0 z-[240] flex justify-end bg-black/30 sm:bg-black/20" role="dialog" aria-modal="true" aria-label={t('Shared media')} onClick={onClose}>
-      <div className="w-full sm:max-w-[520px] h-[100dvh] bg-[#f4f5f7] flex flex-col shadow-[0_12px_40px_rgba(16,24,40,0.14)]" onClick={(e) => e.stopPropagation()}>
-        <header className="bg-white border-b border-[#e6e8ec] pt-[max(8px,env(safe-area-inset-top))]">
+    <BodyPortal>
+    <div className="lg-scrim fixed inset-0 z-[260000] flex justify-end" role="dialog" aria-modal="true" aria-label={t('Shared media')} onClick={onClose}>
+      <div className="w-full sm:max-w-[520px] h-[100dvh] lg-canvas flex flex-col shadow-[0_12px_40px_rgba(16,24,40,0.14)]" onClick={(e) => e.stopPropagation()}>
+        <header className="lg-bar relative z-10 pt-[max(8px,env(safe-area-inset-top))]">
           <div className="flex items-center gap-1 px-2 h-14">
             <button type="button" onClick={close} className="w-11 h-11 grid place-items-center rounded-full hover:bg-[#f2f3f5]" aria-label={t('Back')}><ArrowLeft size={20} /></button>
             <div className="min-w-0">
@@ -133,7 +135,7 @@ export function CommunityMediaSheet({ posts, messages, title, onClose, initialTa
               const M = TAB_META[k]; const Icon = M.icon; const n = index[k].length; const on = tab === k;
               return (
                 <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { setTab(k); setViewer(null); }}
-                  className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[13.5px] font-medium transition-colors ${on ? 'bg-[#15171c] text-white' : 'bg-[#f2f3f5] text-[#3d424b] hover:bg-[#e8eaee]'}`}>
+                  className={`icon-btn shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[13.5px] font-medium transition-colors ${on ? 'bg-[#15171c] lg-ink text-white' : 'bg-[#f2f3f5] text-[#3d424b] hover:bg-[#e8eaee]'}`}>
                   <Icon size={15} strokeWidth={1.9} /> {t(M.label)}{n ? <span className={`tabular-nums ${on ? 'text-white/70' : 'text-[#8a919c]'}`}>{n}</span> : null}
                 </button>
               );
@@ -164,10 +166,10 @@ export function CommunityMediaSheet({ posts, messages, title, onClose, initialTa
           ) : (
             <ul className="list-none m-0 p-3 space-y-2">
               {items.map((it) => (
-                <li key={`${it.tab}:${it.id}:${'url' in it ? it.url : ''}`} className="bg-white rounded-2xl border border-[#e6e8ec] p-3">
+                <li key={`${it.tab}:${it.id}:${'url' in it ? it.url : ''}`} className="lg-card rounded-2xl p-3">
                   {it.tab === 'files' && (
                     <div className="flex items-center gap-3">
-                      <span className="w-11 h-11 rounded-xl bg-[#eff1f4] grid place-items-center text-[#15171c] shrink-0"><FileText size={20} strokeWidth={1.7} /></span>
+                      <span className="w-11 h-11 rounded-xl lg-recessed grid place-items-center text-[#15171c] shrink-0"><FileText size={20} strokeWidth={1.7} /></span>
                       <div className="min-w-0 flex-1">
                         <p className="text-[14.5px] font-medium text-[#15171c] truncate">{it.name}</p>
                         <p className="text-[12.5px] text-[#727a88]">{[size(it.size), day(it.at)].filter(Boolean).join(' · ')}</p>
@@ -177,7 +179,7 @@ export function CommunityMediaSheet({ posts, messages, title, onClose, initialTa
                   )}
                   {it.tab === 'links' && (
                     <a href={it.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-3 min-h-[44px]">
-                      <span className="w-11 h-11 rounded-xl bg-[#eff1f4] grid place-items-center text-[#15171c] shrink-0 text-[15px] font-semibold uppercase">{it.host.slice(0, 1)}</span>
+                      <span className="w-11 h-11 rounded-xl lg-recessed grid place-items-center text-[#15171c] shrink-0 text-[15px] font-semibold uppercase">{it.host.slice(0, 1)}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[14.5px] font-medium text-[#15171c] truncate">{it.host}</span>
                         <span className="block text-[12.5px] text-[#1f5fd6] truncate">{it.url}</span>
@@ -220,5 +222,6 @@ export function CommunityMediaSheet({ posts, messages, title, onClose, initialTa
       </div>
       {viewer !== null && media[viewer] && <Viewer items={media} start={viewer} onClose={() => setViewer(null)} />}
     </div>
+    </BodyPortal>
   );
 }

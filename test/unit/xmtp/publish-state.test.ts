@@ -25,7 +25,10 @@ describe('why a publish waits on its intent', () => {
 
   it('runs once per stuck conversation and is accepted by the delivery log', () => {
     const src = fs.readFileSync('lib/xmtp/client.ts', 'utf8');
-    expect(src).toMatch(/if \(attempt === 2\) void reportPublishState\(entry\.dm\);/);
+    // Once per stuck conversation: explainStuckPublish reports the MLS state among other causes.
+    expect(src).toMatch(/if \(attempt === 2\) void explainStuckPublish\(entry\.dm, entry\.client\);/);
+    const explain = src.slice(src.indexOf('async function explainStuckPublish('), src.indexOf('async function explainStuckPublish(') + 400);
+    expect(explain).toMatch(/void reportPublishState\(dm\);/);
     expect(fs.readFileSync('app/api/chat/delivery-report/route.ts', 'utf8')).toMatch(/'publish_debug'/);
   });
 });

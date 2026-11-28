@@ -86,7 +86,7 @@ export function ContextMenu({ at, items, label, onClose }: { at: MenuAt; items: 
         ref={ref}
         role="menu"
         aria-label={label}
-        className="absolute min-w-[220px] max-w-[300px] rounded-2xl border border-[#d4d8de] bg-white p-1.5 shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] flex flex-col"
+        className="absolute min-w-[220px] max-w-[300px] rounded-[20px] lg-sheet p-1.5 flex flex-col"
         style={{ top: pos.top, left: pos.left }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -100,7 +100,7 @@ export function ContextMenu({ at, items, label, onClose }: { at: MenuAt; items: 
               onClose();
               it.onSelect();
             }}
-            className={`min-h-[44px] flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[16px] outline-none hover:bg-[#f2f4f7] focus-visible:bg-[#eff1f4] disabled:opacity-40 ${it.danger ? 'text-[#9b1c16]' : 'text-[#15171c]'}`}
+            className={`min-h-[44px] flex items-center gap-3 px-3 py-2 rounded-[14px] text-left text-[16px] outline-none hover:bg-black/[0.05] active:bg-black/[0.08] focus-visible:bg-black/[0.06] disabled:opacity-40 ${it.danger ? 'text-[#9b1c16]' : 'text-[#15171c]'}`}
           >
             {it.icon ? <span className="w-5 flex justify-center shrink-0 text-[#3d424b]" aria-hidden="true">{it.icon}</span> : null}
             <span className="truncate">{t(it.label)}</span>

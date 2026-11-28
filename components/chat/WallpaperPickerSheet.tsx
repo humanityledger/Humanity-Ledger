@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Check } from "lucide-react";
 import { WALLPAPERS } from "@/lib/chat/wallpapers";
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Wallpaper options
@@ -51,18 +52,18 @@ export function WallpaperPickerSheet({
 }: WallpaperPickerSheetProps) {
   const t = useT();
   return (
-    <AnimatePresence>
+    <BodyPortal><AnimatePresence>
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            className="lg-scrim fixed inset-0 z-[260000]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[28px] shadow-2xl max-h-[82vh] overflow-y-auto"
+            className="lg-sheet fixed bottom-0 left-0 right-0 z-[260001] mx-auto w-full max-w-[100%] sm:max-w-md rounded-t-[28px] max-h-[85dvh] overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -85,7 +86,7 @@ export function WallpaperPickerSheet({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors"
+                className="icon-btn w-9 h-9 rounded-full lg-tile flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors"
                 aria-label={t("Close")}
               >
                 <X size={18} strokeWidth={2} />
@@ -119,7 +120,7 @@ export function WallpaperPickerSheet({
                     </div>
                     {/* Active check */}
                     {isActive && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#15171c] flex items-center justify-center">
+                      <div className="icon-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-[#15171c] flex items-center justify-center">
                         <Check size={11} strokeWidth={3} className="text-white" />
                       </div>
                     )}
@@ -130,6 +131,6 @@ export function WallpaperPickerSheet({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence></BodyPortal>
   );
 }

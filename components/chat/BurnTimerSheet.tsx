@@ -9,6 +9,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
 
 const TIMER_OPTIONS = [
   { label: 'Off',     value: null,    desc: 'Messages stay forever' },
@@ -31,13 +32,13 @@ interface BurnTimerSheetProps {
 export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: BurnTimerSheetProps) {
   const t = useT();
   return (
-    <AnimatePresence>
+    <BodyPortal><AnimatePresence>
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm flex items-end justify-center"
+          className="lg-scrim fixed inset-0 z-[260000] flex items-end justify-center"
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           <motion.div
@@ -66,7 +67,7 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"
+                className="icon-btn w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"
               >
                 <X size={16} className="text-black/50" />
               </button>
@@ -90,7 +91,7 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
                       {opt.value ? (
                         <Flame size={18} className={isActive ? 'text-white' : 'text-red-400'} />
                       ) : (
-                        <div className="w-[18px] h-[18px] rounded-full border-2 border-current opacity-30" />
+                        <div className="icon-btn w-[18px] h-[18px] rounded-full border-2 border-current opacity-30" />
                       )}
                       <span className="text-[15px] font-bold">{t(opt.label)}</span>
                     </div>
@@ -107,6 +108,6 @@ export function BurnTimerSheet({ isOpen, currentTimer, onSelect, onClose }: Burn
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence></BodyPortal>
   );
 }

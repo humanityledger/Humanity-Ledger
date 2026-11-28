@@ -19,7 +19,7 @@ export function ProvingStatus({ label, startedAt, proving = true }: { label: str
   }, []);
   const s = Math.max(0, Math.floor((now - startedAt) / 1000));
   return (
-    <div className="rounded-2xl bg-[#f2f4f7] p-3.5 space-y-1.5" role="status" aria-live="polite">
+    <div className="rounded-2xl lg-recessed p-3.5 space-y-1.5" role="status" aria-live="polite">
       <p className="flex items-center gap-2 text-[13.5px] text-[#15171c]">
         <LoaderCircle size={14} className="animate-spin shrink-0" aria-hidden="true" />
         <span className="flex-1">{label}</span>

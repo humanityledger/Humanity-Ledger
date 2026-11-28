@@ -1934,16 +1934,17 @@ html[data-bubble-style="brutalist"] .msg-bubble-recv {
   border: 2px solid black !important;
   box-shadow: 4px 4px 0 0 black !important;
 }
-html[data-bubble-style="glass"] .msg-bubble-sent,
-html[data-bubble-style="glass"] .msg-bubble-recv {
+/* Ledger Chat's bubbles (.bs-*) draw their own Liquid Glass in app/ledger-chat-settings.css. */
+html[data-bubble-style="glass"] .msg-bubble-sent:not(.bs),
+html[data-bubble-style="glass"] .msg-bubble-recv:not(.bs) {
   background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 16px !important;
   color: inherit !important;
 }
-html[data-bubble-style="glass"][data-theme="dark"] .msg-bubble-sent,
-html[data-bubble-style="glass"][data-theme="dark"] .msg-bubble-recv {
+html[data-bubble-style="glass"][data-theme="dark"] .msg-bubble-sent:not(.bs),
+html[data-bubble-style="glass"][data-theme="dark"] .msg-bubble-recv:not(.bs) {
   background: rgba(0, 0, 0, 0.3) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }

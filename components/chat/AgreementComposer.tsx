@@ -193,17 +193,17 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
   const seg = (on: boolean) => `flex-1 h-9 rounded-full text-[13.5px] font-semibold flex items-center justify-center gap-1.5 ${on ? 'bg-[#15171c] text-white' : 'bg-[#eff1f4] text-[#15171c]'}`;
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" onClick={() => !step && onClose()}>
+    <div className="lg-scrim fixed inset-0 z-[600] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => !step && onClose()}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={tr("Private agreement")}
-        className="w-full sm:max-w-[420px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-black/10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92vh] supports-[height:100dvh]:max-h-[92dvh] overflow-y-auto overscroll-contain"
+        className="w-full sm:max-w-[420px] lg-sheet rounded-t-3xl sm:rounded-3xl border border-black/10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92vh] supports-[height:100dvh]:max-h-[92dvh] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-[17px] font-semibold text-[#15171c]">{tr("Private agreement with {peerName}", { peerName })}</h2>
-          <button type="button" aria-label={tr("Close")} disabled={!!step} onClick={onClose} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center">
+          <button type="button" aria-label={tr("Close")} disabled={!!step} onClick={onClose} className="icon-btn w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center">
             <X size={16} />
           </button>
         </div>
@@ -225,7 +225,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
           <div className="mt-4">
             <p className="text-[14px] text-[#4a505c]">{tr("Open your private wallet first.")}</p>
             {onOpenWallet && (
-              <button type="button" className="mt-3 h-10 px-4 rounded-full bg-[#15171c] text-white text-[14px] font-semibold" onClick={onOpenWallet}>
+              <button type="button" className="icon-btn mt-3 h-10 px-4 rounded-full bg-[#15171c] lg-ink text-white text-[14px] font-semibold" onClick={onOpenWallet}>
                 {tr("Open private wallet")}
               </button>
             )}
@@ -243,7 +243,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                     : tr("{peerName}'s address {slice}…{slice2} is not verified. Ask them to share it again from an up-to-date Ledger Chat; agreements need a verified address.", { peerName, slice: peer.slice(0, 10), slice2: peer.slice(-4) })
                   : tr("{peerName} has not shared an Aztec address in this chat yet. Share yours and ask them to share theirs.", { peerName })}
               </p>
-              <button type="button" className="mt-2.5 h-9 px-3.5 rounded-full bg-[#eff1f4] text-[13.5px] font-semibold text-[#15171c]" disabled={!!step} onClick={share}>
+              <button type="button" className="icon-btn mt-2.5 h-9 px-3.5 rounded-full lg-recessed text-[13.5px] font-semibold text-[#15171c]" disabled={!!step} onClick={share}>
                 {tr("Share my Aztec address")}
               </button>
             </div>
@@ -312,7 +312,7 @@ export function AgreementComposer({ dmPeerInboxId, selfInboxId, peerName, onClos
                 <ProvingMemoryNote />
                 {ALPHA && <AlphaRiskAck value={ack} onChange={setAck} disabled={!!step} />}
                 {paused && <p role="status" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{paused}</p>}
-                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !!refusalFor(kind) || (!!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
+                <button type="button" className="w-full h-11 rounded-full bg-[#15171c] lg-ink text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!step || !!paused || !amount || !token || !peerVerified || !!refusalFor(kind) || (!!quote && !quote.q.ok) || (ALPHA && !acked(ack))} onClick={open}>
                   {kind === 'escrow' ? tr("Open escrow") : tr("Open stream")}
                 </button>
               </div>

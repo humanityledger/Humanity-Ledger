@@ -75,7 +75,7 @@ export function HistoryBackupSheet({ onClose, account }: { onClose: () => void; 
       <p className="text-[14px] text-[#5b606b] leading-relaxed mb-4">
         {t("A file sealed with a passphrase you choose. It never leaves your device unless you move it. We cannot open it, and we cannot recover a forgotten passphrase.")}
       </p>
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-[#f2f4f7] p-1 mb-4" role="tablist">
+      <div className="grid grid-cols-2 gap-1 rounded-xl lg-recessed p-1 mb-4" role="tablist">
         {(['export', 'restore'] as const).map((m) => (
           <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setError(null); }} className={`h-9 rounded-lg text-[14px] font-semibold ${mode === m ? 'bg-white text-[#15171c] shadow-sm' : 'text-[#5b606b]'}`}>
             {m === 'export' ? t("Export") : t("Restore")}

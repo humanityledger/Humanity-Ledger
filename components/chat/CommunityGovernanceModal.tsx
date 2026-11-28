@@ -181,7 +181,7 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress,
     <div className="flex flex-col gap-5 pb-10">
       <header className={`${card} p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4`}>
         <div className="flex items-start gap-4 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-[#15171c] text-white flex items-center justify-center shrink-0" aria-hidden="true"><Vote size={20} strokeWidth={2} /></div>
+          <div className="w-12 h-12 rounded-2xl bg-[#15171c] lg-ink text-white flex items-center justify-center shrink-0" aria-hidden="true"><Vote size={20} strokeWidth={2} /></div>
           <div className="min-w-0">
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: INK_SOFT }}>{t('Community governance')}</p>
             <h2 className="text-[22px] sm:text-[24px] font-semibold tracking-tight truncate" style={{ color: INK }}>{communityName}</h2>
@@ -212,7 +212,7 @@ export function CommunityGovernanceView({ communityId, communityName, myAddress,
         <div role="tablist" aria-label={t('Filter proposals')} className="flex flex-wrap gap-2">
           {tabs.map((x) => (
             <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
-              className={`min-h-[44px] px-4 rounded-full text-[15px] font-semibold border-2 transition-colors ${tab === x.id ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f2f4f7]'}`}>
+              className={`min-h-[44px] px-4 rounded-full text-[15px] font-semibold border-2 transition-colors ${tab === x.id ? 'bg-[#15171c] lg-ink border-[#15171c] text-white' : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f2f4f7]'}`}>
               {x.label} <span className="tabular-nums opacity-70">{counts[x.id]}</span>
             </button>
           ))}
@@ -317,7 +317,7 @@ function ProposalCard({ p, locale, me, expanded, onToggle, voting, onVote, canEx
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex h-3 w-full overflow-hidden rounded-full bg-[#eff1f4]" role="img" aria-label={t('For {for}%, against {against}%, abstain {abstain}%', { for: pc.for, against: pc.against, abstain: pc.abstain })}>
+        <div className="flex h-3 w-full overflow-hidden rounded-full lg-recessed" role="img" aria-label={t('For {for}%, against {against}%, abstain {abstain}%', { for: pc.for, against: pc.against, abstain: pc.abstain })}>
           <div className="h-full bg-[#15171c] transition-[width] duration-300" style={{ width: `${pc.for}%` }} />
           <div className="h-full bg-[#c0362c] transition-[width] duration-300" style={{ width: `${pc.against}%` }} />
           <div className="h-full bg-[#d0d5dd] transition-[width] duration-300" style={{ width: `${pc.abstain}%` }} />
@@ -339,7 +339,7 @@ function ProposalCard({ p, locale, me, expanded, onToggle, voting, onVote, canEx
 
       <div className="flex flex-wrap items-center gap-2">
         {p.myVote ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#eff1f4] px-4 min-h-[44px] text-[15px] font-semibold" style={{ color: INK }}>
+          <span className="inline-flex items-center gap-2 rounded-full lg-recessed px-4 min-h-[44px] text-[15px] font-semibold" style={{ color: INK }}>
             <CheckCircle2 size={16} aria-hidden="true" />{t(p.myVote === 'FOR' ? 'You voted: For' : p.myVote === 'AGAINST' ? 'You voted: Against' : 'You voted: Abstain')}
           </span>
         ) : active ? (
@@ -480,9 +480,9 @@ function ForumDraft({ p, communityName, onClose }: { p: Proposal; communityName:
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 p-0 sm:p-6" onClick={onClose}>
+    <div className="lg-scrim fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label={t('Forum draft')} onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-2xl max-h-[88dvh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-[var(--hl-shadow-sm)] overflow-hidden">
+        className="w-full sm:max-w-2xl max-h-[88dvh] flex flex-col lg-sheet rounded-t-3xl sm:rounded-3xl overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#d4d8de]">
           <div className="min-w-0">
             <p className="text-[18px] font-semibold" style={{ color: INK }}>{t('Forum draft')}</p>
@@ -490,7 +490,7 @@ function ForumDraft({ p, communityName, onClose }: { p: Proposal; communityName:
           </div>
           <button type="button" className={`${quiet} px-3`} onClick={onClose} aria-label={t('Close')}><X size={18} aria-hidden="true" /></button>
         </div>
-        <pre className="flex-1 overflow-auto px-5 py-4 font-mono text-[13px] leading-[1.6] whitespace-pre-wrap break-words bg-[#f7f8fa]" style={{ color: INK }}>{md}</pre>
+        <pre className="flex-1 overflow-auto px-5 py-4 font-mono text-[13px] leading-[1.6] whitespace-pre-wrap break-words lg-canvas" style={{ color: INK }}>{md}</pre>
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-[#d4d8de]">
           <button type="button" className={primary} onClick={() => navigator.clipboard?.writeText(md).then(() => toast.success(t('Copied.')), () => toast.error(t('Not copied. Select the text and copy it.')))}>
             <Copy size={17} aria-hidden="true" />{t('Copy Markdown')}

@@ -41,8 +41,8 @@ function StatusBody({ story, compact = false }: { story: Story; compact?: boolea
   }, [story.contentUrl]);
   if (story.mediaType === 'text') return <span className="block text-[14.5px] text-[#15171c] whitespace-pre-wrap break-words">{story.contentUrl}</span>;
   if (!media || failed) return <span className="block text-[13.5px] text-[#727a88]">{t("This {value} is not available.", { value: story.mediaType === 'video' ? 'video' : 'photo' })}</span>;
-  if (!src) return <span className={`block rounded-xl border border-[#e4e7ec] bg-white ${compact ? 'h-24 w-24' : 'h-48 w-full'}`} aria-label={t("Loading")} />;
-  const cls = `block rounded-xl border border-[#e4e7ec] bg-white object-cover ${compact ? 'h-24 w-24' : 'max-h-[60vh] w-full object-contain'}`;
+  if (!src) return <span className={`block rounded-xl lg-card ${compact ? 'h-24 w-24' : 'h-48 w-full'}`} aria-label={t("Loading")} />;
+  const cls = `block rounded-xl lg-card object-cover ${compact ? 'h-24 w-24' : 'max-h-[60vh] w-full object-contain'}`;
   return story.mediaType === 'video'
     ? <video src={src} className={cls} controls={!compact} muted playsInline preload="metadata" />
     : <img src={src} alt={t("Status photo")} className={cls} />;
@@ -187,7 +187,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
   }, {});
 
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+    <div className="flex-1 overflow-y-auto flex flex-col bg-transparent">
       <div className="px-2 pt-3">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
           <span className="relative">
@@ -196,7 +196,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
               type="button"
               onClick={() => setComposer(true)}
               aria-label={t("New status")}
-              className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#15171c] text-white ring-2 ring-white flex items-center justify-center"
+              className="icon-btn absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#15171c] lg-ink text-white ring-2 ring-white flex items-center justify-center"
             >
               {G.plus}
             </button>
@@ -307,7 +307,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                 role="tab"
                 aria-selected={mode === id}
                 onClick={() => { setMode(id); setFile(null); setPreview(null); }}
-                className={`h-8 px-3 rounded-full text-[13px] font-medium border transition-colors ${mode === id ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#e4e7ec] text-[#15171c]'}`}
+                className={`icon-btn h-8 px-3 rounded-full text-[13px] font-medium border transition-colors ${mode === id ? 'bg-[#15171c] lg-ink border-[#15171c] text-white' : 'lg-pill border-transparent text-[#15171c]'}`}
               >
                 {label}
               </button>
@@ -327,7 +327,7 @@ export const LedgerUpdatesTab: React.FC<LedgerUpdatesTabProps> = ({ myAddress, m
                   ? <video src={preview} className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" controls muted playsInline />
                   : <img src={preview} alt={t("Selected photo")} className="w-full max-h-64 rounded-xl border border-[#e4e7ec] object-contain" />
               ) : null}
-              <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 h-10 w-full rounded-xl border border-[#e4e7ec] bg-white text-[14px] font-medium text-[#15171c]">
+              <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 h-10 w-full rounded-xl lg-card text-[14px] font-medium text-[#15171c]">
                 {file ? t("Choose another") : mode === 'image' ? t("Choose a photo") : t("Choose a video (up to {STATUS_VIDEO_MAX_SECONDS} s)", { STATUS_VIDEO_MAX_SECONDS })}
               </button>
               <p className="text-[12.5px] text-[#a3a9b4] mt-1">{t("Up to 20 MB.")}</p>

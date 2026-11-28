@@ -15,7 +15,7 @@ describe('chat on a phone', () => {
     expect(layout).toContain("var base='width=device-width, initial-scale='+scale+', minimum-scale='+scale+', viewport-fit=cover'");
     // Safari with a wallet extension (window.ethereum) is not a wallet's own browser: normal size there.
     expect(layout).toContain('var wallet=!!(named||(window.ethereum&&!ios));');
-    expect(layout).toMatch(/new MutationObserver\(si\)\.observe\(document\.head/);
+    expect(layout).toMatch(/new MutationObserver\(onHead\)\.observe\(document\.head/);
     // The tag Next.js renders never caps zoom: Lighthouse and desktop browsers see pinch zoom on.
     const start = layout.indexOf('export const viewport');
     const exported = layout.slice(start, layout.indexOf('\n}', start)).replace(/\/\/[^\n]*/g, '');
@@ -85,5 +85,50 @@ describe('chat on a phone', () => {
     const chat = read('components/terminal/LedgerChatV2.tsx');
     const menu = chat.slice(chat.indexOf('aria-label="Conversation actions"'));
     for (const label of ['Unpin', 'Mark as read', 'Unmute', 'Archive', 'Delete chat']) expect(menu).toContain(label);
+  });
+});
+
+describe('phones: zoom, one pane, and Back', () => {
+  const layout = () => read('app/layout.tsx');
+  it('pinch zoom can never stay locked after typing (Android/WebViews)', () => {
+    const l = layout();
+    expect(l).toContain("var chk=function(){if(locked&&!editable(document.activeElement)){locked=false;si()}};");
+    expect(l).toContain("document.addEventListener('touchend',arm,{capture:true,passive:true});");
+    expect(l).toContain("document.addEventListener('visibilitychange',chk);");
+    expect(l).toContain("window.visualViewport.addEventListener('resize'");
+  });
+
+  it('the device class comes from the physical screen, before the first paint', () => {
+    const l = layout();
+    expect(l).toContain("de.setAttribute('data-hl-device',d)");
+    expect(l).toMatch(/sw<768\)\|\|\(coarse&&screen\.width<1024\)\?'phone'/);
+    const lib = read('lib/layout/mobileViewport.ts');
+    expect(lib).toContain('export function classifyDevice(');
+  });
+
+  it('a phone never shows the rail or two panes side by side, whatever width Safari lays out', () => {
+    const css = read('app/glassmorphism.css');
+    expect(css).toMatch(/html\[data-hl-device="phone"\] \.hidden\.md\\:flex/);
+    expect(css).toMatch(/html\[data-hl-device="phone"\] \.hidden\.lg\\:flex/);
+    expect(css).toContain('html[data-hl-device="phone"] [data-hl-rail]');
+    expect(read('components/terminal/LedgerChatV2.tsx')).toContain('data-hl-rail className="lg-bar hidden md:flex w-[76px]');
+  });
+
+  it('every editable field is 16 px on touch screens, contenteditable included', () => {
+    const css = read('app/glassmorphism.css');
+    expect(css).toMatch(/@media \(pointer: coarse\) \{[^}]*\[contenteditable\]:not\(\[contenteditable="false"\]\) \{\s*font-size: 16px !important;/);
+  });
+
+  it('swipe-back and Android Back close one layer at a time', () => {
+    const hook = read('hooks/useMobileBackStack.ts');
+    expect(hook).toContain("window.addEventListener('popstate', onPopState);");
+    expect(hook).toContain('window.history.pushState({ ...prev, hlDepth: d }');
+    const chat = read('components/terminal/LedgerChatV2.tsx');
+    expect(chat).toContain("useBackLayer(sidebarTab !== 'communities' && !showList, () => setShowList(true), compactLayout);");
+    expect(chat).toContain('useBackLayer(showContactInfo, () => setShowContactInfo(false), compactLayout);');
+  });
+
+  it('the keyboard closing puts a bounded page back at its origin', () => {
+    expect(read('components/layout/KeyboardViewport.tsx')).toContain('settle = window.setTimeout(resetBoundedScroll, 180);');
   });
 });

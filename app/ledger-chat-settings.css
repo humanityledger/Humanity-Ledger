@@ -104,12 +104,12 @@
 .bs.msg-bubble-recv { background: #fff; color: #15171c; border: 1px solid #e6e8ec; }
 
 .bs-default.msg-bubble-sent { border-radius: 20px 20px 6px 20px; }
-.bs-default.msg-bubble-recv { border-radius: 20px 20px 20px 6px; }
+.bs-default.msg-bubble-recv { border-radius: 20px 20px 20px 6px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 2px rgba(16, 24, 40, 0.04); }
 
 .bs-rounded { border-radius: 24px; }
 
 .bs-soft { border-radius: 22px; }
-.bs-soft.msg-bubble-recv { border-color: transparent; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 16px -10px rgba(16, 24, 40, 0.22); }
+.bs-soft.msg-bubble-recv { border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 16px -10px rgba(16, 24, 40, 0.22); }
 .bs-soft.msg-bubble-sent { box-shadow: 0 8px 18px -12px rgba(16, 24, 40, 0.5); }
 
 .bs-sharp { border-radius: 8px; }
@@ -134,7 +134,7 @@
 
 .bs-elevated { border-radius: 20px; }
 .bs-elevated.msg-bubble-sent { border-bottom-right-radius: 8px; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 2px 4px rgba(16, 24, 40, 0.12), 0 14px 26px -14px rgba(16, 24, 40, 0.55); }
-.bs-elevated.msg-bubble-recv { border-bottom-left-radius: 8px; border-color: transparent; box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 14px 26px -16px rgba(16, 24, 40, 0.35); }
+.bs-elevated.msg-bubble-recv { border-bottom-left-radius: 8px; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 2px 4px rgba(16, 24, 40, 0.06), 0 14px 26px -16px rgba(16, 24, 40, 0.35); }
 
 /* Own paint: gradient, aurora, glow, glass, tinted. */
 .bs-gradient { border-radius: 20px; }
@@ -186,20 +186,34 @@
   box-shadow: 0 6px 22px -10px color-mix(in srgb, var(--lc-accent, #15171c) 45%, transparent);
 }
 
-.bs-glass { border-radius: 20px; -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); }
+/* Glass (Appearance studio): iOS 26.3 Liquid Glass — blur and saturation, a Fresnel bevel on top and
+   around the edge, and a diagonal lens sheen layered over the theme's own colour (the fill keeps
+   88 % / 82 % of the theme colour, so text contrast stays the theme's). Chosen per user, not on by
+   default; the default bubbles stay without backdrop-filter (Hyperion). */
+.bs-glass { border-radius: 20px; -webkit-backdrop-filter: blur(22px) saturate(190%); backdrop-filter: blur(22px) saturate(190%); }
 .bs-glass.msg-bubble-sent {
   border-bottom-right-radius: 6px;
   color: #fff;
-  background: color-mix(in srgb, var(--lc-accent, #15171c) 88%, transparent);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 20px -12px rgba(16, 24, 40, 0.45);
+  background-color: color-mix(in srgb, var(--lc-accent, #15171c) 88%, transparent);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 42%, transparent 68%, rgba(255, 255, 255, 0.07) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 20px -12px rgba(16, 24, 40, 0.45);
 }
 .bs-glass.msg-bubble-recv {
   border-bottom-left-radius: 6px;
   color: var(--lc-text-primary, #15171c);
-  background: color-mix(in srgb, var(--lc-bubble-received, #fff) 80%, transparent);
-  border: 1px solid color-mix(in srgb, #fff 55%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 20px -14px rgba(16, 24, 40, 0.35);
+  background-color: color-mix(in srgb, var(--lc-bubble-received, #fff) 82%, transparent);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 68%, rgba(255, 255, 255, 0.18) 100%);
+  border: 1px solid color-mix(in srgb, #fff 60%, transparent);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 8px 20px -14px rgba(16, 24, 40, 0.35);
+}
+@supports (-webkit-touch-callout: none) {
+  .bs-glass { -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bs-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .bs-glass.msg-bubble-sent { background-color: var(--lc-accent, #15171c); }
+  .bs-glass.msg-bubble-recv { background-color: var(--lc-bubble-received, #fff); }
 }
 
 /* Tinted: both bubbles are light, tinted with the accent; text stays the theme's own text colour. */

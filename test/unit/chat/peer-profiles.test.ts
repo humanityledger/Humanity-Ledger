@@ -95,9 +95,11 @@ describe('peer profiles', () => {
   it('is what the chat avatars use, and the profile screen publishes the photo', () => {
     const chat = readFileSync('components/terminal/LedgerChatV2.tsx', 'utf8');
     const avatar = chat.slice(chat.indexOf('function Avatar('), chat.indexOf('const shortAddr'));
-    expect(avatar).toMatch(/subscribePeerProfile\(address/);
-    expect(avatar).toMatch(/requestPeerProfile\(address\)/);
-    expect(avatar).not.toMatch(/api\/user\/search/);
+    expect(avatar).toMatch(/<UserAvatar address=\{address\}/);
+    const ua = readFileSync('components/chat/UserAvatar.tsx', 'utf8');
+    expect(ua).toMatch(/subscribePeerProfile\(addr, sync\)/);
+    expect(ua).toMatch(/requestPeerProfile\(addr\)/);
+    expect(ua).not.toMatch(/api\/user\/search/);
     const settings = readFileSync('components/terminal/LedgerChatSettings.tsx', 'utf8');
     const edit = settings.slice(settings.indexOf('const handleAvatarChange'), settings.indexOf('const handleSave'));
     expect(edit).toMatch(/downscaleAvatar\(file\)/);

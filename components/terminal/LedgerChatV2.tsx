@@ -11,7 +11,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link';
 import { parseValueHandoff, VALUE_HANDOFF_EVENT, type ValueHandoff } from '@/lib/chat/value-handoff';
 import { createPortal } from 'react-dom';
-import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Smile, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
+import { Video, VideoOff, Phone, PhoneOff, Mic, MicOff, Volume2, Paperclip, BarChart2, Wallet, Flame, Heart, Image as ImageIcon, Map as MapIcon, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import type Peer from 'peerjs';
@@ -56,6 +56,11 @@ import { getCallHistory, saveCallRecord, CallRecord } from '@/lib/wallet/callHis
 const LedgerChatOnboarding = dynamic(() => import('@/components/chat/LedgerChatOnboarding').then(m => ({ default: m.LedgerChatOnboarding })), { ssr: false });
 import { LedgerChatStatusBar } from '@/components/chat/LedgerChatStatusBar';
 import { useLedgerChatPresence } from '@/hooks/useLedgerChatPresence';
+import { useBackLayer } from '@/hooks/useMobileBackStack';
+import { useCommunityWelcomer } from '@/hooks/useCommunityWelcomer';
+import { PrivateNotesRow, PrivateNotesView } from '@/components/chat/PrivateNotesView';
+import { CameraIcon, MicIcon, PlusIcon as ComposerPlusIcon, StickerIcon } from '@/components/chat/ComposerIcons';
+import { useCompactLayout } from '@/lib/layout/mobileViewport';
 import { extensionForRecording, pickRecordingMimeType } from '@/lib/chat/recording';
 import { moderateContent, sanitizeFilename, isAllowedMimeType, checkRateLimit } from '@/lib/utils/contentFilter';
 import { ledgerAnalytics, trackMessageSent, trackCallStarted, trackCallAnswered, trackAttachmentSent, trackFeatureUsed } from '@/lib/utils/ledgerAnalytics';
@@ -1361,6 +1366,38 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   const [voiceIsolation, setVoiceIsolation] = useState(true);
   const [dataSaver, setDataSaver] = useState(false);
   const [showE2EE, setShowE2EE] = useState(false);
+
+  // ── Back stack (phones and narrow screens): swipe-back / Android Back close one layer at a time ──
+  // Level 1: the open conversation or community. Level 2: side panels. Level 3: sheets and modals.
+  // Members waiting for a community's encrypted channel are welcomed from here within seconds.
+  useCommunityWelcomer(client, address);
+  const compactLayout = useCompactLayout();
+  // Private Notes: a local, encrypted chat with yourself, pinned first in Chats. It is never an
+  // activePeer, so no XMTP lookup, profile fetch or receipt can ever be made for it.
+  const [privateNotesOpen, setPrivateNotesOpen] = useState(false);
+  useEffect(() => { if (activePeer) setPrivateNotesOpen(false); }, [activePeer]);
+  useEffect(() => { if (sidebarTab !== 'chats') setPrivateNotesOpen(false); }, [sidebarTab]);
+  useBackLayer(privateNotesOpen, () => setPrivateNotesOpen(false), compactLayout);
+  useBackLayer(sidebarTab !== 'communities' && !showList, () => setShowList(true), compactLayout);
+  useBackLayer(sidebarTab === 'communities' && !!activeCommunity, () => setActiveCommunity(null), compactLayout);
+  useBackLayer(showContactInfo, () => setShowContactInfo(false), compactLayout);
+  useBackLayer(showFullSettings, () => setShowFullSettings(false), compactLayout);
+  useBackLayer(showContactRequests, () => setShowContactRequests(false), compactLayout);
+  useBackLayer(showEncryptionInfo, () => setShowEncryptionInfo(false), compactLayout);
+  useBackLayer(showWallpaperPicker, () => setShowWallpaperPicker(false), compactLayout);
+  useBackLayer(showThemePicker, () => setShowThemePicker(false), compactLayout);
+  useBackLayer(showBurnSheet, () => setShowBurnSheet(false), compactLayout);
+  useBackLayer(showScheduleSheet, () => setShowScheduleSheet(false), compactLayout);
+  useBackLayer(showMeetingSheet, () => setShowMeetingSheet(false), compactLayout);
+  useBackLayer(showCreateGroup, () => setShowCreateGroup(false), compactLayout);
+  useBackLayer(showSearch, () => setShowSearch(false), compactLayout);
+  useBackLayer(showAppDrawer, () => setShowAppDrawer(false), compactLayout);
+  useBackLayer(showUserSearch, () => setShowUserSearch(false), compactLayout);
+  useBackLayer(showPollCreator, () => setShowPollCreator(false), compactLayout);
+  useBackLayer(showCallSettings, () => setShowCallSettings(false), compactLayout);
+  useBackLayer(showE2EE, () => setShowE2EE(false), compactLayout);
+  useBackLayer(showSettings, () => setShowSettings(false), compactLayout);
+  useBackLayer(showProfile, () => setShowProfile(false), compactLayout);
 
   // [ARCH-FIX] Deterministic PeerID derivation — mirrors the logic in PeerJS initialization.
   // Both caller and receiver can compute each other's PeerID from the wallet address alone.
@@ -7372,15 +7409,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     // (or permanently if isChecking never resolves due to a race condition).
     if (isChecking) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center h-full bg-white">
-          <div className="w-8 h-8 border-2 border-[#15171c] border-t-transparent rounded-full animate-spin" />
+        <div className="flex-1 flex flex-col items-center justify-center h-full bg-transparent">
+          <div className="icon-btn w-8 h-8 border-2 border-[#15171c] border-t-transparent rounded-full animate-spin" />
         </div>
       );
     }
     const inDesktopApp = typeof window !== 'undefined' && (window as any).electronAPI?.isElectron;
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full bg-white px-6 py-12 text-center">
-        <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] mb-5">
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-transparent px-6 py-12 text-center">
+        <div className="w-14 h-14 rounded-full lg-tile flex items-center justify-center text-[#15171c] mb-5">
           <Wallet size={24} strokeWidth={1.8} />
         </div>
         <h2 className="text-[22px] font-semibold tracking-[-0.015em] text-[#15171c]">{tr("Connect your wallet")}</h2>
@@ -7388,14 +7425,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           {tr("Ledger Chat uses your wallet as your account. Your message keys are created on this device and stay here.")}
         </p>
         {inDesktopApp && (
-          <p className="mt-4 text-[14px] leading-relaxed text-[#475061] max-w-sm bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl px-4 py-3 text-left">
+          <p className="mt-4 text-[14px] leading-relaxed text-[#475061] max-w-sm lg-recessed border border-[#e4e7ec] rounded-xl px-4 py-3 text-left">
             {tr("Browser extensions cannot run inside the desktop app. Choose Connect and scan the code with the wallet app on your phone.")}
           </p>
         )}
         <button
           type="button"
           onClick={() => openAppKit()}
-          className="mt-6 h-12 px-6 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white text-[15px] font-medium transition-colors"
+          className="mt-6 h-12 px-6 rounded-full bg-[#15171c] lg-ink hover:bg-[#2b2f38] text-white text-[15px] font-medium transition-colors"
         >
           {tr("Connect")}
         </button>
@@ -7407,8 +7444,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   if (isEmailUser) {
     const emailLabel = (address as string).replace('email_', '');
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full bg-white px-6 py-12 text-center">
-        <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] mb-5">
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-transparent px-6 py-12 text-center">
+        <div className="w-14 h-14 rounded-full lg-tile flex items-center justify-center text-[#15171c] mb-5">
           <Mail size={24} strokeWidth={1.8} />
         </div>
         <h2 className="text-[22px] font-semibold tracking-[-0.015em] text-[#15171c]">{tr("Link a wallet to start messaging")}</h2>
@@ -7416,7 +7453,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         <button
           type="button"
           onClick={() => openAppKit()}
-          className="mt-6 h-12 px-6 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white text-[15px] font-medium transition-colors"
+          className="mt-6 h-12 px-6 rounded-full bg-[#15171c] lg-ink hover:bg-[#2b2f38] text-white text-[15px] font-medium transition-colors"
         >
           {tr("Connect a wallet")}
         </button>
@@ -7479,7 +7516,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
   if (!isOnboarded) {
     if (!pxeLoaded || effectiveAddress === '0x0') {
       return (
-        <div className="flex-1 h-full bg-white flex flex-col items-center justify-center">
+        <div className="flex-1 h-full bg-transparent flex flex-col items-center justify-center">
           <BootMark label={tr("Loading your account")} />
         </div>
       );
@@ -7601,12 +7638,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
     <audio ref={remoteAudioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
 
     {/* The workspace: rail, list and conversation, edge to edge, separated by hairlines. */}
-      <div className={`relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
-      background: '#ffffff',
+      <div className={`lg-canvas relative flex flex-row flex-1 min-h-0 w-full h-full overflow-hidden ${(showScanner || showMyQR || showProfile) ? 'overflow-visible' : ''}`} style={{ 
       fontFamily,
     }}>
       {/* ── Rail: the app's sections on wide screens (phones keep the tab bar) ── */}
-      <nav aria-label={tr("Ledger Chat")} className="hidden md:flex w-[76px] shrink-0 flex-col items-center gap-1.5 border-r border-black/[0.08] bg-white py-5">
+      <nav aria-label={tr("Ledger Chat")} data-hl-rail className="lg-bar hidden md:flex w-[76px] shrink-0 flex-col items-center gap-1.5 py-5">
         <Link href="/" aria-label={tr("Humanity Ledger home")} className="mb-4 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]">
           <HLLogo variant="mark" size={40} />
         </Link>
@@ -7633,11 +7669,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 else { setSidebarTab(t.id); setActiveCommunity(null); }
                 setShowList(true);
               }}
-              className={`relative w-12 h-12 rounded-[14px] flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c] ${on ? 'bg-[#15171c] text-white' : 'text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c]'}`}
+              className={`relative w-12 h-12 rounded-[14px] flex items-center justify-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c] ${on ? 'bg-[#15171c] lg-ink text-white' : 'text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c]'}`}
             >
               {t.icon}
               {t.badge > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#2456e6] text-white text-[10.5px] font-bold leading-[18px] text-center tabular-nums ring-2 ring-white" aria-hidden="true">
+                <span className="icon-btn absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full lg-badge text-white text-[10.5px] font-bold leading-[18px] text-center tabular-nums" aria-hidden="true">
                   {t.badge > 99 ? '99+' : t.badge}
                 </span>
               )}
@@ -7649,20 +7685,20 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         <div className="flex-1" />
         {/* Live round trip from this device. Same reading on phone, tablet and computer. */}
         <LiveLatency />
-        <button type="button" onClick={() => setShowFullSettings(true)} aria-label={tr("Settings")} title={tr("Settings")} className="w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
+        <button type="button" onClick={() => setShowFullSettings(true)} aria-label={tr("Settings")} title={tr("Settings")} className="lg-pill w-12 h-12 rounded-[14px] flex items-center justify-center text-[#5b606b] hover:text-[#15171c] transition-colors">
           <SettingsIcon />
         </button>
         <button type="button" onClick={() => setShowFullSettings(true)} aria-label={tr("Your profile")} title={effectiveAddress || tr("Your profile")} className="relative mt-1 flex items-center justify-center leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]" style={{ borderRadius: AVATAR_RADIUS }}>
           <Avatar address={effectiveAddress} isMe={true} size={40} />
-          <span className="absolute -right-px -bottom-px w-[11px] h-[11px] rounded-full bg-[#12a150] border-2 border-white" aria-hidden="true" />
+          <span className="icon-btn absolute -right-px -bottom-px w-[11px] h-[11px] rounded-full bg-[#12a150] border-2 border-white" aria-hidden="true" />
         </button>
       </nav>
 
       {/*  Sidebar: Conversation List — fixed width on desktop, full screen on mobile when no chat is active  */}
-      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden lg:flex' : 'flex') : (showList ? 'flex' : 'hidden lg:flex')} w-full md:w-auto md:flex-1 md:min-w-0 lg:flex-none lg:w-96 flex-col border-r border-black/[0.08] bg-white shrink-0 h-full overflow-hidden`}>
+      <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'hidden lg:flex' : 'flex') : (showList ? 'flex' : 'hidden lg:flex')} w-full md:w-auto md:flex-1 md:min-w-0 lg:flex-none lg:w-96 flex-col border-r border-black/[0.06] bg-transparent shrink-0 h-full overflow-hidden`} data-hl-list-col="">
 
         {/* ── Sidebar Header ── */}
-        <div className="px-4 py-3 md:px-5 md:pt-5 md:pb-3 border-b md:border-b-0 border-[#e4e7ec] bg-white flex flex-col gap-3 md:gap-4" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
+        <div className="lg-bar relative z-20 px-4 py-3 md:px-5 md:pt-5 md:pb-3 flex flex-col gap-3 md:gap-4" style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}>
           {/* Wide screens: the section's name and its actions (identity and Studio live in the rail). */}
           <div className="hidden md:flex items-center justify-between gap-3 pt-2">
             <h1 className="text-[26px] font-bold tracking-[-0.03em] text-[#15171c]">
@@ -7673,7 +7709,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 <button
                   type="button"
                   onClick={() => setShowContactRequests(true)}
-                  className="relative w-10 h-10 rounded-xl border border-[#e6e8ec] bg-white hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors"
+                  className="relative w-10 h-10 rounded-xl lg-card hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors"
                   title={tr("Contact requests")}
                   aria-label={pendingRequestCount > 0 ? tr("Contact requests, {pendingRequestCount} new", { pendingRequestCount }) : tr("Contact requests")}
                 >
@@ -7684,10 +7720,10 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     </span>
                   )}
                 </button>
-                <button type="button" onClick={() => setShowCreateGroup(true)} className="w-10 h-10 rounded-xl border border-[#e6e8ec] bg-white hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors" title={tr("New group")} aria-label={tr("New group")}>
+                <button type="button" onClick={() => setShowCreateGroup(true)} className="w-10 h-10 rounded-xl lg-card hover:bg-[#f7f8fa] flex items-center justify-center text-[#15171c] transition-colors" title={tr("New group")} aria-label={tr("New group")}>
                   <NewGroupIcon size={18} />
                 </button>
-                <button type="button" onClick={() => document.getElementById('ledger-new-chat-input')?.focus()} className="w-10 h-10 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] flex items-center justify-center text-white transition-colors" title={tr("New chat")} aria-label={tr("New chat")}>
+                <button type="button" onClick={() => document.getElementById('ledger-new-chat-input')?.focus()} className="w-10 h-10 rounded-xl bg-[#15171c] lg-ink hover:bg-[#2b2f38] flex items-center justify-center text-white transition-colors" title={tr("New chat")} aria-label={tr("New chat")}>
                   <PlusIcon size={18} weight={2} />
                 </button>
               </div>
@@ -7719,7 +7755,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               <button
                 type="button"
                 onClick={() => openStudio()}
-                className="w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
+                className="icon-btn w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
                 title={tr("Ledger Studio")}
                 aria-label={tr("Open Ledger Studio")}
               >
@@ -7728,7 +7764,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               <button
                 type="button"
                 onClick={() => setShowContactRequests(true)}
-                className="relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
+                className="icon-btn relative w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c]"
                 title={tr("Contact requests")}
                 aria-label={pendingRequestCount > 0 ? tr("Contact requests, {pendingRequestCount} new", { pendingRequestCount }) : tr("Contact requests")}
               >
@@ -7743,7 +7779,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 <button
                   type="button"
                   onClick={() => setShowSidebarMore(v => !v)}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${showSidebarMore ? 'bg-[#eff1f4]' : 'hover:bg-[#f2f4f7]'}`}
+                  className={`icon-btn w-9 h-9 rounded-full flex items-center justify-center text-[#15171c] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${showSidebarMore ? 'lg-recessed' : 'hover:bg-[#f2f4f7]'}`}
                   title={tr("More")}
                   aria-label={tr("More")}
                   aria-haspopup="menu"
@@ -7758,7 +7794,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                       role="menu"
                       aria-label={tr("More")}
                       onKeyDown={e => { if (e.key === 'Escape') setShowSidebarMore(false); }}
-                      className="absolute right-0 top-10 z-50 w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5"
+                      className="absolute right-0 top-10 z-50 w-60 lg-card rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5"
                     >
                       {[
                         { label: tr("New chat"), icon: <SquarePen size={16} strokeWidth={1.75} />, onClick: () => document.getElementById('ledger-new-chat-input')?.focus() },
@@ -7801,7 +7837,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               value={peerInput}
               onChange={e => setPeerInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleStartConversation()}
-              className="w-full h-10 md:h-11 bg-[#f2f4f7] rounded-xl md:rounded-[14px] pl-9 pr-3 text-[15px] text-[#15171c] placeholder:text-[#8b909a] border border-transparent focus:outline-none focus:bg-white focus:border-[#d0d5dd] transition-colors"
+              className="w-full h-10 md:h-11 lg-recessed rounded-full pl-9 pr-3 text-[15px] text-[#15171c] placeholder:text-[#8b909a] border border-transparent focus:outline-none focus:bg-white focus:border-[#d0d5dd] transition-colors"
             />
           </div>
           {/* Find by username or link, as in Signal: an exact @username, a Ledger Chat link or an
@@ -7819,9 +7855,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 type="button"
                 onClick={() => handleStartConversation()}
                 disabled={isStartingConversation}
-                className="w-full flex items-center gap-3 px-3 h-12 rounded-xl bg-white border border-[#e6e8ec] hover:bg-[#f7f8fa] text-left disabled:opacity-60"
+                className="w-full flex items-center gap-3 px-3 h-12 rounded-xl lg-card hover:bg-[#f7f8fa] text-left disabled:opacity-60"
               >
-                <span className="w-8 h-8 rounded-full bg-[#15171c] text-white grid place-items-center shrink-0" aria-hidden="true">
+                <span className="icon-btn w-8 h-8 rounded-full bg-[#15171c] lg-ink text-white grid place-items-center shrink-0" aria-hidden="true">
                   {isLink ? <QrCode size={15} strokeWidth={2} /> : isAddr ? <Wallet size={15} strokeWidth={2} /> : <AtSign size={15} strokeWidth={2} />}
                 </span>
                 <span className="flex-1 min-w-0">
@@ -7841,7 +7877,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   type="button"
                   aria-pressed={chatFilter === id}
                   onClick={() => setChatFilter(id)}
-                  className={`h-8 px-3 rounded-full text-[13px] transition-colors ${chatFilter === id ? 'bg-[#15171c] text-white font-semibold' : 'bg-white border border-[#e6e8ec] text-[#15171c] font-medium hover:bg-[#f7f8fa]'}`}
+                  className={`icon-btn h-8 px-3 rounded-full text-[13px] transition-colors ${chatFilter === id ? 'bg-[#15171c] lg-ink text-white font-semibold' : 'lg-card text-[#15171c] font-medium hover:bg-[#f7f8fa]'}`}
                 >
                   {label}
                 </button>
@@ -7866,7 +7902,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
         />
         </div>
 
-        <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+        <div className="flex-1 overflow-y-auto flex flex-col bg-transparent">
 
           {/* ── UPDATES TAB ── */}
           {sidebarTab === 'updates' && (
@@ -7917,6 +7953,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     <ChevronRight size={16} strokeWidth={1.9} className={`transition-transform ${showArchived ? 'rotate-90' : ''}`} aria-hidden="true" />
                   </span>
                 </button>
+              )}
+              {!showArchived && chatFilter === 'all' && (
+                <div className="pb-1">
+                  <PrivateNotesRow active={privateNotesOpen} onOpen={() => { setPrivateNotesOpen(true); if (!compactLayout) setActivePeer(null); }} />
+                  <div className="mx-5 md:mx-4 mt-1 h-px bg-black/[0.06]" aria-hidden="true" />
+                </div>
               )}
               {conversations.length === 0 ? (
                 <div className="flex flex-col flex-1 px-6 py-10">
@@ -8056,7 +8098,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                                 <span className="truncate">{preview}</span>
                               </p>
                               {conv.unreadCount && conv.unreadCount > 0 && !isMuted ? (
-                                <div className="min-w-[20px] h-5 bg-[#2456e6] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={tr("{unreadCount} unread", { unreadCount: conv.unreadCount })}>
+                                <div className="icon-btn min-w-[20px] h-5 bg-[#2456e6] rounded-full flex items-center justify-center px-1.5 shrink-0" aria-label={tr("{unreadCount} unread", { unreadCount: conv.unreadCount })}>
                                   <span className="text-[11px] font-bold text-white tabular-nums">
                                     {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                   </span>
@@ -8117,7 +8159,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             <div className="flex-1 overflow-y-auto">
               {localContacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#727a88]">
+                  <div className="w-14 h-14 rounded-full lg-tile flex items-center justify-center text-[#727a88]">
                     <Users size={24} strokeWidth={1.7} aria-hidden="true" />
                   </div>
                   <div>
@@ -8147,6 +8189,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
       {/*  Chat Area  */}
       <div className={`${sidebarTab === 'communities' ? (activeCommunity ? 'flex' : 'hidden lg:flex') : (!showList ? 'flex' : 'hidden lg:flex')} relative flex-1 flex-col w-full h-full min-w-0 min-h-0 overflow-hidden`}>
+        {privateNotesOpen && address && (
+          <PrivateNotesView wallet={address} locked={isLocked} variant={compactLayout ? 'screen' : 'pane'} onClose={() => setPrivateNotesOpen(false)} />
+        )}
         {sidebarTab === 'communities' ? (
           activeCommunity ? (
             communityManage ? (
@@ -8202,8 +8247,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               />
             )
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center bg-[#f7f8fa] p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-white border border-[#e4e7ec] flex items-center justify-center text-[#15171c] mb-5">
+            <div className="flex-1 flex flex-col items-center justify-center lg-canvas p-8 text-center">
+              <div className="w-16 h-16 rounded-full lg-pill flex items-center justify-center text-[#15171c] mb-5">
                 <Users size={26} strokeWidth={1.6} aria-hidden="true" />
               </div>
               <h3 className="text-[22px] font-semibold tracking-[-0.015em] text-[#15171c]">{tr("Choose a community")}</h3>
@@ -8216,9 +8261,9 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           // The conversation, and on wide screens its details column (ChatDetailsPanel).
           <div className="flex flex-1 min-h-0 min-w-0 w-full">
           <div className="relative flex flex-col flex-1 min-h-0 min-w-0">
-            <div className="h-[72px] pl-2 pr-3 md:pl-5 md:pr-5 border-b border-[#e6e8ec] flex items-center justify-between gap-2 bg-white shrink-0 z-30">
+            <div className="lg-bar h-[72px] pl-2 pr-3 md:pl-5 md:pr-5 flex items-center justify-between gap-2 shrink-0 z-30 relative">
               <div className="flex items-center gap-1 min-w-0">
-                <button type="button" onClick={() => setShowList(true)} className="lg:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label={tr("Back to chats")}>
+                <button type="button" onClick={() => setShowList(true)} className="icon-btn lg:hidden w-9 h-9 rounded-full hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c]" aria-label={tr("Back to chats")}>
                   <ChevronLeft size={22} strokeWidth={1.9} />
                 </button>
                 <button type="button" onClick={openContactInfo} className="flex items-center gap-3 min-w-0 rounded-xl px-1.5 py-1 hover:bg-[#f2f4f7] transition-colors text-left" aria-label={tr("Contact info for {getDisplayName}", { getDisplayName: getDisplayName(activePeer!) })}>
@@ -8258,18 +8303,18 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 {/* The rail (and its reading above Settings) is hidden on a phone. */}
                 <LiveLatency className="md:hidden mr-1" />
                 {/* Verify: compare the safety number with this person (lib/chat/verified-contacts.ts). */}
-                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="h-10 md:h-[42px] px-2.5 md:px-3 rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] inline-flex items-center gap-1.5 text-[#15171c] text-[13.5px] font-semibold transition-colors" title={tr("Verify encryption")} aria-label={tr("Verify encryption with this person")} data-testid="verify-button">
+                <button type="button" onClick={() => setShowEncryptionInfo(true)} className="icon-btn h-10 md:h-[42px] px-2.5 md:px-3 rounded-full lg-orb hover:bg-[#f2f4f7] inline-flex items-center gap-1.5 text-[#15171c] text-[13.5px] font-semibold transition-colors" title={tr("Verify encryption")} aria-label={tr("Verify encryption with this person")} data-testid="verify-button">
                   <ShieldCheck size={18} strokeWidth={1.8} className={activePeer && wasVerified(activePeer) ? 'text-[#0a7a55]' : ''} />
                   <span className="hidden sm:inline">{activePeer && wasVerified(activePeer) ? tr("Verified") : tr("Verify")}</span>
                 </button>
-                <button type="button" onClick={() => handleStartCall('audio')} className="w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title={tr("Voice call")} aria-label={tr("Voice call")}>
+                <button type="button" onClick={() => handleStartCall('audio')} className="icon-btn w-10 h-10 md:w-[42px] md:h-[42px] rounded-full lg-orb hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title={tr("Voice call")} aria-label={tr("Voice call")}>
                   <Phone size={19} strokeWidth={1.8} />
                 </button>
-                <button type="button" onClick={() => handleStartCall('video')} className="w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] bg-white hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title={tr("Video call")} aria-label={tr("Video call")}>
+                <button type="button" onClick={() => handleStartCall('video')} className="icon-btn w-10 h-10 md:w-[42px] md:h-[42px] rounded-full lg-orb hover:bg-[#f2f4f7] flex items-center justify-center text-[#15171c] transition-colors" title={tr("Video call")} aria-label={tr("Video call")}>
                   <Video size={20} strokeWidth={1.8} />
                 </button>
                 {ledgerSettings?.payments_enabled !== false && (
-                  <button type="button" onClick={() => setShowZkModal(true)} className="hidden lg:flex h-[42px] px-4 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] text-white text-[14px] font-semibold items-center gap-2 transition-colors" title={tr("Private payment on {networkLabel}", { networkLabel: networkLabel() })} aria-label={tr("Send a private payment")}>
+                  <button type="button" onClick={() => setShowZkModal(true)} className="hidden lg:flex h-[42px] px-4 rounded-xl bg-[#15171c] lg-ink hover:bg-[#2b2f38] text-white text-[14px] font-semibold items-center gap-2 transition-colors" title={tr("Private payment on {networkLabel}", { networkLabel: networkLabel() })} aria-label={tr("Send a private payment")}>
                     <Wallet size={17} strokeWidth={1.8} aria-hidden="true" />{" "}{tr("Pay")}
                   </button>
                 )}
@@ -8277,7 +8322,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   <button
                     type="button"
                     onClick={() => setShowHeaderMenu(v => !v)}
-                    className={`w-10 h-10 md:w-[42px] md:h-[42px] rounded-full md:rounded-xl md:border md:border-[#e6e8ec] flex items-center justify-center text-[#15171c] transition-colors ${showHeaderMenu ? 'bg-[#eff1f4]' : 'bg-white hover:bg-[#f2f4f7]'}`}
+                    className={`icon-btn w-10 h-10 md:w-[42px] md:h-[42px] rounded-full flex items-center justify-center text-[#15171c] transition-colors ${showHeaderMenu ? 'lg-orb lg-orb-active' : 'lg-orb'}`}
                     title={tr("More")}
                     aria-label={tr("More options")}
                     aria-haspopup="menu"
@@ -8288,7 +8333,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   {showHeaderMenu && (
                     <>
                       <div className="fixed inset-0 z-[150]" onClick={() => setShowHeaderMenu(false)} aria-hidden="true" />
-                      <div role="menu" className="absolute right-0 top-11 z-[160] w-60 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
+                      <div role="menu" className="absolute right-0 top-11 z-[160] w-60 lg-card rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] p-1.5">
                         {[
                           { label: tr("Contact info"), icon: <Info size={17} strokeWidth={1.8} />, onClick: openContactInfo },
                           { label: tr("Search in chat"), icon: <Search size={17} strokeWidth={1.8} />, onClick: () => { setShowSearch(true); setSearchQuery(''); setSearchIndex(0); } },
@@ -8336,7 +8381,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
             {/* Phase 3: Pinned Message Banner */}
             {pinnedMessageId && (
-              <div className="bg-white border-b border-[#e4e7ec] pl-4 pr-2 h-12 flex items-center gap-3 cursor-pointer hover:bg-[#f7f8fa] transition-colors z-20 shrink-0" onClick={() => {
+              <div className="lg-bar pl-4 pr-2 h-12 flex items-center gap-3 cursor-pointer transition-colors z-20 shrink-0 relative" onClick={() => {
                 revealMessage(pinnedMessageId);
               }}>
                 <Pin size={16} strokeWidth={1.9} className="text-[#475061] shrink-0" aria-hidden="true" />
@@ -8355,7 +8400,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     if (activePeer) localStorage.removeItem(`ledger_pinned_${activePeer.toLowerCase()}`);
                     executeSend(`__UNPIN__${oldPin}`);
                   }}
-                  className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
+                  className="icon-btn w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
                   aria-label={tr("Unpin message")}
                 >
                   <X size={16} strokeWidth={1.9} />
@@ -8374,7 +8419,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             />
 
             {/* Dynamic Chat Background */}
-            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'bg-[#f4f5f7]'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} data-wallpaper-tone={isSecretChat ? 'light' : canvasTone(chatTheme, activeWallpaper)} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : canvasStyle(chatTheme, activeWallpaper)), fontFamily, letterSpacing: resolveChatFont(chatFont).letterSpacing, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
+            <div data-chat-theme={isSecretChat ? 'default' : chatTheme.id} className={`ledger-chat-container flex-1 overflow-hidden flex flex-col min-h-0 relative ${isSecretChat ? 'bg-[#fbf7f4]' : 'lg-recessed'} ${ledgerSettings?.anti_screenshot ? 'select-none' : ''}`} data-wallpaper-tone={isSecretChat ? 'light' : canvasTone(chatTheme, activeWallpaper)} style={{ ...(isSecretChat ? {} : chatThemeStyle(chatTheme)), ...(isSecretChat ? {} : canvasStyle(chatTheme, activeWallpaper)), fontFamily, letterSpacing: resolveChatFont(chatFont).letterSpacing, fontSize: `${fontSizePx}px`, ...(ledgerSettings?.anti_screenshot && screenShielded ? { filter: 'blur(18px)', transition: 'filter 120ms ease' } : { transition: 'filter 160ms ease' }) }}>
               {/* Matrix Rain Effect Layer */}
               {chatBackground === 'matrix' && (
                 <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,255,0,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -8392,19 +8437,17 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 // The end-to-end encryption notice is the first item of the conversation and scrolls
                 // with it. 21 November 2026: it sat above the scrolling list, so messages were cut off
                 // under it, in the middle of the screen, instead of at the top of the chat.
-                const encryptionNoticeBase = (
+                // G8 privacy shield: a held stranger's chat opens with Accept / Dismiss / Block.
+                // The notice lives inside this element so nothing renders between the container and the list.
+                const encryptionNotice = (
+                  <>
                   <div className="flex justify-center pt-4 pb-1 px-4">
-                  <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 rounded-[14px] bg-white border border-[#e6e8ec] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
+                  <button type="button" onClick={() => setShowEncryptionInfo(true)} className="max-w-[460px] flex items-start gap-2.5 px-4 py-3 lg-card rounded-[24px] text-[13px] leading-[1.5] text-[#4a4f59] text-left hover:bg-[#fafbfc] transition-colors">
                     <Lock size={15} strokeWidth={1.9} className="text-[#15171c] shrink-0 mt-[2px]" aria-hidden="true" />
                     <span>{tr("Messages in this chat are end-to-end encrypted, and calls are encrypted between your devices.{value}{value2}{0}", { value: ledgerSettings?.payments_enabled !== false ? tr(" Private payments on Aztec hide the amount and the recipient; the account that pays the network fee is public.") : '', value2: ' ', 0: <span className="text-[#15171c] font-medium underline underline-offset-2">{tr("Details")}</span> })}
                     </span>
                   </button>
                 </div>
-                );
-                // G8 privacy shield: a held stranger's chat opens with Accept / Dismiss / Block.
-                const encryptionNotice = (
-                  <>
-                    {encryptionNoticeBase}
                     <RequestBanner owner={effectiveAddress || address} peer={activePeer} onBlock={() => activePeer && blockPeer(activePeer)} />
                   </>
                 );
@@ -8457,7 +8500,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     {encryptionNotice}
                     {/* Keyed by the person, so it plays its entrance again for each empty chat and after Clear chat. */}
                     <div key={`new-${activePeer}`} className="flex-1 flex flex-col items-center justify-center p-6" data-testid="new-conversation">
-                      <div className="hl-empty-enter bg-white rounded-[24px] px-7 pt-6 pb-7 max-w-[320px] text-center border border-[#e4e7ec] shadow-[0_12px_32px_-18px_rgba(16,24,40,0.25)]">
+                      <div className="hl-empty-enter lg-sheet rounded-[24px] px-7 pt-6 pb-7 max-w-[320px] text-center border">
                         {/* Only while this conversation has no message: the first one replaces this card with the thread. */}
                         <div className="hl-empty-enter-art flex justify-center mb-3">
                           <NewConversationLottie />
@@ -8544,7 +8587,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             </div>
 
             <div
-              className="sticky bottom-0 shrink-0 bg-white border-t border-[#e4e7ec] z-10"
+              className="sticky bottom-0 shrink-0 bg-transparent z-10"
               style={{ paddingBottom: `max(8px, env(safe-area-inset-bottom, 0px))` }}
             >
               {/*  Alpha Network Banner — real funds warning, only on Aztec Alpha  */}
@@ -8560,7 +8603,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               {isRecording && (
                 <div className="flex items-center gap-2 px-4 pt-3 pb-1" role="status">
                     <div className="flex items-center gap-2 bg-[#fdeeec] text-[#c0362c] px-3 py-1.5 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-[#e5484d] animate-pulse" aria-hidden="true" />
+                        <span className="lg-rec-dot" aria-hidden="true" />
                         <span className="text-[13px] font-medium">{tr("Recording a voice message")}</span>
                     </div>
                 </div>
@@ -8573,7 +8616,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   <button
                     type="button"
                     onClick={() => setIsSecretChat(false)}
-                    className="ml-auto shrink-0 px-2.5 h-7 rounded-full text-[13px] font-medium text-[#8a2a22] hover:bg-[#f9dcd7] transition-colors"
+                    className="icon-btn ml-auto shrink-0 px-2.5 h-7 rounded-full text-[13px] font-medium text-[#8a2a22] hover:bg-[#f9dcd7] transition-colors"
                   >
                     {tr("Turn off")}
                   </button>
@@ -8581,21 +8624,21 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               )}
               {/* Hito 4: Link Preview Card */}
               {linkPreview && !isRecording && (
-                <div className="flex items-start gap-3 mx-3 mt-2 p-2.5 rounded-xl bg-[#f7f8fa] border border-[#e4e7ec]">
+                <div className="flex items-start gap-3 mx-3 mt-2 p-2.5 rounded-xl lg-recessed border border-[#e4e7ec]">
                   {linkPreview.image && <img src={linkPreview.image} alt="" className="w-14 h-14 object-cover rounded-lg shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-[13.5px] font-medium text-[#15171c] truncate">{tr(linkPreview.title)}</p>
                     <p className="text-[12.5px] text-[#727a88] line-clamp-2">{tr(linkPreview.description)}</p>
                     <p className="text-[12px] text-[#a3a9b4] truncate mt-0.5">{linkPreview.url}</p>
                   </div>
-                  <button type="button" onClick={() => setLinkPreview(null)} className="w-7 h-7 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#727a88] shrink-0" aria-label={tr("Remove link preview")}>
+                  <button type="button" onClick={() => setLinkPreview(null)} className="icon-btn w-7 h-7 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#727a88] shrink-0" aria-label={tr("Remove link preview")}>
                     <X size={15} strokeWidth={1.9} />
                   </button>
                 </div>
               )}
               {/* Phase 4: Editing UI */}
               {editingMsg && (
-                <div className="mx-3 mt-2 pl-3 pr-1.5 py-2 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center gap-2">
+                <div className="mx-3 mt-2 pl-3 pr-1.5 py-2 lg-recessed border border-[#e4e7ec] rounded-xl flex items-center gap-2">
                   <div className="w-0.5 self-stretch rounded-full bg-[#15171c]" aria-hidden="true" />
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="text-[12.5px] font-medium text-[#15171c] mb-0.5">{tr("Edit message")}</span>
@@ -8612,12 +8655,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                       autoFocus
                     />
                   </div>
-                  <button type="button" onClick={submitEditMessage} className="w-8 h-8 rounded-full bg-[#15171c] text-white flex items-center justify-center hover:bg-[#2b2f38] shrink-0" aria-label={tr("Save edit")}><Check size={16} strokeWidth={2.2} /></button>
-                  <button type="button" onClick={() => setEditingMsg(null)} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] shrink-0" aria-label={tr("Cancel edit")}><X size={16} strokeWidth={1.9} /></button>
+                  <button type="button" onClick={submitEditMessage} className="icon-btn w-8 h-8 rounded-full bg-[#15171c] lg-ink text-white flex items-center justify-center hover:bg-[#2b2f38] shrink-0" aria-label={tr("Save edit")}><Check size={16} strokeWidth={2.2} /></button>
+                  <button type="button" onClick={() => setEditingMsg(null)} className="icon-btn w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] shrink-0" aria-label={tr("Cancel edit")}><X size={16} strokeWidth={1.9} /></button>
                 </div>
               )}
               {replyingTo && !editingMsg && (
-                <div className="mx-3 mt-2 pl-3 pr-1.5 py-2 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center gap-2">
+                <div className="mx-3 mt-2 pl-3 pr-1.5 py-2 lg-recessed border border-[#e4e7ec] rounded-xl flex items-center gap-2">
                   <div className="w-0.5 self-stretch rounded-full bg-[#15171c]" aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12.5px] font-medium text-[#15171c]">{tr("Replying to {value}", { value: replyingTo.isMe || replyingTo.senderInboxId === client?.inboxId ? 'yourself' : getDisplayName(activePeer!) })}</p>
@@ -8625,19 +8668,19 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                       replyingTo.content ? formatMessagePreview(replyingTo.content) : tr("Message")
                     }</p>
                   </div>
-                  <button type="button" onClick={() => setReplyingTo(null)} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] shrink-0" aria-label={tr("Cancel reply")}>
+                  <button type="button" onClick={() => setReplyingTo(null)} className="icon-btn w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] shrink-0" aria-label={tr("Cancel reply")}>
                     <X size={16} strokeWidth={1.9} />
                   </button>
                 </div>
               )}
               {/* Hito 4: Scheduled send indicator */}
               {scheduledAt && (
-                <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center justify-between">
+                <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 lg-card rounded-full flex items-center justify-between">
                   <span className="flex items-center gap-2 text-[13.5px] text-[#15171c]">
                     <Clock size={15} strokeWidth={1.9} className="text-[#475061]" aria-hidden="true" />
                     {tr("Sends")}{" "}{describeSendTime(scheduledAt.getTime()).toLowerCase()}
                   </span>
-                  <button type="button" onClick={() => setScheduledAt(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4]">{tr("Cancel")}</button>
+                  <button type="button" onClick={() => setScheduledAt(null)} className="icon-btn px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4]">{tr("Cancel")}</button>
                 </div>
               )}
               {/* Messages scheduled in this chat, each one can be cancelled */}
@@ -8645,7 +8688,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const mine = scheduledForPeer(scheduledList, activePeer);
                 if (!mine.length) return null;
                 return (
-                  <div className="mx-3 mt-2 pl-3 pr-1.5 py-1 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex flex-col" aria-label={tr("Scheduled messages")}>
+                  <div className="mx-3 mt-2 pl-3 pr-1.5 py-1 lg-recessed border border-[#e4e7ec] rounded-xl flex flex-col" aria-label={tr("Scheduled messages")}>
                     {mine.slice(0, 3).map(m => (
                       <div key={m.id} className="flex items-center justify-between gap-2 min-h-9">
                         <span className="flex items-center gap-2 min-w-0 text-[13.5px] text-[#15171c]">
@@ -8653,7 +8696,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                           <span className="shrink-0 font-medium">{tr(describeSendTime(m.sendAt))}</span>
                           <span className="truncate text-[#727a88]">{formatMessagePreview(m.content)}</span>
                         </span>
-                        <button type="button" onClick={() => removeScheduled(address, m.id)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4] shrink-0" aria-label={tr("Cancel the message scheduled for {describeSendTime}", { describeSendTime: describeSendTime(m.sendAt) })}>{tr("Cancel")}</button>
+                        <button type="button" onClick={() => removeScheduled(address, m.id)} className="icon-btn px-3 h-8 rounded-full text-[13px] font-medium text-[#475061] hover:bg-[#eff1f4] shrink-0" aria-label={tr("Cancel the message scheduled for {describeSendTime}", { describeSendTime: describeSendTime(m.sendAt) })}>{tr("Cancel")}</button>
                       </div>
                     ))}
                     {mine.length > 3 && <p className="text-[12.5px] text-[#727a88] pb-1.5">{tr("And {value} more", { value: mine.length - 3 })}</p>}
@@ -8667,7 +8710,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     <Timer size={15} strokeWidth={1.9} className="text-[#e53e3e]" aria-hidden="true" />
                     {tr("Disappearing message (")}{burnTimer >= 60 ? `${Math.floor(burnTimer/60)}m` : `${burnTimer}s`})
                   </span>
-                  <button type="button" onClick={() => setBurnTimer(null)} className="px-3 h-8 rounded-full text-[13px] font-medium text-[#c53030] hover:bg-[#fed7d7]">{tr("Turn off")}</button>
+                  <button type="button" onClick={() => setBurnTimer(null)} className="icon-btn px-3 h-8 rounded-full text-[13px] font-medium text-[#c53030] hover:bg-[#fed7d7]">{tr("Turn off")}</button>
                 </div>
               )}
               {/* Emojis, stickers and GIFs */}
@@ -8685,7 +8728,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 />
               )}
               {inputText === '/' && (
-                <div className="absolute bottom-[72px] left-3 mb-2 bg-white border border-[#e4e7ec] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl w-[280px] overflow-hidden z-50" role="menu" aria-label={tr("Commands")}>
+                <div className="absolute bottom-[72px] left-3 mb-2 lg-card shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl w-[280px] overflow-hidden z-50" role="menu" aria-label={tr("Commands")}>
                   <p className="px-4 pt-3 pb-1.5 text-[12.5px] font-medium text-[#727a88]">{tr("Commands")}</p>
                   <div className="flex flex-col px-1.5 pb-1.5">
                     {[
@@ -8705,7 +8748,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         } },
                     ].filter(c => c.cmd !== '/pay' || (ledgerSettings as any)?.payments_enabled !== false).map(c => (
                       <button key={c.cmd} type="button" role="menuitem" onClick={c.run} className="px-2.5 h-12 text-left hover:bg-[#f2f4f7] rounded-xl transition-colors flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-lg bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0">{c.icon}</span>
+                        <span className="w-8 h-8 rounded-lg lg-recessed text-[#15171c] flex items-center justify-center shrink-0">{c.icon}</span>
                         <span className="flex flex-col">
                           <span className="text-[14px] font-medium text-[#15171c]">{c.label}</span>
                           <span className="text-[12.5px] text-[#727a88]">{c.cmd}</span>
@@ -8732,7 +8775,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                        className="absolute bottom-[68px] left-2 w-[300px] bg-white border border-[#e4e7ec] shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] rounded-2xl z-50 p-1.5 overflow-hidden max-h-[70vh] overflow-y-auto"
+                        className="absolute bottom-[68px] left-2 w-[300px] lg-sheet rounded-[24px] z-50 p-1.5 overflow-hidden max-h-[70vh] overflow-y-auto"
                         role="menu"
                         aria-label={tr("Attach")}
                       >
@@ -8776,7 +8819,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                                       role="menuitem"
                                       className="flex items-center gap-3 h-[52px] px-2.5 w-full hover:bg-[#f2f4f7] active:bg-[#e9ecf0] rounded-xl transition-colors select-none text-left disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
                                     >
-                                      <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${g === 'Pay' ? 'bg-[#f1ebff] text-[#5200ff]' : 'bg-[#eff1f4] text-[#15171c]'}`} aria-hidden="true">
+                                      <span className={`lg-tile w-9 h-9 rounded-[12px] flex items-center justify-center flex-shrink-0 ${g === 'Pay' ? 'text-[#5200ff]' : 'text-[#15171c]'}`} aria-hidden="true">
                                         {app.icon}
                                       </span>
                                       <span className="flex flex-col min-w-0">
@@ -8797,19 +8840,19 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
                   {/* Thread and Bot UI */}
                   {threadParentId && (
-                    <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 bg-[#f7f8fa] border border-[#e4e7ec] rounded-xl flex items-center justify-between">
+                    <div className="mx-3 mt-2 pl-3 pr-1.5 h-10 lg-card rounded-full flex items-center justify-between">
                       <span className="flex items-center gap-2 text-[13.5px] text-[#15171c]">
                         <MessageSquare size={15} strokeWidth={1.9} className="text-[#475061]" aria-hidden="true" />
                         {tr("Replying in a thread")}
                       </span>
-                      <button type="button" onClick={() => setThreadParentId(null)} className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061]" aria-label={tr("Leave thread")}>
+                      <button type="button" onClick={() => setThreadParentId(null)} className="icon-btn w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061]" aria-label={tr("Leave thread")}>
                         <X size={16} strokeWidth={1.9} />
                       </button>
                     </div>
                   )}
 
                   {showBotSuggestions && (
-                    <div className="absolute bottom-[68px] left-2 right-2 bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_24px_48px_-12px_rgba(16,24,40,0.18)] overflow-hidden z-50 p-1.5">
+                    <div className="absolute bottom-[68px] left-2 right-2 lg-sheet rounded-[24px] overflow-hidden z-50 p-1.5">
                       {BOT_COMMANDS_LIST.filter(b => b.cmd.startsWith(inputText)).map(bot => (
                         <button
                           key={bot.cmd}
@@ -8834,25 +8877,25 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   )}
                   {/* ── Main input row ── */}
                   <div
-                    className="flex items-end gap-2 px-3 pt-2 w-full relative z-40 bg-white md:bg-transparent md:gap-2.5 md:px-6 md:pt-3"
+                    className="lg-composer-row flex items-end gap-2.5 px-3 pt-2 w-full relative z-40 md:px-6 md:pt-3"
                     style={{ paddingBottom: 'max(12px, calc(0.5rem + env(safe-area-inset-bottom, 0px)))' }}
                   >
                     <button
                       type="button"
                       onClick={() => setShowAppDrawer(d => !d)}
-                      className={`w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full md:rounded-2xl flex items-center justify-center transition-colors duration-200 mb-[3px] md:mb-0 ${showAppDrawer ? 'bg-[#15171c] text-white md:border md:border-[#15171c]' : 'text-[#475061] hover:bg-[#f2f4f7] md:bg-white md:border md:border-[#e6e8ec] md:text-[#15171c]'}`}
+                      className={`lg-orb w-[46px] h-[46px] shrink-0 rounded-full flex items-center justify-center text-[#15171c] transition-transform duration-200 active:scale-95 ${showAppDrawer ? 'lg-orb-active' : ''}`}
                       aria-label={showAppDrawer ? tr("Close attachments") : tr("Attach")}
                       aria-expanded={showAppDrawer}
                     >
-                      <Plus size={22} strokeWidth={1.9} className={`transition-transform duration-200 ${showAppDrawer ? 'rotate-45' : ''}`} />
+                      <ComposerPlusIcon size={24} strokeWidth={1.75} className={`transition-transform duration-300 ${showAppDrawer ? 'rotate-45' : ''}`} />
                     </button>
 
                     {/* The message field */}
-                    <div className="flex-1 bg-[#f2f4f7] rounded-[22px] flex items-end relative border border-transparent focus-within:bg-white focus-within:border-[#d0d5dd] min-h-[44px] max-h-[136px] transition-colors md:bg-white md:border-[#e6e8ec] md:rounded-2xl md:min-h-[48px] md:focus-within:border-[#b8bdc7]">
+                    <div className={`lg-composer flex-1 min-w-0 flex items-end relative min-h-[46px] max-h-[184px] transition-[border-radius] duration-200 ${inputText.includes('\n') || inputText.length > 42 ? 'rounded-[24px]' : 'rounded-[23px]'}`}>
                       {isRecording ? (
                         <div className="flex-1 flex items-center justify-between pl-4 pr-1.5 h-[44px]">
                           <div className="flex items-center gap-2" role="status">
-                            <span className="w-2 h-2 rounded-full bg-[#e5484d] animate-pulse" aria-hidden="true" />
+                            <span className="lg-rec-dot" aria-hidden="true" />
                             <span className="text-[15px] font-medium text-[#c0362c] tabular-nums">
                               {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
                             </span>
@@ -8861,14 +8904,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                             <button
                               type="button"
                               onClick={cancelRecording}
-                              className="px-3 h-8 rounded-full text-[14px] font-medium text-[#475061] hover:bg-[#e9ecf0]"
+                              className="icon-btn px-3 h-8 rounded-full text-[14px] font-medium text-[#475061] hover:bg-[#e9ecf0]"
                             >
                               {tr("Cancel")}
                             </button>
                             <button
                               type="button"
                               onClick={stopRecording}
-                              className="w-8 h-8 rounded-full bg-[#15171c] flex items-center justify-center text-white active:scale-95"
+                              className="icon-btn w-8 h-8 rounded-full bg-[#15171c] lg-ink flex items-center justify-center text-white active:scale-95"
                               aria-label={tr("Send voice message")}
                             >
                               <ArrowUp size={17} strokeWidth={2.2} />
@@ -8877,16 +8920,6 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         </div>
                       ) : (
                         <>
-                          <button
-                            type="button"
-                            data-expression-toggle=""
-                            onClick={() => setExpression(x => (x ? null : 'emoji'))}
-                            aria-label={tr("Emojis, stickers and GIFs")}
-                            aria-expanded={!!expression}
-                            className={`ml-1.5 mb-[3px] self-end w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${expression ? 'bg-[#e9ecf0] text-[#15171c]' : 'text-[#475061] hover:bg-[#e9ecf0]'}`}
-                          >
-                            <Smile size={21} strokeWidth={1.8} />
-                          </button>
                           <textarea
                             ref={inputRef as any}
                             value={inputText}
@@ -8925,7 +8958,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                             aria-label={tr("Message")}
                             rows={1}
                             // 16px stops iOS Safari from zooming in when the field is focused.
-                            className="flex-1 min-w-0 w-0 bg-transparent px-4 py-[10px] text-[#15171c] focus:outline-none placeholder:text-[#a3a9b4] disabled:opacity-50 text-[16px] resize-none max-h-[184px] scrollbar-none leading-[1.5] min-h-[44px]"
+                            className="flex-1 min-w-0 w-0 bg-transparent pl-[18px] pr-1 py-[11px] text-[#15171c] focus:outline-none placeholder:text-[#7a7e87] disabled:opacity-50 text-[16px] resize-none max-h-[184px] scrollbar-none leading-[1.5] min-h-[46px]"
                           />
                           {/* Character counter — appears when approaching long message */}
                           {inputText.length > 400 && (
@@ -8933,18 +8966,31 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                               {1000 - inputText.length}
                             </span>
                           )}
-                          {/* On wide screens the microphone sits inside the field, beside a separate send button. */}
-                          {!inputText.trim() && (
+                          {/* Inside the pill, right: stickers (always), camera and microphone while empty. */}
+                          <div className="flex items-center self-end mb-[4px] mr-1 shrink-0 text-[#111318]">
                             <button
                               type="button"
-                              onClick={startRecording}
-                              className="hidden md:flex mr-1.5 mb-[6px] self-end w-9 h-9 shrink-0 rounded-xl items-center justify-center text-[#5b606b] hover:bg-[#f2f4f7] transition-colors"
-                              aria-label={tr("Record a voice message")}
-                              title={tr("Record a voice message")}
+                              data-expression-toggle=""
+                              onClick={() => setExpression(x => (x ? null : 'emoji'))}
+                              aria-label={tr("Emojis, stickers and GIFs")}
+                              aria-expanded={!!expression}
+                              className={`icon-btn w-[38px] h-[38px] rounded-full flex items-center justify-center transition-colors ${expression ? 'lg-active-capsule' : 'hover:bg-black/[0.05]'}`}
                             >
-                              <Mic size={19} strokeWidth={1.8} />
+                              <StickerIcon size={22} strokeWidth={1.9} />
                             </button>
-                          )}
+                            {!inputText.trim() && (
+                              <>
+                                <button type="button" onClick={() => cameraRef.current?.click()} aria-label={tr("Camera")} title={tr("Camera")}
+                                  className="icon-btn w-[38px] h-[38px] rounded-full flex items-center justify-center hover:bg-black/[0.05] transition-colors">
+                                  <CameraIcon size={22} strokeWidth={1.9} />
+                                </button>
+                                <button type="button" onClick={startRecording} aria-label={tr("Record a voice message")} title={tr("Record a voice message")}
+                                  className="icon-btn w-[38px] h-[38px] rounded-full flex items-center justify-center hover:bg-black/[0.05] transition-colors">
+                                  <MicIcon size={22} strokeWidth={1.9} />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </>
                       )}
                     </div>
@@ -8963,18 +9009,6 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                         data-key={sendAnimKey}
                         onTrigger={() => {}}
                       />
-                    ) : !isRecording ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={startRecording}
-                          className="md:hidden w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-colors text-[#475061] hover:bg-[#f2f4f7] active:scale-95 mb-[2px]"
-                          aria-label={tr("Record a voice message")}
-                        >
-                          <Mic size={21} strokeWidth={1.8} />
-                        </button>
-                        <LottieSendButton disabled className="hidden md:flex" />
-                      </>
                     ) : null}
                     </div>
                   </div>
@@ -9001,7 +9035,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           )}
           </div>
         ) : (
-          <div className="flex-1 flex flex-col bg-[#f7f8fa] relative overflow-y-auto">
+          <div className="flex-1 flex flex-col lg-canvas relative overflow-y-auto">
             {/* No conversation open (21 November 2026): a quiet workspace panel, no illustration.
                 What the product does is stated as a short specification, each line true today. */}
             <div className="flex-1 flex items-center justify-center p-6 md:p-12">
@@ -9015,7 +9049,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   <button
                     type="button"
                     onClick={() => document.getElementById('ledger-new-chat-input')?.focus()}
-                    className="inline-flex items-center gap-2 h-10 px-4 bg-[#15171c] text-white rounded-lg text-[14px] font-medium hover:bg-[#2b2f38] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5200ff]"
+                    className="inline-flex items-center gap-2 h-10 px-4 bg-[#15171c] lg-ink text-white rounded-full text-[14px] font-medium hover:bg-[#2b2f38] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5200ff]"
                   >
                     <Plus size={16} strokeWidth={2} />
                     {tr("New chat")}
@@ -9023,7 +9057,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   <button
                     type="button"
                     onClick={() => setShowCreateGroup(true)}
-                    className="inline-flex items-center gap-2 h-10 px-4 bg-white border border-[#d0d5dd] text-[#15171c] rounded-lg text-[14px] font-medium hover:bg-[#f2f4f7] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5200ff]"
+                    className="inline-flex items-center gap-2 h-10 px-4 lg-pill text-[#15171c] rounded-full text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5200ff]"
                   >
                     <Users size={16} strokeWidth={1.8} />
                     {tr("New group")}
@@ -9092,7 +9126,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
           // hidden whenever that area is (display: none below 1024 px while the chat list shows, and
           // in Communities): answering from outside the caller's chat connected the call but showed
           // neither face until that chat was opened.
-          <div data-testid="call-screen" className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' && callState === 'active' ? 'bg-[#0f1115]' : 'bg-[#f7f8fa]'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
+          <div data-testid="call-screen" className={`fixed inset-0 w-full h-full flex flex-col ${callType === 'video' && callState === 'active' ? 'bg-[#0f1115]' : 'lg-recessed'}`} style={{ zIndex: 200000, touchAction: 'none' }}>
 
             {/* Background: the other person's video, or their name and picture for a voice call */}
             <div className="absolute inset-0">
@@ -9126,7 +9160,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               </div>
             )}
             {isScreenSharing && (
-              <div role="status" className="absolute top-[120px] left-1/2 -translate-x-1/2 z-30 bg-[#15171c] text-white text-[13px] font-medium pl-3.5 pr-1.5 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
+              <div role="status" className="absolute top-[120px] left-1/2 -translate-x-1/2 z-30 bg-[#15171c] lg-ink text-white text-[13px] font-medium pl-3.5 pr-1.5 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
                 {tr("You are sharing your screen")}
                 <button type="button" onClick={() => stopScreenShareRef.current()} className="bg-white text-[#15171c] rounded-full px-2.5 py-0.5 text-[12px] font-semibold">{tr("Stop")}</button>
               </div>
@@ -9169,8 +9203,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             {(() => {
               const dark = callType === 'video' && !!remoteStream && callState === 'active';
               const btn = dark
-                ? 'w-11 h-11 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white backdrop-blur-md transition-colors'
-                : 'w-11 h-11 flex items-center justify-center rounded-full bg-white hover:bg-[#eff1f4] text-[#15171c] border border-[#e4e7ec] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-colors';
+                ? 'icon-btn lg-smoke w-11 h-11 flex items-center justify-center rounded-full text-white transition'
+                : 'icon-btn lg-orb w-11 h-11 flex items-center justify-center rounded-full text-[#15171c] transition';
               return (
                 <div className="absolute top-0 inset-x-0 z-30 flex items-start justify-between px-4 sm:px-6" style={{ paddingTop: 'max(16px, env(safe-area-inset-top, 16px))' }}>
                   <button type="button" onClick={() => setIsCallMinimized(true)} className={btn} aria-label={tr("Minimise call")} title={tr("Minimise")}>
@@ -9206,7 +9240,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                   key="reconnecting"
                   initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
                   role="status"
-                  className="absolute top-[120px] left-1/2 -translate-x-1/2 bg-white text-[#15171c] text-[13px] font-medium px-3.5 py-2 rounded-full z-30 flex items-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.35)]"
+                  className="absolute top-[120px] left-1/2 -translate-x-1/2 lg-sheet text-[#15171c] text-[13px] font-medium px-3.5 py-2 rounded-full z-30 flex items-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.35)]"
                 >
                   <Wifi size={14} strokeWidth={2} className="text-[#b7791f]" aria-hidden="true" />{" "}{tr("Reconnecting…")}
                 </motion.div>
@@ -9215,7 +9249,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 <motion.div
                   initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
                   role="status"
-                  className="absolute top-[120px] left-1/2 -translate-x-1/2 bg-white text-[#15171c] text-[13px] font-medium px-3.5 py-2 rounded-full z-30 flex items-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.35)]"
+                  className="absolute top-[120px] left-1/2 -translate-x-1/2 lg-sheet text-[#15171c] text-[13px] font-medium px-3.5 py-2 rounded-full z-30 flex items-center gap-2 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.35)]"
                 >
                   <AlertTriangle size={14} strokeWidth={2} className="text-[#b7791f]" aria-hidden="true" />{" "}{tr("Weak connection")}
                 </motion.div>
@@ -9226,7 +9260,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               <button
                 type="button"
                 onClick={playRemoteAudio}
-                className="absolute bottom-[132px] left-1/2 -translate-x-1/2 z-30 bg-[#15171c] text-white text-[14px] font-semibold px-4 py-2.5 rounded-full shadow-lg"
+                className="absolute bottom-[132px] left-1/2 -translate-x-1/2 z-30 bg-[#15171c] lg-ink text-white text-[14px] font-semibold px-4 py-2.5 rounded-full shadow-lg"
               >{tr("Tap to hear {value}", { value: callPeer ? getDisplayName(callPeer) : tr("your contact") })}
               </button>
             )}
@@ -9258,14 +9292,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
       {(showCallSettings && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[300000] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowCallSettings(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="call-settings-title" className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]" onClick={e => e.stopPropagation()}>
+        <div className="lg-scrim fixed inset-0 z-[300000] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowCallSettings(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="call-settings-title" className="lg-sheet w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] overflow-hidden max-h-[85dvh] overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start px-5 pt-5 pb-3">
               <div>
                 <h3 id="call-settings-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">{tr("Call settings")}</h3>
                 <p className="text-[14px] text-[#727a88] mt-0.5 flex items-center gap-2"><span>{callType === 'video' ? tr("Video call") : tr("Voice call")}</span><span className="tabular-nums"><CallClock startedAt={callStartedAt} /></span></p>
               </div>
-              <button type="button" onClick={() => setShowCallSettings(false)} aria-label={tr("Close")} className="w-9 h-9 -mr-1 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+              <button type="button" onClick={() => setShowCallSettings(false)} aria-label={tr("Close")} className="icon-btn w-9 h-9 -mr-1 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
                 <X size={18} strokeWidth={1.9} />
               </button>
             </div>
@@ -9275,7 +9309,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const row = ({ icon, title, text, right, onClick }: { icon: React.ReactNode; title: string; text: string; right?: React.ReactNode; onClick?: () => void }) => {
                   const inner = (
                     <>
-                      <span className="w-9 h-9 rounded-xl bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">{icon}</span>
+                      <span className="w-9 h-9 rounded-xl lg-recessed text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">{icon}</span>
                       <span className="flex-1 min-w-0 text-left">
                         <span className="block text-[15px] font-medium text-[#15171c]">{title}</span>
                         <span className="block text-[13px] text-[#727a88] mt-0.5">{text}</span>
@@ -9290,7 +9324,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                 const toggle = ({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) => (
                   <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
                     className={`icon-btn relative w-[46px] h-[28px] rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-[#15171c]' : 'bg-[#d4d8df]'}`}>
-                    <span className={`absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm transition-transform duration-200 ${on ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                    <span className={`icon-btn absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm transition-transform duration-200 ${on ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                   </button>
                 );
                 return (
@@ -9306,7 +9340,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                           aria-label={tr("Audio output")}
                           value={audioOutputId}
                           onChange={(e) => chooseAudioOutput(e.target.value)}
-                          className="max-w-[150px] h-9 rounded-lg border border-[#e4e7ec] bg-white px-2 text-[13px] text-[#15171c]"
+                          className="max-w-[150px] h-9 rounded-lg lg-card px-2 text-[13px] text-[#15171c]"
                         >
                           {audioOutputs.map((o) => <option key={o.id} value={o.id}>{tr(o.label)}</option>)}
                         </select>
@@ -9356,15 +9390,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
       {(showE2EE && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[300001] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowE2EE(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="e2ee-title" className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]" onClick={e => e.stopPropagation()}>
+        <div className="lg-scrim fixed inset-0 z-[300001] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowE2EE(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="e2ee-title" className="lg-sheet w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] p-6 pb-[max(24px,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
             <div className="flex justify-end -mt-2 -mr-2">
-              <button type="button" onClick={() => setShowE2EE(false)} aria-label={tr("Close")} className="w-9 h-9 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+              <button type="button" onClick={() => setShowE2EE(false)} aria-label={tr("Close")} className="icon-btn w-9 h-9 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
                 <X size={18} strokeWidth={1.9} />
               </button>
             </div>
             <div className="flex flex-col items-center text-center">
-              <span className="w-14 h-14 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] mb-4" aria-hidden="true">
+              <span className="lg-tile w-14 h-14 rounded-full flex items-center justify-center text-[#15171c] mb-4" aria-hidden="true">
                 <ShieldCheck size={26} strokeWidth={1.7} />
               </span>
               <h3 id="e2ee-title" className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">{tr("This call is encrypted")}</h3>
@@ -9390,11 +9424,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
       {(showScanner && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[200000] bg-[#f7f8fa] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[200000] lg-canvas flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
            <div className="w-full max-w-sm">
                <div className="flex justify-between items-center mb-3">
                    <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">{tr("Scan a code")}</h3>
-                   <button type="button" onClick={() => setShowScanner(false)} aria-label={tr("Close")} className="w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                   <button type="button" onClick={() => setShowScanner(false)} aria-label={tr("Close")} className="icon-btn w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
                      <X size={18} strokeWidth={1.9} />
                    </button>
                </div>
@@ -9446,11 +9480,11 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
       {(showMyQR && isMounted && typeof document !== 'undefined')
         ? createPortal(
-        <div className="fixed inset-0 z-[200000] bg-[#f7f8fa] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[200000] lg-canvas flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
            <div className="w-full max-w-sm">
                <div className="flex justify-between items-center mb-6">
                    <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-[#15171c]">{myCodeView === 'username' ? tr("Username") : tr("Share")}</h3>
-                   <button type="button" onClick={() => { setShowMyQR(false); setMyCodeView('share'); }} aria-label={tr("Close")} className="w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
+                   <button type="button" onClick={() => { setShowMyQR(false); setMyCodeView('share'); }} aria-label={tr("Close")} className="icon-btn w-10 h-10 flex items-center justify-center hover:bg-[#eff1f4] rounded-full transition-colors text-[#15171c]">
                      <X size={18} strokeWidth={1.9} />
                    </button>
                </div>
@@ -9470,7 +9504,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                  <button
                    type="button"
                    onClick={() => setMyCodeView(v => (v === 'address' ? 'share' : 'address'))}
-                   className="mt-4 mx-auto block h-10 px-4 rounded-full text-[14px] font-semibold text-[#15171c] hover:bg-[#eff1f4]"
+                   className="icon-btn mt-4 mx-auto block h-10 px-4 rounded-full text-[14px] font-semibold text-[#15171c] hover:bg-[#eff1f4]"
                  >
                    {myCodeView === 'address' ? tr("Show my username code") : tr("Show my wallet address instead")}
                  </button>
@@ -9484,7 +9518,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
        {/* Message actions menu — Signal-parity right-click/long-press menu */}
        {(contextMenu && typeof document !== 'undefined')
          ? createPortal(
-         <div className="fixed inset-0 z-[99999] bg-black/10 select-none" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}>
+         <div className="lg-scrim fixed inset-0 z-[99999] select-none" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}>
            {(() => {
              const targetMsg = messages.find(m => m.id === contextMenu.id);
              const myAddr = (address || effectiveAddress || '').toLowerCase();
@@ -9498,7 +9532,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              // A message waiting to be sent later has one action: cancel it.
              if (typeof contextMenu.id === 'string' && contextMenu.id.startsWith('sched_')) {
                return (
-                 <div role="menu" aria-label={tr("Scheduled message")} className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28)] p-1.5 min-w-[248px]" style={{ top: posY, left: posX, zIndex: 100000 }} onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); setContextMenu(null); } }}>
+                 <div role="menu" aria-label={tr("Scheduled message")} className="absolute lg-card rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28)] p-1.5 min-w-[248px]" style={{ top: posY, left: posX, zIndex: 100000 }} onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); setContextMenu(null); } }}>
                    <button role="menuitem" type="button" autoFocus onClick={() => { if (address) removeScheduled(address, contextMenu.id); setContextMenu(null); toast.success(tr("Scheduled message cancelled")); }} className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[14.5px] text-[#e5484d] hover:bg-[#fff0f0] text-left">
                      <Trash2 size={16} strokeWidth={1.8} />{" "}{tr("Cancel scheduled message")}
                    </button>
@@ -9510,7 +9544,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                  role="menu"
                  aria-label={tr("Message actions")}
                  ref={(el) => { if (el && !el.contains(document.activeElement)) (el.querySelector('[role="menuitem"]') as HTMLElement | null)?.focus(); }}
-                 className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28),0_4px_16px_rgba(16,24,40,0.08)] p-1.5 min-w-[248px] max-h-[calc(100vh-24px)] overflow-y-auto flex flex-col"
+                 className="absolute lg-card rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28),0_4px_16px_rgba(16,24,40,0.08)] p-1.5 min-w-[248px] max-h-[calc(100vh-24px)] overflow-y-auto flex flex-col"
                  style={{
                    top: posY,
                    left: posX,
@@ -9530,7 +9564,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                  }}
                >
                  {/* Signal Quick Reactions Bar */}
-                 <div className="flex items-center justify-between px-2 py-1.5 mb-1 bg-[#f7f8fa] rounded-xl border border-black/[0.04]">
+                 <div className="flex items-center justify-between px-2 py-1.5 mb-1 lg-recessed rounded-xl border border-black/[0.04]">
                    {['❤️', '👍', '👎', '😂', '😮', '😢', '🙏'].map(emoji => (
                      <button
                        key={emoji}
@@ -9683,7 +9717,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
        {(msgDetails && typeof document !== 'undefined')
          ? createPortal(
          <div
-           className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+           className="lg-scrim fixed inset-0 flex items-center justify-center p-4 animate-in fade-in duration-150"
            style={{ zIndex: 300000 }}
            onClick={(e) => { e.stopPropagation(); setMsgDetails(null); }}
            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setMsgDetails(null); } }}
@@ -9692,7 +9726,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
              role="dialog"
              aria-modal="true"
              aria-labelledby="msg-details-title"
-             className="bg-white rounded-3xl shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] border border-[#e4e7ec] w-full max-w-sm p-6"
+             className="lg-sheet rounded-3xl border w-full max-w-sm p-6"
              onClick={e => e.stopPropagation()}
            >
              <div className="flex items-center justify-between mb-4">
@@ -9700,7 +9734,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                <button
                  type="button"
                  onClick={(e) => { e.stopPropagation(); setMsgDetails(null); }}
-                 className="w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
+                 className="icon-btn w-8 h-8 rounded-full hover:bg-[#eff1f4] flex items-center justify-center text-[#475061] transition-colors"
                  aria-label={tr("Close")}
                >
                  <X size={16} strokeWidth={2} />
@@ -9715,7 +9749,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                </div>
                <div className="flex flex-col gap-0.5">
                  <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">{tr("From")}</dt>
-                 <dd className="font-mono text-[12px] break-all bg-[#f7f8fa] p-2 rounded-xl border border-[#e4e7ec] text-[#15171c]">
+                 <dd className="font-mono text-[12px] break-all lg-recessed p-2 rounded-xl border border-[#e4e7ec] text-[#15171c]">
                    {msgDetails.sender || tr("Unknown")}
                  </dd>
                </div>
@@ -9727,7 +9761,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                </div>
                <div className="flex flex-col gap-0.5">
                  <dt className="text-[12px] font-semibold uppercase tracking-wider text-[#727a88]">{tr("Message ID")}</dt>
-                 <dd className="font-mono text-[11px] break-all bg-[#f7f8fa] p-2 rounded-xl border border-[#e4e7ec] text-[#727a88]">
+                 <dd className="font-mono text-[11px] break-all lg-recessed p-2 rounded-xl border border-[#e4e7ec] text-[#727a88]">
                    {msgDetails.id}
                  </dd>
                </div>
@@ -9736,7 +9770,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                type="button"
                autoFocus
                onClick={(e) => { e.stopPropagation(); setMsgDetails(null); }}
-               className="mt-6 w-full py-2.5 rounded-xl bg-[#15171c] hover:bg-[#252830] text-white text-[14px] font-semibold transition-colors"
+               className="mt-6 w-full py-2.5 rounded-xl bg-[#15171c] lg-ink hover:bg-[#252830] text-white text-[14px] font-semibold transition-colors"
              >
                {tr("Close")}
              </button>
@@ -9747,15 +9781,15 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
         {/* Forward a message */}
         {forwardMsg && (
-          <div className="fixed inset-0 z-[300] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" onClick={() => setForwardMsg(null)}>
-            <div role="dialog" aria-modal="true" aria-labelledby="forward-title" className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+          <div className="lg-scrim fixed inset-0 z-[300] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setForwardMsg(null)}>
+            <div role="dialog" aria-modal="true" aria-labelledby="forward-title" className="w-full sm:max-w-md lg-sheet rounded-t-3xl sm:rounded-3xl p-5 animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-3">
                 <h3 id="forward-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">{tr("Forward to")}</h3>
-                <button type="button" onClick={() => setForwardMsg(null)} aria-label={tr("Close")} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#15171c]">
+                <button type="button" onClick={() => setForwardMsg(null)} aria-label={tr("Close")} className="icon-btn w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#15171c]">
                   <X size={18} strokeWidth={1.9} />
                 </button>
               </div>
-              <div className="bg-[#f7f8fa] rounded-xl border border-[#eceef2] px-3.5 py-2.5 mb-3">
+              <div className="lg-recessed rounded-xl border border-[#eceef2] px-3.5 py-2.5 mb-3">
                 <p className="text-[14px] text-[#4a505c] truncate">{forwardMsg.content ? formatMessagePreview(forwardMsg.content) : tr("Message")}</p>
               </div>
               <div className="flex flex-col gap-0.5 max-h-72 overflow-y-auto -mx-1">
@@ -9823,7 +9857,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               onClick={e => e.stopPropagation()}
               aria-label={tr("Download")}
               title={tr("Download")}
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="icon-btn lg-smoke w-11 h-11 flex items-center justify-center rounded-full text-white transition"
             >
               <Download size={19} strokeWidth={1.9} />
             </a>
@@ -9831,7 +9865,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
               type="button"
               aria-label={tr("Close")}
               title={tr("Close")}
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="icon-btn lg-smoke w-11 h-11 flex items-center justify-center rounded-full text-white transition"
               onClick={(e) => { e.stopPropagation(); setLightboxImg(null); }}
             >
               <X size={20} strokeWidth={1.9} />
@@ -9849,14 +9883,14 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
        {/* Clear chat confirmation */}
        {showClearConfirm && typeof document !== 'undefined' ? createPortal(
-         <div className="fixed inset-0 bg-[#15171c]/30 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-150" style={{ zIndex: 200000 }} onClick={() => setShowClearConfirm(false)}>
-           <div role="alertdialog" aria-modal="true" aria-labelledby="clear-title" aria-describedby="clear-text" className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)]" onClick={e => e.stopPropagation()}>
+         <div className="lg-scrim fixed inset-0 flex items-center justify-center p-6 animate-in fade-in duration-150" style={{ zIndex: 200000 }} onClick={() => setShowClearConfirm(false)}>
+           <div role="alertdialog" aria-modal="true" aria-labelledby="clear-title" aria-describedby="clear-text" className="w-full max-w-sm lg-sheet rounded-3xl p-6" onClick={e => e.stopPropagation()}>
              <h3 id="clear-title" className="text-[18px] font-semibold tracking-[-0.015em] text-[#15171c]">{tr("Clear this chat?")}</h3>
              <p id="clear-text" className="text-[15px] text-[#4a505c] leading-relaxed mt-2">
                {tr("All messages in this conversation will be removed from this device. The other person keeps their copy.")}
              </p>
              <div className="flex items-center justify-end gap-2 mt-6">
-               <button type="button" onClick={() => setShowClearConfirm(false)} className="px-4 py-2.5 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[15px] font-medium text-[#15171c] transition-colors">
+               <button type="button" onClick={() => setShowClearConfirm(false)} className="px-4 py-2.5 rounded-xl lg-recessed hover:bg-[#e4e7ec] text-[15px] font-medium text-[#15171c] transition-colors">
                  {tr("Cancel")}
                </button>
                <button type="button" onClick={executeClearChat} className="px-4 py-2.5 rounded-xl bg-[#e5484d] hover:brightness-105 text-white text-[15px] font-medium transition-all">
@@ -9875,7 +9909,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
            <div
              role="menu"
              aria-label={tr("Conversation actions")}
-             className="absolute bg-white border border-[#e4e7ec] rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[190px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
+             className="absolute lg-card rounded-2xl shadow-[0_16px_40px_-12px_rgba(16,24,40,0.28)] p-1.5 min-w-[190px] flex flex-col animate-in fade-in zoom-in-95 duration-150"
              style={{
                top: Math.max(8, Math.min(sidebarMenu.y, window.innerHeight - 300)),
                left: Math.max(8, Math.min(sidebarMenu.x, window.innerWidth - 206)),
@@ -9928,13 +9962,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
        {showPollCreator && (() => {
          const close = () => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); };
          const valid = pollQuestion.trim() && pollOptions.filter(o => o.trim()).length >= 2;
-         const field = 'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#d9dde3] text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] focus:outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
+         const field = 'w-full px-3.5 py-2.5 rounded-xl lg-recessed border border-transparent text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] focus:outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
          return (
-           <div className="fixed inset-0 z-[1000] bg-[#15171c]/30 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-150" onClick={close}>
-             <div role="dialog" aria-modal="true" aria-labelledby="poll-title" className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+           <div className="lg-scrim fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-150" onClick={close}>
+             <div role="dialog" aria-modal="true" aria-labelledby="poll-title" className="w-full sm:max-w-sm lg-sheet rounded-t-3xl sm:rounded-3xl p-5 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
                <div className="flex items-center justify-between">
                  <h3 id="poll-title" className="text-[17px] font-semibold tracking-[-0.01em] text-[#15171c]">{tr("New poll")}</h3>
-                 <button type="button" onClick={close} aria-label={tr("Close")} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#15171c]">
+                 <button type="button" onClick={close} aria-label={tr("Close")} className="icon-btn w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#15171c]">
                    <X size={18} strokeWidth={1.9} />
                  </button>
                </div>
@@ -9955,7 +9989,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                        className={field}
                      />
                      {pollOptions.length > 2 && (
-                       <button type="button" onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} aria-label={tr("Remove option {value}", { value: i + 1 })} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#727a88]">
+                       <button type="button" onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} aria-label={tr("Remove option {value}", { value: i + 1 })} className="icon-btn w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#727a88]">
                          <X size={16} strokeWidth={1.9} />
                        </button>
                      )}
@@ -9977,7 +10011,7 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                    executeSend(`__POLL__${pollId}__::${pollQuestion.trim()}__::${validOpts.join('|')}`);
                    close();
                  }}
-                 className="w-full py-3 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors"
+                 className="w-full py-3 rounded-xl bg-[#15171c] lg-ink hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors"
                >
                  {tr("Send poll")}
                </button>
@@ -10088,8 +10122,8 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
 
        {/* ── Aztec zk.money Payment Stream Modal ── */}
        {showZkStreamModal && activePeer && (
-         <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowZkStreamModal(false)}>
-           <div className="bg-white rounded-3xl shadow-2xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+         <div className="lg-scrim fixed inset-0 z-[500] flex items-center justify-center p-4" onClick={() => setShowZkStreamModal(false)}>
+           <div className="lg-sheet rounded-3xl border border-black/10 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
              <ZkStreamManager
                userAddress={address || ''}
                defaultRecipient={activePeer}
@@ -10189,12 +10223,12 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
             setShowSaveContactModal(false);
           };
           return (
-            <div className="fixed inset-0 z-[300000] flex items-end sm:items-center justify-center sm:p-4 bg-[#15171c]/30 backdrop-blur-sm" onClick={() => setShowSaveContactModal(false)}>
+            <div className="lg-scrim fixed inset-0 z-[300000] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setShowSaveContactModal(false)}>
               <form
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="save-contact-title"
-                className="bg-white rounded-t-3xl sm:rounded-3xl shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] p-5 w-full sm:max-w-sm"
+                className="lg-sheet rounded-t-3xl sm:rounded-3xl p-5 w-full sm:max-w-sm"
                 onClick={e => e.stopPropagation()}
                 onSubmit={e => { e.preventDefault(); save(); }}
               >
@@ -10209,13 +10243,13 @@ export function LedgerChat({ forceAutoInit = false, surfaceVisible = true, onReq
                     maxLength={60}
                     onChange={e => setSaveContactName(e.target.value)}
                     placeholder={tr("How you want to see this person")}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#d9dde3] text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] focus:outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10"
+                    className="w-full px-3.5 py-2.5 rounded-xl lg-card text-[15px] text-[#15171c] placeholder:text-[#a3a9b4] focus:outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10"
                   />
                 </label>
                 <p className="text-[13px] text-[#727a88] -mt-3 mb-5">{tr("Only you can see this name. It stays on this device.")}</p>
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => setShowSaveContactModal(false)} className="px-4 py-2.5 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[15px] font-medium text-[#15171c] transition-colors">{tr("Cancel")}</button>
-                  <button type="submit" disabled={!saveContactName.trim()} className="px-4 py-2.5 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors">{tr("Save")}</button>
+                  <button type="button" onClick={() => setShowSaveContactModal(false)} className="px-4 py-2.5 rounded-xl lg-recessed hover:bg-[#e4e7ec] text-[15px] font-medium text-[#15171c] transition-colors">{tr("Cancel")}</button>
+                  <button type="submit" disabled={!saveContactName.trim()} className="px-4 py-2.5 rounded-xl bg-[#15171c] lg-ink hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors">{tr("Save")}</button>
                 </div>
               </form>
             </div>

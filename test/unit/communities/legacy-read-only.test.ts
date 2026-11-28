@@ -20,6 +20,7 @@ const { db, WALLET, OTHER } = vi.hoisted(() => ({
     community: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
     communityMember: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), upsert: vi.fn() },
     communityChannel: { findFirst: vi.fn() },
+    communityPermission: { findUnique: vi.fn(async () => null) },
   },
 }));
 
@@ -276,8 +277,11 @@ describe('the client', () => {
   });
 
   it('a community that fails to start on MLS says so, instead of quietly creating a readable one', () => {
-    const src = untranslated(fs.readFileSync('components/chat/LedgerCommunitiesTab.tsx', 'utf8'));
-    expect(src).toMatch(/d\.code === 'MLS_REQUIRED'/);
+    // Creation moved to CreateCommunitySheet, which the Communities tab mounts.
+    expect(fs.readFileSync('components/chat/LedgerCommunitiesTab.tsx', 'utf8')).toContain('<CreateCommunitySheet');
+    const src = untranslated(fs.readFileSync('components/communities/CreateCommunitySheet.tsx', 'utf8'));
+    expect(src).toMatch(/d\?\.code === 'MLS_REQUIRED'/);
+    expect(src).toContain('MLS is required for new communities');
   });
 
   it('the migration only adds a nullable column', () => {

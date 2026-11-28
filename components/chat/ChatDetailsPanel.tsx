@@ -112,7 +112,7 @@ export function ChatDetailsPanel({
       id="chat-details-column"
       tabIndex={-1}
       aria-label={t("About {peerName}", { peerName })}
-      className="hidden min-[1400px]:flex w-[340px] shrink-0 flex-col gap-5 border-l border-black/[0.08] bg-white px-[22px] pt-7 pb-6 overflow-y-auto outline-none"
+      className="hidden min-[1400px]:flex w-[340px] shrink-0 flex-col gap-5 border-l border-black/[0.06] lg-canvas px-[22px] pt-7 pb-6 overflow-y-auto outline-none"
     >
       <div className="flex flex-col items-center gap-2.5 text-center">
         <PeerAvatar address={peerAddress} name={peerName} size={88} />
@@ -129,7 +129,7 @@ export function ChatDetailsPanel({
             type="button"
             onClick={a.onClick}
             aria-pressed={'pressed' in a ? a.pressed : undefined}
-            className="h-[68px] rounded-2xl border border-[#e4e7ec] bg-white text-[#15171c] flex flex-col items-center justify-center gap-2 hover:bg-[#f7f8fa] transition-colors"
+            className="h-[68px] rounded-2xl lg-card text-[#15171c] flex flex-col items-center justify-center gap-2 hover:bg-[#f7f8fa] transition-colors"
           >
             {a.icon}
             <span className="text-[12px] font-semibold leading-none">{t(a.label)}</span>
@@ -138,7 +138,7 @@ export function ChatDetailsPanel({
       </div>
 
       {!isGroup && (
-      <section aria-label={t("Safety glyphs")} className="rounded-[20px] bg-[#f4f5f7] p-4 flex flex-col gap-3">
+      <section aria-label={t("Safety glyphs")} className="rounded-[20px] lg-recessed p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h4 className="text-[13px] font-semibold text-[#15171c]">{t("Safety glyphs")}</h4>
           {glyphState === 'ready' && <span className="text-[12px] font-medium text-[#5b606b]">{t("Compare")}</span>}
@@ -156,7 +156,7 @@ export function ChatDetailsPanel({
             ))}
           </div>
         ) : glyphState === 'loading' ? (
-          <p className="h-[78px] flex items-center justify-center rounded-xl bg-white/70 text-[12.5px] text-[#5b606b]" role="status">
+          <p className="h-[78px] flex items-center justify-center rounded-xl lg-recessed text-[12.5px] text-[#5b606b]" role="status">
             {t("Reading both devices")}
           </p>
         ) : (

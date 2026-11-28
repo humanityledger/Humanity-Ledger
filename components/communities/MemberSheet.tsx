@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeft, Copy, Flag, MessageCircle, Search, ShieldCheck, UserMinus, UserPlus, Wallet, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { ROLE_LABEL, ROLE_RANK, assignableRoles, canActOn, roleOf, type CommunityRole } from '@/lib/communities/roles';
 import { saveLocalContact } from '@/lib/wallet/localAddressBook';
@@ -23,7 +24,7 @@ const ROLE_TONE: Record<CommunityRole, string> = {
 
 export function RoleBadge({ role }: { role: CommunityRole }) {
   const t = useT();
-  return <span className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11.5px] font-semibold ${ROLE_TONE[role]}`}>{role !== 'MEMBER' && <ShieldCheck size={12} aria-hidden="true" />}{t(ROLE_LABEL[role])}</span>;
+  return <span className={`icon-btn inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11.5px] font-semibold ${ROLE_TONE[role]}`}>{role !== 'MEMBER' && <ShieldCheck size={12} aria-hidden="true" />}{t(ROLE_LABEL[role])}</span>;
 }
 
 /** Loads the member list (members only; the server answers 404 to anyone else). */
@@ -84,11 +85,12 @@ export function MemberSheet({ people, address, me, nameFor, onClose, onMessage, 
 
   const btn = 'flex flex-col items-center justify-center gap-1 min-h-[64px] rounded-2xl bg-[#f2f3f5] hover:bg-[#e8eaee] text-[#15171c] text-[12.5px] font-medium transition-colors disabled:opacity-40';
   return (
-    <div className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/35" role="dialog" aria-modal="true" aria-label={name} onClick={onClose}>
-      <div className="w-full sm:max-w-[420px] max-h-[92dvh] overflow-y-auto bg-white rounded-t-[28px] sm:rounded-[28px] shadow-[0_12px_40px_rgba(16,24,40,0.14)] pb-[max(16px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+    <BodyPortal>
+    <div className="lg-scrim fixed inset-0 z-[260000] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={name} onClick={onClose}>
+      <div className="w-full sm:max-w-[420px] max-h-[92dvh] overflow-y-auto lg-sheet rounded-t-[28px] sm:rounded-[28px] pb-[max(16px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-3 pt-3">
           <span className="w-10 h-1 rounded-full bg-[#d5d9e0] mx-auto sm:hidden" aria-hidden="true" />
-          <button type="button" onClick={onClose} className="absolute right-3 top-3 w-10 h-10 grid place-items-center rounded-full hover:bg-[#f2f3f5]" aria-label={t('Close')}><X size={20} /></button>
+          <button type="button" onClick={onClose} className="icon-btn absolute right-3 top-3 w-10 h-10 grid place-items-center rounded-full hover:bg-[#f2f3f5]" aria-label={t('Close')}><X size={20} /></button>
         </div>
         <div className="flex flex-col items-center px-6 pt-3 pb-5 text-center">
           <UserAvatar address={a} size={96} />
@@ -97,7 +99,7 @@ export function MemberSheet({ people, address, me, nameFor, onClose, onMessage, 
           <div className="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
             {role && <RoleBadge role={role} />}
             {row?.isZkVerified === true && (
-              <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-[#157347] text-[11.5px] font-semibold text-[#157347]" title={t('Verified in Ledger Chat')}>
+              <span className="icon-btn inline-flex items-center gap-1 h-6 px-2 rounded-full border border-[#157347] text-[11.5px] font-semibold text-[#157347]" title={t('Verified in Ledger Chat')}>
                 <ShieldCheck size={12} aria-hidden="true" />{t('ZK verified')}
               </span>
             )}
@@ -119,7 +121,7 @@ export function MemberSheet({ people, address, me, nameFor, onClose, onMessage, 
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {assignableRoles(myRole).map((r) => (
                   <button key={r} type="button" disabled={busy || r === role} onClick={() => void call('PATCH', { walletAddress: a, role: r }, t('Role changed to {role}', { role: t(ROLE_LABEL[r]) }))}
-                    className={`h-9 px-3 rounded-full text-[13px] font-medium border ${r === role ? 'bg-[#15171c] text-white border-[#15171c]' : 'border-[#d5d9e0] text-[#15171c] hover:bg-[#f2f3f5]'} disabled:opacity-60`}>{t(ROLE_LABEL[r])}</button>
+                    className={`icon-btn h-9 px-3 rounded-full text-[13px] font-medium border ${r === role ? 'bg-[#15171c] lg-ink text-white border-[#15171c]' : 'border-[#d5d9e0] text-[#15171c] hover:bg-[#f2f3f5]'} disabled:opacity-60`}>{t(ROLE_LABEL[r])}</button>
                 ))}
               </div>
             )}
@@ -130,10 +132,11 @@ export function MemberSheet({ people, address, me, nameFor, onClose, onMessage, 
           </div>
         )}
         {!isMe && (
-          <button type="button" onClick={() => void report()} className="mx-5 mt-3 w-[calc(100%-40px)] min-h-[44px] rounded-xl text-[14px] font-medium text-[#727a88] hover:bg-[#f7f8fa] inline-flex items-center justify-center gap-2"><Flag size={16} />{t('Report')}</button>
+          <button type="button" onClick={() => void report()} className="mx-5 mt-3 w-[calc(100%-40px)] min-h-[44px] rounded-xl text-[14px] font-medium text-[#727a88] hover:bg-black/[0.04] inline-flex items-center justify-center gap-2"><Flag size={16} />{t('Report')}</button>
         )}
       </div>
     </div>
+    </BodyPortal>
   );
 }
 
@@ -158,8 +161,9 @@ export function MembersPanel({ people, me, nameFor, onOpen, onClose }: {
   const onKey = useCallback((e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }, [onClose]);
   useEffect(() => { window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [onKey]);
   return (
-    <div className="fixed inset-0 z-[240] flex justify-end bg-black/30 sm:bg-black/20" role="dialog" aria-modal="true" aria-label={t('Members')} onClick={onClose}>
-      <div className="w-full sm:max-w-[440px] h-[100dvh] bg-white flex flex-col shadow-[0_12px_40px_rgba(16,24,40,0.14)]" onClick={(e) => e.stopPropagation()}>
+    <BodyPortal>
+    <div className="lg-scrim fixed inset-0 z-[260000] flex justify-end" role="dialog" aria-modal="true" aria-label={t('Members')} onClick={onClose}>
+      <div className="lg-drawer w-full sm:max-w-[440px] h-[100dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <header className="border-b border-[#e6e8ec] pt-[max(8px,env(safe-area-inset-top))]">
           <div className="flex items-center gap-1 px-2 h-14">
             <button type="button" onClick={onClose} className="w-11 h-11 grid place-items-center rounded-full hover:bg-[#f2f3f5]" aria-label={t('Back')}><ArrowLeft size={20} /></button>
@@ -171,14 +175,14 @@ export function MembersPanel({ people, me, nameFor, onOpen, onClose }: {
           </label>
           <div className="flex gap-1.5 overflow-x-auto px-3 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(['ALL', 'OWNER', 'ADMIN', 'MODERATOR', 'MEMBER'] as const).map((r) => (
-              <button key={r} type="button" onClick={() => setFilter(r)} className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium ${filter === r ? 'bg-[#15171c] text-white' : 'bg-[#f2f3f5] text-[#3d424b]'}`}>{r === 'ALL' ? t('All') : t(ROLE_LABEL[r])}</button>
+              <button key={r} type="button" onClick={() => setFilter(r)} className={`icon-btn shrink-0 h-8 px-3 rounded-full text-[13px] font-medium ${filter === r ? 'bg-[#15171c] lg-ink text-white' : 'bg-[#f2f3f5] text-[#3d424b]'}`}>{r === 'ALL' ? t('All') : t(ROLE_LABEL[r])}</button>
             ))}
           </div>
         </header>
         <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain list-none m-0 p-0 pb-[env(safe-area-inset-bottom)]">
           {rows.map((m) => (
             <li key={m.a}>
-              <button type="button" onClick={() => onOpen(m.a)} className="w-full flex items-center gap-3 px-4 py-2.5 min-h-[60px] text-left hover:bg-[#f7f8fa]">
+              <button type="button" onClick={() => onOpen(m.a)} className="w-full flex items-center gap-3 px-4 py-2.5 min-h-[60px] text-left hover:bg-black/[0.04]">
                 <UserAvatar address={m.a} size={42} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15px] font-medium text-[#15171c] truncate">{m.n}{m.a === me.toLowerCase() ? ` (${t('You')})` : ''}</span>
@@ -192,5 +196,6 @@ export function MembersPanel({ people, me, nameFor, onOpen, onClose }: {
         </ul>
       </div>
     </div>
+    </BodyPortal>
   );
 }

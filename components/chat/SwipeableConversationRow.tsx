@@ -55,14 +55,16 @@ interface Action {
   run?: () => void;
 }
 
-/* Island geometry: 36 px buttons, 6 px apart, 5 px padding, 10 px from the row's edge. */
+/* Island geometry: 36 px buttons, 6 px apart, 6 px padding (48 px capsule, concentric radii),
+   10 px from the row's edge. */
 const BTN = 36;
 const GAP = 6;
-const PAD = 5;
+const PAD = 6;
 const EDGE = 10;
 const trayWidth = (n: number) => n * BTN + (n - 1) * GAP + 2 * PAD + 2 * EDGE;
 
-const SPRING = { type: "spring" as const, stiffness: 560, damping: 44, mass: 0.9 };
+/* iOS 26.3 Dynamic Island feel: crisp elastic open, close without a heavy bounce. */
+const SPRING = { type: "spring" as const, stiffness: 520, damping: 38, mass: 0.85 };
 const INSTANT = { duration: 0.12 };
 
 /** One open row at a time: opening a row closes the previous one. */
@@ -193,7 +195,9 @@ export default function SwipeableConversationRow({
   };
 
   return (
-    <div ref={rowRef} className="hl-row relative overflow-hidden bg-[#f2f4f7]" data-swipe-open={open ?? "none"}>
+    <div ref={rowRef} className="hl-row relative overflow-hidden bg-white" data-swipe-open={open ?? "none"}>
+      {/* One colour: the lane the row uncovers is the same white as the row itself, so a swipe never
+          shows a second tone behind the chat. */}
       {touch && RIGHT_W > 0 && <Island side="right" actions={right} width={RIGHT_W} x={x} interactive={open === "right"} onRun={run} name={displayName} />}
       {touch && LEFT_W > 0 && <Island side="left" actions={left} width={LEFT_W} x={x} interactive={open === "left"} onRun={run} name={displayName} />}
 
@@ -224,7 +228,7 @@ export default function SwipeableConversationRow({
             settle(null);
           }
         }}
-        className="relative z-10 bg-white will-change-transform"
+        className="relative z-10 bg-white"
         data-pinned={isPinned}
         data-muted={isMuted}
       >
@@ -260,7 +264,9 @@ function Island({
   const reveal = useTransform(x, (v) => Math.max(0, Math.min(1, (sign * v) / width)));
   const capsule = width - 2 * EDGE;
   const capsuleWidth = useTransform(reveal, (r) => Math.max(BTN * 0.6, capsule * r));
-  const opacity = useTransform(reveal, [0, 0.15, 0.45], [0, 0.6, 1]);
+  // The island is born at the edge like a drop of liquid glass: it widens, settles vertically and fades in.
+  const opacity = useTransform(reveal, [0, 0.12, 0.35], [0, 0.75, 1]);
+  const scaleY = useTransform(reveal, [0, 1], [0.86, 1]);
 
   return (
     <motion.div
@@ -268,12 +274,12 @@ function Island({
       style={{ width, paddingLeft: side === "right" ? EDGE : 0, paddingRight: side === "left" ? EDGE : 0, opacity, pointerEvents: interactive ? "auto" : "none" }}
       aria-hidden={!interactive}
     >
-      {/* No black capsule behind the actions (18 Nov 2026): only the buttons, on the row background. */}
+      {/* Light Liquid Porcelain Island (never a black capsule), floating on the row's own white. */}
       <motion.div
         role="toolbar"
         aria-label={t("Actions for {name}", { name })}
-        className={`h-[46px] flex items-center ${side === "right" ? "justify-start" : "justify-end"}`}
-        style={{ width: capsuleWidth, paddingLeft: PAD, paddingRight: PAD }}
+        className={`lg-swipe-island flex items-center overflow-hidden ${side === "right" ? "justify-start origin-left" : "justify-end origin-right"}`}
+        style={{ width: capsuleWidth, paddingLeft: PAD, paddingRight: PAD, scaleY }}
       >
         <div className="flex items-center" style={{ gap: GAP }}>
           {actions.map((a, i) => (
@@ -318,8 +324,9 @@ function IslandButton({
       }}
       title={t(a.label)}
       aria-label={t(a.label)}
-      className="shrink-0 rounded-full flex items-center justify-center text-white outline-none shadow-[0_4px_12px_-4px_rgba(16,24,40,0.35)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#15171c] active:brightness-90"
-      style={{ width: BTN, height: BTN, background: a.color, scale, opacity }}
+      whileTap={{ scale: 0.9 }}
+      className={`icon-btn lg-swipe-gem lg-gem-${a.id} shrink-0 flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#15171c]`}
+      style={{ width: BTN, height: BTN, scale, opacity }}
     >
       <a.Icon size={16} strokeWidth={2.2} aria-hidden="true" />
     </motion.button>

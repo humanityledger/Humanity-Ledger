@@ -49,8 +49,8 @@ export function NodeChoiceSheet({ onClose }: { onClose: () => void }) {
       {problem && <p role="alert" className="mt-2 text-[13px] text-[#b42318]">{problem}</p>}
       <p className="mt-3 text-[12.5px] leading-relaxed text-[#5b606b]">{t("The wallet checks the node before using it: it must be on {networkLabel} and on the rollup this version of Ledger Chat supports, or the wallet refuses it. A node you choose is never replaced by our relay.", { networkLabel: t(networkLabel()) })}</p>
       <div className="mt-5 grid gap-2">
-        <button type="button" disabled={!value.trim() || !!problem} onClick={save} className="w-full h-12 rounded-xl bg-[#15171c] text-white font-semibold text-[15px] disabled:opacity-50">{t("Use this node")}</button>
-        {current && <button type="button" onClick={reset} className="w-full h-12 rounded-xl border border-[#d0d5dd] bg-white text-[#15171c] font-semibold text-[15px]">{t("Use the public node")}</button>}
+        <button type="button" disabled={!value.trim() || !!problem} onClick={save} className="w-full h-12 rounded-xl bg-[#15171c] lg-ink text-white font-semibold text-[15px] disabled:opacity-50">{t("Use this node")}</button>
+        {current && <button type="button" onClick={reset} className="w-full h-12 rounded-xl lg-card text-[#15171c] font-semibold text-[15px]">{t("Use the public node")}</button>}
         <button type="button" onClick={onClose} className="w-full h-11 text-[#5b606b] font-semibold text-[15px]">{t("Cancel")}</button>
       </div>
     </div>

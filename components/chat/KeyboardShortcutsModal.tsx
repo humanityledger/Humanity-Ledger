@@ -41,18 +41,18 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="lg-scrim fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-black/[0.08] flex flex-col overflow-hidden max-h-[85vh]"
+        className="w-full max-w-lg lg-sheet rounded-3xl border border-black/[0.08] flex flex-col overflow-hidden max-h-[85vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#15171c] text-white flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#15171c] lg-ink text-white flex items-center justify-center">
               <Command size={16} strokeWidth={2} />
             </div>
             <div>
@@ -63,7 +63,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-black/50 transition-colors"
+            className="icon-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-black/50 transition-colors"
           >
             <X size={18} />
           </button>

@@ -40,11 +40,11 @@ export function LinkPreviewCard({ preview, compact = false, onDismiss }: LinkPre
         href={preview.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block mt-2 border border-[#e6e8ec] rounded-xl overflow-hidden hover:border-[#d4d8df] transition-colors bg-white"
+        className="block mt-2 rounded-xl overflow-hidden hover:border-[#d4d8df] transition-colors lg-card"
         onClick={(e) => e.stopPropagation()}
       >
         {preview.image && !imageError && (
-          <div className="relative w-full h-32 bg-[#f2f4f7]">
+          <div className="relative w-full h-32 lg-recessed">
             <img
               src={preview.image}
               alt={preview.title || t("Link preview")}
@@ -77,7 +77,7 @@ export function LinkPreviewCard({ preview, compact = false, onDismiss }: LinkPre
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 8 }}
-      className="mx-3 mb-2 border border-[#e6e8ec] rounded-2xl overflow-hidden bg-white flex"
+      className="mx-3 mb-2 rounded-2xl overflow-hidden lg-card flex"
     >
       {preview.image && !imageError && (
         <div className="w-20 h-20 shrink-0 bg-black/5">

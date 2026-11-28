@@ -76,7 +76,7 @@ function CommunityRow({ c, onOpen, onManage, onLeave, onDelete }: { c: Community
   return (
     <li>
       {menu && <ContextMenu at={menu} items={rowMenu(c, onOpen, onManage, onLeave, onDelete)} label={t("{name} actions", { name: c.name })} onClose={() => setMenu(null)} />}
-      <button type="button" {...handlers} style={{ WebkitTouchCallout: 'none' }} onClick={() => { if (!consumeLongPress()) onOpen(); }} aria-label={t("Open {name}", { name: c.name })} className="w-full min-h-[72px] flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/20 transition-colors text-left">
+      <button type="button" {...handlers} style={{ WebkitTouchCallout: 'none' }} onClick={() => { if (!consumeLongPress()) onOpen(); }} aria-label={t("Open {name}", { name: c.name })} className="lg-row-card w-full min-h-[72px] flex items-center gap-3.5 px-3 py-3 rounded-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/20 transition-colors text-left">
         <CommunityMark c={c} size={48} />
         <span className="flex-1 min-w-0">
           <span className="block text-[18px] font-semibold text-[#15171c] truncate">{c.name}</span>
@@ -214,12 +214,12 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
 
   const q = search.trim().toLowerCase();
   const visiblePublic = publicOnes.filter(c => !q || c.name.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q));
-  const field = 'w-full min-h-[52px] px-4 py-3 rounded-2xl bg-white border-2 border-[#9aa1ac] text-[18px] text-[#15171c] placeholder:text-[#4a505c] outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
+  const field = 'w-full min-h-[52px] px-4 py-3 rounded-2xl lg-recessed border-2 border-transparent text-[18px] text-[#15171c] placeholder:text-[#4a505c] outline-none focus:border-[#15171c] focus:ring-2 focus:ring-[#15171c]/10';
 
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col bg-white">
-      <div className="px-4 pt-3 pb-2 sticky top-0 bg-white z-10 border-b border-[#eceef2]">
-        <div className="flex p-1 bg-[#f2f4f7] rounded-xl" role="tablist" aria-label={t("Communities")}>
+    <div className="flex-1 overflow-y-auto flex flex-col bg-transparent">
+      <div className="lg-bar px-4 pt-3 pb-2 sticky top-0 z-10">
+        <div className="flex p-1 lg-recessed rounded-full" role="tablist" aria-label={t("Communities")}>
           {([['mine', 'Your communities'], ['discover', 'Find one']] as const).map(([id, label]) => (
             <button
               key={id}
@@ -227,7 +227,7 @@ export const LedgerCommunitiesTab: React.FC<LedgerCommunitiesTabProps> = ({ myAd
               role="tab"
               aria-selected={view === id}
               onClick={() => setView(id)}
-              className={`flex-1 min-h-[48px] text-[17px] font-semibold rounded-lg transition-colors ${view === id ? 'bg-white text-[#15171c] shadow-sm' : 'text-[#3d424b] hover:text-[#15171c]'}`}
+              className={`flex-1 min-h-[48px] text-[17px] font-semibold rounded-full transition-colors ${view === id ? 'lg-active-capsule text-[#15171c]' : 'text-[#3d424b] hover:text-[#15171c]'}`}
             >
               {label}
             </button>

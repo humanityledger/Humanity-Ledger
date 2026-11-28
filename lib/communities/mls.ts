@@ -29,6 +29,7 @@ import {
 } from '@/lib/xmtp/groups';
 
 import { membersComplete, reconcileMembers, serverMembers, type CommunityLike } from './mls-membership';
+import { absorbHistory, buildCapsuleChunks, encodeHistoryRequest, takeSlot, type RawGroupMsg } from './mls-history-backfill';
 export { isMlsCommunity, membersComplete, mlsGroupOf, reconcileMembers, serverMembers, type CommunityLike } from './mls-membership';
 
 const ADDR = /^0x[0-9a-fA-F]{40}$/;
@@ -215,6 +216,8 @@ export async function syncGroupMembers(client: any, groupId: string, c: Communit
   }
   await syncMemberInstallations(client, groupId, group, server).catch(() => {});
   await runGroupSerial(groupId, () => grantAdmins(client, group, c)).catch(() => { /* only the super admin can; others skip */ });
+  // Whoever adds people also hands them the history they cannot decrypt (mls-history-backfill.ts).
+  if (added > 0) void sendHistoryCapsule(client, self, communityIdOf(c), groupId).catch(() => {});
   return { added, removed };
 }
 
@@ -244,7 +247,70 @@ export async function addMissingMembers(client: any, groupId: string, c: Communi
   let n = 0;
   for (const a of plan.add) { try { await addGroupMember(client, groupId, a); n++; } catch { /* not on XMTP yet */ } }
   await syncMemberInstallations(client, groupId, group, server).catch(() => {});
+  if (n > 0) void sendHistoryCapsule(client, self, communityIdOf(c), groupId).catch(() => {});
   return n;
+}
+
+const communityIdOf = (c: CommunityLike): string => String((c as { id?: unknown })?.id ?? '');
+
+/** The group's messages (posts and controls) in the backfill shape, oldest first. */
+export async function readGroupRaw(client: any, groupId: string): Promise<RawGroupMsg[]> {
+  const posts = await readGroupPosts(client, groupId);
+  return posts.map((p) => ({ id: p.id, senderInboxId: p.senderInboxId, content: p.content, createdAt: p.createdAt }));
+}
+
+/**
+ * Send this device's history of the channel as a capsule inside the group (current epoch only).
+ * Throttled to one unsolicited capsule per channel every 5 minutes on this device; an answer to a
+ * specific request (forRid) is sent once per request.
+ */
+export async function sendHistoryCapsule(
+  client: any,
+  wallet: string,
+  communityId: string,
+  groupId: string,
+  forRid?: string,
+): Promise<number> {
+  if (!client || !groupId || !wallet) return 0;
+  const slot = forRid ? `hl:hist:ans:${groupId}:${forRid}` : `hl:hist:cap:${groupId}`;
+  if (!takeSlot(slot, forRid ? 24 * 3600_000 : 5 * 60_000)) return 0;
+  const all = await readGroupRaw(client, groupId).catch(() => [] as RawGroupMsg[]);
+  const { history } = communityId
+    ? await absorbHistory({ wallet, communityId, groupId, selfInbox: String(client?.inboxId ?? '') }, all)
+    : { history: all.filter((m) => !m.content.startsWith('__HL_HIST_')) };
+  if (!history.length) return 0;
+  const chunks = buildCapsuleChunks(history, { forRid });
+  let sent = 0;
+  for (const chunk of chunks) {
+    try { await sendGroupMessage(client, groupId, chunk); sent++; } catch { break; }
+  }
+  return sent;
+}
+
+/** A member who just got access with no history on this device asks once (every 6 h at most). */
+export async function requestHistory(client: any, wallet: string, groupId: string): Promise<boolean> {
+  if (!takeSlot(`hl:hist:req:${wallet.toLowerCase()}:${groupId}`, 6 * 3600_000)) return false;
+  try { await sendGroupMessage(client, groupId, encodeHistoryRequest()); return true; } catch { return false; }
+}
+
+/**
+ * "Restore channel": bring the encrypted channel back in line with the server for everyone —
+ * add missing members (admins also remove), welcome every member's new devices, republish
+ * anything pending in this epoch, sync, and send a history capsule.
+ */
+export async function restoreChannel(client: any, groupId: string, c: CommunityLike, self: string, isAdmin: boolean): Promise<{ added: number; removed: number; capsules: number }> {
+  let added = 0, removed = 0;
+  if (isAdmin) ({ added, removed } = await syncGroupMembers(client, groupId, c, self));
+  else added = await addMissingMembers(client, groupId, c, self);
+  const group = await resolveGroupForClient(client, groupId, { patient: true });
+  if (group) {
+    await runGroupSerial(groupId, async () => {
+      await Promise.resolve(group.publishMessages?.()).catch(() => {});
+      await Promise.resolve(group.sync?.()).catch(() => {});
+    }).catch(() => {});
+  }
+  const capsules = await sendHistoryCapsule(client, self, communityIdOf(c), groupId).catch(() => 0);
+  return { added, removed, capsules };
 }
 
 /** Sync membership across EVERY MLS channel in a community. */
@@ -285,6 +351,8 @@ export async function syncCommunitiesMlsMembership(
   fetchImpl: typeof fetch = fetch,
   minIntervalMs = 20_000,
   force = false,
+  /** Communities where someone is waiting for access (welcome-queue): send them a capsule too. */
+  capsuleFor?: ReadonlySet<string>,
 ): Promise<Set<string>> {
   const me = (myAddress || '').trim().toLowerCase();
   const cached = mlsKnownGroupIds.get(me) ?? new Set<string>();
@@ -328,6 +396,12 @@ export async function syncCommunitiesMlsMembership(
           const isAdmin = isOwner || mine?.role === 'ADMIN';
           if (isOwner || mine) {
             await syncAllCommunityChannels(client, full, me, isAdmin);
+            if (capsuleFor?.has(String(summary.id))) {
+              for (const ch of full.channels ?? []) {
+                const gid = typeof ch?.xmtpGroupId === 'string' ? ch.xmtpGroupId.trim() : '';
+                if (gid) await sendHistoryCapsule(client, me, String(summary.id), gid).catch(() => 0);
+              }
+            }
           }
         } catch { /* retry on next tick */ }
       }

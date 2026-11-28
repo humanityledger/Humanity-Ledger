@@ -101,7 +101,7 @@ export function ScheduleMessageSheet({ isOpen, onSchedule, onClose }: ScheduleMe
                 setValue(toLocalInput(opt.getValue()));
                 setError(null);
               }}
-              className="h-9 px-3.5 rounded-full border border-[#d0d5dd] bg-white text-[14px] font-medium text-[#15171c] hover:bg-[#f2f4f7] transition-colors"
+              className="icon-btn h-9 px-3.5 rounded-full lg-pill text-[14px] font-medium text-[#15171c] hover:bg-[#f2f4f7] transition-colors"
             >
               {tr(opt.label)}
             </button>
@@ -120,7 +120,7 @@ export function ScheduleMessageSheet({ isOpen, onSchedule, onClose }: ScheduleMe
               setValue(e.target.value);
               setError(null);
             }}
-            className="w-full h-11 px-3 rounded-xl border border-[#d0d5dd] bg-white text-[15px] text-[#15171c] outline-none focus:border-[#15171c]"
+            className="w-full h-11 px-3 rounded-xl lg-card text-[15px] text-[#15171c] outline-none focus:border-[#15171c]"
           />
         </div>
       </div>

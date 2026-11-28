@@ -1,0 +1,362 @@
+/* ============================================================================
+   app/glassmorphism.css — Ledger Chat
+   1. Phone guard: one pane at a time on every phone, whatever width the browser lays out.
+   2. Text fields ≥ 16 px everywhere (no focus zoom), horizontal containment.
+   3. Liquid Porcelain Glass: optical tokens and surfaces (dock, composer, sheets, calls).
+   Kept separate from globals.css so the Tailwind pass of build:railway is unaffected.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   1. PHONE GUARD
+   html[data-hl-device="phone"] comes from the physical screen (inline script, app/layout.tsx).
+   When Safari or a WebView lays a phone page out wider than 767 px, Tailwind's md:/lg: variants
+   would show the rail and put list, conversation and Contact info side by side. Here the
+   wide-screen-only elements stay hidden and the phone-only elements stay shown.
+   --------------------------------------------------------------------------- */
+html[data-hl-device="phone"] .hidden.md\:flex,
+html[data-hl-device="phone"] .hidden.lg\:flex,
+html[data-hl-device="phone"] .hidden.md\:block,
+html[data-hl-device="phone"] .hidden.lg\:block,
+html[data-hl-device="phone"] .hidden.md\:grid,
+html[data-hl-device="phone"] .hidden.md\:inline-flex,
+html[data-hl-device="phone"] [data-hl-rail] {
+  display: none !important;
+}
+html[data-hl-device="phone"] .flex.md\:hidden:not(.hidden),
+html[data-hl-device="phone"] .flex.lg\:hidden:not(.hidden) { display: flex !important; }
+html[data-hl-device="phone"] .inline-flex.md\:hidden:not(.hidden),
+html[data-hl-device="phone"] .inline-flex.lg\:hidden:not(.hidden) { display: inline-flex !important; }
+html[data-hl-device="phone"] .md\:hidden:not(.hidden):not(.flex):not(.inline-flex):not(.grid):not(.inline-block),
+html[data-hl-device="phone"] .lg\:hidden:not(.hidden):not(.flex):not(.inline-flex):not(.grid):not(.inline-block) { display: block !important; }
+
+/* Side panels never sit beside the conversation on a phone: they cover the screen. */
+html[data-hl-device="phone"] [data-hl-side-panel] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100dvh !important;
+}
+
+/* ---------------------------------------------------------------------------
+   2. FIELDS AND CONTAINMENT
+   --------------------------------------------------------------------------- */
+[contenteditable]:not([contenteditable="false"]) {
+  font-size: max(16px, 1em);
+}
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea, select, [contenteditable]:not([contenteditable="false"]) {
+    font-size: 16px !important;
+  }
+}
+html[data-hl-device="phone"] body,
+[data-chat-root] {
+  overflow-x: clip;
+  max-width: 100vw;
+}
+[data-chat-root] :where(p, li, code, pre) { overflow-wrap: anywhere; }
+[data-chat-root] :where(pre) { max-width: 100%; overflow-x: auto; }
+[data-hl-scroll] {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   3. LIQUID PORCELAIN GLASS
+   White, milky, cut-crystal glass on a luminous porcelain canvas. Five optical materials:
+     1 frost base (headers, bars)      2 floating liquid dock (dock, composer, orbs)
+     3 recessed pearl capsule (active) 4 crystal sheet (popovers, menus, sheets, modals)
+     5 obsidian ink / smoked crystal (primary actions; overlays on camera video)
+   Discipline (Hyperion, globals.css): real backdrop-filter only on a handful of floating,
+   structural surfaces, never on rows of a virtualised list; no static will-change. iOS gets a
+   slightly lower radius (every blurred layer is its own IOSurface); reduced transparency gets
+   solid porcelain. Text on every material keeps ≥ 4.5:1 (body ink #15171c ≥ 15:1).
+   --------------------------------------------------------------------------- */
+:root {
+  --lg-ink: #15171c;
+  --lg-ink-2: #2c2e33;
+  --lg-ink-soft: #4a505c;
+  --lg-ink-mute: #5b606b;
+  --lg-canvas: #ffffff;
+
+  --lg-surface-1: rgba(255, 255, 255, 0.78);
+  --lg-dock: rgba(248, 248, 247, 0.84);
+  --lg-composer: rgba(255, 255, 255, 0.82);
+  --lg-active-capsule: rgba(212, 213, 212, 0.56);
+  --lg-sheet: rgba(255, 255, 255, 0.88);
+  --lg-recessed: rgba(118, 122, 132, 0.10);
+  --lg-ink-glass: rgba(21, 23, 28, 0.88);
+  --lg-smoke: rgba(255, 255, 255, 0.18);
+
+  --lg-blur-1: blur(24px) saturate(180%);
+  --lg-blur-dock: blur(32px) saturate(195%) brightness(1.04);
+  --lg-blur-sheet: blur(36px) saturate(190%);
+  --lg-blur-smoke: blur(24px) saturate(180%);
+
+  --lg-bevel: inset 0 1px 0 0 rgba(255, 255, 255, 0.96), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  --lg-hair: 0 0 0 0.5px rgba(16, 24, 40, 0.07);
+  --lg-float: 0 8px 30px -6px rgba(16, 24, 40, 0.10), 0 2px 8px rgba(16, 24, 40, 0.04);
+  --lg-float-lg: 0 32px 64px -24px rgba(16, 24, 40, 0.22), 0 12px 28px -12px rgba(16, 24, 40, 0.10), 0 2px 6px rgba(16, 24, 40, 0.04);
+  --lg-spring: cubic-bezier(0.2, 0.9, 0.25, 1.05);
+
+  /* iOS 26.3 optics: Fresnel caustic edge, 135° lens sheen, luminous border. */
+  --lg-caustic: inset 0 1.5px 0 0 rgba(255, 255, 255, 0.98), inset 0 -1px 0 0 rgba(16, 24, 40, 0.055), inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+  --lg-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.10) 40%, rgba(255, 255, 255, 0) 68%, rgba(255, 255, 255, 0.18) 100%);
+  --lg-shine-border: 0 0 0 0.5px rgba(16, 24, 40, 0.08);
+  --lg-blur-bar: blur(28px) saturate(195%) brightness(1.03);
+}
+
+/* Porcelain luminous canvas: white, with pearl and ice halos at 3–5 % so the glass has light to bend. */
+[data-chat-page="true"],
+.lg-canvas {
+  background-color: var(--lg-canvas);
+  background-image:
+    radial-gradient(60% 45% at 12% 0%, rgba(236, 241, 250, 0.55), transparent 70%),
+    radial-gradient(55% 40% at 100% 18%, rgba(250, 244, 236, 0.45), transparent 72%),
+    radial-gradient(70% 50% at 50% 100%, rgba(240, 243, 248, 0.6), transparent 70%);
+  background-attachment: local;
+}
+
+/* Material 1 — frost base */
+.lg-bar {
+  background-color: var(--lg-surface-1);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0) 70%);
+  -webkit-backdrop-filter: var(--lg-blur-bar);
+  backdrop-filter: var(--lg-blur-bar);
+  box-shadow: inset 0 -0.5px 0 rgba(16, 24, 40, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Material 2 — floating liquid dock, composer, orbs */
+.lg-dock,
+.lg-composer,
+.lg-orb {
+  background-color: var(--lg-dock);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: var(--lg-blur-dock);
+  backdrop-filter: var(--lg-blur-dock);
+  box-shadow: var(--lg-caustic), var(--lg-shine-border), var(--lg-float);
+}
+.lg-composer,
+.lg-orb { background-color: var(--lg-composer); }
+.lg-composer { transition: box-shadow 220ms var(--lg-spring), background-color 220ms ease; }
+.lg-composer:focus-within {
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--lg-caustic), 0 0 0 0.5px rgba(16, 24, 40, 0.12), 0 0 0 4px rgba(255, 255, 255, 0.55), 0 10px 32px -8px rgba(16, 24, 40, 0.16), 0 2px 8px rgba(16, 24, 40, 0.05);
+}
+.lg-orb { box-shadow: var(--lg-caustic), var(--lg-shine-border), 0 4px 18px rgba(16, 24, 40, 0.08); transition: transform 180ms var(--lg-spring), box-shadow 180ms ease, background-color 180ms ease; }
+.lg-orb:hover { background-color: rgba(255, 255, 255, 0.92); }
+.lg-orb-active {
+  background: var(--lg-ink-glass) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 20px -6px rgba(16, 24, 40, 0.35) !important;
+}
+.lg-composer-row { background: transparent; }
+
+/* Material 3 — recessed pearl capsule */
+.lg-dock-capsule,
+.lg-active-capsule {
+  background: var(--lg-active-capsule);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75), inset 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+.lg-recessed {
+  background: var(--lg-recessed);
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.06), inset 0 0 0 0.5px rgba(16, 24, 40, 0.05);
+}
+
+/* Material 4 — crystal sheet */
+.lg-sheet,
+.lg-drawer {
+  background-color: var(--lg-sheet);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.06) 40%, rgba(255, 255, 255, 0) 68%, rgba(255, 255, 255, 0.12) 100%);
+  -webkit-backdrop-filter: var(--lg-blur-sheet);
+  backdrop-filter: var(--lg-blur-sheet);
+  box-shadow: var(--lg-caustic), var(--lg-shine-border), var(--lg-float-lg);
+}
+.lg-drawer { box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.9), -0.5px 0 0 rgba(16, 24, 40, 0.08), -24px 0 60px -30px rgba(16, 24, 40, 0.25); }
+.lg-scrim {
+  background: rgba(244, 246, 250, 0.42);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+}
+
+/* Static glass: cards, tiles, grouped rows, pills (no backdrop-filter: cheap, any count). */
+.lg-card,
+.lg-group,
+.lg-tile,
+.lg-pill,
+.lg-row-card,
+.lg-avatar-tile {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 251, 253, 0.9));
+  box-shadow: var(--lg-bevel), var(--lg-hair), 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 18px -10px rgba(16, 24, 40, 0.10);
+}
+.lg-pill, .lg-tile { transition: transform 160ms var(--lg-spring), background-color 160ms ease, box-shadow 160ms ease; }
+.lg-pill:hover, .lg-tile:hover { background: #ffffff; }
+/* Gel/lens response to touch (iOS 26.3): the glass presses in and its highlight brightens. */
+.lg-orb:active, .lg-pill:active, .lg-tile:active {
+  transform: scale(0.95);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 1), inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 0.5px rgba(16, 24, 40, 0.10), 0 2px 8px -2px rgba(16, 24, 40, 0.12);
+}
+.lg-orb-active:active { transform: scale(0.95); }
+.lg-row-card { box-shadow: none; background: transparent; }
+.lg-row-card:hover { background: rgba(16, 24, 40, 0.03); }
+.lg-avatar-tile { background: linear-gradient(160deg, #ffffff 0%, #f3f5f8 100%); }
+
+/* Material 5 — obsidian ink */
+.lg-ink {
+  background: var(--lg-ink-glass);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 14px -4px rgba(16, 24, 40, 0.35);
+}
+.lg-badge { background: var(--lg-ink); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95); }
+
+/* Sent bubble in porcelain satin (ink #15171c on near-white: > 15:1). */
+.lg-bubble-out {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 246, 249, 0.96));
+  box-shadow: var(--lg-bevel), var(--lg-hair), 0 2px 10px -4px rgba(16, 24, 40, 0.10);
+}
+
+/* Live indicators */
+.lg-sync-dot {
+  width: 10px; height: 10px; border-radius: 999px;
+  background: #0a7a55;
+  box-shadow: 0 0 0 0 rgba(10, 122, 85, 0.35);
+  animation: lg-pulse 1.6s ease-out infinite;
+}
+.lg-rec-dot {
+  width: 10px; height: 10px; border-radius: 999px;
+  background: #e5484d;
+  animation: lg-pulse-red 1.2s ease-out infinite;
+}
+@keyframes lg-pulse { 0% { box-shadow: 0 0 0 0 rgba(10, 122, 85, 0.35); } 100% { box-shadow: 0 0 0 10px rgba(10, 122, 85, 0); } }
+@keyframes lg-pulse-red { 0% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.4); } 100% { box-shadow: 0 0 0 10px rgba(229, 72, 77, 0); } }
+.hl-verified-check { filter: drop-shadow(0 0.5px 0 rgba(255, 255, 255, 0.6)); transition: filter 160ms ease; }
+.hl-verified-check:hover { filter: drop-shadow(0 0 3px rgba(18, 121, 192, 0.35)); }
+
+/* Space under the floating dock so the last chat is never hidden (phones). */
+@media (max-width: 767px) {
+  [data-hl-list-col] .overflow-y-auto { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  [data-hl-list-col] .overflow-y-auto .overflow-y-auto { padding-bottom: 0; }
+}
+html[data-hl-device="phone"] [data-hl-list-col] .overflow-y-auto { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+html[data-hl-device="phone"] [data-hl-list-col] .overflow-y-auto .overflow-y-auto { padding-bottom: 0; }
+
+/* ── Existing Ledger Chat surfaces, brought onto the same materials ── */
+/* Sheets built on the shared kit and the chat's dialogs. */
+[data-chat-root] [role="dialog"][data-sheet],
+[data-chat-root] [role="menu"].lg-auto {
+  background: var(--lg-sheet);
+}
+/* Chat list rows keep contain:paint and no blur (Hyperion); selected row = pearl capsule. */
+[data-hl-list-col] .hl-row.bg-\[\#f1f2f4\],
+[data-hl-list-col] button.bg-\[\#f1f2f4\] {
+  background: var(--lg-active-capsule) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+}
+/* Filter chips and the search field in the list header. */
+[data-hl-list-col] button.bg-\[\#15171c\].rounded-full { background: var(--lg-ink-glass); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 8px -2px rgba(16,24,40,0.3); }
+[data-hl-list-col] button.border-\[\#e6e8ec\].rounded-full {
+  border-color: transparent;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,251,253,0.9));
+  box-shadow: var(--lg-bevel), var(--lg-hair);
+}
+[data-hl-list-col] input[type="search"],
+[data-hl-list-col] input[placeholder] {
+  border-radius: 999px;
+}
+
+/* Received bubble in satin porcelain and a subtle card: static, no backdrop-filter (list rows). */
+.lg-bubble-in {
+  background: linear-gradient(180deg, #ffffff, rgba(250, 251, 253, 0.97));
+  box-shadow: var(--lg-bevel), var(--lg-hair), 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.lg-card-subtle {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 0.5px rgba(16, 24, 40, 0.06);
+}
+/* Smoked crystal: controls over photos and video. */
+.lg-smoke {
+  background-color: rgba(255, 255, 255, 0.18);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%);
+  -webkit-backdrop-filter: var(--lg-blur-smoke);
+  backdrop-filter: var(--lg-blur-smoke);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 8px 24px -10px rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+}
+.lg-smoke:active { transform: scale(0.95); }
+
+/* Swipe actions: a light Liquid Porcelain Island floating over the same white as the row.
+   Static glass (no backdrop-filter: it lives inside list rows), no will-change. */
+.lg-swipe-island {
+  position: relative;
+  height: 48px;
+  padding: 6px;
+  gap: 6px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.9);
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(244, 247, 252, 0.84) 55%, rgba(255, 255, 255, 0.92) 100%);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.99),
+    inset 0 -1px 0 0 rgba(16, 24, 40, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.78),
+    0 0 0 0.5px rgba(16, 24, 40, 0.09),
+    0 10px 26px -10px rgba(16, 24, 40, 0.16),
+    0 2px 6px rgba(16, 24, 40, 0.05);
+}
+/* Tinted crystal gems inside the island (white icons ≥ 4.5:1 on every tint). */
+.lg-swipe-gem {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 9999px;
+  color: #ffffff;
+  background-image: linear-gradient(180deg, var(--gem-hi), var(--gem-lo));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.52),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 4px 12px -4px var(--gem-halo);
+  transition: transform 160ms var(--lg-spring), filter 160ms ease;
+}
+.lg-swipe-gem:hover { filter: brightness(1.05); }
+.lg-swipe-gem:active { transform: scale(0.9); filter: brightness(1.08); }
+.lg-gem-pin     { --gem-hi: #d98a04; --gem-lo: #b26e02; --gem-halo: rgba(194, 120, 3, 0.45); }
+.lg-gem-read    { --gem-hi: #22945c; --gem-lo: #1a6e44; --gem-halo: rgba(31, 122, 77, 0.45); }
+.lg-gem-archive { --gem-hi: #3869f6; --gem-lo: #2150d8; --gem-halo: rgba(36, 86, 230, 0.45); }
+.lg-gem-mute    { --gem-hi: #5c6370; --gem-lo: #464c57; --gem-halo: rgba(74, 80, 92, 0.40); }
+.lg-gem-delete  { --gem-hi: #eb4349; --gem-lo: #c9282e; --gem-halo: rgba(217, 48, 54, 0.45); }
+
+/* Optional SVG lens refraction, Chromium only (WebKit drops the whole backdrop-filter when a
+   url() is in the list): a separate rule, never on bars or anything that scrolls. */
+@supports (backdrop-filter: url(#lg-refract)) and (not (-webkit-touch-callout: none)) {
+  .lg-orb.lg-refract { backdrop-filter: blur(22px) saturate(195%) url(#lg-refract); }
+}
+
+/* iOS / iPadOS WebKit: same look, a lower blur radius per layer. */
+@supports (-webkit-touch-callout: none) {
+  .lg-bar { -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+  .lg-dock, .lg-composer, .lg-orb { -webkit-backdrop-filter: blur(22px) saturate(190%); backdrop-filter: blur(22px) saturate(190%); }
+  .lg-sheet, .lg-drawer { -webkit-backdrop-filter: blur(24px) saturate(185%); backdrop-filter: blur(24px) saturate(185%); }
+  .lg-scrim { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .lg-smoke { -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%); }
+}
+/* No backdrop-filter support: the materials turn opaque porcelain, never see-through grey. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lg-bar, .lg-dock, .lg-composer, .lg-orb, .lg-sheet, .lg-drawer { background: #fbfbfa; }
+  .lg-scrim { background: rgba(20, 22, 28, 0.32); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .lg-bar, .lg-dock, .lg-composer, .lg-orb, .lg-sheet, .lg-drawer, .lg-scrim {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  }
+  .lg-bar, .lg-dock, .lg-composer, .lg-orb, .lg-sheet, .lg-drawer { background: #fbfbfa; }
+  .lg-scrim { background: rgba(20, 22, 28, 0.38); }
+  .lg-smoke { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: rgba(20, 22, 28, 0.78); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg-sync-dot, .lg-rec-dot { animation: none; }
+  .lg-orb, .lg-pill, .lg-tile, .lg-swipe-gem, .lg-smoke { transition: none; }
+  .lg-orb:active, .lg-pill:active, .lg-tile:active, .lg-swipe-gem:active, .lg-smoke:active { transform: none; }
+}

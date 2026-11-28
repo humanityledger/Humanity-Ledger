@@ -46,7 +46,7 @@ export function PaymentRequestComposer({ peerName, onClose, onSend }: { peerName
   };
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-stretch justify-end bg-black/40" onClick={onClose}>
+    <div className="lg-scrim fixed inset-0 z-[600] flex items-stretch justify-end" onClick={onClose}>
       <div
         className="h-full w-full max-w-[420px] overflow-y-auto bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4"
         role="dialog"
@@ -77,7 +77,7 @@ export function PaymentRequestComposer({ peerName, onClose, onSend }: { peerName
           </select>
         </label>
         {amount.trim() && problem && <p role="status" className="text-[13px] text-[#7a2d24]">{problem}</p>}
-        <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!problem} onClick={send}>
+        <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] lg-ink text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={!!problem} onClick={send}>
           {tr("Send request")}
         </button>
         <button type="button" className="w-full min-h-[44px] text-[13.5px] text-[#4a505c]" onClick={onClose}>{tr("Cancel")}</button>

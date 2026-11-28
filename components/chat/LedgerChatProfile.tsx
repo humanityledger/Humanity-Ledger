@@ -41,7 +41,7 @@ export function LedgerChatProfile({
       className="absolute inset-y-0 right-0 w-full sm:w-[400px] bg-white shadow-2xl z-[100] border-l border-black/10 flex flex-col"
     >
       {/* Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-black/5 shrink-0 bg-[#f2f4f7]">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-black/5 shrink-0 lg-recessed">
         <h2 className="text-[17px] font-semibold text-black">{t("Contact Info")}</h2>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors">
           <X size={20} className="text-black" />
@@ -68,7 +68,7 @@ export function LedgerChatProfile({
         {/* Action Row */}
         <div className="flex items-center justify-center gap-6 py-6 border-b border-black/5">
           <button className="flex flex-col items-center gap-2 group">
-            <div className="w-12 h-12 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] group-hover:bg-[#eff1f4] transition-colors">
+            <div className="w-12 h-12 rounded-full lg-tile flex items-center justify-center text-[#15171c] group-hover:bg-[#eff1f4] transition-colors">
               <BellOff size={22} />
             </div>
             <span className="text-[12px] font-semibold text-black/60 group-hover:text-[#15171c]">{t("Mute")}</span>
@@ -108,7 +108,7 @@ export function LedgerChatProfile({
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-4"
               >
-                <div className="bg-[#f2f4f7] rounded-2xl p-4">
+                <div className="lg-recessed rounded-2xl p-4">
                   <div className="flex items-start gap-3">
                     <Shield size={20} className="text-[#30d158] shrink-0 mt-0.5" />
                     <div>
@@ -120,7 +120,7 @@ export function LedgerChatProfile({
                   </div>
                 </div>
                 
-                <div className="bg-[#f2f4f7] rounded-2xl p-4">
+                <div className="lg-recessed rounded-2xl p-4">
                   <h3 className="text-[12.5px] font-semibold text-black/40 mb-3">{t("About")}</h3>
                   <p className="text-[15px] font-medium text-black">{t("\"Sovereign individual building on L2.\"")}</p>
                 </div>
@@ -135,13 +135,13 @@ export function LedgerChatProfile({
                 exit={{ opacity: 0, y: -10 }}
               >
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="aspect-square bg-[#f2f4f7] rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors">
+                  <div className="aspect-square lg-recessed rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors">
                     <ImageIcon size={24} className="text-black/20" />
                   </div>
-                  <div className="aspect-square bg-[#f2f4f7] rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors">
+                  <div className="aspect-square lg-recessed rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors">
                     <FileText size={24} className="text-black/20" />
                   </div>
-                  <div className="aspect-square bg-[#f2f4f7] rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors">
+                  <div className="aspect-square lg-recessed rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors">
                     <Link2 size={24} className="text-black/20" />
                   </div>
                 </div>
@@ -159,7 +159,7 @@ export function LedgerChatProfile({
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-2"
               >
-                <div className="bg-[#f2f4f7] rounded-2xl overflow-hidden">
+                <div className="lg-recessed rounded-2xl overflow-hidden">
                   <button className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition-colors text-left border-b border-black/5">
                     <div className="flex items-center gap-3">
                       <EyeOff size={20} className="text-black" />
@@ -168,7 +168,7 @@ export function LedgerChatProfile({
                         <span className="block text-[12px] text-black/50">{t("Allow peer to see when you read")}</span>
                       </div>
                     </div>
-                    <div className="w-10 h-6 bg-[#30d158] rounded-full relative">
+                    <div className="icon-btn w-10 h-6 bg-[#30d158] rounded-full relative">
                       <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
                     </div>
                   </button>

@@ -31,18 +31,18 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="lg-scrim fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-black/[0.08] flex flex-col overflow-hidden max-h-[85vh]"
+        className="w-full max-w-lg lg-sheet rounded-3xl border border-black/[0.08] flex flex-col overflow-hidden max-h-[85vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#15171c] text-white flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#15171c] lg-ink text-white flex items-center justify-center">
               <Bookmark size={16} strokeWidth={2} />
             </div>
             <div>
@@ -53,7 +53,7 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-black/50 transition-colors"
+            className="icon-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-black/50 transition-colors"
           >
             <X size={18} />
           </button>
@@ -63,7 +63,7 @@ export const SavedMessagesModal: React.FC<SavedMessagesModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
           {savedMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-[#727a88]">
-              <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] flex items-center justify-center mb-3 text-[#15171c]/40">
+              <div className="w-12 h-12 rounded-2xl lg-recessed flex items-center justify-center mb-3 text-[#15171c]/40">
                 <Bookmark size={24} />
               </div>
               <p className="text-[15px] font-medium text-[#15171c]">{t("No saved messages")}</p>

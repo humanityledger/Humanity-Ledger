@@ -133,7 +133,7 @@ export function RemoteAttachmentBubble({
       return (
         <button type="button" onClick={() => void (att.kind === 'file' ? download() : start())}
           className={`${CARD} ${corner} flex items-center gap-3 px-3.5 py-3 min-h-[44px] min-w-[220px] max-w-[300px] text-left hover:border-[#c9ced6] transition-colors`}>
-          <span className="w-10 h-10 rounded-xl bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+          <span className="w-10 h-10 rounded-xl lg-recessed text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
             <FileText size={18} strokeWidth={1.8} />
           </span>
           <span className="flex flex-col min-w-0 flex-1">
@@ -175,7 +175,7 @@ export function RemoteAttachmentBubble({
   return (
     <button type="button" onClick={() => void download()}
       className={`${CARD} ${corner} flex items-center gap-3 px-3.5 py-3 min-h-[44px] min-w-[220px] max-w-[300px] text-left hover:border-[#c9ced6] transition-colors`}>
-      <span className="w-10 h-10 rounded-xl bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+      <span className="w-10 h-10 rounded-xl lg-recessed text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
         <FileText size={18} strokeWidth={1.8} />
       </span>
       <span className="flex flex-col min-w-0 flex-1">

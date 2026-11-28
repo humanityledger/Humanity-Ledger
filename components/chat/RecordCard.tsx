@@ -110,7 +110,7 @@ export function RecordCard({ message, members, arrive = false }: { message: stri
     >
       {play && Array.from({ length: SEAL_BUBBLES }, (_, n) => <i key={n} aria-hidden="true" />)}
       <div className="flex items-start gap-2.5">
-        <span className="w-9 h-9 rounded-xl bg-[#f2f4f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+        <span className="w-9 h-9 rounded-xl lg-recessed text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
           {kind === 'file' ? <FileText size={16} strokeWidth={1.8} /> : <Lock size={16} strokeWidth={1.8} />}
         </span>
         <span className="min-w-0">
@@ -127,13 +127,13 @@ export function RecordCard({ message, members, arrive = false }: { message: stri
         </a>
       )}
       {handoff && (
-        <button type="button" onClick={() => requestValueHandoff(handoff)} className="mt-3 h-9 px-3 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold">
+        <button type="button" onClick={() => requestValueHandoff(handoff)} className="mt-3 h-9 px-3 rounded-xl bg-[#15171c] lg-ink text-white text-[13px] font-semibold">
           {handoff.action === 'pay' ? t("Open payment") : t("Open agreement")}
         </button>
       )}
       {error && <p className="mt-3 text-[12.5px] text-[#9a3412]">{error}</p>}
       {text == null && !fileUrl && !handoff && (
-        <button type="button" onClick={() => { void open(); }} disabled={busy} className="mt-3 h-9 px-3 rounded-xl bg-[#15171c] text-white text-[13px] font-semibold disabled:opacity-50">
+        <button type="button" onClick={() => { void open(); }} disabled={busy} className="mt-3 h-9 px-3 rounded-xl bg-[#15171c] lg-ink text-white text-[13px] font-semibold disabled:opacity-50">
           {busy ? t("Opening") : t("Open")}
         </button>
       )}
