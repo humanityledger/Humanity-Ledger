@@ -58,7 +58,7 @@ export function LargeFileBubble({ file, isMe }: { file: LargeFileMessage; isMe: 
   return (
     <div className={`${CARD} ${corner} w-[300px] max-w-full px-3.5 py-3`}>
       <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl bg-[#eff1f4] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+        <span className="w-10 h-10 rounded-xl lg-recessed text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
           <FileText size={18} strokeWidth={1.8} />
         </span>
         <span className="flex flex-col min-w-0 flex-1">
@@ -69,11 +69,11 @@ export function LargeFileBubble({ file, isMe }: { file: LargeFileMessage; isMe: 
           </span>
         </span>
         {state === 'loading' ? (
-          <button type="button" onClick={() => ctrl.current?.abort()} aria-label={t("Cancel download")} className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a505c] hover:bg-[#f2f4f7]">
+          <button type="button" onClick={() => ctrl.current?.abort()} aria-label={t("Cancel download")} className="icon-btn w-10 h-10 rounded-full flex items-center justify-center text-[#4a505c] hover:bg-[#f2f4f7]">
             <X size={17} strokeWidth={1.9} />
           </button>
         ) : (
-          <button type="button" onClick={() => void start()} aria-label={t("Download {filename}", { filename: file.filename })} className="w-10 h-10 rounded-full flex items-center justify-center text-[#15171c] hover:bg-[#f2f4f7]">
+          <button type="button" onClick={() => void start()} aria-label={t("Download {filename}", { filename: file.filename })} className="icon-btn w-10 h-10 rounded-full flex items-center justify-center text-[#15171c] hover:bg-[#f2f4f7]">
             <Download size={17} strokeWidth={1.9} />
           </button>
         )}

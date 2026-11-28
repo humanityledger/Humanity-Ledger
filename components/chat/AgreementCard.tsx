@@ -30,7 +30,8 @@ import { PaymentCard } from './PaymentCard';
 import { PaymentRequestCard } from './PaymentRequestCard';
 import { useT } from '@/lib/i18n/client';
 
-const CARD = 'rounded-2xl bg-white border border-[#e6e8ec] shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
+/* Rich cards in high-density porcelain glass (≥ 0.94 white): ink stays ≥ 10:1 on any chat theme. */
+const CARD = 'rounded-2xl lg-card';
 const BTN = 'h-9 px-3.5 rounded-full text-[13.5px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 const BTN_PRIMARY = `${BTN} bg-[#15171c] text-white hover:bg-[#2a2d35]`;
 const BTN_SECONDARY = `${BTN} bg-[#eff1f4] text-[#15171c] hover:bg-[#e4e7ec]`;
@@ -59,7 +60,7 @@ function amountText(units: bigint, token: string, symbol: string) {
 function Label({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-2 text-[13px] text-[#727a88]">
-      <span className="w-6 h-6 rounded-full bg-[#eff1f4] text-[#15171c] flex items-center justify-center" aria-hidden="true">{icon}</span>
+      <span className="icon-btn w-6 h-6 rounded-full lg-tile text-[#15171c] flex items-center justify-center" aria-hidden="true">{icon}</span>
       {children}
     </span>
   );

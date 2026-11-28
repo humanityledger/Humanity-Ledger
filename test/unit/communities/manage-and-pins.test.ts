@@ -149,6 +149,7 @@ describe('opening a community', () => {
     const manage = read('components/communities/CommunityManage.tsx');
     expect(manage).toMatch(/action: 'REVOKE_LINK', communityId/);
     expect(manage).toMatch(/data-testid="invite-reset"/);
-    expect(manage).toMatch(/flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white/);
+    // Manage sits on the porcelain canvas (Liquid Glass), full height, never wider than the screen.
+    expect(manage).toMatch(/lg-canvas flex-1 flex flex-col w-full h-full min-w-0 min-h-0/);
   });
 });

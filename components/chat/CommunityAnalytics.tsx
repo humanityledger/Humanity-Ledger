@@ -239,7 +239,7 @@ function TopContributorsList({ list, empty, nameFor }: { list: Contributor[]; em
             <span className="truncate" style={{ color: INK }}><span className="tabular-nums mr-2" style={{ color: INK_3 }}>{i + 1}</span>{nameFor?.(c.address) || c.label}</span>
             <span className="tabular-nums font-semibold" style={{ color: INK }}>{c.count}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-[#eff1f4] overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(c.count / max) * 100}%`, background: i === 0 ? ACCENT : INK }} /></div>
+          <div className="h-1.5 rounded-full lg-recessed overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(c.count / max) * 100}%`, background: i === 0 ? ACCENT : INK }} /></div>
         </li>
       ))}
     </ol>
@@ -387,7 +387,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
     return (
       <div className="py-10 text-center" role="alert">
         <p className="text-[16px]" style={{ color: INK }}>{t('Analytics could not load. Check your connection and try again.')}</p>
-        <button type="button" onClick={load} className="mt-4 min-h-[48px] px-5 rounded-2xl bg-[#15171c] text-white text-[16px] font-semibold">{t('Try again')}</button>
+        <button type="button" onClick={load} className="mt-4 min-h-[48px] px-5 rounded-2xl bg-[#15171c] lg-ink text-white text-[16px] font-semibold">{t('Try again')}</button>
       </div>
     );
   }
@@ -408,7 +408,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
           <p className="text-[14px] mt-0.5" style={{ color: INK_3 }}>{data?.community?.name}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center p-1 bg-[#f2f4f7] border border-[#e4e7ec] rounded-xl" role="tablist" aria-label={t('Analytics sections')}>
+          <div className="flex items-center p-1 lg-recessed border border-[#e4e7ec] rounded-xl" role="tablist" aria-label={t('Analytics sections')}>
             {TABS.map((x) => (
               <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
                 className={`min-h-[40px] px-3.5 rounded-lg text-[14px] font-medium transition-colors ${tab === x.id ? 'bg-white text-[#15171c] shadow-[var(--hl-shadow-xs)]' : 'text-[#475061] hover:text-[#15171c]'}`}>
@@ -424,14 +424,14 @@ export default function CommunityAnalytics({ communityId, community: initialComm
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {summary.map((s) => (
-          <div key={s.label} className="rounded-2xl border border-[#e4e7ec] bg-white px-5 py-4">
+          <div key={s.label} className="rounded-2xl lg-card px-5 py-4">
             <div className="text-[28px] font-bold tabular-nums tracking-tight leading-none" style={{ color: INK }}>{s.value}</div>
             <div className="text-[14px] mt-1.5" style={{ color: INK_2 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      <p className={`rounded-xl border px-4 py-2.5 text-[13.5px] ${isMls && localState !== 'done' ? 'border-[#e4e7ec] bg-[#f7f8fa]' : 'border-[#e4e7ec] bg-white'}`} style={{ color: INK_2 }} role="note">
+      <p className={`rounded-xl border px-4 py-2.5 text-[13.5px] ${isMls && localState !== 'done' ? 'border-[#e4e7ec] lg-recessed' : 'border-[#e4e7ec] bg-white'}`} style={{ color: INK_2 }} role="note">
         {source}{local?.failedChannels ? ` ${t('{count} channels could not be read on this device.', { count: local.failedChannels })}` : ''}
       </p>
 
@@ -469,7 +469,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
                     return (
                       <li key={c.id} className="flex flex-col gap-1">
                         <div className="flex justify-between text-[14px]"><span style={{ color: INK }}>#{c.name}</span><span className="tabular-nums" style={{ color: INK_2 }}>{n} · {Math.round((n / all) * 100)}%</span></div>
-                        <div className="h-1.5 rounded-full bg-[#eff1f4] overflow-hidden"><div className="h-full rounded-full bg-[#15171c]" style={{ width: `${(n / all) * 100}%` }} /></div>
+                        <div className="h-1.5 rounded-full lg-recessed overflow-hidden"><div className="h-full rounded-full bg-[#15171c]" style={{ width: `${(n / all) * 100}%` }} /></div>
                       </li>
                     );
                   })}
@@ -494,7 +494,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
       )}
 
       {tab === 'members' && (
-        <section className="rounded-2xl border border-[#e4e7ec] bg-white p-5 flex flex-col gap-4">
+        <section className="rounded-2xl lg-card p-5 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <label className="relative flex-1 min-w-[220px]">
               <span className="sr-only">{t('Search members')}</span>
@@ -534,7 +534,7 @@ export default function CommunityAnalytics({ communityId, community: initialComm
       )}
 
       {tab === 'channels' && (
-        <section className="rounded-2xl border border-[#e4e7ec] bg-white p-5 overflow-x-auto">
+        <section className="rounded-2xl lg-card p-5 overflow-x-auto">
           <table className="w-full text-left text-[14px]">
             <thead><tr className="border-b border-[#e4e7ec]" style={{ color: INK_3 }}>
               <th className="py-2 pr-3 font-medium">{t('Channel')}</th><th className="py-2 pr-3 font-medium text-right">{t('Messages')}</th><th className="py-2 pr-3 font-medium">{t('Health')}</th><th className="py-2 font-medium">{t('Encryption')}</th>

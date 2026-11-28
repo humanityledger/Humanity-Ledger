@@ -44,7 +44,9 @@ describe('rail', () => {
     expect(rail).not.toMatch(/openStudio|Ledger Studio"/);
   });
   it('contacts without a photo show a wallet glyph, not two letters', () => {
-    expect(src).toMatch(/return <WalletGlyph address=\{address\} size=\{size\} \/>;/);
+    // Avatar() delegates to UserAvatar, whose last fallback is the wallet glyph.
+    expect(src).toMatch(/return <UserAvatar address=\{address\} isMe=\{isMe \|\| undefined\} size=\{size\} \/>;/);
+    expect(fs.readFileSync('components/chat/UserAvatar.tsx', 'utf8')).toMatch(/<WalletGlyph address=\{isWalletAddress\(addr\) \|\| HEX_ID\.test\(addr\) \? addr : ''\} size=\{size\} \/>/);
     expect(src).not.toMatch(/const initials = address \? address\.slice\(2, 4\)/);
   });
   it('no icon in the set comes from an icon library', () => {

@@ -157,36 +157,47 @@ export function runGroupSerial<T>(groupId: string, task: () => Promise<T>): Prom
   return result;
 }
 
-/** Look up a group by id; if absent locally, sync welcomes (including unknown consent) and check again. */
 /** The group is not on this device after a full sync: sendGroupMessage throws this code. */
 export const GROUP_NOT_REACHABLE = 'GROUP_NOT_REACHABLE';
 export const GROUP_NOT_REACHABLE_MESSAGE =
   'Not sent. This device has not received access to the encrypted group yet. If you just joined or linked this device, open the community on an online member device, then try again.';
 
-export async function resolveGroupForClient(client: Client, groupId: string): Promise<any | null> {
+/**
+ * Look up a group by id; if absent locally, sync welcomes (including unknown consent) and check again.
+ * `patient` (used before giving up on a send, and by "Check access now") doubles the sync budgets:
+ * on a phone on cellular the welcome list often takes longer than 4 s / 8 s to arrive. A group found
+ * only through the list is marked allowed, since the caller asked for it by id.
+ */
+export async function resolveGroupForClient(client: Client, groupId: string, opts: { patient?: boolean } = {}): Promise<any | null> {
   const convs = (client as any)?.conversations;
   if (!convs || !groupId) return null;
+  const k = opts.patient ? 2 : 1;
   let group = await convs.getConversationById?.(groupId).catch(() => null);
   if (group) return group;
-  // Fast sync first (< 2 s), then re-check before falling back to slow syncAll.
   try {
     if (typeof convs.sync === 'function') {
-      await withTimeout(Promise.resolve(convs.sync()), 4_000, 'sync timeout');
+      await withTimeout(Promise.resolve(convs.sync()), 4_000 * k, 'sync timeout');
     }
   } catch { /* best-effort */ }
   group = await convs.getConversationById?.(groupId).catch(() => null);
   if (group) return group;
   try {
     if (typeof convs.syncAll === 'function') {
-      await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 8_000, 'syncAll timeout');
+      await withTimeout(Promise.resolve(convs.syncAll([0, 1])), 8_000 * k, 'syncAll timeout');
     }
   } catch { /* best-effort sync before failing */ }
   group = await convs.getConversationById?.(groupId).catch(() => null);
   if (group) return group;
   if (typeof convs.listGroups === 'function') {
-    const list: any[] = await convs.listGroups({ consentStates: [0, 1] }).catch(() => convs.listGroups().catch(() => []));
     const target = groupId.toLowerCase();
-    group = list.find((g) => String(g?.id ?? '').toLowerCase() === target) ?? null;
+    const pick = (list: any[]) => list.find((g) => String(g?.id ?? '').toLowerCase() === target) ?? null;
+    const filtered: any[] = await Promise.resolve(convs.listGroups({ consentStates: [0, 1] })).catch(() => []);
+    group = pick(filtered ?? []);
+    // A welcome whose consent ended up in another state (denied by an old client) is still ours.
+    if (!group) group = pick((await Promise.resolve(convs.listGroups()).catch(() => [])) ?? []);
+    if (group && typeof group.updateConsentState === 'function') {
+      await Promise.resolve(group.updateConsentState(1)).catch(() => {});
+    }
   }
   return group ?? null;
 }
@@ -467,7 +478,8 @@ export async function sendGroupMessage(
     throw new Error('Not sent. This device is offline. Connect to the internet and try again.');
   }
 
-  const group = await resolveGroupForClient(client, groupId);
+  // Second, patient attempt before giving up: on phones the welcome often lands a few seconds late.
+  const group = (await resolveGroupForClient(client, groupId)) ?? (await resolveGroupForClient(client, groupId, { patient: true }));
   if (!group) {
     // Coded so the community screen can offer its owner or an admin to restore the channel
     // (lib/communities/mls.ts restoreChannelGroup) when no device can reach the group.

@@ -87,14 +87,14 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
   };
 
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+    <div className="flex-1 overflow-y-auto flex flex-col bg-transparent">
       <div className="px-4 pt-3 pb-1 flex flex-col">
         <button
           type="button"
           onClick={() => { setPickFor('call'); setShowNewCall(true); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f7f8fa] transition-colors text-left"
+          className="lg-pill w-full flex items-center gap-3 px-3 py-2.5 rounded-[18px] transition text-left"
         >
-          <span className="w-11 h-11 rounded-full bg-[#15171c] text-white flex items-center justify-center shrink-0" aria-hidden="true">
+          <span className="w-11 h-11 rounded-full bg-[#15171c] lg-ink text-white flex items-center justify-center shrink-0" aria-hidden="true">
             <Plus size={20} strokeWidth={2} />
           </span>
           <span className="text-[15.5px] font-medium text-[#15171c]">{t("New call")}</span>
@@ -103,9 +103,9 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
           <button
             type="button"
             onClick={() => { setPickFor('schedule'); setShowNewCall(true); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f7f8fa] transition-colors text-left"
+            className="lg-pill w-full flex items-center gap-3 px-3 py-2.5 rounded-[18px] transition text-left"
           >
-            <span className="w-11 h-11 rounded-full bg-[#f2f4f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+            <span className="w-11 h-11 rounded-full lg-tile text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
               <CalendarPlus size={19} strokeWidth={1.9} />
             </span>
             <span className="text-[15.5px] font-medium text-[#15171c]">{t("Schedule a call")}</span>
@@ -124,7 +124,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                 <li key={`${m.peer}-${m.invite.id}`}>
                   <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[#f7f8fa] transition-colors">
                     <button type="button" onClick={() => onOpenChat(m.peer)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                      <span className="w-11 h-11 rounded-full bg-[#f2f4f7] text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
+                      <span className="w-11 h-11 rounded-full lg-tile text-[#15171c] flex items-center justify-center shrink-0" aria-hidden="true">
                         {m.invite.kind === 'video' ? <Video size={18} strokeWidth={1.8} /> : <Phone size={18} strokeWidth={1.8} />}
                       </span>
                       <span className="flex-1 min-w-0">
@@ -135,7 +135,7 @@ export const LedgerCallsTab: React.FC<LedgerCallsTabProps> = ({ callHistory, con
                       </span>
                     </button>
                     {canJoin && onJoinMeeting ? (
-                      <button type="button" onClick={() => onJoinMeeting(m)} className="h-9 px-4 rounded-full bg-[#12a150] hover:bg-[#0f8a44] text-white text-[13.5px] font-semibold shrink-0">
+                      <button type="button" onClick={() => onJoinMeeting(m)} className="icon-btn h-9 px-4 rounded-full bg-[#12a150] hover:bg-[#0f8a44] text-white text-[13.5px] font-semibold shrink-0">
                         {t("Join")}
                       </button>
                     ) : (

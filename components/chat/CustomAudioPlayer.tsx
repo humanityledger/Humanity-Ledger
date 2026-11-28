@@ -234,7 +234,7 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
           type="button"
           onClick={togglePlay}
           aria-label={isPlaying ? t("Pause voice message") : t("Play voice message")}
-          className="w-9 h-9 rounded-full bg-[#15171c] hover:bg-[#2b2f38] text-white flex items-center justify-center shrink-0 transition-all active:scale-95"
+          className="icon-btn w-9 h-9 rounded-full bg-[#15171c] lg-ink hover:bg-[#2b2f38] text-white flex items-center justify-center shrink-0 transition-all active:scale-95"
         >
           {isPlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
         </button>
@@ -279,7 +279,7 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
           type="button"
           onClick={togglePlaybackRate}
           aria-label={t("Playback speed")}
-          className="px-2 py-0.5 rounded-full text-[12px] font-medium tabular-nums bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#4a505c] transition-colors shrink-0"
+          className="icon-btn lg-pill px-2 h-6 rounded-full text-[12px] font-semibold tabular-nums text-[#4a505c] shrink-0"
         >
           {playbackRate}x
         </button>
@@ -292,7 +292,7 @@ export const CustomAudioPlayer = ({ src: rawSrc, isMe }: { src: string, isMe: bo
         </p>
       )}
       {showTranscript && (
-        <div className="px-3 py-1.5 rounded-xl text-[13px] bg-[#f2f4f7] text-[#4a505c]">
+        <div className="px-3 py-1.5 rounded-xl text-[13px] lg-recessed text-[#4a505c]">
           {t("Transcribing")}
         </div>
       )}

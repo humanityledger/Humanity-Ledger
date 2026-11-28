@@ -119,14 +119,14 @@ export function LedgerChatSearchModal({
             <button
               onClick={handlePrev}
               disabled={currentIndex === 0 || totalMatches === 0}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 disabled:opacity-30 transition-colors"
+              className="icon-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 disabled:opacity-30 transition-colors"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={handleNext}
               disabled={currentIndex >= totalMatches - 1 || totalMatches === 0}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 disabled:opacity-30 transition-colors"
+              className="icon-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 disabled:opacity-30 transition-colors"
             >
               <ChevronRight size={18} />
             </button>

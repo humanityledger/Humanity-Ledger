@@ -46,17 +46,17 @@ const TOKEN_ICONS: Record<PublicTipSymbol, React.ReactNode> = {
       </svg>
   ),
   USDC: (
-      <div className="w-5 h-5 rounded-full bg-[#2775CA] flex items-center justify-center">
+      <div className="icon-btn w-5 h-5 rounded-full bg-[#2775CA] flex items-center justify-center">
         <span className="text-white text-[12px] font-semibold">$</span>
       </div>
   ),
   USDT: (
-      <div className="w-5 h-5 rounded-full bg-[#26A17B] flex items-center justify-center">
+      <div className="icon-btn w-5 h-5 rounded-full bg-[#26A17B] flex items-center justify-center">
         <span className="text-white text-[12px] font-semibold">₮</span>
       </div>
   ),
   DAI: (
-      <div className="w-5 h-5 rounded-full bg-[#F5AC37] flex items-center justify-center">
+      <div className="icon-btn w-5 h-5 rounded-full bg-[#F5AC37] flex items-center justify-center">
         <span className="text-white text-[11px] font-semibold">D</span>
       </div>
   ),
@@ -237,7 +237,7 @@ export function NativeCryptoSendModal({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] bg-black/50 flex items-end sm:items-center justify-center"
+      className="lg-scrim fixed inset-0 z-[2000] flex items-end sm:items-center justify-center"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       role="dialog"
       aria-modal="true"

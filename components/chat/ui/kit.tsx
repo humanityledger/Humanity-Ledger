@@ -13,6 +13,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from './BodyPortal';
 import { AVATAR_RADIUS, UserAvatar, isWalletAddress } from '@/components/chat/UserAvatar';
 
 export const shortAddr = (addr?: string | null) => (addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '');
@@ -57,7 +58,7 @@ export function SectionLabel({ children, className = '' }: { children: React.Rea
 export function EmptyState({ icon, title, text, action }: { icon?: React.ReactNode; title: string; text?: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center text-center px-8 py-14">
-      {icon && <span className="w-12 h-12 rounded-full bg-[#f2f4f7] text-[#4a505c] flex items-center justify-center mb-4" aria-hidden="true">{icon}</span>}
+      {icon && <span className="w-12 h-12 rounded-full lg-tile text-[#4a505c] flex items-center justify-center mb-4" aria-hidden="true">{icon}</span>}
       <p className="text-[15.5px] font-medium text-[#15171c]">{title}</p>
       {text && <p className="text-[14px] text-[#727a88] mt-1 leading-relaxed max-w-[280px]">{text}</p>}
       {action && <div className="mt-5">{action}</div>}
@@ -70,7 +71,7 @@ export function PrimaryButton({ children, className = '', ...rest }: React.Butto
     <button
       type="button"
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#15171c] hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors ${className}`}
+      className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-[#15171c] lg-ink hover:bg-[#2b2f38] disabled:bg-[#e4e7ec] disabled:text-[#a3a9b4] text-white text-[15px] font-medium transition-colors ${className}`}
     >
       {children}
     </button>
@@ -82,7 +83,7 @@ export function SecondaryButton({ children, className = '', ...rest }: React.But
     <button
       type="button"
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#eff1f4] hover:bg-[#e4e7ec] text-[#15171c] text-[15px] font-medium transition-colors disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full lg-pill text-[#15171c] text-[15px] font-medium transition-colors disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
@@ -96,7 +97,7 @@ export function IconButton({ label, children, className = '', ...rest }: React.B
       aria-label={label}
       title={label}
       {...rest}
-      className={`w-9 h-9 rounded-full flex items-center justify-center text-[#15171c] hover:bg-[#f2f4f7] transition-colors shrink-0 ${className}`}
+      className={`icon-btn w-9 h-9 rounded-full flex items-center justify-center text-[#15171c] hover:bg-black/[0.05] active:scale-95 transition shrink-0 ${className}`}
     >
       {children}
     </button>
@@ -105,7 +106,7 @@ export function IconButton({ label, children, className = '', ...rest }: React.B
 
 export function SearchField({ value, onChange, placeholder, autoFocus }: { value: string; onChange: (v: string) => void; placeholder: string; autoFocus?: boolean }) {
   return (
-    <label className="flex items-center gap-2 h-10 bg-[#f2f4f7] rounded-xl px-3">
+    <label className="flex items-center gap-2 h-10 lg-recessed rounded-full px-4">
       <Search size={16} strokeWidth={1.9} className="text-[#a3a9b4] shrink-0" aria-hidden="true" />
       <input
         autoFocus={autoFocus}
@@ -146,6 +147,7 @@ export function Sheet({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
   return (
+    <BodyPortal>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -153,7 +155,7 @@ export function Sheet({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[1000] bg-[#15171c]/30 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4"
+          className="lg-scrim fixed inset-0 z-[260000] flex items-end sm:items-center justify-center sm:p-4"
           onClick={onClose}
         >
           <motion.div
@@ -166,7 +168,7 @@ export function Sheet({
             exit={{ y: 24, opacity: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 360 }}
             onClick={e => e.stopPropagation()}
-            className={`bg-white w-full ${wide ? 'sm:max-w-lg' : 'sm:max-w-md'} rounded-t-3xl sm:rounded-3xl shadow-[0_24px_60px_-20px_rgba(16,24,40,0.35)] max-h-[88vh] flex flex-col overflow-hidden`}
+            className={`lg-sheet w-full max-w-[100%] ${wide ? 'sm:max-w-lg' : 'sm:max-w-md'} rounded-t-[28px] sm:rounded-[28px] max-h-[85dvh] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]`}
           >
             <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
               <div className="min-w-0">
@@ -177,11 +179,12 @@ export function Sheet({
                 <X size={18} strokeWidth={1.9} />
               </IconButton>
             </div>
-            <div className="flex-1 overflow-y-auto">{children}</div>
+            <div className="flex-1 overflow-y-auto overscroll-contain">{children}</div>
             {footer && <div className="px-5 py-4 border-t border-[#eceef2]">{footer}</div>}
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+    </BodyPortal>
   );
 }

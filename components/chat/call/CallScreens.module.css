@@ -718,3 +718,76 @@
     animation: none;
   }
 }
+
+/* ── Liquid Porcelain Glass (28 Nov 2026) ─────────────────────────────────────────────────────
+   Voice calls: porcelain canvas, pearl halo, porcelain control dock with obsidian "on" state.
+   Video calls: smoked crystal over the camera (white frost at 18 %, luminous 1 px ring). */
+.backdrop {
+  background-color: #ffffff;
+  background-image:
+    radial-gradient(60% 45% at 50% 30%, rgba(236, 241, 250, 0.7), transparent 72%),
+    radial-gradient(50% 40% at 0% 100%, rgba(250, 244, 236, 0.5), transparent 70%);
+}
+.kind {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.65), 0 0 0 0.5px rgba(16, 24, 40, 0.08), 0 4px 14px -6px rgba(16, 24, 40, 0.12);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.topDark .kind,
+.secureDark {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+.ring {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.06), inset 0 0 18px rgba(255, 255, 255, 0.6);
+}
+.controlsLight {
+  background: rgba(248, 248, 247, 0.84);
+  border: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), inset 0 0 0 1px rgba(255, 255, 255, 0.65), 0 0 0 0.5px rgba(16, 24, 40, 0.08), 0 12px 36px -10px rgba(16, 24, 40, 0.18);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+}
+.controlsLight .control {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 246, 249, 0.94));
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 0 0.5px rgba(16, 24, 40, 0.10), 0 2px 8px -3px rgba(16, 24, 40, 0.14);
+}
+.controlsLight .control:hover { background: #ffffff; }
+.controlsLight .controlOn {
+  background: rgba(21, 23, 28, 0.9);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 12px -4px rgba(16, 24, 40, 0.4);
+}
+.controlsDark {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 16px 40px -12px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+.controlsDark .control {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 0 0 0.5px rgba(255, 255, 255, 0.3);
+}
+.controlEnd {
+  background: linear-gradient(180deg, #ff5a4f, #ef3b30);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px -6px rgba(239, 59, 48, 0.55);
+}
+@supports (-webkit-touch-callout: none) {
+  .controlsLight, .controlsDark, .kind { -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .controlsLight, .kind { -webkit-backdrop-filter: none; backdrop-filter: none; background: #fbfbfa; }
+  .controlsDark { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(20, 22, 28, 0.72); }
+}
+/* iOS 26.3: caustic Fresnel edge and a directional lens sheen on the call controls. */
+.controlsLight {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.10) 40%, rgba(255, 255, 255, 0) 68%, rgba(255, 255, 255, 0.18) 100%);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.98), inset 0 -1px 0 rgba(16, 24, 40, 0.055), inset 0 0 0 1px rgba(255, 255, 255, 0.72), 0 0 0 0.5px rgba(16, 24, 40, 0.08), 0 12px 36px -10px rgba(16, 24, 40, 0.18);
+}
+.controlsDark { background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 55%); }
+.control.control { min-height: 0; }
+.controlsLight .control:active, .controlsDark .control:active { transform: scale(0.94); }

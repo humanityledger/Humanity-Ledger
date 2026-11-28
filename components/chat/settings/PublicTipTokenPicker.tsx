@@ -116,12 +116,12 @@ export function PublicTipTokenPicker({
               onClick={() => void choose(t.symbol)}
               onKeyDown={e => onKeyDown(e, i)}
               className={`w-full min-h-[52px] flex items-center gap-3 px-2 -mx-2 my-0.5 rounded-xl text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#15171c]/30 ${
-                on ? 'bg-[#f2f4f7]' : 'hover:bg-[#f7f8fa] active:bg-[#eef0f3]'
+                on ? 'lg-recessed' : 'hover:bg-[#f7f8fa] active:bg-[#eef0f3]'
               }`}
             >
               <span
                 aria-hidden="true"
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[14px] font-semibold shrink-0"
+                className="icon-btn w-8 h-8 rounded-full flex items-center justify-center text-white text-[14px] font-semibold shrink-0"
                 style={{ backgroundColor: t.color }}
               >
                 {t.glyph}
@@ -134,7 +134,7 @@ export function PublicTipTokenPicker({
               </span>
               <span
                 aria-hidden="true"
-                className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                className={`icon-btn w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
                   on ? 'bg-[#15171c] scale-100' : 'border-2 border-[#d0d5dd] scale-90'
                 }`}
               >

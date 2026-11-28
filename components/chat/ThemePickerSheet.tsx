@@ -18,6 +18,7 @@ import { CHAT_THEMES, CHAT_THEME_GROUPS, chatThemeVars, findChatTheme, type Chat
 import { BUBBLE_STYLES, bubbleClasses } from "@/lib/chat/bubbleStyles";
 import { WALLPAPERS, WALLPAPER_GROUPS, canvasCss, resolveWallpaper, type Wallpaper } from "@/lib/chat/wallpapers";
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
 
 export type AppearanceTab = "theme" | "wallpaper" | "bubbles";
 
@@ -85,7 +86,7 @@ function Preview({ theme, bubbleStyle, wallpaper }: { theme: ChatTheme; bubbleSt
       aria-hidden="true"
     >
       <div className="flex justify-center mb-3">
-        <span className={`px-3 py-1 rounded-full text-[12px] font-medium ${tone === "dark" ? "bg-black/35 text-white/85 backdrop-blur-sm" : "bg-white/85 border border-[#e6e8ec] text-[#727a88] backdrop-blur-sm"}`}>{tr("Today")}</span>
+        <span className={`px-3 py-1 rounded-full text-[12px] font-medium ${tone === "dark" ? "lg-smoke text-white/90" : "lg-pill text-[#5b606b]"}`}>{tr("Today")}</span>
       </div>
       <div className="flex flex-col items-start max-w-[78%]">
         <div className={`${recv} ${pad}`}>
@@ -124,7 +125,7 @@ const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outli
 
 function SelectedDot() {
   return (
-    <span className="absolute top-1.5 right-1.5 w-[18px] h-[18px] rounded-full bg-[#15171c] ring-2 ring-white flex items-center justify-center" aria-hidden="true">
+    <span className="icon-btn absolute top-1.5 right-1.5 w-[18px] h-[18px] rounded-full bg-[#15171c] ring-2 ring-white flex items-center justify-center" aria-hidden="true">
       <Check size={10} strokeWidth={3.2} className="text-white" />
     </span>
   );
@@ -288,11 +289,11 @@ export function ThemePickerSheet({
 
   return (
     <MotionConfig reducedMotion="user">
-      <AnimatePresence>
+      <BodyPortal><AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-[600] flex items-end md:items-center justify-center md:p-6">
+          <div className="fixed inset-0 z-[260000] flex items-end md:items-center justify-center md:p-6">
             <motion.div
-              className="absolute inset-0 bg-[rgba(16,24,40,0.42)] backdrop-blur-[2px]"
+              className="lg-scrim absolute inset-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -305,7 +306,7 @@ export function ThemePickerSheet({
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
-              className="relative w-full md:w-[min(1040px,100%)] h-[min(94dvh,820px)] md:h-[min(720px,calc(100dvh-48px))] bg-white rounded-t-[26px] md:rounded-[26px] shadow-[0_40px_80px_-20px_rgba(16,24,40,0.35)] overflow-hidden flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]"
+              className="relative w-full md:w-[min(1040px,100%)] h-[min(94dvh,820px)] md:h-[min(720px,calc(100dvh-48px))] lg-sheet rounded-t-[26px] md:rounded-[26px] overflow-hidden flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]"
               initial={{ y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 28, opacity: 0 }}
@@ -328,7 +329,7 @@ export function ThemePickerSheet({
                   <button
                     type="button"
                     onClick={onClose}
-                    className={`w-9 h-9 rounded-full bg-[#f2f4f7] flex items-center justify-center text-[#475061] hover:bg-[#e4e7ec] transition-colors ${FOCUS}`}
+                    className={`icon-btn w-9 h-9 rounded-full lg-orb flex items-center justify-center text-[#475061] transition ${FOCUS}`}
                     aria-label={tr("Close")}
                   >
                     <X size={17} strokeWidth={2} />
@@ -338,7 +339,7 @@ export function ThemePickerSheet({
                 <div className="px-5 pb-3">
                   {/* Layout by inline style: when the utility classes were missing the three tabs ran
                       together ("Theme 40Wallpaper 59Bubbles 14", 18 November 2026). */}
-                  <div role="tablist" aria-label={tr("Appearance")} className="rounded-full bg-[#f2f4f7]" style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`, gap: 6, padding: 4, borderRadius: 999 }}>
+                  <div role="tablist" aria-label={tr("Appearance")} className="rounded-full lg-recessed" style={{ display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`, gap: 6, padding: 4, borderRadius: 999 }}>
                     {tabs.map(t => (
                       <button
                         key={t.id}
@@ -349,7 +350,7 @@ export function ThemePickerSheet({
                         className={`relative rounded-full text-[13.5px] font-medium transition-colors ${FOCUS} ${tab === t.id ? "text-[#15171c]" : "text-[#5b6271] hover:text-[#15171c]"}`}
                         style={{ height: 38, minWidth: 0, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}
                       >
-                        {tab === t.id && <motion.span layoutId="appearance-tab" className="absolute inset-0 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.14)]" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
+                        {tab === t.id && <motion.span layoutId="appearance-tab" className="lg-dock-capsule absolute inset-0 rounded-full" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
                         <span className="relative" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                           <span>{tr(t.label)}</span>
                           <span aria-label={tr("{count} options", { count: t.count })} style={{ fontSize: 11.5, fontWeight: 600, lineHeight: '18px', minWidth: 22, padding: '0 6px', borderRadius: 999, background: tab === t.id ? '#eef0f3' : 'rgba(255,255,255,0.7)', color: '#727a88', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>{t.count}</span>
@@ -401,7 +402,7 @@ export function ThemePickerSheet({
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence></BodyPortal>
     </MotionConfig>
   );
 }

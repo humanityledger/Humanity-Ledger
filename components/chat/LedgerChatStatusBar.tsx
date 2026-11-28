@@ -137,7 +137,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
               >
                 <AddressAvatar address={address} size={42} showSaved={true} />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#2754d6] rounded-full border-2 border-white flex items-center justify-center">
+              <div className="icon-btn absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#2754d6] rounded-full border-2 border-white flex items-center justify-center">
                 <span className="text-white text-[10px] font-black leading-none">+</span>
               </div>
             </div>
@@ -184,7 +184,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-sm flex items-end justify-center"
+            className="lg-scrim fixed inset-0 z-[99999] flex items-end justify-center"
             onClick={() => setShowAddModal(false)}
           >
             <motion.div
@@ -254,7 +254,7 @@ export function LedgerChatStatusBar({ address, contacts }: LedgerChatStatusBarPr
             </div>
             {/* Close */}
             <button
-              className="absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              className="icon-btn absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               onClick={closeViewModal}
               aria-label={t("Close")}
             >

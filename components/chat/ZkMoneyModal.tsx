@@ -74,7 +74,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
     body = (
       <div className="h-full bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-[14px] text-[#4a505c]">
         {NO_PRIVATE_TOKENS_MESSAGE}
-        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>{tr("Close")}</button>
+        <button type="button" className="icon-btn mt-4 block h-10 px-4 rounded-full bg-[#15171c] lg-ink text-white font-semibold" onClick={onClose}>{tr("Close")}</button>
       </div>
     );
   } else if (dmPeerInboxId && ready) {
@@ -86,7 +86,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
     body = (
       <div className="h-full bg-white p-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-[14px] text-[#4a505c]">
         {tr("On")}{" "}{tr(networkLabel())}{tr(", private payments from a chat go only to a verified address, in a direct conversation.")}
-        <button type="button" className="mt-4 block h-10 px-4 rounded-full bg-[#15171c] text-white font-semibold" onClick={onClose}>{tr("Close")}</button>
+        <button type="button" className="icon-btn mt-4 block h-10 px-4 rounded-full bg-[#15171c] lg-ink text-white font-semibold" onClick={onClose}>{tr("Close")}</button>
       </div>
     );
   }
@@ -95,7 +95,7 @@ export const ZkMoneyModal: React.FC<ZkMoneyModalProps> = ({ isOpen, onClose, myA
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[600] flex items-stretch justify-end bg-black/40"
+          className="lg-scrim fixed inset-0 z-[600] flex items-stretch justify-end"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -201,7 +201,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
               {payee.verified ? tr("✓ Verified (G7)") : tr("Not verified: payment blocked")}
             </span>
           </div>
-          <div className="flex items-center justify-between font-mono text-[11px] text-[#15171c] bg-white border border-[#e4e7ec] rounded-lg px-2.5 py-1.5">
+          <div className="flex items-center justify-between font-mono text-[11px] text-[#15171c] lg-card rounded-lg px-2.5 py-1.5">
             <span className="truncate mr-2">{payee.address.slice(0, 14)}…{payee.address.slice(-10)}</span>
             {fingerprint && (
               <span className="font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 flex-shrink-0" title={tr("Address fingerprint (SHA-256)")}>{tr("FP: {fingerprint}", { fingerprint })}
@@ -246,7 +246,7 @@ function DirectPaymentForm({ dmPeerInboxId, selfInboxId, peerName, peerAddress, 
         </p>
       )}
       {lowBalance && !busy && <p role="status" data-testid="low-balance" className="rounded-xl bg-[#fdf3f2] border border-[#f3d4d0] px-3 py-2 text-[13px] text-[#7a2d24]">{lowBalance}</p>}
-      <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
+      <button type="button" className="w-full min-h-[44px] rounded-full bg-[#15171c] lg-ink text-white text-[14.5px] font-semibold disabled:opacity-50" disabled={busy || blocked || !amount} onClick={send}>
         {busy ? tr("Proving on this device…") : tr("Send privately")}
       </button>
       {error && <p className="text-[13px] text-[#7a2e12] bg-[#fdf0eb] border border-[#f5d3c4] rounded-xl px-3 py-2" role="alert">{error}</p>}

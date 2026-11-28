@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
     // request that an owner or admin answers in Manage → Members. A signed invite is already an
     // admin's personal invitation, so it joins directly.
     if (!isCryptographicInvite) {
-      const perms = await (prisma as any).communityPermission.findUnique({ where: { communityId: community.id }, select: { requireApproval: true } }).catch(() => null);
+      const perms = await ((prisma as any).communityPermission?.findUnique?.({ where: { communityId: community.id }, select: { requireApproval: true } })?.catch?.(() => null) ?? null);
       if (perms?.requireApproval === true) {
         const ok = await addJoinRequest(community.id, member);
         if (!ok) return NextResponse.json({ error: 'This community has too many pending requests. Try again later.', code: 'REQUESTS_FULL' }, { status: 429 });

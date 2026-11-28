@@ -192,13 +192,13 @@ export function ExpressionPicker({
       ref={ref}
       role="dialog"
       aria-label={tr("Emojis, stickers and GIFs")}
-      className="absolute bottom-[68px] left-2 z-50 w-[min(392px,calc(100vw-16px))] h-[min(480px,62vh)] flex flex-col bg-white rounded-[28px] border border-[#e4e7ec] shadow-[0_28px_60px_-18px_rgba(16,24,40,0.30)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
+      className="absolute bottom-[68px] left-2 z-50 w-[min(392px,calc(100vw-16px))] h-[min(480px,62vh)] flex flex-col lg-sheet rounded-[28px] border overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
     >
       <div className="px-3.5 pt-3.5 pb-3 shrink-0">
         {/* Segmented tabs: 8 px between tabs, one white indicator that follows the finger. */}
         <div
           ref={tabsRef}
-          className="relative p-1.5 rounded-full bg-[#f2f4f7]"
+          className="relative p-1.5 rounded-full lg-recessed"
           style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: 8 }}
           role="tablist"
           aria-label={tr("Emojis, stickers and GIFs")}
@@ -212,7 +212,7 @@ export function ExpressionPicker({
         >
           <span
             aria-hidden="true"
-            className={`absolute top-1.5 bottom-1.5 left-0 rounded-full bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)] motion-reduce:transition-none ${drag === null ? 'transition-[transform,width] duration-[260ms] ease-[cubic-bezier(0.22,0.8,0.24,1)]' : ''}`}
+            className={`lg-dock-capsule absolute top-1.5 bottom-1.5 left-0 rounded-full motion-reduce:transition-none ${drag === null ? 'transition-[transform,width] duration-[260ms] ease-[cubic-bezier(0.22,0.8,0.24,1)]' : ''}`}
             style={pill ? { width: pill.width, transform: `translateX(${pill.left}px)` } : { opacity: 0 }}
           />
           {TABS.map(([id, label]) => (
@@ -226,7 +226,7 @@ export function ExpressionPicker({
               aria-controls={`expr-pane-${id}`}
               tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
-              className={`relative z-[1] w-full min-w-0 h-10 rounded-full text-center text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${tab === id ? 'text-[#15171c]' : 'text-[#475061] hover:text-[#15171c]'}`}
+              className={`icon-btn relative z-[1] w-full min-w-0 h-10 rounded-full text-center text-[14px] font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#15171c] ${tab === id ? 'text-[#15171c]' : 'text-[#475061] hover:text-[#15171c]'}`}
             >
               {label}
             </button>
@@ -361,7 +361,7 @@ function StickerTab({ onSend }: { onSend: (c: string) => void }) {
                 if (l < row.scrollLeft) row.scrollLeft = l;
                 else if (r > row.scrollLeft + row.clientWidth) row.scrollLeft = r - row.clientWidth;
               } : undefined}
-              className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-[background-color,box-shadow] duration-150 ${on ? 'bg-[#f2f4f7] shadow-[inset_0_0_0_2px_#15171c]' : 'hover:bg-[#f2f4f7]'}`}
+              className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-[background-color,box-shadow] duration-150 ${on ? 'lg-recessed shadow-[inset_0_0_0_2px_#15171c]' : 'hover:bg-[#f2f4f7]'}`}
             >
               <img src={stickerFile(p.id, p.cover)} alt={tr(p.name)} className="w-9 h-9 object-contain" draggable={false} />
             </button>
@@ -448,7 +448,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
             onChange={(e) => setQ(e.target.value)}
             placeholder={tr("Search GIPHY")}
             aria-label={tr("Search GIFs")}
-            className="w-full h-10 rounded-full bg-[#f2f4f7] pl-10 pr-4 text-[15px] text-[#15171c] outline-none placeholder:text-[#a3a9b4] focus:bg-white focus:ring-2 focus:ring-[#15171c]/10"
+            className="icon-btn w-full h-10 rounded-full lg-recessed pl-10 pr-4 text-[15px] text-[#15171c] outline-none placeholder:text-[#a3a9b4] focus:bg-white focus:ring-2 focus:ring-[#15171c]/10"
           />
         </div>
       </div>
@@ -463,7 +463,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
         {state === 'error' && items.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-10">
             <p className="text-center text-[13.5px] text-[#727a88]">{tr("GIFs could not be loaded.")}</p>
-            <button type="button" onClick={() => load(q, 0)} className="h-9 px-4 rounded-full border border-[#e4e7ec] text-[13.5px] font-medium text-[#15171c] hover:bg-[#f7f8fa]">{tr("Try again")}</button>
+            <button type="button" onClick={() => load(q, 0)} className="icon-btn lg-pill h-9 px-4 rounded-full text-[13.5px] font-medium text-[#15171c]">{tr("Try again")}</button>
           </div>
         )}
         {state === 'empty' && <p className="text-center text-[13.5px] text-[#727a88] py-10">{tr("No GIFs for “{q}”.", { q })}</p>}
@@ -478,7 +478,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
                     onClick={() => onSend(`[GIF]${g.url}`)}
                     aria-label={g.title ? tr("Send GIF: {title}", { title: g.title }) : tr("Send GIF")}
                     title={g.title || undefined}
-                    className="block w-full rounded-2xl overflow-hidden bg-[#eff1f4] active:scale-[0.98] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
+                    className="block w-full rounded-2xl overflow-hidden lg-recessed active:scale-[0.98] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#15171c]"
                     style={{ aspectRatio: `${g.width} / ${g.height}` }}
                   >
                     <img src={g.preview} alt="" loading="lazy" className="w-full h-full object-cover" draggable={false} />
@@ -490,7 +490,7 @@ function GifTab({ onSend }: { onSend: (c: string) => void }) {
         )}
         {state === 'loading' && <Spinner />}
       </div>
-      <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 px-3 h-6 rounded-full bg-[#15171c]/85 text-white text-[10.5px] font-semibold tracking-[0.06em] flex items-center">
+      <div className="icon-btn pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 px-3 h-6 rounded-full lg-smoke text-white text-[10.5px] font-semibold tracking-[0.06em] flex items-center">
         {tr("POWERED BY GIPHY")}
       </div>
     </>

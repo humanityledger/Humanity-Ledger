@@ -21,10 +21,10 @@ export function LottieSendButton({ onTrigger, disabled, className = '' }: Lottie
       type="submit"
       disabled={disabled}
       onClick={onTrigger}
-      className={`w-10 h-10 mb-[2px] md:w-12 md:h-12 md:mb-0 rounded-full md:rounded-2xl flex items-center justify-center transition-colors shrink-0 ${
+      className={`icon-btn w-10 h-10 mb-[2px] md:w-12 md:h-12 md:mb-0 rounded-full md:rounded-2xl flex items-center justify-center transition-colors shrink-0 ${
         disabled
           ? 'bg-[#e4e7ec] text-[#a3a9b4] md:bg-[#2456e6]/35 md:text-white cursor-not-allowed'
-          : 'bg-[#15171c] text-white hover:bg-[#2b2f38] md:bg-[#2456e6] md:hover:bg-[#1d47c4] active:scale-95'
+          : 'bg-[#15171c] lg-ink text-white hover:bg-[#2b2f38] md:bg-[#2456e6] md:hover:bg-[#1d47c4] active:scale-95'
       } ${className}`}
       aria-label={t("Send message")}
     >

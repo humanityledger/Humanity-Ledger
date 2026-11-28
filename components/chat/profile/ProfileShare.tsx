@@ -48,7 +48,7 @@ export function ProfileHeaderCard({ address, name, photo, onOpenProfile, onOpenS
   const tr = useT();
   const { username, loaded } = useUsername(!!address);
   return (
-    <div className="bg-white rounded-2xl border border-[#e6e8ec] flex items-center gap-3 pl-3 pr-2.5 py-3">
+    <div className="lg-card rounded-2xl flex items-center gap-3 pl-3 pr-2.5 py-3">
       <button type="button" onClick={onOpenProfile} className={`flex-1 min-w-0 flex items-center gap-3.5 text-left rounded-xl ${FOCUS}`} aria-label={tr("Open your profile")}>
         <PeerAvatar address={address} name={name} photo={photo} size={56} />
         <span className="min-w-0">
@@ -63,7 +63,7 @@ export function ProfileHeaderCard({ address, name, photo, onOpenProfile, onOpenS
         type="button"
         onClick={onOpenShare}
         aria-label={tr("Your QR code and link")}
-        className={`w-11 h-11 shrink-0 rounded-full bg-[#f2f4f7] hover:bg-[#e9ecf1] grid place-items-center ${FOCUS}`}
+        className={`w-11 h-11 shrink-0 rounded-full lg-tile hover:bg-[#e9ecf1] grid place-items-center ${FOCUS}`}
       >
         <QrCode size={19} strokeWidth={1.9} style={{ color: INK }} aria-hidden="true" />
       </button>
@@ -76,7 +76,7 @@ export function ProfileHeaderCard({ address, name, photo, onOpenProfile, onOpenS
 function Group({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <div>
-      <div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">{children}</div>
+      <div className="lg-card rounded-2xl overflow-hidden">{children}</div>
       {footer && <p className="text-[12.5px] leading-relaxed px-1.5 mt-2" style={{ color: INK_3 }}>{footer}</p>}
     </div>
   );
@@ -132,7 +132,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
         <div className="flex flex-col items-center pt-2">
           <PeerAvatar address={address} name={name} photo={photo} size={88} />
           {onEditName && (
-            <button type="button" onClick={onEditName} className={`mt-3 h-8 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13px] font-semibold ${FOCUS}`} style={{ color: INK }}>
+            <button type="button" onClick={onEditName} className={`icon-btn mt-3 h-8 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13px] font-semibold ${FOCUS}`} style={{ color: INK }}>
               {tr("Edit name and photo")}
             </button>
           )}
@@ -149,7 +149,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
           <Row icon={<User size={18} strokeWidth={1.8} style={{ color: INK }} />} onClick={onEditName} label={onEditName ? tr("Edit your name") : undefined}>
             {name}
           </Row>
-          <Row icon={<span className="text-[12px] font-semibold" style={{ color: INK_3 }}>0x</span>} trailing={<button type="button" onClick={() => copy(address, 'Wallet address')} aria-label={tr("Copy wallet address")} className={`w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}><Copy size={15} strokeWidth={1.8} style={{ color: INK_2 }} /></button>}>
+          <Row icon={<span className="text-[12px] font-semibold" style={{ color: INK_3 }}>0x</span>} trailing={<button type="button" onClick={() => copy(address, 'Wallet address')} aria-label={tr("Copy wallet address")} className={`icon-btn w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}><Copy size={15} strokeWidth={1.8} style={{ color: INK_2 }} /></button>}>
             <span className="tabular-nums">{shortAddr(address)}</span>
           </Row>
         </Group>
@@ -169,7 +169,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
             {confirmDelete ? (
               <div className="px-4 py-3 flex items-center gap-3" role="group" aria-label={tr("Delete your username?")}>
                 <span className="flex-1 text-[14px] leading-snug" style={{ color: INK }}>{tr("Delete {0}? Your link and QR code stop working, and someone else can take the name.", { 0: <span className="font-semibold">@{u.username}</span> })}</span>
-                <button type="button" onClick={() => setConfirmDelete(false)} className={`h-9 px-3 rounded-full text-[14px] font-semibold hover:bg-[#f2f4f7] ${FOCUS}`} style={{ color: INK }}>{tr("Cancel")}</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className={`icon-btn h-9 px-3 rounded-full text-[14px] font-semibold hover:bg-[#f2f4f7] ${FOCUS}`} style={{ color: INK }}>{tr("Cancel")}</button>
                 <button
                   type="button"
                   disabled={busy}
@@ -185,7 +185,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
                       setConfirmDelete(false);
                     }
                   }}
-                  className={`h-9 px-3 rounded-full text-[14px] font-semibold text-white bg-[#b42318] hover:bg-[#962018] disabled:opacity-40 ${FOCUS}`}
+                  className={`icon-btn h-9 px-3 rounded-full text-[14px] font-semibold text-white bg-[#b42318] hover:bg-[#962018] disabled:opacity-40 ${FOCUS}`}
                 >
                   {tr("Delete")}
                 </button>
@@ -197,10 +197,10 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
                   <span className="flex items-center gap-1 shrink-0">
                     {/* Changing the username is one tap, in plain sight (18 November 2026: it was
                         only inside the ⋯ menu and people could not find it). */}
-                    <button type="button" onClick={onEditUsername} className={`h-9 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13.5px] font-semibold ${FOCUS}`} style={{ color: INK }} data-testid="change-username">
+                    <button type="button" onClick={onEditUsername} className={`icon-btn h-9 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13.5px] font-semibold ${FOCUS}`} style={{ color: INK }} data-testid="change-username">
                       {tr("Change")}
                     </button>
-                    <button type="button" onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} aria-label={tr("Username options")} className={`w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}>
+                    <button type="button" onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} aria-label={tr("Username options")} className={`icon-btn w-9 h-9 grid place-items-center rounded-full hover:bg-[#f2f4f7] ${FOCUS}`}>
                       <MoreHorizontal size={18} strokeWidth={1.9} style={{ color: INK }} />
                     </button>
                   </span>
@@ -210,7 +210,7 @@ export function ProfilePanel({ address, name, photo, onEditName, onEditUsername,
               </Row>
             )}
             {menu && (
-              <div role="menu" aria-label={tr("Username options")} className="absolute right-3 top-[46px] z-20 w-[220px] bg-white rounded-2xl border border-[#e4e7ec] shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28)] p-1.5">
+              <div role="menu" aria-label={tr("Username options")} className="absolute right-3 top-[46px] z-20 w-[220px] lg-card rounded-2xl shadow-[0_16px_48px_-8px_rgba(16,24,40,0.28)] p-1.5">
                 <MenuItem icon={<Copy size={16} strokeWidth={1.8} />} onClick={() => { setMenu(false); void copy(`@${u.username}`, 'Username'); }}>{tr("Copy username")}</MenuItem>
                 <MenuItem icon={<Pencil size={16} strokeWidth={1.8} />} onClick={() => { setMenu(false); onEditUsername(); }}>{tr("Change username")}</MenuItem>
                 <MenuItem icon={<Trash2 size={16} strokeWidth={1.8} />} danger onClick={() => { setMenu(false); setConfirmDelete(true); }}>{tr("Delete username")}</MenuItem>
@@ -246,7 +246,7 @@ function RetryButton({ onRetry }: { onRetry: () => Promise<void> | void }) {
           setBusy(false);
         }
       }}
-      className={`h-9 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13.5px] font-semibold shrink-0 disabled:opacity-50 ${FOCUS}`}
+      className={`icon-btn h-9 px-3.5 rounded-full bg-[#eef0f3] hover:bg-[#e4e7ec] text-[13.5px] font-semibold shrink-0 disabled:opacity-50 ${FOCUS}`}
       style={{ color: INK }}
     >
       {busy ? tr("Trying…") : tr("Try again")}
@@ -378,7 +378,7 @@ export function UsernameEditor({ onDone }: { onDone: () => void }) {
         {suggestions.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-2 px-1" aria-label={tr("Free usernames")}>
             {suggestions.map((s) => (
-              <button key={s} type="button" onClick={() => { setValue(s); setSuggestions([]); setTouched(true); }} className={`h-9 px-3.5 rounded-full bg-white border border-[#e4e7ec] hover:bg-[#f7f8fa] text-[14px] font-medium ${FOCUS}`} style={{ color: INK }}>
+              <button key={s} type="button" onClick={() => { setValue(s); setSuggestions([]); setTouched(true); }} className={`icon-btn h-9 px-3.5 rounded-full lg-pill hover:bg-[#f7f8fa] text-[14px] font-medium ${FOCUS}`} style={{ color: INK }}>
                 @{s}
               </button>
             ))}
@@ -393,14 +393,14 @@ export function UsernameEditor({ onDone }: { onDone: () => void }) {
       </ul>
 
       <div className="grid grid-cols-[auto_1fr] gap-2">
-        <button type="button" onClick={onDone} disabled={busy} className={`min-h-[52px] px-5 rounded-2xl border border-[#e4e7ec] bg-white hover:bg-[#f2f4f7] text-[16px] font-semibold disabled:opacity-40 ${FOCUS}`} style={{ color: INK }}>
+        <button type="button" onClick={onDone} disabled={busy} className={`min-h-[52px] px-5 rounded-2xl lg-card hover:bg-[#f2f4f7] text-[16px] font-semibold disabled:opacity-40 ${FOCUS}`} style={{ color: INK }}>
           {tr("Cancel")}
         </button>
         <button
           type="button"
           onClick={() => void save()}
           disabled={busy || !!problem || unchanged || availability === 'taken' || availability === 'checking'}
-          className={`min-h-[52px] rounded-2xl bg-[#15171c] hover:bg-[#262932] text-white text-[16px] font-semibold disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
+          className={`min-h-[52px] rounded-2xl bg-[#15171c] lg-ink hover:bg-[#262932] text-white text-[16px] font-semibold disabled:bg-[#e4e7ec] disabled:text-[#5b606b] ${FOCUS}`}
         >
           {busy ? tr("Saving…") : tr("Save")}
         </button>
@@ -473,11 +473,11 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
   const c = qrColor(colorId);
 
   if (!u.loaded) {
-    return <div className="h-[420px] rounded-3xl bg-white border border-[#e6e8ec] animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label={tr("Loading your QR code")} />;
+    return <div className="h-[420px] rounded-3xl lg-card animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label={tr("Loading your QR code")} />;
   }
   if (u.error && !u.username) {
     return (
-      <div className="bg-white rounded-2xl border border-[#e6e8ec] p-6 text-center" role="alert">
+      <div className="lg-card rounded-2xl p-6 text-center" role="alert">
         <div className="mx-auto w-14 h-14 rounded-2xl bg-[#fff1f0] grid place-items-center">
           <QrCode size={24} strokeWidth={1.8} style={{ color: '#B42318' }} aria-hidden="true" />
         </div>
@@ -491,15 +491,15 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
   }
   if (!u.username || !u.link) {
     return (
-      <div className="bg-white rounded-2xl border border-[#e6e8ec] p-6 text-center">
-        <div className="mx-auto w-14 h-14 rounded-2xl bg-[#f2f4f7] grid place-items-center">
+      <div className="lg-card rounded-2xl p-6 text-center">
+        <div className="mx-auto w-14 h-14 rounded-2xl lg-recessed grid place-items-center">
           <QrCode size={24} strokeWidth={1.8} style={{ color: INK }} aria-hidden="true" />
         </div>
         <p className="mt-4 text-[17px] font-semibold" style={{ color: INK }}>{tr("Choose a username first")}</p>
         <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK_2 }}>
           {tr("Your QR code and link open a chat with you without showing your wallet address. They need a username.")}
         </p>
-        <button type="button" onClick={onEditUsername} className={`mt-5 min-h-[48px] px-6 rounded-2xl bg-[#15171c] hover:bg-[#262932] text-white text-[15px] font-semibold ${FOCUS}`}>
+        <button type="button" onClick={onEditUsername} className={`mt-5 min-h-[48px] px-6 rounded-2xl bg-[#15171c] lg-ink hover:bg-[#262932] text-white text-[15px] font-semibold ${FOCUS}`}>
           {tr("Choose a username")}
         </button>
       </div>
@@ -547,7 +547,7 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
               setBusy(false);
             }
           }}
-          className={`w-[76px] h-[60px] rounded-2xl bg-white border border-[#e6e8ec] hover:bg-[#f7f8fa] flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium disabled:opacity-50 ${FOCUS}`}
+          className={`w-[76px] h-[60px] rounded-2xl lg-card hover:bg-[#f7f8fa] flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium disabled:opacity-50 ${FOCUS}`}
           style={{ color: INK }}
         >
           <Download size={17} strokeWidth={1.9} aria-hidden="true" />
@@ -558,7 +558,7 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
           onClick={() => setColorOpen((o) => !o)}
           aria-haspopup="true"
           aria-expanded={colorOpen}
-          className={`w-[76px] h-[60px] rounded-2xl bg-white border ${colorOpen ? 'border-[#15171c] bg-[#f7f8fa]' : 'border-[#e6e8ec] hover:bg-[#f7f8fa]'} flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium transition-colors ${FOCUS}`}
+          className={`w-[76px] h-[60px] rounded-2xl bg-white border ${colorOpen ? 'border-[#15171c] lg-recessed' : 'border-[#e6e8ec] hover:bg-[#f7f8fa]'} flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium transition-colors ${FOCUS}`}
           style={{ color: INK }}
         >
           <Palette size={17} strokeWidth={1.9} aria-hidden="true" />
@@ -567,7 +567,7 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
       </div>
 
       {colorOpen && (
-        <div role="radiogroup" aria-label={tr("QR code colour")} className="mt-3 w-full max-w-[280px] bg-white rounded-2xl border border-[#e4e7ec] shadow-[0_4px_20px_-4px_rgba(16,24,40,0.12)] p-3 grid grid-cols-4 gap-2.5 transition-all">
+        <div role="radiogroup" aria-label={tr("QR code colour")} className="mt-3 w-full max-w-[280px] lg-card rounded-2xl shadow-[0_4px_20px_-4px_rgba(16,24,40,0.12)] p-3 grid grid-cols-4 gap-2.5 transition-all">
           {QR_COLORS.map((k) => (
             <button
               key={k.id}
@@ -577,7 +577,7 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
               aria-label={tr(k.name)}
               title={tr(k.name)}
               onClick={() => pick(k.id)}
-              className={`w-10 h-10 rounded-full mx-auto grid place-items-center ring-offset-2 ${k.id === colorId ? 'ring-2 ring-[#15171c]' : 'ring-1 ring-black/10 hover:scale-105'} transition-all ${FOCUS}`}
+              className={`icon-btn w-10 h-10 rounded-full mx-auto grid place-items-center ring-offset-2 ${k.id === colorId ? 'ring-2 ring-[#15171c]' : 'ring-1 ring-black/10 hover:scale-105'} transition-all ${FOCUS}`}
               style={{ background: k.card }}
             >
               {k.id === colorId && <Check size={16} strokeWidth={2.4} style={{ color: k.text }} aria-hidden="true" />}
@@ -589,7 +589,7 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
       <button
         type="button"
         onClick={() => copy(link, 'Link')}
-        className={`mt-5 w-full flex items-start gap-3 text-left bg-white rounded-2xl border border-[#e6e8ec] hover:bg-[#f7f8fa] px-4 py-3.5 ${FOCUS}`}
+        className={`mt-5 w-full flex items-start gap-3 text-left lg-card rounded-2xl hover:bg-[#f7f8fa] px-4 py-3.5 ${FOCUS}`}
         aria-label={tr("Copy your link")}
       >
         <Copy size={17} strokeWidth={1.8} className="mt-0.5 shrink-0" style={{ color: INK }} aria-hidden="true" />
@@ -601,12 +601,12 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
       </p>
 
       {confirmReset ? (
-        <div className="mt-3 w-full bg-white rounded-2xl border border-[#e6e8ec] p-4" role="group" aria-label={tr("Reset your link?")}>
+        <div className="mt-3 w-full lg-card rounded-2xl p-4" role="group" aria-label={tr("Reset your link?")}>
           <p className="text-[14px] leading-snug" style={{ color: INK }}>
             {tr("Reset your QR code and link? The ones you shared stop working. Your username stays the same.")}
           </p>
           <div className="mt-3 flex justify-end gap-2">
-            <button type="button" onClick={() => setConfirmReset(false)} className={`h-10 px-4 rounded-full text-[14px] font-semibold hover:bg-[#f2f4f7] ${FOCUS}`} style={{ color: INK }}>{tr("Cancel")}</button>
+            <button type="button" onClick={() => setConfirmReset(false)} className={`icon-btn h-10 px-4 rounded-full text-[14px] font-semibold hover:bg-[#f2f4f7] ${FOCUS}`} style={{ color: INK }}>{tr("Cancel")}</button>
             <button
               type="button"
               disabled={busy}
@@ -622,14 +622,14 @@ export function ProfileSharePanel({ address, onEditUsername }: { address: string
                   setConfirmReset(false);
                 }
               }}
-              className={`h-10 px-4 rounded-full text-[14px] font-semibold text-white bg-[#15171c] hover:bg-[#262932] disabled:opacity-40 ${FOCUS}`}
+              className={`icon-btn h-10 px-4 rounded-full text-[14px] font-semibold text-white bg-[#15171c] lg-ink hover:bg-[#262932] disabled:opacity-40 ${FOCUS}`}
             >
               {tr("Reset")}
             </button>
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setConfirmReset(true)} className={`mt-2 h-10 px-4 rounded-full text-[14px] font-semibold text-[#2754d6] hover:bg-[#eef3ff] ${FOCUS}`}>
+        <button type="button" onClick={() => setConfirmReset(true)} className={`icon-btn mt-2 h-10 px-4 rounded-full text-[14px] font-semibold text-[#2754d6] hover:bg-[#eef3ff] ${FOCUS}`}>
           {tr("Reset")}
         </button>
       )}

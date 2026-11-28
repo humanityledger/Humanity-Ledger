@@ -161,7 +161,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-[#f7f8fa] text-[#15171c] overflow-y-auto font-sans flex flex-col selection:bg-[#eff1f4]">
+    <div className="fixed inset-0 z-[999999] lg-canvas text-[#15171c] overflow-y-auto font-sans flex flex-col selection:bg-[#eff1f4]">
       <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col relative px-6 py-12 md:px-12 md:py-20 justify-center">
         
         {/* Progress Bar */}
@@ -228,7 +228,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-[#eff1f4] rounded-2xl mb-4 text-[#15171c]">
+                  <div className="inline-flex items-center justify-center p-3 lg-recessed rounded-2xl mb-4 text-[#15171c]">
                     <User size={24} />
                   </div>
                   <h2 className="text-3xl font-semibold tracking-tight mb-2">{t("Your Identity")}</h2>
@@ -237,7 +237,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
 
                 <div className="flex flex-col items-center mb-8">
                   <div
-                    className={`w-24 h-24 flex flex-col items-center justify-center relative cursor-pointer transition-all overflow-hidden group ${avatar ? 'bg-[#f2f4f7] ring-1 ring-inset ring-black/[0.09]' : 'bg-black/5 border-2 border-dashed border-black/20 hover:border-[#15171c] hover:bg-[#eff1f4]'}`}
+                    className={`w-24 h-24 flex flex-col items-center justify-center relative cursor-pointer transition-all overflow-hidden group ${avatar ? 'lg-recessed ring-1 ring-inset ring-black/[0.09]' : 'bg-black/5 border-2 border-dashed border-black/20 hover:border-[#15171c] hover:bg-[#eff1f4]'}`}
                     style={{ borderRadius: AVATAR_RADIUS }}
                     onClick={() => fileRef.current?.click()}
                   >
@@ -282,7 +282,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 <button
                   onClick={handleNext}
                   disabled={username.trim().length < 3}
-                  className="w-full py-4 bg-[#15171c] hover:bg-[#20bd5a] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/5 disabled:shadow-none"
+                  className="w-full py-4 bg-[#15171c] lg-ink hover:bg-[#20bd5a] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/5 disabled:shadow-none"
                 >
                   {t("Continue")}{" "}<ChevronRight size={20} />
                 </button>
@@ -300,7 +300,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-[#eff1f4] rounded-2xl mb-4 text-[#15171c]">
+                  <div className="inline-flex items-center justify-center p-3 lg-recessed rounded-2xl mb-4 text-[#15171c]">
                     <Globe size={24} />
                   </div>
                   <h2 className="text-3xl font-semibold tracking-tight mb-2">{t("About You")}</h2>
@@ -355,14 +355,14 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 className="w-full max-w-sm mx-auto flex flex-col"
               >
                 <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center p-3 bg-[#eff1f4] rounded-2xl mb-4 text-[#15171c]">
+                  <div className="inline-flex items-center justify-center p-3 lg-recessed rounded-2xl mb-4 text-[#15171c]">
                     <Key size={24} />
                   </div>
                   <h2 className="text-3xl font-semibold tracking-tight mb-2">{t("Vault Security")}</h2>
                   <p className="text-[15px] text-black/50 font-medium">{t("Protect your keys with an enclave PIN.")}</p>
                 </div>
 
-                <div className="bg-white border border-black/5 rounded-3xl p-6 shadow-sm mb-8">
+                <div className="lg-sheet border border-black/5 rounded-3xl p-6 mb-8">
                   <label className="block text-center text-[12px] font-semibold text-black/40 mb-6">
                     {t("Create 6-Digit PIN")}
                   </label>
@@ -372,7 +372,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                       <div
                         key={i}
                         className={`w-12 h-14 rounded-xl flex items-center justify-center text-2xl font-semibold transition-all ${
-                          pin.length > i ? 'bg-[#15171c] text-white shadow-lg shadow-black/5 scale-105' : 'bg-black/5 text-transparent'
+                          pin.length > i ? 'bg-[#15171c] lg-ink text-white shadow-lg shadow-black/5 scale-105' : 'bg-black/5 text-transparent'
                         }`}
                       >
                         {pin.length > i ? '•' : ''}
@@ -415,7 +415,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                 <button
                   onClick={handleNext}
                   disabled={pin.length !== 6}
-                  className="w-full py-4 bg-[#15171c] hover:bg-[#15171c] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/5 disabled:shadow-none"
+                  className="w-full py-4 bg-[#15171c] lg-ink hover:bg-[#15171c] disabled:bg-black/10 disabled:text-black/40 active:scale-95 rounded-2xl text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/5 disabled:shadow-none"
                 >
                   {t("Secure Account")}{" "}<ChevronRight size={20} />
                 </button>
@@ -448,7 +448,7 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
 
                 <div className="w-full bg-white border border-black/10 rounded-2xl p-5 flex items-center justify-between mb-10 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center">
+                    <div className="icon-btn w-10 h-10 rounded-full bg-black/5 flex items-center justify-center">
                       <Bell size={18} className="text-black/60" />
                     </div>
                     <div className="text-left">
@@ -458,9 +458,9 @@ export function LedgerChatOnboarding({ address, onComplete }: OnboardingProps) {
                   </div>
                   <button
                     onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    className={`w-14 h-8 rounded-full relative transition-colors duration-300 ${notificationsEnabled ? 'bg-[#15171c]' : 'bg-black/15'}`}
+                    className={`icon-btn w-14 h-8 rounded-full relative transition-colors duration-300 ${notificationsEnabled ? 'bg-[#15171c]' : 'bg-black/15'}`}
                   >
-                    <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-transform duration-300 shadow-sm ${notificationsEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
+                    <div className={`icon-btn w-6 h-6 rounded-full bg-white absolute top-1 transition-transform duration-300 shadow-sm ${notificationsEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                   </button>
                 </div>
 

@@ -14,6 +14,10 @@ import { isAgreementMessage } from '@/lib/aztec/agreement-message';
 import { parseAttachmentMessage } from '@/lib/chat/remote-attachment';
 import { useT } from '@/lib/i18n/client';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
+import { useBackLayer } from '@/hooks/useMobileBackStack';
+import { useCompactLayout } from '@/lib/layout/mobileViewport';
+import { isPrivateNotesPeer } from '@/lib/chat/private-notes';
 
 /**
  * Contact info for one chat, in two places that share one body (ContactInfoSections):
@@ -63,7 +67,8 @@ export function usePeerProfile(peerAddress: string): PeerProfile | null {
   const key = (peerAddress || '').toLowerCase();
   const [profile, setProfile] = useState<PeerProfile | null>(() => profileCache.get(key) ?? null);
   useEffect(() => {
-    if (!key) return;
+    // Private Notes is not a person: never ask /api/user/profile about it.
+    if (!key || isPrivateNotesPeer(key)) return;
     if (profileCache.has(key)) {
       setProfile(profileCache.get(key) ?? null);
       return;
@@ -96,9 +101,9 @@ export function usePeerProfile(peerAddress: string): PeerProfile | null {
 const Toggle = ({ value }: { value: boolean }) => (
   <span
     aria-hidden="true"
-    className={`w-[44px] h-[26px] rounded-full flex items-center px-[2px] transition-colors duration-150 shrink-0 ${value ? 'bg-[#15171c]' : 'bg-[#d0d5dd]'}`}
+    className={`icon-btn w-[44px] h-[26px] rounded-full flex items-center px-[2px] transition-colors duration-150 shrink-0 ${value ? 'bg-[#15171c]' : 'bg-[#d0d5dd]'}`}
   >
-    <span className={`w-[22px] h-[22px] rounded-full bg-white transition-transform duration-150 ${value ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+    <span className={`icon-btn w-[22px] h-[22px] rounded-full bg-white transition-transform duration-150 ${value ? 'translate-x-[18px]' : 'translate-x-0'}`} />
   </span>
 );
 
@@ -127,7 +132,7 @@ const Row = ({
   >
     <span
       className={`${compact ? 'w-8 h-8 rounded-[9px]' : 'w-[34px] h-[34px] rounded-[10px]'} flex items-center justify-center shrink-0 ${
-        danger ? 'bg-[#FFF4F4] text-[#B42318]' : 'bg-[#f2f4f7] text-[#344054]'
+        danger ? 'bg-[#FFF4F4] text-[#B42318]' : 'lg-recessed text-[#344054]'
       }`}
     >
       {icon}
@@ -151,15 +156,24 @@ const Group = ({ title, footer, variant, children }: { title?: string; footer?: 
         {title}
       </h4>
     )}
-    <div className={variant === 'column' ? 'flex flex-col' : 'bg-white rounded-[14px] border border-[#e4e7ec] overflow-hidden px-4'}>{children}</div>
+    <div className={variant === 'column' ? 'flex flex-col' : 'lg-group rounded-[18px] overflow-hidden px-4'}>{children}</div>
     {footer && <p className="text-[12px] text-[#727a88] px-1 mt-2 leading-relaxed">{footer}</p>}
   </section>
 );
 
 const Modal = ({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) => {
   const tr = useT();
+  // Back closes this dialog only; the Contact info panel underneath stays open.
+  useBackLayer(true, onClose);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  // Portalled to <body>: inside the drawer (transformed, overflow-clipped) WebKit cut it in half.
   return ((
-  <div className="fixed inset-0 z-[250002] flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+  <BodyPortal>
+  <div className="lg-scrim fixed inset-0 z-[260000] flex items-center justify-center p-3" onClick={onClose}>
     <motion.div
       role="dialog"
       aria-label={title}
@@ -168,17 +182,18 @@ const Modal = ({ title, onClose, children }: { title: string; onClose: () => voi
       exit={{ opacity: 0, y: 8 }}
       transition={{ duration: 0.16, ease: 'easeOut' }}
       onClick={(e) => e.stopPropagation()}
-      className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] border border-[#e4e7ec] overflow-hidden"
+      className="lg-sheet rounded-[28px] w-[min(calc(100vw-24px),420px)] flex flex-col max-h-[85dvh] overflow-hidden"
     >
-      <div className="flex items-center justify-between px-5 h-[60px] border-b border-[#eef0f3]">
+      <div className="flex items-center justify-between px-5 h-[60px] border-b border-black/[0.06]">
         <h3 className="font-semibold text-[16px] text-[#15171c]">{title}</h3>
         <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-[#15171c] hover:bg-[#f2f4f7] transition-colors">
           <X size={18} strokeWidth={1.75} />
         </button>
       </div>
-      <div className="p-5 overflow-y-auto bg-[#f7f8fa]">{children}</div>
+      <div className="p-5 overflow-y-auto overscroll-contain pb-[max(20px,env(safe-area-inset-bottom))]">{children}</div>
     </motion.div>
   </div>
+  </BodyPortal>
 ));
 };
 
@@ -360,7 +375,7 @@ export function ContactInfoSections({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#15171c] text-white px-5 h-11 rounded-full flex items-center gap-2.5 z-[250003]"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#15171c] lg-ink text-white px-5 h-11 rounded-full flex items-center gap-2.5 z-[250003]"
           >
             <Check size={16} strokeWidth={1.75} aria-hidden="true" />
             <span className="text-[14px] font-medium">{toast}</span>
@@ -379,10 +394,10 @@ export function ContactInfoSections({
                   key={opt}
                   onClick={() => chooseTimer(opt)}
                   aria-pressed={disappearing === opt}
-                  className="flex items-center justify-between min-h-[52px] px-4 rounded-xl bg-white border border-[#e4e7ec] hover:border-[#15171c] transition-colors"
+                  className="flex items-center justify-between min-h-[52px] px-4 rounded-xl lg-card hover:border-[#15171c] transition-colors"
                 >
                   <span className="text-[15px] font-semibold text-[#15171c]">{tr(TIMER_LABEL[opt])}</span>
-                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#15171c]' : 'border-[#d0d5dd]'}`}>
+                  <span className={`icon-btn w-5 h-5 rounded-full border-2 flex items-center justify-center ${disappearing === opt ? 'border-[#15171c]' : 'border-[#d0d5dd]'}`}>
                     {disappearing === opt && <span className="w-2.5 h-2.5 bg-[#15171c] rounded-full" />}
                   </span>
                 </button>
@@ -394,7 +409,7 @@ export function ContactInfoSections({
         {modal === 'media' && (
           <Modal title={tr("Photos and files")} onClose={() => setModal(null)}>
             <div className="flex flex-col items-center text-center gap-3 py-6">
-              <span className="w-14 h-14 bg-white border border-[#e4e7ec] text-[#475467] rounded-full flex items-center justify-center">
+              <span className="w-14 h-14 lg-pill text-[#475467] rounded-full flex items-center justify-center">
                 <ImageIcon size={26} strokeWidth={1.75} aria-hidden="true" />
               </span>
               <p className="text-[14px] text-[#15171c] font-medium">{shared.files ? tr("{files} shared in this chat", { files: shared.files }) : tr("Nothing shared yet")}</p>
@@ -472,6 +487,8 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   const tr = useT();
   const profile = usePeerProfile(peerAddress);
   const displayName = profile?.displayName || peerName || shortAddr(peerAddress);
+  // Phones and screens under 1024 px: the panel covers the whole screen, edge to edge.
+  const compact = useCompactLayout();
   const quick = [
     { label: tr("Audio"), icon: <Phone size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onVoiceCall },
     { label: tr("Video"), icon: <Video size={20} strokeWidth={1.75} aria-hidden="true" />, onClick: onVideoCall },
@@ -479,8 +496,8 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   ];
 
   return (
-    <>
-      <motion.div key="contact-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className="fixed inset-0 z-[250000] bg-black/25" aria-hidden="true" />
+    <BodyPortal>
+      <motion.div key="contact-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className={`fixed inset-0 z-[250000] ${compact ? 'bg-white' : 'lg-scrim'}`} aria-hidden="true" />
       <motion.aside
         role="dialog"
         aria-label={tr("Contact info")}
@@ -488,23 +505,27 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-        className="fixed inset-y-0 right-0 z-[250001] w-full sm:w-[400px] flex flex-col bg-[#f7f8fa] border-l border-[#e4e7ec] pb-[env(safe-area-inset-bottom)]"
+        data-hl-side-panel={compact ? '' : undefined}
+        style={compact ? { height: '100dvh' } : undefined}
+        className={compact
+          ? 'lg-canvas fixed inset-0 z-[250001] w-full max-w-none flex flex-col'
+          : 'lg-canvas lg-drawer fixed inset-y-0 right-0 z-[250001] w-[400px] max-w-[100vw] flex flex-col'}
       >
-        <div className="h-[60px] pt-[env(safe-area-inset-top)] box-content flex items-center gap-2 px-2 shrink-0 border-b border-[#e4e7ec] bg-white">
-          <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-11 h-11 flex items-center justify-center rounded-full text-[#475467] hover:bg-[#f2f4f7] hover:text-[#15171c] transition-colors">
+        <div className="lg-bar sticky top-0 z-10 min-h-[60px] pt-[max(8px,env(safe-area-inset-top))] pb-1 flex items-center gap-2 px-2 shrink-0">
+          <button type="button" onClick={onClose} aria-label={tr("Close")} className="w-11 h-11 min-w-[44px] flex items-center justify-center rounded-full text-[#15171c] hover:bg-black/[0.05] active:scale-95 transition">
             <X size={22} strokeWidth={1.75} />
           </button>
           <h2 className="text-[16px] font-semibold text-[#15171c]">{tr("Contact info")}</h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain">
-          <div className="bg-white pt-7 pb-6 px-4 flex flex-col items-center border-b border-[#e4e7ec] mb-5">
+        <div data-hl-scroll className="flex-1 overflow-y-auto overscroll-contain pb-[max(28px,env(safe-area-inset-bottom))]">
+          <div className="pt-7 pb-6 px-4 flex flex-col items-center mb-2">
             <div className="mb-4 flex items-center justify-center leading-none"><UserAvatar address={peerAddress} photo={profile?.avatarUrl} size={112} /></div>
             <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-[#15171c] text-center">{displayName}</h1>
             {displayName !== shortAddr(peerAddress) && <p className="text-[14px] text-[#727a88] font-mono tabular-nums mt-1">{shortAddr(peerAddress)}</p>}
             <div className="mt-5 grid grid-cols-3 gap-2 w-full max-w-[300px]">
               {quick.map((q) => (
-                <button key={q.label} type="button" onClick={q.onClick} className="h-[68px] rounded-2xl border border-[#e4e7ec] bg-white text-[#15171c] flex flex-col items-center justify-center gap-1.5 hover:bg-[#f7f8fa] transition-colors">
+                <button key={q.label} type="button" onClick={q.onClick} className="lg-tile h-[68px] rounded-2xl text-[#15171c] flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition">
                   {q.icon}
                   <span className="text-[12.5px] font-semibold leading-none">{tr(q.label)}</span>
                 </button>
@@ -528,6 +549,6 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           </div>
         </div>
       </motion.aside>
-    </>
+    </BodyPortal>
   );
 };

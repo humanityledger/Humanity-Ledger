@@ -32,6 +32,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { communityInviteUrl } from '@/lib/ui/format';
 import { authorLabel, postText, MLS_VISIBILITY_SENTENCE, VISIBILITY_SENTENCE, type ReaderPost } from './CommunityReader';
 import { createChannelGroup, groupMemberAddresses, isMlsCommunity, mlsGroupOf, readGroupPosts, postToGroup, serverMembers, syncGroupMembers } from '@/lib/communities/mls';
+import { restoreChannel } from '@/lib/communities/mls';
 import { toast } from 'sonner';
 import { Download, Lock, Share2, ShieldCheck } from 'lucide-react';
 import { BrandedQr, loadQrLogo } from '@/components/chat/profile/BrandedQr';
@@ -120,11 +121,11 @@ export function isWideView(view: ManageView): boolean {
 type Note = { kind: 'ok' | 'error'; text: string } | null;
 
 const btn = 'min-h-[48px] min-w-[48px] px-4 rounded-2xl text-[18px] font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#15171c]/25';
-const primary = `${btn} px-5 bg-[#15171c] text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`;
-const secondary = `${btn} border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`;
-const dangerBtn = `${btn} px-5 bg-[#9b1c16] text-white hover:bg-[#7f1612] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`;
-const card = 'rounded-2xl border border-[#d4d8de] bg-white';
-const input = 'w-full min-h-[52px] rounded-2xl border-2 border-[#9aa1ac] focus:border-[#15171c] outline-none px-4 py-3 text-[18px] bg-white placeholder:text-[#4a505c]';
+const primary = `${btn} px-5 rounded-full bg-[#15171c] lg-ink text-white hover:bg-[#2a2d34] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`;
+const secondary = `${btn} lg-pill rounded-full`;
+const dangerBtn = `${btn} px-5 rounded-full bg-[#9b1c16] text-white hover:bg-[#7f1612] disabled:bg-[#e4e7ec] disabled:text-[#3d424b]`;
+const card = 'rounded-2xl lg-card';
+const input = 'w-full min-h-[52px] rounded-2xl lg-recessed border-2 border-transparent focus:border-[#15171c] outline-none px-4 py-3 text-[18px] placeholder:text-[#4a505c]';
 const short = (a: string) => (a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 
 export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGone, fetchImpl, xmtpClient, initialView, onOpenChannel }: CommunityManageProps) {
@@ -212,7 +213,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
   const noteBox = note && (
     <p
       role={note.kind === 'error' ? 'alert' : 'status'}
-      className={`rounded-2xl border px-4 py-3 text-[18px] leading-snug ${note.kind === 'error' ? 'border-[#9b1c16] bg-[#fdf3f2]' : 'border-[#d4d8de] bg-[#f2f4f7]'}`}
+      className={`rounded-2xl border px-4 py-3 text-[18px] leading-snug ${note.kind === 'error' ? 'border-[#9b1c16] bg-[#fdf3f2]' : 'border-transparent lg-card'}`}
       style={{ color: note.kind === 'error' ? DANGER : INK }}
     >
       {note.text}
@@ -220,12 +221,12 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
   );
 
   return (
-    <section className="flex-1 flex flex-col w-full h-full min-w-0 min-h-0 bg-white" aria-label={t("Manage {name}", { name })}>
-      <header className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3 border-b border-[#d4d8de] bg-white">
+    <section className="lg-canvas flex-1 flex flex-col w-full h-full min-w-0 min-h-0" aria-label={t("Manage {name}", { name })}>
+      <header className="lg-bar relative z-20 shrink-0 flex items-center gap-2 px-3 sm:px-5 py-3">
         <button
           type="button"
           onClick={() => (view === 'rows' ? onBack() : setView('rows'))}
-          className={`${btn} px-3 hover:bg-[#eff1f4]`}
+          className={`${btn} lg-pill px-3 rounded-full`}
           style={{ color: INK }}
           aria-label={view === 'rows' ? t("Back to {name}", { name }) : t("Back to Manage")}
         >
@@ -240,7 +241,7 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
       {wide && view === 'apps' && (
         // Apps: the whole space below the header, no reading column, no card, no outer scroll.
-        <div className="flex-1 min-h-0 w-full flex flex-col bg-white overflow-hidden">
+        <div className="flex-1 min-h-0 w-full flex flex-col bg-transparent overflow-hidden">
           <Suspense fallback={loadingWide}>
             <CommunityApps communityId={communityId} communityName={name} />
           </Suspense>
@@ -292,13 +293,13 @@ export function CommunityManage({ communityId, myAddress, nameFor, onBack, onGon
 
           {community && view === 'rows' && (
             <>
-              <ul className={`${card} divide-y divide-[#d4d8de] overflow-hidden`} aria-label={t("Manage this community")}>
+              <ul className={`${card} divide-y divide-black/[0.06] overflow-hidden`} aria-label={t("Manage this community")}>
                 {visibleRows.map((r) => (
                   <li key={r.view}>
                     <button
                       type="button"
                       onClick={() => setView(r.view)}
-                      className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 text-left text-[18px] font-semibold hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#15171c]/25"
+                      className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 text-left text-[18px] font-semibold hover:bg-black/[0.03] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#15171c]/25"
                       style={{ color: r.danger ? DANGER : INK }}
                     >
                       <span className="flex-1 min-w-0">
@@ -711,13 +712,13 @@ function Members({ base, f, headers, me, nameFor, rank, owner, mls, onChanged }:
   return (
     <>
       {error && <p role="alert" className="rounded-2xl border border-[#9b1c16] bg-[#fdf3f2] px-4 py-3 text-[18px]" style={{ color: DANGER }}>{error}</p>}
-      {ok && <p role="status" className="rounded-2xl border border-[#d4d8de] bg-[#f2f4f7] px-4 py-3 text-[18px]" style={{ color: INK }}>{ok}</p>}
+      {ok && <p role="status" className="rounded-2xl lg-card px-4 py-3 text-[18px]" style={{ color: INK }}>{ok}</p>}
 
       {isAdmin && requests.length > 0 && (
         <section className={`${card} px-4 py-4 flex flex-col gap-3`} aria-label={t('Requests to join')}>
           <h2 className="text-[19px] font-semibold" style={{ color: INK }}>{t('Requests to join')} · {requests.length}</h2>
           <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>{t('These people opened your invite link. They see nothing until you approve them.')}</p>
-          <ul className="divide-y divide-[#d4d8de]">
+          <ul className="divide-y divide-black/[0.06]">
             {requests.map((r) => {
               const a = String(r.walletAddress || '').toLowerCase();
               return (
@@ -739,7 +740,7 @@ function Members({ base, f, headers, me, nameFor, rank, owner, mls, onChanged }:
 
       {members === null && !error && <p className="text-[18px]" style={{ color: INK_SOFT }} role="status">{t("Loading…")}</p>}
       {members && (
-        <ul className={`${card} divide-y divide-[#d4d8de]`}>
+        <ul className={`${card} divide-y divide-black/[0.06]`}>
           {members.map((m) => {
             const a = String(m.walletAddress || '').toLowerCase();
             const isMe = a === me;
@@ -855,7 +856,7 @@ async function shareLink(link: string, title: string, text: string): Promise<'sh
 
 function QrFrame({ value, title }: { value: string; title: string }) {
   return (
-    <div className="self-center p-4 rounded-2xl border border-[#d4d8de] bg-white shadow-[var(--hl-shadow-xs)]">
+    <div className="self-center p-4 rounded-2xl lg-card shadow-[var(--hl-shadow-xs)]">
       <BrandedQr value={value} title={title} className="mx-auto" style={{ width: 216, height: 216 }} />
     </div>
   );
@@ -913,7 +914,7 @@ function Invite({ joinCode, communityName, base, f, headers, isAdmin, requireApp
         <div className="flex flex-col gap-1.5">
           <span className="text-[14px]" style={{ color: INK_SOFT }}>{t('Invite link')}</span>
           <p
-            className="rounded-2xl border-2 border-[#9aa1ac] px-4 py-3 font-mono text-[16px] break-all select-all cursor-text"
+            className="rounded-2xl lg-recessed px-4 py-3 font-mono text-[16px] break-all select-all cursor-text"
             style={{ color: INK }}
             data-testid="invite-link"
             onClick={(e) => { const r = document.createRange(); r.selectNodeContents(e.currentTarget); const s = window.getSelection(); s?.removeAllRanges(); s?.addRange(r); }}
@@ -936,7 +937,7 @@ function Invite({ joinCode, communityName, base, f, headers, isAdmin, requireApp
         {copied === 'code' && <span role="status" className="text-[18px]" style={{ color: INK }}>{t("Code copied.")}</span>}
         {copied === 'no' && <span role="alert" className="text-[18px]" style={{ color: DANGER }}>{t("Not copied. Select the link and copy it.")}</span>}
         {code && code.length <= 24 && (
-          <div className="flex flex-wrap items-center gap-3 border-t border-[#d4d8de] pt-3">
+          <div className="flex flex-wrap items-center gap-3 border-t border-black/[0.06] pt-3">
             <div className="flex-1 min-w-0">
               <p className="text-[14px]" style={{ color: INK_SOFT }}>{t('Invite code')}</p>
               <p className="font-mono text-[20px] font-semibold tracking-[0.06em] tabular-nums break-all" style={{ color: INK }}>{code}</p>
@@ -952,14 +953,14 @@ function Invite({ joinCode, communityName, base, f, headers, isAdmin, requireApp
             : t('People who open this link join right away.')}
         </p>
         {isAdmin && requireApproval && pending > 0 && (
-          <button type="button" onClick={onReviewRequests} className="self-start rounded-2xl border-2 border-[#15171c] bg-[#f2f4f7] px-4 min-h-[48px] text-[17px] font-semibold hover:bg-[#e4e7ec]" style={{ color: INK }}>
+          <button type="button" onClick={onReviewRequests} className="self-start rounded-full lg-pill px-4 min-h-[48px] text-[17px] font-semibold" style={{ color: INK }}>
             {pending === 1 ? t('1 request to join · Review in Members') : t('{count} requests to join · Review in Members', { count: pending })}
           </button>
         )}
         {canReset && onReset && (
-          <div className="border-t border-[#d4d8de] pt-3 flex flex-col gap-2">
+          <div className="border-t border-black/[0.06] pt-3 flex flex-col gap-2">
             {!confirmReset ? (
-              <button type="button" className={`${btn} px-4 self-start hover:bg-[#eff1f4]`} style={{ color: DANGER }} onClick={() => setConfirmReset(true)} data-testid="invite-reset">
+              <button type="button" className={`${btn} lg-pill rounded-full px-4 self-start`} style={{ color: DANGER }} onClick={() => setConfirmReset(true)} data-testid="invite-reset">
                 {t("Reset the link")}
               </button>
             ) : (
@@ -969,7 +970,7 @@ function Invite({ joinCode, communityName, base, f, headers, isAdmin, requireApp
                   <button type="button" disabled={busy} className={primary} onClick={async () => { setBusy(true); try { await onReset(); } finally { setBusy(false); setConfirmReset(false); } }}>
                     {busy ? t("Resetting…") : t("Reset now")}
                   </button>
-                  <button type="button" className={`${btn} px-4 hover:bg-[#eff1f4]`} style={{ color: INK }} onClick={() => setConfirmReset(false)}>{t("Cancel")}</button>
+                  <button type="button" className={`${btn} lg-pill rounded-full px-4`} style={{ color: INK }} onClick={() => setConfirmReset(false)}>{t("Cancel")}</button>
                 </div>
               </>
             )}
@@ -1003,7 +1004,7 @@ function PersonalInvite({ base, f, headers, communityName }: { base: string; f: 
       setBusy(false);
     }
   };
-  const pill = (on: boolean) => `min-h-[44px] px-4 rounded-full text-[16px] font-semibold border-2 ${on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#d4d8de] text-[#15171c] hover:bg-[#f2f4f7]'}`;
+  const pill = (on: boolean) => `min-h-[44px] px-4 rounded-full text-[16px] font-semibold ${on ? 'bg-[#15171c] lg-ink text-white' : 'lg-pill text-[#15171c]'}`;
   return (
     <details className={`${card} px-4 py-4`}>
       <summary className="cursor-pointer min-h-[44px] flex items-center text-[18px] font-semibold" style={{ color: INK }}>{t('Personal invite')}</summary>
@@ -1033,9 +1034,9 @@ function PersonalInvite({ base, f, headers, communityName }: { base: string; f: 
         {error && <p role="alert" className="text-[16px]" style={{ color: DANGER }}>{error}</p>}
         <button type="button" className={`${primary} self-start`} disabled={busy} onClick={make}>{busy ? t('Creating…') : t('Create personal invite')}</button>
         {made && (
-          <div className="flex flex-col gap-3 border-t border-[#d4d8de] pt-4">
+          <div className="flex flex-col gap-3 border-t border-black/[0.06] pt-4">
             <QrFrame value={made.url} title={t("Invite QR code")} />
-            <p className="rounded-2xl border-2 border-[#9aa1ac] px-4 py-3 font-mono text-[15px] break-all select-all" style={{ color: INK }}>{made.url}</p>
+            <p className="rounded-2xl lg-recessed px-4 py-3 font-mono text-[15px] break-all select-all" style={{ color: INK }}>{made.url}</p>
             <p className="text-[15px]" style={{ color: INK_SOFT }}>
               {t(made.role === 'MODERATOR' ? 'Moderator' : 'Member')}
               {made.singleUse ? ` · ${t('Single use')}` : ''}
@@ -1103,14 +1104,22 @@ function ChannelSync({ groupId, community, xmtpClient, me }: { groupId: string; 
     setInGroup(list ? list.length : null);
   }, [xmtpClient, groupId]);
   useEffect(() => { void count(); }, [count]);
+  const isAdmin = useMemo(() => {
+    const m = String(me || '').toLowerCase();
+    if (String(community?.ownerAddress || '').toLowerCase() === m) return true;
+    return (community?.members ?? []).some((x: any) => String(x?.walletAddress || '').toLowerCase() === m && x?.role === 'ADMIN');
+  }, [community, me]);
+  // Restore channel: members, every member's new devices, pending commits, and a history capsule
+  // for whoever joined recently (lib/communities/mls.ts restoreChannel). Always available, because a
+  // member's new phone is missing even when the member count looks complete.
   const sync = async () => {
     setBusy(true);
     try {
-      const r = await syncGroupMembers(xmtpClient, groupId, community, me);
+      const r = await restoreChannel(xmtpClient, groupId, community, me, isAdmin);
       await count();
       toast.success(r.added || r.removed
         ? t('Encrypted group updated: {added} added, {removed} removed.', { added: r.added, removed: r.removed })
-        : t('Everyone who can be reached is already in the encrypted group.'));
+        : t('Channel restored. Every member and device that can be reached has access.'));
     } catch {
       toast.error(t('The encrypted group could not be updated now. It is retried when the community opens.'));
     } finally {
@@ -1122,9 +1131,9 @@ function ChannelSync({ groupId, community, xmtpClient, me }: { groupId: string; 
       <span className="text-[15px] tabular-nums" style={{ color: INK_SOFT }} role="status">
         {inGroup === null ? t('Checking the encrypted group…') : t('{inGroup} / {expected} members in the encrypted group', { inGroup, expected })}
       </span>
-      {inGroup !== null && inGroup < expected && (
-        <button type="button" disabled={busy} className={`${btn} min-h-[44px] text-[16px] border-2 border-[#15171c] bg-white hover:bg-[#f2f4f7]`} style={{ color: INK }} onClick={sync}>
-          {busy ? t('Syncing…') : t('Sync members')}
+      {inGroup !== null && (
+        <button type="button" disabled={busy} data-testid="restore-channel" className={`${btn} lg-pill min-h-[44px] text-[16px]`} style={{ color: INK }} onClick={sync}>
+          {busy ? t('Restoring…') : inGroup < expected ? t('Sync members') : t('Restore channel')}
         </button>
       )}
     </div>
@@ -1156,14 +1165,14 @@ function Channels({ channels, mls, community, xmtpClient, me, onOpen, onAdd, onD
       <p className="text-[16px] leading-snug" style={{ color: INK_SOFT }}>
         {t(mls ? 'Each channel is its own end-to-end encrypted group with every member. The first channel carries the community’s main posts and cannot be deleted.' : 'The first channel carries the community’s main posts and cannot be deleted.')}
       </p>
-      <ul className={`${card} divide-y divide-[#d4d8de]`}>
+      <ul className={`${card} divide-y divide-black/[0.06]`}>
         {channels.map((c, i) => (
           <li key={c.id} className="px-4 py-3 flex flex-col gap-2 min-h-[56px]">
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex-1 min-w-0 flex items-center gap-2 text-[18px] font-semibold" style={{ color: INK }}>
                 {c.xmtpGroupId && <Lock size={17} strokeWidth={2} aria-label={t('End-to-end encrypted')} />}
                 <span className="truncate">#{c.name}</span>
-                {i === 0 && <span className="shrink-0 rounded-full bg-[#eff1f4] px-2.5 py-0.5 text-[14px] font-medium" style={{ color: INK_SOFT }}>{t('Main')}</span>}
+                {i === 0 && <span className="shrink-0 rounded-full lg-recessed px-2.5 py-0.5 text-[14px] font-medium" style={{ color: INK_SOFT }}>{t('Main')}</span>}
                 {typeof c.memberCount === 'number' && <span className="shrink-0 text-[15px] font-normal tabular-nums" style={{ color: INK_SOFT }}>{c.memberCount}</span>}
               </span>
               {onOpen && (!mls || c.xmtpGroupId) && (
@@ -1215,7 +1224,7 @@ function Channels({ channels, mls, community, xmtpClient, me, onOpen, onAdd, onD
         {busy && stepText && (
           <div className="flex flex-col gap-2" role="status" aria-live="polite">
             <p className="text-[16px]" style={{ color: INK }}>{stepText}</p>
-            <div className="h-1 w-full overflow-hidden rounded-full bg-[#eff1f4]" aria-hidden="true">
+            <div className="h-1 w-full overflow-hidden rounded-full lg-recessed" aria-hidden="true">
               <div className="h-full w-1/3 rounded-full bg-[#15171c] animate-[hl-indeterminate_1.2s_ease-in-out_infinite] motion-reduce:animate-none" />
             </div>
           </div>
@@ -1238,7 +1247,7 @@ function Switches({ items, values, slow, mls, onChange }: {
   const run = async (key: string, changes: Record<string, boolean | number>) => { setBusy(key); await onChange(changes); setBusy(null); };
   return (
     <>
-      <ul className={`${card} divide-y divide-[#d4d8de]`}>
+      <ul className={`${card} divide-y divide-black/[0.06]`}>
         {items.map(({ key, label, help }) => {
           const on = values[key] === true;
           return (
@@ -1250,14 +1259,14 @@ function Switches({ items, values, slow, mls, onChange }: {
                 aria-describedby={`help-${key}`}
                 disabled={busy === key}
                 onClick={() => run(key, { [key]: !on })}
-                className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 text-left text-[18px] hover:bg-[#f2f4f7] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#15171c]/25"
+                className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 text-left text-[18px] hover:bg-black/[0.03] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#15171c]/25"
                 style={{ color: INK }}
               >
                 <span className="flex-1 min-w-0">
                   <span className="block font-semibold">{t(label)}</span>
                   <span id={`help-${key}`} className="block text-[15px] leading-snug mt-0.5" style={{ color: INK_SOFT }}>{t(help)}</span>
                 </span>
-                <span className={`min-w-[64px] text-center rounded-xl px-3 py-1 text-[16px] font-semibold border-2 shrink-0 ${on ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#9aa1ac] text-[#15171c]'}`}>{busy === key ? '…' : on ? t("On") : t("Off")}</span>
+                <span className={`min-w-[64px] text-center rounded-full px-3 py-1 text-[16px] font-semibold shrink-0 ${on ? 'bg-[#15171c] lg-ink text-white' : 'lg-recessed text-[#15171c]'}`}>{busy === key ? '…' : on ? t("On") : t("Off")}</span>
               </button>
             </li>
           );
@@ -1272,7 +1281,7 @@ function Switches({ items, values, slow, mls, onChange }: {
               const on = (values.slowModeSeconds ?? 0) === v;
               return (
                 <button key={v} type="button" role="radio" aria-checked={on} disabled={busy === 'slow'} onClick={() => run('slow', { slowModeSeconds: v })}
-                  className={`${btn} ${on ? 'bg-[#15171c] text-white' : 'border-2 border-[#9aa1ac] bg-white text-[#15171c] hover:bg-[#f2f4f7]'}`}>
+                  className={`${btn} rounded-full ${on ? 'bg-[#15171c] lg-ink text-white' : 'lg-pill text-[#15171c]'}`}>
                   {t(l)}
                 </button>
               );
@@ -1301,7 +1310,7 @@ function Privacy({ isPrivate, mls, onChange }: { isPrivate: boolean; mls: boolea
       ] as const).map(([priv, label, text]) => (
         <button key={label} type="button" role="radio" aria-checked={isPrivate === priv} disabled={busy}
           onClick={async () => { if (isPrivate === priv) return; setBusy(true); await onChange(priv); setBusy(false); }}
-          className={`${card} min-h-[56px] px-4 py-3 flex items-center gap-3 text-left border-2 ${isPrivate === priv ? 'border-[#15171c]' : 'border-[#d4d8de] hover:bg-[#f2f4f7]'}`}>
+          className={`${card} min-h-[56px] px-4 py-3 flex items-center gap-3 text-left ${isPrivate === priv ? 'ring-2 ring-[#15171c]' : 'hover:bg-black/[0.03]'}`}>
           <span className="flex-1 min-w-0">
             <span className="block text-[18px] font-semibold" style={{ color: INK }}>{t(label)}</span>
             <span className="block text-[16px]" style={{ color: INK_SOFT }}>{t(text)}</span>

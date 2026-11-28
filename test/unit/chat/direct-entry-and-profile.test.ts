@@ -45,7 +45,7 @@ describe('one profile page', () => {
   it('Profile shows the editable card and every group of Profile and devices', () => {
     const s = read('components/chat/LedgerSettingsFull.tsx');
     expect(s).toContain("(activeTab === 'profile' || activeTab === 'account')");
-    expect(s).toContain('header={<div className="bg-white rounded-2xl border border-[#e6e8ec] overflow-hidden">{profileCardBody}</div>}');
+    expect(s).toContain('header={<div className="lg-group rounded-[20px] overflow-hidden divide-y divide-black/[0.05]">{profileCardBody}</div>}');
     expect(s).toContain('{accountGroups}');
     const groups = s.slice(s.indexOf('const accountGroups'), s.indexOf('return (', s.indexOf('const accountGroups')));
     for (const t of ['title="Devices"', 'title="Profile visibility"', 'title="Data and backup"', 'title="Session"', 'label="Linked devices"', 'label="Sign out"']) {

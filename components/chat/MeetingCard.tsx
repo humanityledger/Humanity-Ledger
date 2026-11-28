@@ -52,7 +52,7 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
   return (
     <div
       className={`w-[280px] max-w-full rounded-[20px] border overflow-hidden ${
-        isMe ? 'bg-[#15171c] border-[#15171c] text-white' : 'bg-white border-[#e4e7ec] text-[#15171c]'
+        isMe ? 'bg-[#15171c] lg-ink border-[#15171c] text-white' : 'bg-white border-[#e4e7ec] text-[#15171c]'
       }`}
     >
       <div className="px-4 pt-3.5 pb-3 flex flex-col gap-2">
@@ -64,7 +64,7 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
         <p className={`text-[13.5px] ${isMe ? 'text-[#d9dce1]' : 'text-[#475061]'}`}>{tr(describeMeetingTime(invite))}</p>
         {invite.note && <p className={`text-[13.5px] leading-relaxed break-words ${isMe ? 'text-[#b9bdc6]' : 'text-[#727a88]'}`}>{invite.note}</p>}
       </div>
-      <div className={`px-3 py-2.5 flex items-center gap-2 ${isMe ? 'bg-[#1f2128]' : 'bg-[#f7f8fa] border-t border-[#eceef2]'}`}>
+      <div className={`px-3 py-2.5 flex items-center gap-2 ${isMe ? 'bg-[#1f2128]' : 'lg-recessed border-t border-[#eceef2]'}`}>
         <span
           className={`flex-1 text-[12.5px] font-medium tabular-nums ${
             phase === 'live' || phase === 'joinable' ? 'text-[#12a150]' : isMe ? 'text-[#b9bdc6]' : 'text-[#727a88]'
@@ -79,7 +79,7 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
             onClick={addToCalendar}
             aria-label={tr("Add to calendar")}
             title={tr("Add to calendar")}
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isMe ? 'hover:bg-white/10 text-white' : 'hover:bg-[#eceef2] text-[#15171c]'}`}
+            className={`icon-btn w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isMe ? 'hover:bg-white/10 text-white' : 'hover:bg-[#eceef2] text-[#15171c]'}`}
           >
             <CalendarPlus size={17} strokeWidth={1.8} aria-hidden="true" />
           </button>
@@ -90,7 +90,7 @@ export function MeetingCard({ invite, isMe, peerName }: { invite: MeetingInvite;
             onClick={join}
             disabled={!canJoin}
             title={canJoin ? tr("Join the call") : tr("Join opens ten minutes before the start")}
-            className={`h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors ${
+            className={`icon-btn h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors ${
               canJoin
                 ? 'bg-[#12a150] text-white hover:bg-[#0f8a44]'
                 : isMe

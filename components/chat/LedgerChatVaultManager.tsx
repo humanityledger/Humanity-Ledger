@@ -112,7 +112,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
+      className="lg-scrim fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
       onClick={onClose}
     >
       <motion.div
@@ -120,11 +120,11 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         animate={{ y: 0, scale: 1 }}
         exit={{ y: 50, scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        className="w-full max-w-2xl lg-sheet rounded-3xl overflow-hidden flex flex-col max-h-[85vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-black/5 bg-[#f2f4f7]">
+        <div className="flex items-center justify-between p-6 border-b border-black/5 lg-recessed">
           <div>
             <h2 className="text-[20px] font-semibold text-black flex items-center gap-2">
               <Lock size={20} className="text-[#15171c]" />
@@ -135,7 +135,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-black/5 hover:bg-black/5 transition-colors"
+            className="icon-btn w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-black/5 hover:bg-black/5 transition-colors"
           >
             <X size={20} className="text-black" />
           </button>
@@ -169,13 +169,13 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                   {t("{size} selected", { size: selectedFiles.size })}</span>
                 <button
                   onClick={handleDownloadSelected}
-                  className="w-8 h-8 rounded-full bg-[#eff1f4] flex items-center justify-center text-[#15171c] hover:bg-[#eff1f4] transition-colors"
+                  className="icon-btn w-8 h-8 rounded-full lg-tile flex items-center justify-center text-[#15171c] hover:bg-[#eff1f4] transition-colors"
                 >
                   <Download size={14} />
                 </button>
                 <button
                   onClick={handleDeleteSelected}
-                  className="w-8 h-8 rounded-full bg-[#e5484d]/10 flex items-center justify-center text-[#d93036] hover:bg-[#e5484d]/20 transition-colors"
+                  className="icon-btn w-8 h-8 rounded-full bg-[#e5484d]/10 flex items-center justify-center text-[#d93036] hover:bg-[#e5484d]/20 transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -188,7 +188,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         <div className="flex-1 overflow-y-auto p-4 bg-white min-h-[300px]">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-3">
-              <div className="w-8 h-8 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
+              <div className="icon-btn w-8 h-8 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
               <p className="text-[13px] tabular-nums text-black/40">{t("Decrypting vault manifest...")}</p>
             </div>
           ) : filteredFiles.length === 0 ? (
@@ -205,10 +205,10 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                     key={file.id}
                     onClick={() => toggleSelect(file.id)}
                     className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all border ${
-                      isSelected ? 'bg-[#eff1f4] border-[#15171c]' : 'bg-white border-transparent hover:bg-black/5'
+                      isSelected ? 'lg-recessed border-[#15171c]' : 'bg-white border-transparent hover:bg-black/5'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-[#f2f4f7] flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl lg-recessed flex items-center justify-center shrink-0">
                       {getFileIcon(file.type)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -228,7 +228,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
                       </div>
                     </div>
                     
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
+                    <div className={`icon-btn w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
                       isSelected ? 'border-[#15171c] bg-[#15171c]' : 'border-black/20 bg-transparent'
                     }`}>
                       {isSelected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-2.5 h-2.5 bg-white rounded-full" />}
@@ -241,7 +241,7 @@ export function LedgerChatVaultManager({ onClose }: VaultManagerProps) {
         </div>
         
         {/* Footer info */}
-        <div className="p-4 bg-[#f2f4f7] border-t border-black/5 flex items-center justify-center gap-2">
+        <div className="p-4 lg-recessed border-t border-black/5 flex items-center justify-center gap-2">
             <Lock size={12} className="text-black/40" />
             <span className="text-[12.5px] tabular-nums font-semibold text-black/40">{t("AES-256-GCM Encrypted Storage")}</span>
         </div>

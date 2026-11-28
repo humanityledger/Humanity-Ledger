@@ -31,7 +31,7 @@ export function TypingIndicator({ names = [], accentColor = "#a3a9b4" }: TypingI
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
     >
       <div
-        className="px-4 py-3 bg-white rounded-[18px] rounded-bl-[4px] border border-[#e4e7ec] flex items-center gap-[5px] shadow-sm"
+        className="px-4 py-3 lg-card rounded-[18px] rounded-bl-[4px] flex items-center gap-[5px]"
         role="status"
         aria-label={label}
         title={label}

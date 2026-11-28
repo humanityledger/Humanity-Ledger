@@ -59,7 +59,7 @@ export function PollCard({ pollId, question, options, hideResults, author, messa
     try { await onVote(encodeVote(pollId, k)); } finally { setPending(null); }
   };
   return (
-    <div className="mt-2 rounded-2xl border border-[#d4d8de] p-3.5 bg-white">
+    <div className="mt-2 rounded-2xl p-3.5 lg-card">
       <p className="text-[12.5px] font-semibold uppercase tracking-wide text-[#727a88]">{t('Poll')}</p>
       <p className="text-[17px] font-semibold mt-0.5 mb-2.5" style={{ color: INK }}>{question}</p>
       <div role="radiogroup" aria-label={question}>
@@ -123,8 +123,8 @@ export function PollComposer({ onSend, onClose }: { onSend: (encoded: string) =>
   const valid = q.trim() && opts.filter((o) => o.trim()).length >= 2;
   const field = 'w-full px-4 py-3 rounded-2xl bg-[#f4f5f7] border border-transparent text-[16px] text-[#15171c] placeholder:text-[#8a919c] outline-none focus:bg-white focus:border-[#15171c]';
   return (
-    <div className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/35" role="dialog" aria-modal="true" aria-label={t('Create a poll')} onClick={onClose}>
-      <div className="w-full sm:max-w-[440px] max-h-[92dvh] overflow-y-auto bg-white rounded-t-[28px] sm:rounded-[28px] p-5 pb-[max(18px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+    <div className="lg-scrim fixed inset-0 z-[250] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={t('Create a poll')} onClick={onClose}>
+      <div className="w-full sm:max-w-[440px] max-h-[92dvh] overflow-y-auto lg-sheet rounded-t-[28px] sm:rounded-[28px] p-5 pb-[max(18px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[20px] font-semibold text-[#15171c]">{t('Create a poll')}</h2>
           <button type="button" onClick={onClose} className="w-11 h-11 grid place-items-center rounded-full hover:bg-[#f2f3f5]" aria-label={t('Close')}><X size={20} /></button>
@@ -143,7 +143,7 @@ export function PollComposer({ onSend, onClose }: { onSend: (encoded: string) =>
           <span><span className="block text-[14.5px] font-medium text-[#15171c]">{t('Hide results until I close the poll')}</span><span className="block text-[12.5px] text-[#727a88]">{t('Members still see each other’s votes in the group; this only hides the totals on screen.')}</span></span>
         </label>
         <p className="text-[12.5px] text-[#727a88] mt-2">{t('Members see who voted for what: votes are posts in this encrypted community.')}</p>
-        <button type="button" disabled={!valid} onClick={() => onSend(encodePoll(q, opts.filter((o) => o.trim()), undefined, { hideResults: hide }))} className="mt-4 w-full min-h-[52px] rounded-2xl bg-[#15171c] text-white text-[16px] font-semibold disabled:opacity-40">{t('Send poll')}</button>
+        <button type="button" disabled={!valid} onClick={() => onSend(encodePoll(q, opts.filter((o) => o.trim()), undefined, { hideResults: hide }))} className="mt-4 w-full min-h-[52px] rounded-2xl bg-[#15171c] lg-ink text-white text-[16px] font-semibold disabled:opacity-40">{t('Send poll')}</button>
       </div>
     </div>
   );

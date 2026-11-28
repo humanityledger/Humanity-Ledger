@@ -111,7 +111,7 @@ export function InChatSearch({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="flex items-center gap-2 px-3 py-2 bg-white border-b border-[#e4e7ec] shadow-sm"
+          className="lg-bar relative z-20 flex items-center gap-2 px-3 py-2"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
@@ -163,7 +163,7 @@ export function InChatSearch({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[#475061] hover:bg-[#f2f4f7] transition-colors"
+            className="icon-btn w-7 h-7 rounded-full flex items-center justify-center text-[#475061] hover:bg-[#f2f4f7] transition-colors"
             aria-label={t("Close search")}
           >
             <X size={15} strokeWidth={2} />

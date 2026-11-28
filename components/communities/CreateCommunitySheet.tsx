@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Copy, Globe, Lock, Share2, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { BodyPortal } from '@/components/chat/ui/BodyPortal';
 import { WalletGlyph } from '@/components/chat/WalletGlyph';
 import { BrandedQr } from '@/components/chat/profile/BrandedQr';
 import { communityInviteUrl } from '@/lib/ui/format';
@@ -81,6 +82,8 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
         body: JSON.stringify({ name: name.trim(), description: desc.trim(), isPrivate, mls: true, xmtpGroupId: groupId }),
       });
       const d = await r.json().catch(() => ({}));
+      // The server refuses a community that is not end-to-end encrypted: say so, never fall back to plain text.
+      if (r.status === 409 || d?.code === 'MLS_REQUIRED') throw new Error(t('MLS is required for new communities. Encrypted messaging must be running on this device; try again in a moment.'));
       if (!r.ok || !d?.community?.id) throw new Error(d?.error || t('Could not create the community'));
       if (welcome.trim()) await postToGroup(client, groupId, welcome.trim()).catch(() => {});
       invalidateCommunityMlsCache();
@@ -99,15 +102,16 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
     await navigator.clipboard?.writeText(link).then(() => toast.success(t('Invite link copied')), () => {});
   };
 
-  const field = 'w-full px-4 py-3 rounded-2xl bg-[#f4f5f7] border border-transparent text-[16px] text-[#15171c] placeholder:text-[#8a919c] outline-none focus:bg-white focus:border-[#15171c] transition-colors';
+  const field = 'w-full px-4 py-3 rounded-2xl lg-recessed border border-transparent text-[16px] text-[#15171c] placeholder:text-[#8a919c] outline-none focus:bg-white focus:border-[#15171c] transition-colors';
   const primary = 'w-full min-h-[52px] rounded-2xl bg-[#15171c] text-white text-[16px] font-semibold disabled:opacity-40';
   const dots = ['basics', 'privacy', 'done'] as const;
   const at = step === 'creating' ? 1 : dots.indexOf(step as (typeof dots)[number]);
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/35" role="dialog" aria-modal="true" aria-label={t('New community')} onClick={() => step !== 'creating' && onClose()}>
-      <div className="w-full sm:max-w-[460px] max-h-[94dvh] overflow-y-auto bg-white rounded-t-[28px] sm:rounded-[28px] shadow-[0_12px_40px_rgba(16,24,40,0.14)] pb-[max(18px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white flex items-center gap-1 px-2 h-14 z-10">
+    <BodyPortal>
+    <div className="lg-scrim fixed inset-0 z-[260000] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={t('New community')} onClick={() => step !== 'creating' && onClose()}>
+      <div className="w-full sm:max-w-[460px] max-h-[94dvh] overflow-y-auto lg-sheet rounded-t-[28px] sm:rounded-[28px] pb-[max(18px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+        <div className="lg-bar sticky top-0 flex items-center gap-1 px-2 h-14 z-10">
           {step === 'privacy' ? <button type="button" onClick={() => setStep('basics')} className="w-11 h-11 grid place-items-center rounded-full hover:bg-[#f2f3f5]" aria-label={t('Back')}><ArrowLeft size={20} /></button> : <span className="w-11" />}
           <div className="flex-1 flex justify-center gap-1.5" aria-hidden="true">
             {dots.map((d, i) => <span key={d} className={`h-1.5 rounded-full transition-all ${i <= at ? 'w-6 bg-[#15171c]' : 'w-1.5 bg-[#d5d9e0]'}`} />)}
@@ -140,16 +144,16 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
             ] as const).map((o) => (
               <button key={String(o.v)} type="button" disabled={step === 'creating'} onClick={() => setIsPrivate(o.v)}
                 className={`w-full flex items-start gap-3 text-left p-4 rounded-2xl border-2 mb-2.5 transition-colors ${isPrivate === o.v ? 'border-[#15171c] bg-[#fafafb]' : 'border-[#e6e8ec] hover:border-[#c9ced6]'}`}>
-                <span className="w-10 h-10 rounded-xl bg-[#eff1f4] grid place-items-center shrink-0"><o.icon size={19} /></span>
+                <span className="w-10 h-10 rounded-xl lg-recessed grid place-items-center shrink-0"><o.icon size={19} /></span>
                 <span className="flex-1 min-w-0"><span className="block text-[15.5px] font-semibold text-[#15171c]">{o.title}</span><span className="block text-[13.5px] text-[#5b6270] leading-snug mt-0.5">{o.body}</span></span>
-                <span className={`w-6 h-6 rounded-full border-2 grid place-items-center shrink-0 mt-2 ${isPrivate === o.v ? 'border-[#15171c] bg-[#15171c] text-white' : 'border-[#c9ced6]'}`}>{isPrivate === o.v && <Check size={14} strokeWidth={3} />}</span>
+                <span className={`icon-btn w-6 h-6 rounded-full border-2 grid place-items-center shrink-0 mt-2 ${isPrivate === o.v ? 'border-[#15171c] bg-[#15171c] lg-ink text-white' : 'border-[#c9ced6]'}`}>{isPrivate === o.v && <Check size={14} strokeWidth={3} />}</span>
               </button>
             ))}
             <label className="block text-[13px] font-semibold text-[#3d424b] mt-3 mb-1.5" htmlFor="cc-welcome">{t('Welcome message')} <span className="font-normal text-[#8a919c]">({t('optional')})</span></label>
             <textarea id="cc-welcome" value={welcome} maxLength={MAX_WELCOME} rows={2} disabled={step === 'creating'} onChange={(e) => setWelcome(e.target.value)} placeholder={t('The first post new members will see')} className={`${field} resize-none`} />
             {error && <p className="mt-3 text-[13.5px] text-[#b42318]" role="alert">{error}</p>}
             {step === 'creating'
-              ? <p className="mt-5 min-h-[52px] rounded-2xl bg-[#f4f5f7] flex items-center justify-center gap-2 text-[14.5px] text-[#15171c]" role="status" aria-live="polite">{status}</p>
+              ? <p className="mt-5 min-h-[52px] rounded-2xl lg-recessed flex items-center justify-center gap-2 text-[14.5px] text-[#15171c]" role="status" aria-live="polite">{status}</p>
               : <button type="button" onClick={() => void create()} className={`${primary} mt-5`}>{t('Create community')}</button>}
           </div>
         )}
@@ -161,8 +165,8 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
             <p className="text-[14px] text-[#727a88] mt-1 mb-4">{t('Invite people with this link or QR code. You are the owner.')}</p>
             {link && (
               <>
-                <div className="p-3 rounded-3xl bg-white border border-[#e6e8ec] shadow-sm"><BrandedQr value={link} title={t('Invite QR code')} style={{ width: 188, height: 188 }} /></div>
-                <button type="button" onClick={() => navigator.clipboard?.writeText(link).then(() => toast.success(t('Invite link copied')), () => {})} className="mt-3 w-full flex items-center gap-2 rounded-2xl bg-[#f4f5f7] px-4 min-h-[48px] text-left">
+                <div className="p-3 rounded-3xl lg-sheet border"><BrandedQr value={link} title={t('Invite QR code')} style={{ width: 188, height: 188 }} /></div>
+                <button type="button" onClick={() => navigator.clipboard?.writeText(link).then(() => toast.success(t('Invite link copied')), () => {})} className="mt-3 w-full flex items-center gap-2 rounded-2xl lg-recessed px-4 min-h-[48px] text-left">
                   <span className="flex-1 min-w-0 truncate font-mono text-[13px] text-[#3d424b]">{link}</span><Copy size={16} aria-hidden="true" />
                 </button>
                 <button type="button" onClick={() => void share()} className="mt-2 w-full min-h-[48px] rounded-2xl border border-[#d5d9e0] text-[15px] font-semibold text-[#15171c] inline-flex items-center justify-center gap-2"><Share2 size={17} />{t('Share invite')}</button>
@@ -173,5 +177,6 @@ export function CreateCommunitySheet({ getClient, defaultPublic = false, onClose
         )}
       </div>
     </div>
+    </BodyPortal>
   );
 }

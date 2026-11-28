@@ -124,7 +124,7 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="tip-title">
+    <div className="lg-scrim fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="tip-title">
       <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-[#E4E7EC] space-y-5">
         <div className="flex items-center justify-between">
           <h2 id="tip-title" className="text-[15px] font-semibold text-[#15171C]">
@@ -141,7 +141,7 @@ export function SendTipModal({ open, onClose, recipientAddress, recipientName, o
         </div>
 
         <div className="flex items-center gap-3 p-3 bg-[#F7F8FA] border border-[#E4E7EC] rounded-xl">
-          <div className="w-10 h-10 rounded-full bg-[#15171C] flex items-center justify-center text-white font-semibold text-[13px] shrink-0">
+          <div className="icon-btn w-10 h-10 rounded-full bg-[#15171C] flex items-center justify-center text-white font-semibold text-[13px] shrink-0">
             {recipientName ? recipientName.slice(0, 2).toUpperCase() : 'W'}
           </div>
           <div className="min-w-0 flex-1">

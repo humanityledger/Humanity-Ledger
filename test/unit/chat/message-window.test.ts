@@ -22,6 +22,6 @@ describe('message list windowing', () => {
 
   it('no spinning or pulsing status in the list; the composer sticks to the bottom with the safe area', () => {
     expect(list).not.toMatch(/animate-(spin|pulse|ping)/);
-    expect(chat).toMatch(/className="sticky bottom-0 shrink-0 bg-white border-t border-\[#e4e7ec\] z-10"\s*\n\s*style=\{\{ paddingBottom: `max\(8px, env\(safe-area-inset-bottom, 0px\)\)` \}\}/);
+    expect(chat).toMatch(/className="sticky bottom-0 shrink-0 bg-transparent z-10"\s*\n\s*style=\{\{ paddingBottom: `max\(8px, env\(safe-area-inset-bottom, 0px\)\)` \}\}/);
   });
 });

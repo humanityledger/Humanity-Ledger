@@ -80,13 +80,13 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const canProceedStep3 = members.length >= 1;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="lg-scrim fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <motion.div
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 24, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        className="w-full max-w-md bg-[#f2f4f7] rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl overflow-hidden"
+        className="w-full max-w-md lg-recessed rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl overflow-hidden"
         style={{ maxHeight: '92vh' }}
         onClick={e => e.stopPropagation()}
       >
@@ -110,7 +110,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 text-black/40 hover:bg-black/10 transition-colors"
+            className="icon-btn w-8 h-8 flex items-center justify-center rounded-full bg-black/5 text-black/40 hover:bg-black/10 transition-colors"
           >
             <X size={16} />
           </button>
@@ -258,7 +258,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     <button
                       type="button"
                       onClick={handleAddMember}
-                      className="px-5 py-3 bg-[#15171c] text-white text-[13px] font-semibold rounded-2xl hover:bg-black transition-colors shrink-0"
+                      className="px-5 py-3 bg-[#15171c] lg-ink text-white text-[13px] font-semibold rounded-2xl hover:bg-black transition-colors shrink-0"
                     >
                       {t("Add")}
                     </button>
@@ -318,7 +318,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               type="button"
               disabled={step === 1 && !canProceedStep1}
               onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)}
-              className="w-full py-4 bg-[#15171c] text-white font-semibold text-[15px] rounded-2xl hover:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-[#15171c] lg-ink text-white font-semibold text-[15px] rounded-2xl hover:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {t("Continue →")}
             </button>
@@ -327,7 +327,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               type="button"
               disabled={isCreating || !canProceedStep3}
               onClick={handleCreate}
-              className="w-full py-4 bg-[#15171c] text-white font-semibold text-[15px] rounded-2xl hover:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-4 bg-[#15171c] lg-ink text-white font-semibold text-[15px] rounded-2xl hover:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isCreating ? (
                 <>

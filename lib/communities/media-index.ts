@@ -25,7 +25,7 @@ export type MediaItem =
   | { tab: 'music'; id: string; at: number; author?: string; att: AttachmentMessage; name: string };
 
 /** Control messages (reactions, receipts, votes, typing…) are not posts and never shown as such. */
-export const CONTROL_PREFIXES = ['__REACT__', '__READ__', '__DELIVERED__', '__TYPING__', '__VOTE__', '__EDIT__', '__REVOKE__', '__PIN__', '__UNPIN__', '__CALL_', '__CLEAR__', '__POLL_CLOSE__'];
+export const CONTROL_PREFIXES = ['__REACT__', '__READ__', '__DELIVERED__', '__TYPING__', '__VOTE__', '__EDIT__', '__REVOKE__', '__PIN__', '__UNPIN__', '__CALL_', '__CLEAR__', '__POLL_CLOSE__', '__HL_HIST_REQ__', '__HL_HIST_CAP__'];
 export const isControlMessage = (c: unknown) => typeof c === 'string' && CONTROL_PREFIXES.some((p) => c.startsWith(p));
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)\]]/gi;

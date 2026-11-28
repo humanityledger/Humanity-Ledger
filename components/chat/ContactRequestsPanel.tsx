@@ -105,7 +105,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100001] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
+      className="lg-scrim fixed inset-0 z-[100001] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
@@ -113,7 +113,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-md bg-white rounded-[28px] overflow-hidden shadow-2xl flex flex-col max-h-[75vh]"
+        className="w-full max-w-md lg-sheet rounded-[28px] overflow-hidden flex flex-col max-h-[75vh]"
       >
         {/* Header */}
         <div className="p-5 border-b border-black/5 bg-[#f9f9fb] flex items-center justify-between">
@@ -138,7 +138,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
           <AnimatePresence mode="popLayout">
             {loading ? (
               <div className="flex items-center justify-center p-12">
-                <div className="w-7 h-7 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
+                <div className="icon-btn w-7 h-7 border-4 border-[#15171c] border-t-[#25D366] rounded-full animate-spin" />
               </div>
             ) : requests.length === 0 ? (
               <motion.div
@@ -181,7 +181,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                       <button
                         onClick={() => handleAction(req, 'accept')}
                         disabled={isProcessing}
-                        className="w-9 h-9 bg-[#15171c] hover:bg-[#1fae52] text-white rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="icon-btn w-9 h-9 bg-[#15171c] lg-ink hover:bg-[#1fae52] text-white rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
                         title={t("Accept")}
                       >
                         {isProcessing ? (
@@ -193,7 +193,7 @@ export function ContactRequestsPanel({ myAddress, onClose, onAccepted }: Contact
                       <button
                         onClick={() => handleAction(req, 'reject')}
                         disabled={isProcessing}
-                        className="w-9 h-9 bg-zinc-100 hover:bg-red-50 hover:text-[#d93036] text-zinc-500 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                        className="icon-btn w-9 h-9 bg-zinc-100 hover:bg-red-50 hover:text-[#d93036] text-zinc-500 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
                         title={t("Decline")}
                       >
                         <UserX size={15} />

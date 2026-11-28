@@ -23,7 +23,7 @@ const PILL: Record<CardTone, string> = {
 
 export function StatusPill({ tone, children }: { tone: CardTone; children: React.ReactNode }) {
   return (
-    <span className={`inline-flex h-[22px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[11.5px] font-semibold ${PILL[tone]}`}>
+    <span className={`icon-btn inline-flex h-[22px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[11.5px] font-semibold ${PILL[tone]}`}>
       <span
         aria-hidden
         className={`h-1.5 w-1.5 rounded-full ${tone === 'ok' ? 'bg-[#0a7a55]' : tone === 'bad' ? 'bg-[#b42318]' : 'bg-[#15171c]'} ${tone === 'wait' ? 'animate-pulse motion-reduce:animate-none' : ''}`}
@@ -69,7 +69,7 @@ export function PaymentCardFrame({
   const t = useT();
   return (
     <div
-      className="w-[300px] max-w-full rounded-[18px] border border-[#e4e7ec] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_24px_-16px_rgba(16,24,40,0.18)]"
+      className="w-[300px] max-w-full rounded-[18px] lg-card p-4"
       data-testid={testId}
       data-state={state}
     >

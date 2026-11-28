@@ -78,7 +78,7 @@ describe('Manage: wide views and channels', () => {
     const src = read('components/communities/CommunityManage.tsx');
     expect(src).toMatch(/<Lock size=/);
     expect(src).toMatch(/groupMemberAddresses\(xmtpClient, groupId\)/);
-    expect(src).toMatch(/syncGroupMembers\(xmtpClient, groupId, community, me\)/);
+    expect(src).toMatch(/restoreChannel\(xmtpClient, groupId, community, me, isAdmin\)/);
     expect(src).toMatch(/onOpen\(c\.id\)/);
     expect(src).toMatch(/animate-\[hl-indeterminate/);
     expect(src).not.toMatch(/\banimate-spin\b/);

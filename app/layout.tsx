@@ -13,6 +13,7 @@ import { Inter, IBM_Plex_Mono, Instrument_Serif } from 'next/font/google'
 // globals.css already runs through Tailwind via postcss.config.js.
 
 import './globals.css'
+import './glassmorphism.css'
 
 import './smooth-scroll.css'
 
@@ -350,11 +351,17 @@ export default async function RootLayout({
             maximum-scale for pinch zoom, so pinching still works there (WCAG 1.4.4).
             Android (Chrome and others): the cap is set only while a text field is in use, from the touch
             that focuses it until it loses focus, so typing never zooms and pinch zoom works the rest of
-            the time. Next.js rewrites the tag on navigation, so it is put back whenever it changes. */}
+            the time. The cap is also released when the focused field is removed from the page (a sheet closes on
+            Send), when a touch never lands focus in a field, when the keyboard closes and when the tab is
+            hidden, so pinch zoom can never stay locked. data-hl-device (phone | tablet | desktop) comes
+            from the physical screen, so a phone never gets the tablet or desktop layout. Next.js rewrites the tag on navigation, so it is put back whenever it changes. */}
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){try{
 var ua=navigator.userAgent||'';var mobile=/iPhone|iPad|iPod|Android/i.test(ua);
 var named=/MetaMaskMobile|TrustWallet|Trust\\/|CoinbaseWallet|CoinbaseBrowser|Rainbow|OKApp|Phantom|imToken|TokenPocket|BitKeep|Bitget|Zerion|BinanceWeb3|Rabby|SafePal|Uniswap/i.test(ua);
 var ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+var de=document.documentElement;
+var dev=function(){try{var sw=Math.min(screen.width,screen.height);var coarse=!!(window.matchMedia&&matchMedia('(pointer: coarse)').matches);var d=((coarse||mobile||ios)&&sw<768)||(coarse&&screen.width<1024)?'phone':(coarse||mobile||ios)?'tablet':'desktop';if(de.getAttribute('data-hl-device')!==d)de.setAttribute('data-hl-device',d)}catch(e){}};
+dev();window.addEventListener('resize',dev,{passive:true});window.addEventListener('orientationchange',dev);
 if(!mobile&&!ios)return;
 var wallet=!!(named||(window.ethereum&&!ios));
 if(wallet)document.documentElement.setAttribute('data-wallet-browser','1');
@@ -371,7 +378,13 @@ try{new MutationObserver(onHead).observe(document.head,{childList:true})}catch(e
 if(ios)return;
 var editable=function(el){if(!el||el.nodeType!==1)return false;var t=el.tagName;if(t==='TEXTAREA'||el.isContentEditable)return true;if(t!=='INPUT')return false;return !/^(button|checkbox|radio|range|color|file|image|submit|reset|hidden)$/i.test(el.type||'')};
 var on=function(e){var el=e.target&&e.target.closest?e.target.closest('input,textarea,[contenteditable]'):null;if(editable(el)&&!locked){locked=true;si()}};
-var off=function(){setTimeout(function(){if(locked&&!editable(document.activeElement)){locked=false;si()}},250)};
+var chk=function(){if(locked&&!editable(document.activeElement)){locked=false;si()}};
+var off=function(){setTimeout(chk,250)};
+var arm=function(){setTimeout(chk,900)};
+document.addEventListener('touchend',arm,{capture:true,passive:true});
+document.addEventListener('visibilitychange',chk);
+if(window.visualViewport)window.visualViewport.addEventListener('resize',function(){setTimeout(chk,120)});
+var pend=false;try{new MutationObserver(function(){if(locked&&!pend){pend=true;setTimeout(function(){pend=false;chk()},80)}}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
 document.addEventListener('touchstart',on,{capture:true,passive:true});
 document.addEventListener('focusin',on,true);
 document.addEventListener('focusout',off,true);

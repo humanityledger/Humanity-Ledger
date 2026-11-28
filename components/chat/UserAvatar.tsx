@@ -76,7 +76,7 @@ export function UserAvatar({ address, photo, size = 44, isMe, className = '', ti
   if (src) {
     return (
       <span
-        className={`relative inline-block overflow-hidden shrink-0 bg-[#f2f4f7] ${className}`}
+        className={`relative inline-block overflow-hidden shrink-0 lg-recessed ${className}`}
         style={{ width: size, height: size, borderRadius: AVATAR_RADIUS, lineHeight: 0 }}
         title={title}
       >

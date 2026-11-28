@@ -475,7 +475,7 @@ export function RenderPremiumSticker({ code, size = '96px', fresh = false }: { c
   const sticker = STICKER_BY_CODE.get(code.trim());
   if (!sticker) {
     return (
-      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#f2f4f7] text-[13.5px] text-[#727a88]">
+      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl lg-recessed text-[13.5px] text-[#727a88]">
         <ImageOff size={15} strokeWidth={1.8} aria-hidden="true" />
         {t("Retired sticker")}
       </div>
@@ -550,7 +550,7 @@ export const StickerPicker = React.memo(({ onSend, onClose }: {
             type="button"
             onClick={onClose}
             aria-label={t("Close stickers")}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#4a505c] hover:text-[#15171c] transition-colors"
+            className="icon-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#eff1f4] text-[#4a505c] hover:text-[#15171c] transition-colors"
           >
             <X size={16} strokeWidth={1.9} />
           </button>
